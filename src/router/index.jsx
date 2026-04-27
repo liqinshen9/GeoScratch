@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from '@/layout/Layout'
-import Home from '@/pages/Home'
-// import App from '../App'
+import App from '../App'
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -9,14 +9,10 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <App />,
       },
     ],
   },
-  // {
-  //   path: '/a',
-  //   element: <App />,
-  // }
 ])
 
 export default router
