@@ -22,7 +22,13 @@ export default function BlocksCanvas({ onObjectsChange }) {
   const hostRef = useRef(null)
   const workspaceRef = useRef(null)
   const registryRef = useRef(null)
+  const onObjectsChangeRef = useRef(onObjectsChange)
   const [collapsed, setCollapsed] = useState(false)
+
+  //keep ref in sync with the latest prop so the change listener always uses the current callback
+  useEffect(() => {
+    onObjectsChangeRef.current = onObjectsChange
+  }, [onObjectsChange])
 
   const {
     workspace,
@@ -89,11 +95,11 @@ export default function BlocksCanvas({ onObjectsChange }) {
     // Change listener -> run + sync
     const cleanupListener = setupChangeListener(ws, (w) => {
       clearObjects() // Clear old objects
-      runAndSync(w, onObjectsChange, registryRef.current)
+      runAndSync(w, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current)
     })
 
     // Initial run
-    runAndSync(ws, onObjectsChange, registryRef.current)
+    runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current)
 
     // Adaptive size
     const cleanupResize = attachResizeObserver(hostRef.current, ws)

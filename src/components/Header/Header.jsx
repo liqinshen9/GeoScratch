@@ -23,14 +23,6 @@ const fallbackGuides = [
 
 export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderChange }) {
   const [showMenu, setShowMenu] = useState(false)
-  const [showCalculator, setShowCalculator] = useState(false)
-  const [calculatorPosition, setCalculatorPosition] = useState({ x: 320, y: 80 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const [display, setDisplay] = useState('0')
-  const [previousValue, setPreviousValue] = useState(null)
-  const [operation, setOperation] = useState(null)
-  const [waitingForOperand, setWaitingForOperand] = useState(false)
   const [guides, setGuides] = useState(fallbackGuides)
   const [selectedGuide, setSelectedGuide] = useState(null)
   const [currentChapter, setCurrentChapter] = useState("Chapter 1 - Basic Geometry")
@@ -72,32 +64,6 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  // Drag functionality for calculator
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isDragging) {
-        setCalculatorPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y
-        })
-      }
-    }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [isDragging, dragOffset])
 
   // const handlePickExample = (xml) => {
   //   onLoadExample?.(xml)
@@ -266,106 +232,6 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
   }
 
 
-  const handleCalculatorMouseDown = (e) => {
-    if (e.target.closest('button') && !e.target.closest('button[onClick]')) {
-      return // Don't drag if clicking on calculator buttons
-    }
-    setIsDragging(true)
-    setDragOffset({
-      x: e.clientX - calculatorPosition.x,
-      y: e.clientY - calculatorPosition.y
-    })
-  }
-
-  // Calculator functions
-  const inputNumber = (num) => {
-    if (waitingForOperand) {
-      setDisplay(String(num))
-      setWaitingForOperand(false)
-    } else {
-      setDisplay(display === '0' ? String(num) : display + num)
-    }
-  }
-
-  const inputDecimal = () => {
-    if (waitingForOperand) {
-      setDisplay('0.')
-      setWaitingForOperand(false)
-    } else if (display.indexOf('.') === -1) {
-      setDisplay(display + '.')
-    }
-  }
-
-  const clear = () => {
-    setDisplay('0')
-    setPreviousValue(null)
-    setOperation(null)
-    setWaitingForOperand(false)
-  }
-
-  const performOperation = (nextOperation) => {
-    const inputValue = parseFloat(display)
-
-    if (previousValue === null) {
-      setPreviousValue(inputValue)
-    } else if (operation) {
-      const currentValue = previousValue || 0
-      const newValue = calculate(currentValue, inputValue, operation)
-
-      setDisplay(String(newValue))
-      setPreviousValue(newValue)
-    }
-
-    setWaitingForOperand(true)
-    setOperation(nextOperation)
-  }
-
-  const calculate = (firstValue, secondValue, operation) => {
-    switch (operation) {
-      case '+':
-        return firstValue + secondValue
-      case '-':
-        return firstValue - secondValue
-      case '×':
-        return firstValue * secondValue
-      case '÷':
-        return secondValue !== 0 ? firstValue / secondValue : 0
-      default:
-        return secondValue
-    }
-  }
-
-  const handleMathFunction = (func) => {
-    const value = parseFloat(display)
-    let result
-
-    switch (func) {
-      case '√':
-        result = Math.sqrt(value)
-        break
-      case 'x²':
-        result = value * value
-        break
-      case 'x³':
-        result = value * value * value
-        break
-      case 'sin':
-        result = Math.sin(value * Math.PI / 180)
-        break
-      case 'cos':
-        result = Math.cos(value * Math.PI / 180)
-        break
-      case 'tan':
-        result = Math.tan(value * Math.PI / 180)
-        break
-      default:
-        return
-    }
-
-    setDisplay(String(result))
-    setWaitingForOperand(true)
-  }
-
   return (
     <div className="grid grid-cols-3 gap-4 px-4 h-full items-center">
       
@@ -491,92 +357,16 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
         </div>
 
         {/* Run Button */}
-        {/* <FontAwesomeIcon
+        <FontAwesomeIcon
           icon="fa-solid fa-play"
-          className="text-2xl cursor-pointer hover:text-sky-700"
-          onClick={() => onRun?.()}
-        /> */}
+          className={`text-2xl transition-opacity ${autoRender ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:text-sky-700'}`}
+          onClick={() => !autoRender && onRun?.()}
+          title={autoRender ? 'Disable Auto Render to run manually' : 'Run'}
+        />
 
         
         <FontAwesomeIcon icon="fa-solid fa-file-import" className="text-2xl cursor-pointer hover:text-sky-700" onClick={() => loadWorkspace(ws)} title="Import code"/>
         <FontAwesomeIcon icon="fa-solid fa-file-export" className="text-2xl cursor-pointer hover:text-sky-700" onClick={() => saveWorkspace(ws)} title="Export code"/>
-        
-        {/* Calculator */}
-        <div className="relative">
-          <FontAwesomeIcon 
-            icon="fa-solid fa-calculator" 
-            className="text-2xl cursor-pointer hover:text-sky-700" 
-            onClick={() => setShowCalculator(!showCalculator)}
-            title="Calculator"
-          />
-          {showCalculator && (
-            <div 
-              className="fixed w-80 rounded bg-white text-slate-900 shadow-lg z-50 border cursor-move"
-              style={{
-                left: `${calculatorPosition.x}px`,
-                top: `${calculatorPosition.y}px`
-              }}
-              onMouseDown={handleCalculatorMouseDown}
-            >
-              <div className="border-b px-3 py-2 font-semibold text-sm flex justify-between items-center">
-                🧮 Calculator
-                <button 
-                  onClick={() => setShowCalculator(false)}
-                  className="text-slate-500 hover:text-slate-700"
-                >
-                  ✖
-                </button>
-              </div>
-              
-              {/* Calculator Display */}
-              <div className="p-4">
-                <div className="bg-gray-100 p-3 rounded text-right text-lg font-mono mb-3">
-                  {display}
-                </div>
-                
-                {/* Calculator Buttons */}
-                <div className="grid grid-cols-4 gap-2">
-                  <button onClick={clear} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">C</button>
-                  <button className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">±</button>
-                  <button className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">%</button>
-                  <button onClick={() => performOperation('÷')} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">÷</button>
-                  
-                  <button onClick={() => inputNumber(7)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">7</button>
-                  <button onClick={() => inputNumber(8)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">8</button>
-                  <button onClick={() => inputNumber(9)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">9</button>
-                  <button onClick={() => performOperation('×')} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">×</button>
-                  
-                  <button onClick={() => inputNumber(4)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">4</button>
-                  <button onClick={() => inputNumber(5)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">5</button>
-                  <button onClick={() => inputNumber(6)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">6</button>
-                  <button onClick={() => performOperation('-')} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">-</button>
-                  
-                  <button onClick={() => inputNumber(1)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">1</button>
-                  <button onClick={() => inputNumber(2)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">2</button>
-                  <button onClick={() => inputNumber(3)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">3</button>
-                  <button onClick={() => performOperation('+')} className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm">+</button>
-                  
-                  <button onClick={() => inputNumber(0)} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm col-span-2">0</button>
-                  <button onClick={inputDecimal} className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">.</button>
-                  <button onClick={() => performOperation('=')} className="p-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm">=</button>
-                </div>
-                
-                {/* Math Functions */}
-                <div className="mt-3 pt-3 border-t">
-                  <div className="text-xs text-gray-600 mb-2">Math Functions</div>
-                  <div className="grid grid-cols-3 gap-1">
-                    <button onClick={() => handleMathFunction('√')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">√</button>
-                    <button onClick={() => handleMathFunction('x²')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">x²</button>
-                    <button onClick={() => handleMathFunction('x³')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">x³</button>
-                    <button onClick={() => handleMathFunction('sin')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">sin</button>
-                    <button onClick={() => handleMathFunction('cos')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">cos</button>
-                    <button onClick={() => handleMathFunction('tan')} className="p-1 bg-purple-100 hover:bg-purple-200 rounded text-xs">tan</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )
