@@ -1,3 +1,7 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -15,6 +19,11 @@ pnpm-debug.log*
 dist/
 build/
 
-# Package manager lockfile (keep the one you USE, ignore the rest)
+# IDE settings
+.idea/
+.vscode/
+.DS_Store
+
+# Package manager lockfile (standardizing on pnpm)
 package-lock.json
 yarn.lock
