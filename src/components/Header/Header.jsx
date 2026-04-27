@@ -538,7 +538,13 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4 px-16 h-full items-center">
+    <div className="grid grid-cols-3 gap-4 px-4 h-full items-center">
+      
+      {/* Title */}
+      <div className="text-left">
+        <Title />
+      </div>
+
       {/* Left controls */}
       <div className="flex gap-8 items-center relative">
         {/* Main Menu */}
@@ -555,11 +561,6 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
           title="Next Lesson"
         /> */}
         
-      </div>
-
-      {/* Title */}
-      <div className="text-center">
-        <Title />
       </div>
 
       {/* Right controls */}
