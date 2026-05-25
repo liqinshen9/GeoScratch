@@ -78,7 +78,23 @@
 
 :root { 
 
-  --radius: 0.625rem; 
+  --radius: 0.625rem;
+
+  /* GeoScratch palette */
+  --geo-bg: #f7f7f7;
+  --geo-surface: #ffffff;
+  --geo-slate: #8c8c94;
+  --geo-butter: #fbe2a2;
+  --geo-gold: #f9d77c;
+  --geo-lavender: #b8a8d3;
+  --geo-peach: #f5b89e;
+  --geo-sky: #7bbfcf;
+  --geo-mint: #a9d8b7;
+  --geo-steel: #6a89a6;
+  --geo-rose: #f2b8b6;
+  --geo-cornflower: #8da6d2;
+  --geo-text: #171717;
+  --geo-text-muted: #404040;
 
   --background: oklch(1 0 0); 
 

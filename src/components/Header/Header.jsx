@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import Title from './Title'
 import AutoRenderToggle from '@/components/Header/AutoRenderToggle'
 import RunButton from '@/components/Header/RunButton'
@@ -8,14 +9,15 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
   return (
     <div className="grid grid-cols-3 gap-4 px-4 h-full items-center">
 
-      {/* Title */}
-      <div className="text-left">
+      <div className="flex items-center gap-4 text-left">
+        <Link to="/" className="text-sm font-medium text-neutral-900 underline-offset-2 hover:underline">
+          Home
+        </Link>
         <Title />
       </div>
 
       <div className="flex gap-8 items-center relative" />
 
-      {/* Right controls */}
       <div className="flex gap-6 justify-end items-center relative">
         <AutoRenderToggle autoRender={autoRender} onAutoRenderChange={onAutoRenderChange} />
         <ExamplesAndGuidesMenu onLoadExample={onLoadExample} />
