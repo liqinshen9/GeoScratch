@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Header from '@/components/Header/Header'
 import useSceneStore from '@/store/useSceneStore'
-import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { useCallback } from 'react'
 
 const Layout = () => {
@@ -13,15 +12,11 @@ const Layout = () => {
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden">
-      <header className="h-[10%]">
+      <header className="h-[10%] shrink-0 border-b border-slate-200">
         <Header
           autoRender={autoRender}
           onAutoRenderChange={toggleAutoRender}
           onRun={handleRun}
-          onLoadExample={(xml) => {
-            const { setExampleXml } = useWorkspaceStore.getState()
-            setExampleXml(xml)
-          }}
         />
       </header>
 

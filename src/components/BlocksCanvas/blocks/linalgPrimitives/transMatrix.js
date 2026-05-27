@@ -1,5 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { translationMatrix, translationMatrix3x3 } from './homogeneousMatrix.js'
+import { appendMatrixPreviewUI } from './matrixPreview.js'
 
 let REGISTERED = false
 
@@ -17,6 +19,21 @@ export function initTransMatrixBlock() {
         .appendField(new Blockly.FieldNumber(0), 'TY')
         .appendField('z')
         .appendField(new Blockly.FieldNumber(0), 'TZ')
+      appendMatrixPreviewUI(
+        this,
+        (b) =>
+          translationMatrix3x3(
+            Number(b.getFieldValue('TX')) || 0,
+            Number(b.getFieldValue('TY')) || 0,
+            Number(b.getFieldValue('TZ')) || 0
+          ),
+        (b) =>
+          translationMatrix(
+            Number(b.getFieldValue('TX')) || 0,
+            Number(b.getFieldValue('TY')) || 0,
+            Number(b.getFieldValue('TZ')) || 0
+          )
+      )
       this.setStyle('math_blocks')
       this.setTooltip('Homogeneous translation by (x,y,z).')
       this.setOutput(true, 'transMat')

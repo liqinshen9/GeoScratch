@@ -31,7 +31,6 @@ const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#
 };
 
 function AxisArrow({ dir = [1,0,0], color = 'red', length = 3 }) {
-    // Build a THREE.ArrowHelper once
     const arrow = useMemo(() => {
         const direction = new THREE.Vector3(...dir).normalize()
         const origin = new THREE.Vector3(0, 0, 0)
@@ -59,9 +58,9 @@ function AxisArrow({ dir = [1,0,0], color = 'red', length = 3 }) {
 function Axes({ length = 3 }) {
     return (
         <group>
-            <AxisArrow dir={[1,0,0]} color="#ef4444" length={length} /> {/* X - red */}
-            <AxisArrow dir={[0,1,0]} color="#22c55e" length={length} /> {/* Y - green */}
-            <AxisArrow dir={[0,0,1]} color="#3b82f6" length={length} /> {/* Z - blue */}
+            <AxisArrow dir={[1,0,0]} color="#ef4444" length={length} />
+            <AxisArrow dir={[0,1,0]} color="#22c55e" length={length} />
+            <AxisArrow dir={[0,0,1]} color="#3b82f6" length={length} />
         </group>
     )
 }
@@ -72,11 +71,9 @@ function fmtVec(v) {
   return `[${n(v.x)}, ${n(v.y)}, ${n(v.z)}]`;
 }
 
-// Resolve a label "anchor" name to a world-space position
 function resolveAnchor(object3D, anchorName) {
   const ud = object3D.userData || {};
 
-  // Built-ins for geo_vector_line
   if (anchorName === 'origin' && ud.origin) {
     const { x, y, z } = ud.origin;
     return [x, y, z];
@@ -86,7 +83,6 @@ function resolveAnchor(object3D, anchorName) {
     return [x, y, z];
   }
 
-  // Custom anchors
   const dict = ud.labelAnchors || {};
   const entry = dict[anchorName];
   if (!entry || !entry.position || entry.position.length !== 3) return null;
@@ -98,19 +94,10 @@ function resolveAnchor(object3D, anchorName) {
   return [v.x, v.y, v.z];
 }
 
-// Generic label renderer for any object carrying userData.labels
-// userData.labels: Array<{
-//   anchor: 'origin' | 'rPoint' | string,     // where to stick the label
-//   text?: string,                             // explicit text; overrides formatting
-//   format?: 'vec' | 'raw' | 'none',           // how to show value if no text
-//   distanceFactor?: number,                   // Html distanceFactor
-//   offset?: [dx, dy, dz],                     // small 3D offset from anchor
-// }>
 function LabelLayer({ object3D }) {
   const ud = object3D.userData || {};
   const labels = Array.isArray(ud.labels) ? ud.labels : [];
 
-  // Defaults for geo_vector_line if no explicit labels provided
   const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line';
   const derived = needsDefault
     ? [
@@ -130,7 +117,6 @@ function LabelLayer({ object3D }) {
         const df = Number.isFinite(lbl.distanceFactor) ? lbl.distanceFactor : 8;
         const off = Array.isArray(lbl.offset) && lbl.offset.length === 3 ? lbl.offset : [0, 0, 0];
 
-        // If no text provided, try formatting the anchor value
         let text = lbl.text;
         if (!text) {
           const val =
@@ -193,22 +179,24 @@ export default function Scene3D({ objects = [] }) {
     controlsRef.current.update();
   };
   return (
-    <div className="panel panel-right">
-      <Canvas
-        camera={{ position: [45, 45, 8], fov: 45, near: 0.1, far: 5000 }}
-        dpr={[1, 2]}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <OrbitControls ref={controlsRef}/>
-        <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
-        <Scene objects={objects} />
-        <color attach="background" args={['#0e0e12']} />
-      </Canvas>
-      <button className="recenter-btn" onClick={recenter} aria-label="Recenter camera" title="Recenter">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-        </svg>
-      </button>
+    <div className="editor-body-3d">
+      <div className="relative flex-1 min-h-0">
+        <Canvas
+          camera={{ position: [45, 45, 8], fov: 45, near: 0.1, far: 5000 }}
+          dpr={[1, 2]}
+          style={{ width: '100%', height: '100%' }}
+        >
+          <OrbitControls ref={controlsRef}/>
+          <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
+          <Scene objects={objects} />
+          <color attach="background" args={['#0e0e12']} />
+        </Canvas>
+        <button className="recenter-btn" onClick={recenter} aria-label="Recenter camera" title="Recenter">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

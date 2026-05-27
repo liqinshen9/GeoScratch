@@ -1,166 +1,203 @@
-html, body, #root {
-    height: 100%;
-    margin: 0;
+/* 3-column body (columns defined on .editor-body-row via subgrid) */
+#blocks-canvas.blocks-shell {
+  min-height: 0;
 }
 
-.root-split {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
+.blocks-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
 }
 
-/* Panels split 50/50 */
-.panel {
-    flex: 1 1 50%;
-    height: 100%;
+.blocks-col--workspace {
+  border-right: none;
 }
 
-/* Left: blocks canvas (blank) */
-.panel-left {
-    background: #fffffd;           /* slightly off white */
-    border-right: 1px solid #ddd;
+.blocks-col--workspace .workspace-host {
+  flex: 1;
 }
 
-/* Panels split 50/50 */
-.panel {
-    flex: 1 1 50%;
-    height: 100%;
+/* Toolbox */
+.category-toolbox {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
 }
 
-/* Toolbar at the top of BlocksCanvas */
-.blocks-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 14px;
-    border-bottom: 1px solid #dbe4f0;
-    position: relative;
-    z-index: 5;
+.category-toolbox-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.blocks-toolbar-title {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: #1e293b;
+.category-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  text-align: left;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
 }
 
-.blocks-toolbar-hint {
-    font-size: 13px;
-    color: #64748b;
+.category-card strong {
+  font-size: 14px;
+  color: #1e293b;
 }
 
-/* Toolbar buttons */
-.blocks-toolbar button,
-.blocks-toolbar .dropbtn {
-    background: #c9c9c9;     /* slightly darker grey */
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    cursor: pointer;
-    font-size: 14px;
+.category-card span {
+  font-size: 11px;
+  color: #64748b;
 }
 
+.category-card--blue.is-active { border-color: #3b82f6; background: #eff6ff; }
+.category-card--green.is-active { border-color: #22c55e; background: #f0fdf4; }
+.category-card--purple.is-active { border-color: #a855f7; background: #faf5ff; }
 
-.blocks-toolbar button:hover,
-.blocks-toolbar .dropbtn:hover {
-    background: #b5b5b5;     /* darker on hover */
+/* Palette */
+.block-palette {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.dropdown {
-    position: relative;
-    display: inline-block;
+.block-palette-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 0 6px;
 }
 
-.dropdown-content {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 160px;
-    background-color: #f1f1f1;
-    box-shadow: 0px 2px 6px rgba(0,0,0,0.15);
-    z-index: 10;
-    border-radius: 4px;
-    overflow: hidden;
+.palette-group {
+  margin-bottom: 14px;
 }
 
-.dropdown:hover .dropdown-content {
-    display: block;
+.palette-group-label {
+  margin: 0 0 8px;
+  padding: 0 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 
-.dropdown-content div {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 14px;
+.palette-block-preview {
+  position: relative;
+  margin: 0 10px 10px;
+  min-height: 48px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
 
-.dropdown-content div:hover {
-    background-color: #ddd;
+.palette-block-preview:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
-/* Blocks workspace area */
-.blocks-content {
-    flex: 1;
-    height: calc(100% - 45px); /* fills remaining height */
-    background: #ffffff;
+.palette-block-preview .injectionDiv,
+.palette-block-preview .blocklySvg {
+  width: 100% !important;
+  height: 100% !important;
 }
 
-
-/*hack to get rid of persistent scrollbar*/
-/*svg[display="none"] {
-    display: none;
-}*/
-
-/* .blocklyToolbox {
-  width: 9px;
-} */
-
-
-/* Show scrollbar only when needed */
-.blocklyToolboxDiv,
-.blocklyTreeRoot {
-  overflow-y: auto !important;  /* override Blockly's default scroll */
-}
-
-/* Hide the scrollbar but keep scrolling with mouse/trackpad */
-.blocklyToolboxDiv {
-  scrollbar-width: none !important; /* Firefox */
-}
-
-/* Chrome, Edge, Safari */
-.blocklyToolboxDiv::-webkit-scrollbar,
-.blocklyTreeRoot::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  background: transparent !important;
-}
-
-#blocks-canvas .blocklyScrollbarVertical,
-#blocks-canvas .blocklyScrollbarHorizontal,
-#blocks-canvas .blocklyFlyoutScrollbar,
-#blocks-canvas .blocklyMainWorkspaceScrollbar,
-#blocks-canvas .blocklyScrollbarBackground,
-#blocks-canvas .blocklyScrollbarHandle,
-#blocks-canvas .blocklyScrollbarKnob {
+.palette-block-preview .blocklyScrollbarVertical,
+.palette-block-preview .blocklyScrollbarHorizontal {
   display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
 }
 
-#blocks-canvas .blocks-content,
-#blocks-canvas .injectionDiv,
-#blocks-canvas .blocklySvg {
-  overflow: hidden !important;
+.block-palette-hint {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 14px 10px;
+  font-size: 11px;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
 }
 
-.label {
-    font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    color: #e2e8f0;
-    background: rgba(15, 23, 42, 0.75);
-    padding: 2px 6px;
-    border-radius: 6px;
-    white-space: nowrap;
-    pointer-events: none; /* labels don’t block mouse picks */
+/* Workspace */
+.workspace-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace-host {
+  flex: 1;
+  min-height: 0;
+  background: #f8fafc;
+}
+
+.workspace-host .injectionDiv,
+.workspace-host .blocklySvg {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#blocks-canvas .workspace-host .blocklyScrollbarVertical,
+#blocks-canvas .workspace-host .blocklyScrollbarHorizontal,
+#blocks-canvas .workspace-host .blocklyMainWorkspaceScrollbar {
+  display: none !important;
+}
+
+/*matrix preview toggle*/
+.matrix-drawer-shell {
+  position: fixed;
+  z-index: 100000;
+  pointer-events: none;
+}
+
+.matrix-drawer-panel {
+  pointer-events: auto;
+  height: 100%;
+  background: #fff;
+  border: 2px solid #3b82f6;
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 4px 4px 12px rgba(15, 23, 42, 0.15);
+  padding: 8px 10px;
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.matrix-drawer-shell.open .matrix-drawer-panel {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.matrix-drawer-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.matrix-drawer-inner {
+  font: 10px/1.3 ui-monospace, Menlo, Consolas, monospace;
+  color: #0f172a;
+}
+
+.blockly-matrix-preview-table {
+  border-collapse: collapse;
+}
+
+.blockly-matrix-preview-table td {
+  padding: 2px 6px;
+  text-align: right;
+  border: 1px solid #e2e8f0;
 }

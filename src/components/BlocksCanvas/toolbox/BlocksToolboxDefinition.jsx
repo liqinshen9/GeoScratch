@@ -31,9 +31,6 @@ const TOOLBOX_XML = `
 <!--            <block type="determinant"></block>-->
 <!--            <block type="dot_product"></block>            -->
         </category>
-        <category name="Measurements" categorystyle="list_category">
-            <block type="debug"></block>
-        </category>
     </xml>
     `
 

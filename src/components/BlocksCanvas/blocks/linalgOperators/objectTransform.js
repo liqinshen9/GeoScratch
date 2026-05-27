@@ -79,9 +79,12 @@ export function initObjectTransformBlock() {
     const trans = generator.valueToCode(block, 'trans',  Order.FUNCTION_CALL) || 'null'
     const scale = generator.valueToCode(block, 'scale',  Order.FUNCTION_CALL) || 'null'
 
-    const order = (block.transformOrder || [])
+    let order = (block.transformOrder || [])
       .filter(n => n === 'rot' || n === 'trans' || n === 'scale')
       .filter(n => !!block.getInputTargetBlock(n))
+    if (!order.length) {
+      order = ['rot', 'trans', 'scale'].filter(n => !!block.getInputTargetBlock(n))
+    }
 
     const expr = { rot, trans, scale }
     const steps = order.map(n => `__applyWorld(obj, ${expr[n]});`).join('\n      ')

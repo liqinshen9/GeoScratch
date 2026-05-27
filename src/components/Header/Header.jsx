@@ -3,9 +3,8 @@ import Title from './Title'
 import AutoRenderToggle from '@/components/Header/AutoRenderToggle'
 import RunButton from '@/components/Header/RunButton'
 import WorkspaceFileControls from '@/components/Header/WorkspaceFileControls'
-import ExamplesAndGuidesMenu from '@/components/Header/ExamplesAndGuidesMenu'
 
-export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderChange }) {
+export default function Header({ onRun, autoRender, onAutoRenderChange }) {
   return (
     <div className="grid grid-cols-3 gap-4 px-4 h-full items-center">
 
@@ -20,7 +19,6 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
 
       <div className="flex gap-6 justify-end items-center relative">
         <AutoRenderToggle autoRender={autoRender} onAutoRenderChange={onAutoRenderChange} />
-        <ExamplesAndGuidesMenu onLoadExample={onLoadExample} />
         <RunButton autoRender={autoRender} onRun={onRun} />
         <WorkspaceFileControls />
       </div>

@@ -1,13 +1,13 @@
 import * as Blockly from 'blockly/core'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import {
+  rotationMatrix3x3FromDegrees,
+  rotationMatrixFromDegrees,
+} from './homogeneousMatrix.js'
+import { appendMatrixPreviewUI } from './matrixPreview.js'
 
 let REGISTERED = false
 
-/**
- * Register linalg_vec3 (3-dimensional vector) building blocks + code generator
- * Output type: 'vector3'
- * Field: X/Y/Z (number)
- */
 export function initRotMatrixBlock() {
   if (REGISTERED) return
   REGISTERED = true
@@ -23,6 +23,21 @@ export function initRotMatrixBlock() {
         .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'RY')
         .appendField('z')
         .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'RZ')
+      appendMatrixPreviewUI(
+        this,
+        (b) =>
+          rotationMatrix3x3FromDegrees(
+            Number(b.getFieldValue('RX')) || 0,
+            Number(b.getFieldValue('RY')) || 0,
+            Number(b.getFieldValue('RZ')) || 0
+          ),
+        (b) =>
+          rotationMatrixFromDegrees(
+            Number(b.getFieldValue('RX')) || 0,
+            Number(b.getFieldValue('RY')) || 0,
+            Number(b.getFieldValue('RZ')) || 0
+          )
+      )
       this.setStyle('math_blocks')
       this.setTooltip('Homogeneous rotation about X, then Y, then Z (degrees).')
       this.setOutput(true, 'rotMat')
@@ -39,7 +54,6 @@ export function initRotMatrixBlock() {
       const Rx = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(${rx}));
       const Ry = new THREE.Matrix4().makeRotationY(THREE.MathUtils.degToRad(${ry}));
       const Rz = new THREE.Matrix4().makeRotationZ(THREE.MathUtils.degToRad(${rz}));
-      // Apply X, then Y, then Z: R = Rz * Ry * Rx
       const R = new THREE.Matrix4().multiplyMatrices(
         new THREE.Matrix4().multiplyMatrices(Rz, Ry),
         Rx

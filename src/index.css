@@ -232,3 +232,47 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*column headings: line separates title from panel content*/
+.panel-column-header {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.panel-column-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.panel-column-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+/* Column headings: line separates title from panel content */
+.panel-column-header {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.panel-column-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.panel-column-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
