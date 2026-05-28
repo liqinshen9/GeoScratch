@@ -45,3 +45,17 @@
   flex-direction: column;
   background: #fff;
 }
+
+.editor-shell--maximized .editor-header-row,
+.editor-shell--maximized .editor-body-row {
+  grid-template-columns: minmax(0, 1fr) 34%;
+}
+
+.editor-shell--maximized .editor-body-row > #blocks-canvas.blocks-shell {
+  grid-column: 1;
+  grid-template-columns: 1fr;
+}
+
+.editor-shell--maximized .editor-body-3d {
+  grid-column: 2;
+}

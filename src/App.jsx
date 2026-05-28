@@ -10,6 +10,7 @@ export default function App() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const [categoryId, setCategoryId] = useState('create')
+  const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const clearWorkspaceRef = useRef(() => {})
 
   const handleObjectsChange = useCallback(
@@ -21,15 +22,18 @@ export default function App() {
   )
 
   return (
-    <div className="editor-shell">
+    <div className={`editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}>
       <EditorColumnHeaders
         categoryId={categoryId}
         workspace={workspace}
+        workspaceMaximized={workspaceMaximized}
+        onWorkspaceMaximizedChange={setWorkspaceMaximized}
         onClearWorkspace={() => clearWorkspaceRef.current()}
       />
       <div className="editor-body-row">
         <BlocksCanvas
           categoryId={categoryId}
+          workspaceMaximized={workspaceMaximized}
           onCategoryChange={setCategoryId}
           onObjectsChange={handleObjectsChange}
           onRegisterClear={(fn) => {

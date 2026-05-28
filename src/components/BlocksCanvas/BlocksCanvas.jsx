@@ -21,6 +21,7 @@ import './BlocksCanvas.css'
 export default function BlocksCanvas({
   onObjectsChange,
   categoryId,
+  workspaceMaximized,
   onCategoryChange,
   onRegisterClear,
 }) {
@@ -105,15 +106,25 @@ export default function BlocksCanvas({
     requestAnimationFrame(() => Blockly.svgResize(workspace))
   }, [exampleXml, workspace])
 
+  useEffect(() => {
+    if (!workspace) return
+    const id = requestAnimationFrame(() => Blockly.svgResize(workspace))
+    return () => cancelAnimationFrame(id)
+  }, [workspaceMaximized, workspace])
+
   return (
     <div id="blocks-canvas" className="blocks-shell">
-      <aside className="blocks-col blocks-col--toolbox">
-        <CategoryToolbox selected={categoryId} onSelect={onCategoryChange} />
-      </aside>
+      {!workspaceMaximized && (
+        <aside className="blocks-col blocks-col--toolbox">
+          <CategoryToolbox selected={categoryId} onSelect={onCategoryChange} />
+        </aside>
+      )}
 
-      <aside className="blocks-col blocks-col--palette">
-        <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
-      </aside>
+      {!workspaceMaximized && (
+        <aside className="blocks-col blocks-col--palette">
+          <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
+        </aside>
+      )}
 
       <section className="blocks-col blocks-col--workspace">
         <div className="workspace-host" ref={workspaceHostRef} />
