@@ -11,7 +11,7 @@ const PALETTE_WS_OPTIONS = {
   theme: Blockly.Themes.Classic,
 }
 
-function BlockPreview({ type, onSelect }) {
+function BlockPreview({ type, onSelect, onDragStartBlock }) {
   const hostRef = useRef(null)
 
   useLayoutEffect(() => {
@@ -41,10 +41,27 @@ function BlockPreview({ type, onSelect }) {
     }
   }, [type, onSelect])
 
-  return <div className="palette-block-preview" ref={hostRef} role="button" tabIndex={0} />
+  const handleDragStart = (event) => {
+    if (!event.dataTransfer) return
+    event.dataTransfer.effectAllowed = 'copy'
+    event.dataTransfer.setData('application/x-geoscratch-block-type', type)
+    onDragStartBlock?.(type)
+  }
+
+  return (
+    <div
+      className="palette-block-preview"
+      ref={hostRef}
+      role="button"
+      tabIndex={0}
+      draggable
+      onDragStart={handleDragStart}
+      title="Click to add or drag into workspace"
+    />
+  )
 }
 
-export default function BlockPalette({ categoryId, onBlockSelect }) {
+export default function BlockPalette({ categoryId, onBlockSelect, onBlockDragStart }) {
   const category = getCategory(categoryId)
   if (!category) return null
 
@@ -55,13 +72,18 @@ export default function BlockPalette({ categoryId, onBlockSelect }) {
           <section key={group.label} className="palette-group">
             <h3 className="palette-group-label">{group.label}</h3>
             {group.blocks.map(({ type }) => (
-              <BlockPreview key={type} type={type} onSelect={onBlockSelect} />
+              <BlockPreview
+                key={type}
+                type={type}
+                onSelect={onBlockSelect}
+                onDragStartBlock={onBlockDragStart}
+              />
             ))}
           </section>
         ))}
       </div>
 
-      <p className="block-palette-hint">Click a block to add it to the workspace</p>
+      <p className="block-palette-hint">Click a block or drag it into the workspace</p>
     </div>
   )
 }

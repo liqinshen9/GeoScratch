@@ -25,10 +25,10 @@ export function initVectorArithmeticBlock() {
       this.setOutput(true, 'obj3D')
       this.setInputsInline(true)
       this.setStyle('math_blocks')
+      this.setColour(155)
       this.setTooltip('Compute u ± v and return a group with arrows for u, v, and the result (registered).')
       this.setDeletable(true)
       this.setMovable(true)
-      this.setColour(155)
     },
   }
 

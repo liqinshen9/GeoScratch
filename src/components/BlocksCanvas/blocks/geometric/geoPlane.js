@@ -13,11 +13,11 @@ const initGeoPlaneBlock = () => {
       this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
       this.appendValueInput('side').appendField('side length:').setCheck('scalar')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('Plane at position p, with side length s.')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.setColour(205)
     }
   }
 

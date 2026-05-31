@@ -11,11 +11,11 @@ export default function initGeoCubeBlock () {
     init() {
       this.appendDummyInput().appendField('Cube')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('Axis-aligned cube defined by centre and side length.')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.setColour(205)
 
       // Side length: inline numeric field (like Sphere's Radius)
       this.appendDummyInput('SIDE_ROW')

@@ -28,11 +28,11 @@ export function initMat3x3Block() {
         .appendField(new Blockly.FieldNumber(1), 'r3c2')
         .appendField(new Blockly.FieldNumber(1), 'r3c3')
       this.setStyle('math_blocks')
+      this.setColour(85)
       this.setTooltip('3x3 Matrix')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'matrix3')
-      this.setColour(85)
     },
   }
 

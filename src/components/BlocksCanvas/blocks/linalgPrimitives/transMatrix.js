@@ -1,5 +1,5 @@
 import * as Blockly from 'blockly/core'
-import { javascriptGenerator, Order } from 'blockly/javascript'
+import { javascriptGenerator } from 'blockly/javascript'
 import { translationMatrix, translationMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 
@@ -11,6 +11,7 @@ export function initTransMatrixBlock() {
 
   Blockly.Blocks['trans_matrix'] = {
     init() {
+      this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
       this.appendDummyInput().appendField('Translate (x, y, z)')
       this.appendDummyInput()
         .appendField('x')
@@ -35,19 +36,14 @@ export function initTransMatrixBlock() {
           )
       )
       this.setStyle('math_blocks')
-      this.setTooltip('Homogeneous translation by (x,y,z).')
-      this.setOutput(true, 'transMat')
       this.setColour(85)
+      this.setTooltip('Homogeneous translation by (x,y,z).')
+      this.setPreviousStatement(true, 'transformStep')
+      this.setNextStatement(true, 'transformStep')
     },
   }
 
-  javascriptGenerator.forBlock['trans_matrix'] = function (block) {
-    const tx = Number(block.getFieldValue('TX')) || 0
-    const ty = Number(block.getFieldValue('TY')) || 0
-    const tz = Number(block.getFieldValue('TZ')) || 0
-    const code = `(function(){
-      return new THREE.Matrix4().makeTranslation(${tx}, ${ty}, ${tz});
-    })()`
-    return [code, Order.ATOMIC]
+  javascriptGenerator.forBlock['trans_matrix'] = function () {
+    return ''
   }
 }

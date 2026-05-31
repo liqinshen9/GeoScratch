@@ -20,8 +20,8 @@ export function initGetObj3DBlock() {
         .appendField(' (3D Object)')
       this.setOutput(true, 'obj3D')
       this.setStyle('variable_blocks')
-      this.setTooltip('Get a 3D object variable')
       this.setColour(255)
+      this.setTooltip('Get a 3D object variable')
     },
   }
 

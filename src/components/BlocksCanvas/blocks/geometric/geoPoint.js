@@ -3,40 +3,34 @@ import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
 
-const initPointBlock = () => {
+export default function initPointBlock() {
   if (REGISTERED) return
   REGISTERED = true
 
-  // Block Definition
-  Blockly.Blocks['geo_point'] = {
+  Blockly.Blocks.geo_point = {
     init() {
       this.appendDummyInput().appendField('Point')
       this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('Point with position p.')
       this.setOutput(true, 'obj3D')
-      this.setColour(205)
     },
   }
 
-  // Block Code Generation
-    javascriptGenerator.forBlock['geo_point'] = function (block, generator) {
-        const pos =
-            generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) ||
-            'new THREE.Vector3()'
-        const code = `(function(){
+  javascriptGenerator.forBlock.geo_point = function (block, generator) {
+    const pos = generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) || 'new THREE.Vector3()'
+    const code = `(function(){
     const m = new THREE.Mesh(
       new THREE.SphereGeometry(0.08, 8, 8),
       new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
     );
     m.position.copy(${pos});
-    m.userData.geoType     = 'geo_point';
-    m.userData.srcBlockId = ${JSON.stringify(block.id)} 
-    threeObjStore[${JSON.stringify(block.id)}] = m 
+    m.userData.geoType = 'geo_point';
+    m.userData.srcBlockId = ${JSON.stringify(block.id)};
+    threeObjStore[${JSON.stringify(block.id)}] = m;
     return m;
   })()`
-        return [code, Order.ATOMIC]
+    return [code, Order.ATOMIC]
   }
 }
-
-export default initPointBlock

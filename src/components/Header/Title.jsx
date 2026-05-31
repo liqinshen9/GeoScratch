@@ -1,12 +1,15 @@
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
 
 const Title = () => {
   const { title } = useWorkspaceStore()
 
   return (
-    <h1 className="font-bold text-3xl">
-      {title}
-    </h1>
+    <GeoScratchLogo
+      className="app-nav__logo"
+      wordmark={title}
+      showWordmark
+    />
   )
 }
 

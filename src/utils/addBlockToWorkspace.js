@@ -2,8 +2,14 @@
 //place it near the center of the view, avoiding overlap with existing blocks.
 
 import * as Blockly from 'blockly/core'
+import {
+  PIPELINE_DEMO_OBJECT_TYPES,
+  TRANSFORM_STEP_BLOCK_TYPES,
+} from '@/components/BlocksCanvas/catalog/blockCatalog'
 
 const GAP = 20
+const PIPELINE_OBJECT_TYPES = new Set(PIPELINE_DEMO_OBJECT_TYPES)
+const PIPELINE_TRANSFORM_TYPES = new Set(TRANSFORM_STEP_BLOCK_TYPES)
 
 function getViewCenter(workspace) {
   const m = workspace.getMetrics()
@@ -59,7 +65,59 @@ function findOpenSpot(workspace, newBlock) {
   return { x: center.x - hw.width / 2, y: center.y - hw.height / 2 }
 }
 
-export function addBlockToWorkspace(workspace, type) {
+function getPipelineAnchor(workspace, block) {
+  const metrics = workspace.getMetrics()
+  const { width, height } = block.getHeightWidth()
+  const centerX = metrics.viewLeft + metrics.viewWidth / 2 - width / 2
+  const bottomY = metrics.viewTop + metrics.viewHeight - height - 56
+  const topY = metrics.viewTop + 52
+
+  if (block.type === 'transform_pipeline') {
+    return { x: centerX, y: topY }
+  }
+
+  const topBlocks = workspace.getTopBlocks(true)
+  const objectBlocks = topBlocks.filter((b) => PIPELINE_OBJECT_TYPES.has(b.type))
+  const transformBlocks = topBlocks.filter((b) => PIPELINE_TRANSFORM_TYPES.has(b.type))
+
+  if (PIPELINE_OBJECT_TYPES.has(block.type)) {
+    return { x: centerX, y: bottomY }
+  }
+
+  if (PIPELINE_TRANSFORM_TYPES.has(block.type)) {
+    const sourceObject = objectBlocks
+      .slice()
+      .sort((a, b) => b.getRelativeToSurfaceXY().y - a.getRelativeToSurfaceXY().y)[0]
+
+    const baseY = sourceObject
+      ? sourceObject.getRelativeToSurfaceXY().y - height - GAP
+      : bottomY - height - GAP
+
+    const orderedTransforms = transformBlocks
+      .slice()
+      .sort((a, b) => b.getRelativeToSurfaceXY().y - a.getRelativeToSurfaceXY().y)
+
+    const y = orderedTransforms.length
+      ? orderedTransforms[0].getRelativeToSurfaceXY().y - height - GAP
+      : baseY
+
+    return { x: centerX, y }
+  }
+
+  return null
+}
+
+function clientToWorkspaceXY(workspace, clientX, clientY, block) {
+  const metrics = workspace.getMetrics()
+  const scale = workspace.scale || 1
+  const { width, height } = block.getHeightWidth()
+
+  const x = metrics.viewLeft + (clientX - metrics.absoluteLeft) / scale - width / 2
+  const y = metrics.viewTop + (clientY - metrics.absoluteTop) / scale - height / 2
+  return { x, y }
+}
+
+export function addBlockToWorkspace(workspace, type, options = {}) {
   if (!workspace || workspace.isFlyout) return
 
   const group = Blockly.utils.idGenerator.genUid()
@@ -69,7 +127,14 @@ export function addBlockToWorkspace(workspace, type) {
     block.initSvg()
     block.render()
 
-    const { x, y } = findOpenSpot(workspace, block)
+    const hasDropPoint =
+      Number.isFinite(options.clientX) && Number.isFinite(options.clientY)
+
+    const pipelineAnchor = hasDropPoint ? null : getPipelineAnchor(workspace, block)
+    const dropPoint = hasDropPoint
+      ? clientToWorkspaceXY(workspace, options.clientX, options.clientY, block)
+      : null
+    const { x, y } = dropPoint || pipelineAnchor || findOpenSpot(workspace, block)
     const xy = block.getRelativeToSurfaceXY()
     block.moveBy(x - xy.x, y - xy.y)
 

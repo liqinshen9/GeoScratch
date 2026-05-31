@@ -14,6 +14,7 @@ export function initGeoSphereBlock() {
     init() {
       this.appendDummyInput().appendField('Sphere')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('Geometric Sphere Object')
       this.setDeletable(true)
       this.setMovable(true)
@@ -22,7 +23,6 @@ export function initGeoSphereBlock() {
         .appendField('Radius:')
         .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'R')
       this.appendValueInput('pos').appendField('Centre:').setCheck('vector3')
-      this.setColour(205)
     },
   }
 

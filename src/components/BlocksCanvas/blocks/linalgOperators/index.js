@@ -1,4 +1,5 @@
 import { initObjectTransformBlock } from "./objectTransform"
+import { initTransformPipelineBlock } from "./transformPipeline"
 import { initVectorTransformBlock } from "./vectorTransform"
 import { initVectorArithmeticBlock } from "./vectorArithmetic"
 import { initDotProductBlock } from "./dotProduct"
@@ -11,6 +12,7 @@ import { initVectorProjectBlock } from "./vectorProject.js"
 import { initVectorMagnitude } from "./vectorMagnitude.js"
 
 export function initLinalgOperatorsBlocks() {
+  initTransformPipelineBlock()
   initObjectTransformBlock()
   initVectorTransformBlock()
   initVectorArithmeticBlock()

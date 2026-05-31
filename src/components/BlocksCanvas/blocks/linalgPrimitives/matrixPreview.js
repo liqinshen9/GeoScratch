@@ -8,8 +8,6 @@ import { formatMatrixHtml } from './homogeneousMatrix.js'
 /** @typedef {'3x3' | '4x4'} MatrixPreviewMode */
 /** @typedef {(block: Block) => number[][]} ComputeMatrixFn */
 
-const MIN_HEIGHT_4X4 = 128
-const MIN_HEIGHT_3X3 = 96
 const MATRIX_FIELD_NAMES = ['MATRIX_3X3', 'MATRIX_4X4']
 
 /** @type {HTMLDivElement | null} */
@@ -94,30 +92,30 @@ class FieldMatrixPreview extends Field {
   setActive(open) {
     this.isOpen_ = open
     if (!this.borderRect_) return
-    this.borderRect_.setAttribute('fill', open ? '#bfdbfe' : '#e2e8f0')
-    this.borderRect_.setAttribute('stroke', open ? '#2563eb' : '#334155')
+    this.borderRect_.setAttribute('fill', open ? '#002ea6' : '#f0f4f8')
+    this.borderRect_.setAttribute('stroke', open ? '#002ea6' : 'rgba(0, 46, 166, 0.25)')
   }
 
   initView() {
     super.initView()
     if (this.borderRect_) {
-      this.borderRect_.setAttribute('fill', '#e2e8f0')
-      this.borderRect_.setAttribute('stroke', '#334155')
+      this.borderRect_.setAttribute('fill', '#f0f4f8')
+      this.borderRect_.setAttribute('stroke', 'rgba(0, 46, 166, 0.25)')
       this.borderRect_.setAttribute('stroke-width', '1.5')
     }
     if (this.textElement_) {
       this.textElement_.setAttribute('font-size', '11px')
       this.textElement_.setAttribute('font-weight', '700')
-      this.textElement_.setAttribute('fill', '#0f172a')
+      this.textElement_.setAttribute('fill', '#ECECEF')
     }
   }
 
   applyColour() {
     super.applyColour()
-    if (this.textElement_) this.textElement_.setAttribute('fill', '#0f172a')
+    if (this.textElement_) this.textElement_.setAttribute('fill', '#ECECEF')
     if (!this.isOpen_ && this.borderRect_) {
-      this.borderRect_.setAttribute('fill', '#e2e8f0')
-      this.borderRect_.setAttribute('stroke', '#334155')
+      this.borderRect_.setAttribute('fill', '#f0f4f8')
+      this.borderRect_.setAttribute('stroke', 'rgba(0, 46, 166, 0.25)')
     }
   }
 
@@ -184,10 +182,27 @@ function fitContent() {
   inner.style.width = ''
   const overflow = inner.scrollHeight - shell.clientHeight
   if (overflow <= 0) return
-  const scale = Math.max(0.72, (shell.clientHeight - 4) / inner.scrollHeight)
+  const scale = Math.max(0.5, (shell.clientHeight - 4) / inner.scrollHeight)
   inner.style.transform = `scale(${scale})`
   inner.style.transformOrigin = 'left center'
   inner.style.width = `${100 / scale}%`
+}
+
+function getSingleBlockHeight(block) {
+  const rect = block.getSvgRoot()?.getBoundingClientRect()
+  if (!rect) return Math.max(64, block.getHeightWidth().height)
+
+  const next = block.getNextBlock?.()
+  if (next?.getSvgRoot) {
+    const nextRect = next.getSvgRoot()?.getBoundingClientRect()
+    if (nextRect && Number.isFinite(nextRect.top) && Number.isFinite(rect.top)) {
+      const dy = nextRect.top - rect.top
+      if (dy > 16) return dy
+    }
+  }
+
+  if (rect.height && Number.isFinite(rect.height)) return rect.height
+  return Math.max(64, block.getHeightWidth().height)
 }
 
 function syncLayout() {
@@ -197,16 +212,18 @@ function syncLayout() {
     closeDrawer()
     return
   }
-  const scale = anchor.workspace.scale
   const rect = block.getSvgRoot().getBoundingClientRect()
-  const minH = anchor.mode === '3x3' ? MIN_HEIGHT_3X3 : MIN_HEIGHT_4X4
-  const h = Math.max(block.getHeightWidth().height, minH)
+  const isPipeline = block.type === 'transform_pipeline'
+  const h = isPipeline ? 132 : getSingleBlockHeight(block)
 
-  shell.style.top = `${rect.top}px`
-  shell.style.left = `${rect.right}px`
+  shell.classList.toggle('matrix-drawer-shell--below', isPipeline)
+
+  shell.style.top = isPipeline ? `${rect.bottom - 2}px` : `${rect.top}px`
+  shell.style.left = isPipeline ? `${rect.left}px` : `${rect.right}px`
+  shell.style.width = isPipeline ? `${rect.width}px` : ''
   shell.style.height = `${h}px`
-  shell.style.minHeight = `${minH}px`
-  shell.style.transform = `scale(${scale})`
+  shell.style.minHeight = ''
+  shell.style.transform = ''
   shell.style.transformOrigin = 'top left'
   fitContent()
 }
@@ -244,6 +261,8 @@ function bindListeners() {
   if (!anchor) return
   workspaceListener = (event) => {
     if (!anchor) return
+    const anchorBlock = getBlock()
+    const isPipelineAnchor = anchorBlock?.type === 'transform_pipeline'
     if (event.type === Blockly.Events.BLOCK_DELETE && event.blockId === anchor.blockId) {
       closeDrawer()
       return
@@ -260,11 +279,21 @@ function bindListeners() {
       syncLayout()
       return
     }
+    if (isPipelineAnchor && event.type === Blockly.Events.BLOCK_MOVE) {
+      refreshContent()
+      syncLayout()
+      return
+    }
     if (
       event.type === Blockly.Events.BLOCK_CHANGE &&
       event.blockId === anchor.blockId &&
       event.element === 'field'
     ) {
+      refreshContent()
+      syncLayout()
+      return
+    }
+    if (isPipelineAnchor && event.type === Blockly.Events.BLOCK_CHANGE && event.element === 'field') {
       refreshContent()
       syncLayout()
     }

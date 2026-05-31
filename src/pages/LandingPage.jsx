@@ -1,20 +1,49 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
+import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
+import './LandingPage.css'
+
+function landingNavLinkClass(isActive) {
+  return `landing-nav__link${isActive ? ' is-active' : ''}`
+}
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--geo-bg)] px-6">
-      <div className="max-w-md text-center">
-        <h1 className="text-3xl font-bold text-[var(--geo-text)]">GeoScratch</h1>
-        <p className="mt-3 text-base text-[var(--geo-text-muted)]">
-          Build 3D geometry with blocks and see the result live.
-        </p>
-        <Link
-          to="/sandbox"
-          className="mt-8 inline-block rounded-md bg-[var(--geo-gold)] px-6 py-2.5 text-base font-semibold text-[var(--geo-text)] hover:bg-[var(--geo-butter)]"
-        >
-          Open sandbox
+    <div className="landing-page">
+      <header className="landing-nav">
+        <Link to="/" className="landing-nav__logo app-nav__logo">
+          <GeoScratchLogo showWordmark />
         </Link>
-      </div>
+
+        <nav className="landing-nav__links" aria-label="Main">
+          <NavLink to="/" end className={({ isActive }) => landingNavLinkClass(isActive)}>
+            Home
+          </NavLink>
+          <NavLink to="/sandbox" className={({ isActive }) => landingNavLinkClass(isActive)}>
+            Sandbox
+          </NavLink>
+        </nav>
+      </header>
+
+      <main className="landing-hero">
+        <div className="landing-hero__content">
+          <h1 className="landing-hero__title">
+            Snap blocks together.
+            <span className="landing-hero__title-line landing-hero__accent">
+              See it in 3D.
+            </span>
+          </h1>
+
+          <div className="landing-hero__actions">
+            <Link to="/sandbox" className="landing-btn landing-btn--primary">
+              Open sandbox
+            </Link>
+          </div>
+        </div>
+
+        <div className="landing-hero__mark" aria-hidden="true">
+          <GeoScratchLogo />
+        </div>
+      </main>
     </div>
   )
 }

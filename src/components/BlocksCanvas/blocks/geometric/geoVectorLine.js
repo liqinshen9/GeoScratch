@@ -15,11 +15,11 @@ export function initVector3Block() {
       this.appendValueInput('dir').appendField('Direction:').setCheck('vector3')
       this.appendValueInput('scale').appendField('t:').setCheck('scalar')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('A line in R3 that passes through a specific point and runs parallel to the direction vector')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.setColour(205)
     },
   }
 

@@ -14,11 +14,11 @@ const initParametricPlaneBlock = () => {
       this.appendValueInput('point').appendField('Point:').setCheck('vector3')
       this.appendValueInput('norm').appendField('Normal:').setCheck('vector3')
       this.setStyle('math_blocks')
+      this.setColour(205)
       this.setTooltip('Plane defined by a point p and a normal n (normalized internally).')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.setColour(205)
     },
   }
 
@@ -50,15 +50,8 @@ const initParametricPlaneBlock = () => {
     if (!isFinite(normLen) || normLen === 0) { nRaw.set(0,1,0); normLen = 1; }
     const nUnit = nRaw.clone().normalize(); // for plane orientation
 
-    // Plane (light pink)
-    const geom = new THREE.PlaneGeometry(40, 40, 1, 1);
-    const mat  = new THREE.MeshStandardMaterial({
-      color: 0xffb6c1,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.35
-    });
-    const plane = new THREE.Mesh(geom, mat);
+    // Plane — large extent with soft edge fade (reads as infinite)
+    const plane = createInfinitePlaneMesh({ color: 0xffb6c1, opacity: 0.14, fadeStart: 8, fadeEnd: 48 });
     const quat  = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), nUnit);
     plane.setRotationFromQuaternion(quat);
     plane.position.copy(p);
@@ -88,7 +81,7 @@ const initParametricPlaneBlock = () => {
     group.userData.point       = p.clone();
     group.userData.normalRaw   = nRaw.clone();  // input
     group.userData.normalUnit  = nUnit.clone(); // used for orientation
-    group.userData.planeSize   = 20;
+    group.userData.planeSize   = 'infinite';
 
     group.userData.labelAnchors = {
       pAnchor: { type:'world', position:[p.x,    p.y,    p.z   ] },

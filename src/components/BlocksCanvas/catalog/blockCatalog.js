@@ -1,5 +1,11 @@
 /** @typedef {'create' | 'transform' | 'compute'} BlockCategoryId */
 
+/** Demo objects placed at the bottom of the transform pipeline workspace layout. */
+export const PIPELINE_DEMO_OBJECT_TYPES = ['geo_cube', 'geo_sphere']
+
+/** Statement blocks stacked inside {@link transform_pipeline}. */
+export const TRANSFORM_STEP_BLOCK_TYPES = ['rot_matrix', 'trans_matrix', 'scale_matrix']
+
 /**
  * @typedef {{ type: string, label?: string }} BlockCatalogEntry
  * @typedef {{ label: string, blocks: BlockCatalogEntry[] }} BlockCatalogGroup
@@ -52,11 +58,11 @@ export const BLOCK_CATEGORIES = {
     accent: 'green',
     groups: [
       {
-        label: 'Object transforms',
-        blocks: [{ type: 'object_transform', label: 'Object transform' }],
+        label: 'Pipeline',
+        blocks: [{ type: 'transform_pipeline', label: 'Transform pipeline' }],
       },
       {
-        label: 'Matrices',
+        label: 'Transforms',
         blocks: [
           { type: 'rot_matrix', label: 'Rotation matrix' },
           { type: 'trans_matrix', label: 'Translation matrix' },
@@ -77,6 +83,7 @@ export const BLOCK_CATEGORIES = {
         blocks: [
           { type: 'vector_arithmetic', label: 'Vector arithmetic' },
           { type: 'vector_cross_product', label: 'Cross product' },
+          { type: 'vector_dot_product', label: 'Dot product' },
           { type: 'vector_normalise', label: 'Normalise' },
           { type: 'vector_project', label: 'Project' },
           { type: 'vector_magnitude', label: 'Magnitude' },

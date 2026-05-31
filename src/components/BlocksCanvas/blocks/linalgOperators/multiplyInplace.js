@@ -15,12 +15,12 @@ export function initMultiplyInplaceBlock() {
       )
       this.appendValueInput('rhs').appendField('*')
       this.setStyle('math_blocks')
+      this.setColour(155)
       this.setTooltip('Multiply two matrices.')
       this.setInputsInline(true)
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true)
-      this.setColour(155)
     },
   }
 

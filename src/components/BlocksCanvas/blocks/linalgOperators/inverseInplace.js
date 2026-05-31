@@ -14,12 +14,12 @@ export function initInverseInplaceBlock() {
         .appendField(new Blockly.FieldVariable('Matrix'), 'VAR')
       this.appendDummyInput('').appendField(')')
       this.setStyle('math_blocks')
+      this.setColour(155)
       this.setTooltip('Calculate the inverse of this matrix.')
       this.setInputsInline(true)
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true)
-      this.setColour(155)
     },
   }
 

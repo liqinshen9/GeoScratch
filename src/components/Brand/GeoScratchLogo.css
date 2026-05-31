@@ -1,0 +1,23 @@
+.geoscratch-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  line-height: 1;
+}
+
+.geoscratch-logo__mark {
+  flex-shrink: 0;
+  display: block;
+  width: var(--geoscratch-logo-size, var(--app-nav-logo-mark-size, 3.5rem));
+  height: var(--geoscratch-logo-size, var(--app-nav-logo-mark-size, 3.5rem));
+  background: transparent;
+  object-fit: contain;
+  object-position: center;
+}
+
+.geoscratch-logo__wordmark {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: 1;
+}

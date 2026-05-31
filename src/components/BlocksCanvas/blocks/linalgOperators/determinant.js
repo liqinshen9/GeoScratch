@@ -13,12 +13,12 @@ export function initDeterminantBlock() {
       this.appendValueInput('mat')
       this.appendDummyInput('').appendField(')')
       this.setStyle('math_blocks')
+      this.setColour(155)
       this.setTooltip('Calculate the determinant of this matrix.')
       this.setInputsInline(true)
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true)
-      this.setColour(155)
     },
   }
 

@@ -11,8 +11,8 @@ const Layout = () => {
   }, [autoRender, pendingObjects, setObjects])
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden">
-      <header className="h-[10%] shrink-0 border-b border-slate-200">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[var(--bg-main)]">
+      <header className="app-nav shrink-0 w-full text-white">
         <Header
           autoRender={autoRender}
           onAutoRenderChange={toggleAutoRender}
@@ -20,8 +20,7 @@ const Layout = () => {
         />
       </header>
 
-      <main className="h-[90%]">
-        {/* This is where App.jsx will be rendered */}
+      <main className="flex-1 min-h-0 bg-[var(--bg-main)]">
         <Outlet />
       </main>
     </div>

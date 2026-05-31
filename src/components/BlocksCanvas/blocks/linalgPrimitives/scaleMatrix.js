@@ -1,5 +1,5 @@
 import * as Blockly from 'blockly/core'
-import { javascriptGenerator, Order } from 'blockly/javascript'
+import { javascriptGenerator } from 'blockly/javascript'
 import { scaleMatrix, scaleMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 
@@ -11,6 +11,7 @@ export function initScaleMatrixBlock() {
 
   Blockly.Blocks['scale_matrix'] = {
     init() {
+      this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
       this.appendDummyInput().appendField('Scale (sx, sy, sz)')
       this.appendDummyInput()
         .appendField('sx')
@@ -35,19 +36,14 @@ export function initScaleMatrixBlock() {
           )
       )
       this.setStyle('math_blocks')
-      this.setTooltip('Homogeneous scaling by (sx, sy, sz).')
-      this.setOutput(true, 'scaleMat')
       this.setColour(85)
+      this.setTooltip('Homogeneous scaling by (sx, sy, sz).')
+      this.setPreviousStatement(true, 'transformStep')
+      this.setNextStatement(true, 'transformStep')
     },
   }
 
-  javascriptGenerator.forBlock['scale_matrix'] = function (block) {
-    const sx = Number(block.getFieldValue('SX'))
-    const sy = Number(block.getFieldValue('SY'))
-    const sz = Number(block.getFieldValue('SZ'))
-    const code = `(function(){
-      return new THREE.Matrix4().makeScale(${sx}, ${sy}, ${sz});
-    })()`
-    return [code, Order.ATOMIC]
+  javascriptGenerator.forBlock['scale_matrix'] = function () {
+    return ''
   }
 }
