@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { javascriptGenerator } from 'blockly/javascript'
 import { scaleMatrix, scaleMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
+import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
 
 let REGISTERED = false
 
@@ -40,6 +41,7 @@ export function initScaleMatrixBlock() {
       this.setTooltip('Homogeneous scaling by (sx, sy, sz).')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
+      useSingleStepDrag(this)
     },
   }
 

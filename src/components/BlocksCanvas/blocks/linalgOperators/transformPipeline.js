@@ -31,8 +31,7 @@ function syncPipelineStepLabels(pipelineBlock) {
   if (!workspace) return
 
   const topToBottomBlocks = collectStatementChain(pipelineBlock.getInputTargetBlock('STEPS'))
-  const bottomToTopBlocks = topToBottomBlocks.slice().reverse()
-  const nextNumberedIds = new Set(bottomToTopBlocks.map((b) => b.id))
+  const nextNumberedIds = new Set(topToBottomBlocks.map((b) => b.id))
 
   if (!pipelineBlock._numberedStepIds) pipelineBlock._numberedStepIds = new Set()
 
@@ -44,10 +43,10 @@ function syncPipelineStepLabels(pipelineBlock) {
     }
   }
 
-  for (let i = 0; i < bottomToTopBlocks.length; i += 1) {
+  for (let i = 0; i < topToBottomBlocks.length; i += 1) {
     const stepText = `Step ${i + 1}`
-    if (bottomToTopBlocks[i].getFieldValue('PIPE_STEP') !== stepText) {
-      bottomToTopBlocks[i].setFieldValue(stepText, 'PIPE_STEP')
+    if (topToBottomBlocks[i].getFieldValue('PIPE_STEP') !== stepText) {
+      topToBottomBlocks[i].setFieldValue(stepText, 'PIPE_STEP')
     }
   }
 

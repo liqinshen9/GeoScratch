@@ -5,6 +5,7 @@ import {
   rotationMatrixFromDegrees,
 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
+import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
 
 let REGISTERED = false
 
@@ -43,6 +44,7 @@ export function initRotMatrixBlock() {
       this.setTooltip('Homogeneous rotation about X, then Y, then Z (degrees).')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
+      useSingleStepDrag(this)
       this.setColour(85)
     },
   }
