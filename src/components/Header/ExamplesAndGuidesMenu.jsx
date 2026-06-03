@@ -20,14 +20,14 @@ const simpleBlockExamples = {
   line: `
     <xml xmlns="https://developers.google.com/blockly/xml">
       <block type="geo_vector" x="24" y="24">
-        <value name="pos">
+        <value name="POS">
           <block type="linalg_vec3">
             <field name="X">5</field>
             <field name="Y">4.5</field>
             <field name="Z">1</field>
           </block>
         </value>
-        <value name="dir">
+        <value name="DIR">
           <block type="linalg_vec3">
             <field name="X">1</field>
             <field name="Y">2</field>
@@ -40,7 +40,7 @@ const simpleBlockExamples = {
   points: `
     <xml xmlns="https://developers.google.com/blockly/xml">
       <block type="geo_point" x="24" y="24">
-        <value name="pos">
+        <value name="POS">
           <block type="linalg_vec3">
             <field name="X">1</field>
             <field name="Y">1</field>
@@ -53,8 +53,8 @@ const simpleBlockExamples = {
   spheres: `
     <xml xmlns="https://developers.google.com/blockly/xml">
       <block type="geo_sphere" x="24" y="24">
-        <field name="R">2.4</field>
-        <value name="pos">
+        <field name="RADIUS">2.4</field>
+        <value name="CENTRE">
           <block type="linalg_vec3">
             <field name="X">1</field>
             <field name="Y">-4</field>
@@ -90,8 +90,8 @@ const simpleBlockExamples = {
         <!-- Target: Cube (side 2.3, centre (-2, 4, -6)) -->
         <value name="TARGET">
           <block type="geo_cube">
-            <field name="SIDE">2.3</field>
-            <value name="center">
+            <field name="SIDE_LENGTH">2.3</field>
+            <value name="CENTRE">
               <block type="linalg_vec3">
                 <field name="X">-2</field>
                 <field name="Y">4</field>

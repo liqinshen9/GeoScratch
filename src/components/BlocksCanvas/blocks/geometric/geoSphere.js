@@ -50,7 +50,7 @@ export function initGeoSphereBlock() {
       this.setOutput(true, 'obj3D')
       this.appendDummyInput()
         .appendField('Radius:')
-        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'Radius')
+        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'RADIUS')
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
       this.setColour(205)
     },
@@ -60,7 +60,7 @@ export function initGeoSphereBlock() {
     const centre =
       generator.valueToCode(block, 'CENTRE', Order.FUNCTION_CALL) ||
       'new THREE.Vector3()'
-    const radius = Number(block.getFieldValue('Radius'))
+    const radius = Number(block.getFieldValue('RADIUS'))
     const blockId = JSON.stringify(block.id)
 
     const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId}, THREE, threeObjStore)`

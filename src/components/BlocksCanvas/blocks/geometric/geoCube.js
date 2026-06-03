@@ -52,13 +52,9 @@ export default function initGeoCubeBlock() {
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
       this.setColour(205)
-
-      // Side length field: Keyed as 'SIDE_LENGTH' to stay descriptive
       this.appendDummyInput('SIDE_ROW')
         .appendField('Side length:')
         .appendField(new Blockly.FieldNumber(1, 0.0001, Infinity, 0.1), 'SIDE_LENGTH')
-
-      // Centre field: Keyed as 'CENTRE'
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     }
   }

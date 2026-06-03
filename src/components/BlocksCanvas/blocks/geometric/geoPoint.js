@@ -34,7 +34,7 @@ export default function initPointBlock() {
   Blockly.Blocks['geo_point'] = {
     init() {
       this.appendDummyInput().appendField('Point')
-      this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
+      this.appendValueInput('POS').appendField('pos:').setCheck('vector3')
       this.setStyle('math_blocks')
       this.setTooltip('Point with position p.')
       this.setOutput(true, 'obj3D')
@@ -45,7 +45,7 @@ export default function initPointBlock() {
   // Block Code Generation
   javascriptGenerator.forBlock['geo_point'] = function(block, generator) {
     const pos =
-      generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) ||
+      generator.valueToCode(block, 'POS', Order.FUNCTION_CALL) ||
       'new THREE.Vector3()'
     const blockId = JSON.stringify(block.id)
 
