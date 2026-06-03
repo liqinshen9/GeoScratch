@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -19,8 +20,7 @@ export function initGetObj3DBlock() {
         )
         .appendField(' (3D Object)')
       this.setOutput(true, 'obj3D')
-      this.setStyle('variable_blocks')
-      this.setColour(255)
+      this.setStyle(BLOCK_STYLES.OBJECT_VARIABLE)
       this.setTooltip('Get a 3D object variable')
     },
   }

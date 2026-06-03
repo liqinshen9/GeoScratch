@@ -243,6 +243,11 @@
 #blocks-canvas .blocklyFlyoutBackground {
   fill: var(--geo-surface) !important;
 }
+/*make the block appears as one flat solid colour, without the extra highlight or shadow border*/
+#blocks-canvas .blocklyPathLight,
+#blocks-canvas .blocklyPathDark {
+  display: none !important;
+}
 
 #blocks-canvas .workspace-host .blocklyScrollbarVertical,
 #blocks-canvas .workspace-host .blocklyScrollbarHorizontal,

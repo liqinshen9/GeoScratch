@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator } from 'blockly/javascript'
 import {
   rotationMatrix3x3FromDegrees,
@@ -40,12 +41,11 @@ export function initRotMatrixBlock() {
             Number(b.getFieldValue('RZ')) || 0
           )
       )
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Homogeneous rotation about X, then Y, then Z (degrees).')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
       useSingleStepDrag(this)
-      this.setColour(85)
     },
   }
 

@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -12,12 +13,11 @@ export function initScalarBlock() {
       this.appendDummyInput()
         .appendField('Scalar')
         .appendField(new Blockly.FieldNumber(1), 'scalar')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
       this.setTooltip('Vector Scalar')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'scalar')
-      this.setColour(85)
     },
   }
 

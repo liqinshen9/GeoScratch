@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -22,12 +23,11 @@ export function initVec3Block() {
         .appendField(',')
         .appendField(new Blockly.FieldNumber(1), 'Z')
         .appendField(')')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
       this.setTooltip('3D coordinate')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'vector3')
-      this.setColour(85)
     },
   }
 

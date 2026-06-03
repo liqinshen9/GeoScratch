@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -16,13 +17,12 @@ export function initObjectTransformBlock() {
       this.appendValueInput('trans').appendField('Translate:').setCheck('transMat')
       this.appendValueInput('scale').appendField('Scaling:').setCheck('scaleMat')
 
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Apply matrices to the object in recorded order')
       this.setDeletable(true)
       this.setMovable(true)
       this.setInputsInline(false)
       this.setOutput(true, 'obj3D')
-      this.setColour(155)
 
       // Chronological order of connected sockets
       this.transformOrder = this.transformOrder || []

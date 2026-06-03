@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -13,8 +14,7 @@ const initParametricPlaneBlock = () => {
       this.appendDummyInput().appendField('Plane (Point–Normal)')
       this.appendValueInput('point').appendField('Point:').setCheck('vector3')
       this.appendValueInput('norm').appendField('Normal:').setCheck('vector3')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_LINES_PLANES)
       this.setTooltip('Plane defined by a point p and a normal n (normalized internally).')
       this.setDeletable(true)
       this.setMovable(true)

@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { buildDotProductVisualExpression } from '@/utils/dotProductVisualCodegen'
 
@@ -15,8 +16,7 @@ export function initDotProductBlock() {
       this.appendValueInput('V').setCheck('vector3').appendField('·').appendField('q:')
       this.setInputsInline(true)
       this.setOutput(true, 'scalar')
-      this.setStyle('math_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip('Compute p · q; shows projection of q onto p in the 3D view.')
       this.setDeletable(true)
       this.setMovable(true)

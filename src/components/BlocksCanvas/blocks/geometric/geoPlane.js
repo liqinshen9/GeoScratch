@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -12,8 +13,7 @@ const initGeoPlaneBlock = () => {
       this.appendDummyInput().appendField('Plane (Geometric)')
       this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
       this.appendValueInput('side').appendField('side length:').setCheck('scalar')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_LINES_PLANES)
       this.setTooltip('Plane at position p, with side length s.')
       this.setDeletable(true)
       this.setMovable(true)

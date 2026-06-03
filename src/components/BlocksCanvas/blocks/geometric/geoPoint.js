@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -11,8 +12,7 @@ export default function initPointBlock() {
     init() {
       this.appendDummyInput().appendField('Point')
       this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
       this.setTooltip('Point with position p.')
       this.setOutput(true, 'obj3D')
     },

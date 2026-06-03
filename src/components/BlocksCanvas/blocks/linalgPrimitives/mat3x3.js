@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -27,8 +28,7 @@ export function initMat3x3Block() {
         .appendField(new Blockly.FieldNumber(1), 'r3c1')
         .appendField(new Blockly.FieldNumber(1), 'r3c2')
         .appendField(new Blockly.FieldNumber(1), 'r3c3')
-      this.setStyle('math_blocks')
-      this.setColour(85)
+      this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('3x3 Matrix')
       this.setDeletable(true)
       this.setMovable(true)

@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -12,8 +13,7 @@ export function initDeterminantBlock() {
       this.appendDummyInput().appendField('det(')
       this.appendValueInput('mat')
       this.appendDummyInput('').appendField(')')
-      this.setStyle('math_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('Calculate the determinant of this matrix.')
       this.setInputsInline(true)
       this.setDeletable(true)

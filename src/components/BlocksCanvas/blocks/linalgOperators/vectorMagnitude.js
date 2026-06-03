@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -13,11 +14,10 @@ export function initVectorMagnitude() {
       this.appendValueInput('V').setCheck('vector3').appendField('j:')
       this.setInputsInline(true)
       this.setOutput(true, 'obj3D')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip('Render j and show its vector magnitude / length')
       this.setDeletable(true)
       this.setMovable(true)
-      this.setColour(155)
     },
   }
 

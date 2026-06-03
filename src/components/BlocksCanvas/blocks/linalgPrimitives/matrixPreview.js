@@ -9,6 +9,9 @@ import { formatMatrixHtml } from './homogeneousMatrix.js'
 /** @typedef {(block: Block) => number[][]} ComputeMatrixFn */
 
 const MATRIX_FIELD_NAMES = ['MATRIX_3X3', 'MATRIX_4X4']
+const PIPELINE_TOGGLE_COLOUR = '#5dd979'
+const TRANSFORM_STEP_TOGGLE_COLOUR = '#ff914d'
+const TOGGLE_TEXT_COLOUR = '#111827'
 
 /** @type {HTMLDivElement | null} */
 let shell = null
@@ -91,32 +94,36 @@ class FieldMatrixPreview extends Field {
   /** @param {boolean} open */
   setActive(open) {
     this.isOpen_ = open
-    if (!this.borderRect_) return
-    this.borderRect_.setAttribute('fill', open ? '#002ea6' : '#f0f4f8')
-    this.borderRect_.setAttribute('stroke', open ? '#002ea6' : 'rgba(0, 46, 166, 0.25)')
+    this.applyButtonColour()
   }
 
-  initView() {
-    super.initView()
+  getButtonColour() {
+    const block = this.getSourceBlock()
+    return block?.type === 'transform_pipeline' ? PIPELINE_TOGGLE_COLOUR : TRANSFORM_STEP_TOGGLE_COLOUR
+  }
+
+  applyButtonColour() {
+    const colour = this.getButtonColour()
     if (this.borderRect_) {
-      this.borderRect_.setAttribute('fill', '#f0f4f8')
-      this.borderRect_.setAttribute('stroke', 'rgba(0, 46, 166, 0.25)')
+      this.borderRect_.setAttribute('fill', colour)
+      this.borderRect_.setAttribute('stroke', colour)
       this.borderRect_.setAttribute('stroke-width', '1.5')
     }
     if (this.textElement_) {
       this.textElement_.setAttribute('font-size', '11px')
       this.textElement_.setAttribute('font-weight', '700')
-      this.textElement_.setAttribute('fill', '#ECECEF')
+      this.textElement_.setAttribute('fill', TOGGLE_TEXT_COLOUR)
     }
+  }
+
+  initView() {
+    super.initView()
+    this.applyButtonColour()
   }
 
   applyColour() {
     super.applyColour()
-    if (this.textElement_) this.textElement_.setAttribute('fill', '#ECECEF')
-    if (!this.isOpen_ && this.borderRect_) {
-      this.borderRect_.setAttribute('fill', '#f0f4f8')
-      this.borderRect_.setAttribute('stroke', 'rgba(0, 46, 166, 0.25)')
-    }
+    this.applyButtonColour()
   }
 
   showEditor_() {
@@ -169,7 +176,7 @@ function refreshContent() {
     closeDrawer()
     return
   }
-  const title = anchor.mode === '3x3' ? '3×3 matrix' : '4×4 homogeneous matrix'
+  const title = anchor.mode === '3x3' ? '3x3 matrix' : '4x4 homogeneous matrix'
   inner.innerHTML = `
     <div class="matrix-drawer-title">${title}</div>
     <div class="matrix-drawer-table-wrap">${formatMatrixHtml(anchor.computeMatrix(block))}</div>
@@ -358,18 +365,19 @@ function toggleDrawer(workspace, block, field, mode, computeMatrix) {
 }
 
 /**
- * Spacer + 3×3 / 4×4 preview buttons on transform blocks.
+ * Spacer + 3x3 / 4x4 preview buttons on transform blocks.
  * @param {Block} block
  * @param {ComputeMatrixFn} mat3
  * @param {ComputeMatrixFn} mat4
  */
 export function appendMatrixPreviewUI(block, mat3, mat4) {
+  const spacerHeight = block.type === 'transform_pipeline' ? 32 : 8
   block
     .appendDummyInput('MATRIX_MIN_SPACER')
-    .appendField(new FieldMatrixSpacer(32), 'MIN_SPACER')
+    .appendField(new FieldMatrixSpacer(spacerHeight), 'MIN_SPACER')
   block
     .appendDummyInput('MATRIX_PREVIEW')
     .setAlign(Blockly.inputs.Align.RIGHT)
-    .appendField(new FieldMatrixPreview('3×3', '3x3', mat3), 'MATRIX_3X3')
-    .appendField(new FieldMatrixPreview('4×4', '4x4', mat4), 'MATRIX_4X4')
+    .appendField(new FieldMatrixPreview('3x3', '3x3', mat3), 'MATRIX_3X3')
+    .appendField(new FieldMatrixPreview('4x4', '4x4', mat4), 'MATRIX_4X4')
 }

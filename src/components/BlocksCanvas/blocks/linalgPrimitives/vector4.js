@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -14,12 +15,11 @@ export function initVec4Block() {
         .appendField(new Blockly.FieldNumber(1), 'X').appendField(',')
         .appendField(new Blockly.FieldNumber(1), 'Y').appendField(',')
         .appendField(new Blockly.FieldNumber(1), 'Z').appendField(')')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
       this.setTooltip('4D Vector')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'vector4')
-      this.setColour(85)
     }
   }
 

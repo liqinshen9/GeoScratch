@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -14,8 +15,7 @@ export function initMultiplyInplaceBlock() {
         'VAR'
       )
       this.appendValueInput('rhs').appendField('*')
-      this.setStyle('math_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('Multiply two matrices.')
       this.setInputsInline(true)
       this.setDeletable(true)

@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -10,8 +11,7 @@ export default function initGeoCubeBlock () {
   Blockly.Blocks['geo_cube'] = {
     init() {
       this.appendDummyInput().appendField('Cube')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
       this.setTooltip('Axis-aligned cube defined by centre and side length.')
       this.setDeletable(true)
       this.setMovable(true)

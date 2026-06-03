@@ -1,5 +1,6 @@
 
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -13,8 +14,7 @@ export function initGeoSphereBlock() {
   Blockly.Blocks['geo_sphere'] = {
     init() {
       this.appendDummyInput().appendField('Sphere')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
       this.setTooltip('Geometric Sphere Object')
       this.setDeletable(true)
       this.setMovable(true)

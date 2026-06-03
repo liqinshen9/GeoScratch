@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -31,12 +32,11 @@ export function initMat4x4Block() {
         .appendField(new Blockly.FieldNumber(1), 'r4c2')
         .appendField(new Blockly.FieldNumber(1), 'r4c3')
         .appendField(new Blockly.FieldNumber(1), 'r4c4')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('4x4 Matrix')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'matrix4')
-      this.setColour(85)
     }
   }
 

@@ -1,4 +1,5 @@
-import * as Blockly from 'blockly/core'
+﻿import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import * as THREE from 'three'
 import {
@@ -59,12 +60,11 @@ export function initTransformPipelineBlock() {
 
   Blockly.Blocks.transform_pipeline = {
     init() {
-      this.appendDummyInput().appendField('Transform Pipeline (Bottom \u2192 Top)')
+      this.appendDummyInput().appendField('Transform Pipeline (Top \u2192 Bottom)')
       this.appendValueInput('INPUT').setCheck('obj3D').appendField('Input object')
       this.appendStatementInput('STEPS').setCheck('transformStep').appendField('Transforms')
       appendMatrixPreviewUI(this, computePipelineMatrix3, computePipelineMatrix4)
-      this.setStyle('logic_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.TRANSFORM_PIPELINE)
       this.setTooltip('Connect an input object and a stack of transforms.')
 
       this.setOnChange(() => {
@@ -73,8 +73,8 @@ export function initTransformPipelineBlock() {
         this.setWarningText(
           [
             'Transformation order changes the result.',
-            'Bottom block runs first.',
-            'Top block runs last.',
+            'Top block runs first.',
+            'Bottom block runs last.',
             'Drag steps to reorder.',
           ].join('\n'),
         )

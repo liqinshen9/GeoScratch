@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 import * as Blockly from 'blockly/core'
 import { getCategory } from '@/components/BlocksCanvas/catalog/blockCatalog'
+import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
 
 const PALETTE_WS_OPTIONS = {
   readOnly: true,
@@ -8,7 +9,7 @@ const PALETTE_WS_OPTIONS = {
   zoom: { controls: false, wheel: false, startScale: 0.9 },
   move: { scrollbars: false, drag: false, wheel: false },
   renderer: 'geras',
-  theme: Blockly.Themes.Classic,
+  theme: GEO_SCRATCH_BLOCK_THEME,
 }
 
 function BlockPreview({ type, onSelect, onDragStartBlock }) {

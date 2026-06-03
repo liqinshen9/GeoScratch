@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 // import { threeObjStore } from '@/utils/store' // Global store for persisting THREE objects
 
@@ -27,8 +28,7 @@ export function initSetObj3DBlock() {
         .appendField('to')
       this.setPreviousStatement(true, null)
       this.setNextStatement(true, null)
-      this.setStyle('variable_blocks')
-      this.setColour(255)
+      this.setStyle(BLOCK_STYLES.OBJECT_VARIABLE)
       this.setTooltip('Set a 3D object variable')
     },
   }

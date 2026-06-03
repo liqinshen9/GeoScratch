@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -18,13 +19,12 @@ export function initVectorTransformBlock() {
         .appendField('Translate:')
         .setCheck('transMat')
       this.appendValueInput('scale').appendField('Scaling:').setCheck('scalar')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Translate / rotate vector in R3')
       this.setDeletable(true)
       this.setMovable(true)
       this.setInputsInline(false)
       this.setOutput(true, 'obj3D')
-      this.setColour(155)
     },
   }
 

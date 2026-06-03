@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -13,8 +14,7 @@ export function initInverseInplaceBlock() {
         .appendField('inv(')
         .appendField(new Blockly.FieldVariable('Matrix'), 'VAR')
       this.appendDummyInput('').appendField(')')
-      this.setStyle('math_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('Calculate the inverse of this matrix.')
       this.setInputsInline(true)
       this.setDeletable(true)

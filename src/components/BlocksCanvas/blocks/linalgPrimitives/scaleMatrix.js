@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator } from 'blockly/javascript'
 import { scaleMatrix, scaleMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
@@ -36,8 +37,7 @@ export function initScaleMatrixBlock() {
             Number(b.getFieldValue('SZ'))
           )
       )
-      this.setStyle('math_blocks')
-      this.setColour(85)
+      this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Homogeneous scaling by (sx, sy, sz).')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')

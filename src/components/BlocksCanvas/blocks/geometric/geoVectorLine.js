@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -14,8 +15,7 @@ export function initVector3Block() {
       this.appendValueInput('pos').appendField('Position:').setCheck('vector3')
       this.appendValueInput('dir').appendField('Direction:').setCheck('vector3')
       this.appendValueInput('scale').appendField('t:').setCheck('scalar')
-      this.setStyle('math_blocks')
-      this.setColour(205)
+      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
       this.setTooltip('A line in R3 that passes through a specific point and runs parallel to the direction vector')
       this.setDeletable(true)
       this.setMovable(true)

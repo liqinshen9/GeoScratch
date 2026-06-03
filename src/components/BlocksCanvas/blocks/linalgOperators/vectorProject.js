@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -15,11 +16,10 @@ export function initVectorProjectBlock() {
       this.setInputsInline(true)
 
       this.setOutput(true, 'obj3D')
-      this.setStyle('math_blocks')
+      this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip('Compute projection of U onto V')
       this.setDeletable(true)
       this.setMovable(true)
-      this.setColour(155)
     },
   }
 

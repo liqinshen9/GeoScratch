@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 let REGISTERED = false
@@ -24,8 +25,7 @@ export function initVectorArithmeticBlock() {
       // Value block output (like cross product), not a statement block
       this.setOutput(true, 'obj3D')
       this.setInputsInline(true)
-      this.setStyle('math_blocks')
-      this.setColour(155)
+      this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip('Compute u ± v and return a group with arrows for u, v, and the result (registered).')
       this.setDeletable(true)
       this.setMovable(true)
