@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import defineBlocks from '@/components/BlocksCanvas/blocks/index'
 import { BlockRegistry } from '@/components/BlocksCanvas/state/BlockRegistry'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useThreeStore from '@/store/useThreeStore'
-import * as Blockly from 'blockly/core' 
 import 'blockly/blocks'
 import {
-  createObj3DButtonHandler,
   obj3DFlyoutCallback,
 } from '@/utils/callbacks'
-import Obj3DDialog from '../CreateObj3DDiaglog'
 import runAndSync from '../../utils/runAndSync'
 import attachResizeObserver from '@/utils/attachResizeOberver'
 import setupChangeListener from '@/utils/setupChangeListener'
@@ -20,13 +17,16 @@ import './BlocksCanvas.css'
 
 export default function BlocksCanvas({ onObjectsChange }) {
   const hostRef = useRef(null)
-  const workspaceRef = useRef(null)
   const registryRef = useRef(null)
-  const [collapsed, setCollapsed] = useState(false)
+  const onObjectsChangeRef = useRef(onObjectsChange)
+
+  //keep ref in sync with the latest prop so the change listener always uses the current callback
+  useEffect(() => {
+    onObjectsChangeRef.current = onObjectsChange
+  }, [onObjectsChange])
 
   const {
     workspace,
-    dialogOpen,
     setWorkspace,
     setDialogOpen,
     exampleXml,
@@ -49,30 +49,6 @@ export default function BlocksCanvas({ onObjectsChange }) {
     ws.registerToolboxCategoryCallback('OBJS_3D', obj3DFlyoutCallback)
   }
 
-  // Collapse & Expand function
-  const applyCollapse = (collapse) => {
-    const toolboxGroup = document.querySelector('.blocklyToolboxCategoryGroup')
-    if (toolboxGroup) {
-      if (collapse) {
-        toolboxGroup.style.setProperty('width', '9px', 'important')
-        // toolboxGroup.style.overflow = 'hidden'
-      } else {
-        toolboxGroup.style.removeProperty('width')
-        // toolboxGroup.style.setProperty('width', '200px', 'important')
-        // toolboxGroup.style.overflow = ''
-      }
-    }
-    if (workspace) {
-      Blockly.svgResize(workspace)
-    }
-  }
-
-  const toggleToolbox = () => {
-    const newState = !collapsed
-    setCollapsed(newState)
-    applyCollapse(newState)
-  }
-
   // Initialize Blockly once
   useEffect(() => {
     defineBlocks()
@@ -89,11 +65,11 @@ export default function BlocksCanvas({ onObjectsChange }) {
     // Change listener -> run + sync
     const cleanupListener = setupChangeListener(ws, (w) => {
       clearObjects() // Clear old objects
-      runAndSync(w, onObjectsChange, registryRef.current)
+      runAndSync(w, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current)
     })
 
     // Initial run
-    runAndSync(ws, onObjectsChange, registryRef.current)
+    runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current)
 
     // Adaptive size
     const cleanupResize = attachResizeObserver(hostRef.current, ws)
@@ -104,13 +80,6 @@ export default function BlocksCanvas({ onObjectsChange }) {
       ws.dispose()
     }
   }, [])
-
-  // After workspace ready, apply initial collapse
-  useEffect(() => {
-    if (workspace) {
-      applyCollapse(collapsed)
-    }
-  }, [workspace])
 
   // Load example XML
   useEffect(() => {
@@ -135,13 +104,8 @@ export default function BlocksCanvas({ onObjectsChange }) {
   return (
     <div className="panel panel-left" id="blocks-canvas">
       <div className="blocks-toolbar">
-        <span style={{ opacity: 0.8 }}>Blocks</span>
-        <button
-          onClick={toggleToolbox}
-          className="ml-2 px-2 py-1 text-xs bg-gray-400 rounded hover:bg-gray-500"
-        >
-          {collapsed ? 'EXPAND' : 'COLLAPSE'}
-        </button>
+        <span className="blocks-toolbar-title">Blocks</span>
+        <span className="blocks-toolbar-hint">Choose a category to open its blocks</span>
       </div>
       <div className="blocks-content" ref={hostRef}></div>
     </div>
