@@ -38,13 +38,13 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
         );
       } else {
         projObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.08, 8, 8),
+          new THREE.SphereGeometry(0.05, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.4, metalness: 0.1 })
         );
       }
     } else {
       projObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.SphereGeometry(0.05, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.4, metalness: 0.1 })
       );
     }

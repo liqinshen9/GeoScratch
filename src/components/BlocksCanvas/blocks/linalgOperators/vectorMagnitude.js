@@ -47,7 +47,7 @@ export function initVectorMagnitude() {
       );
     } else {
       obj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.08, 8, 8),
+        new THREE.SphereGeometry(0.05, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }

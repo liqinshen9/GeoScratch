@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react'
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { useThree } from "@react-three/fiber"
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
@@ -141,7 +141,49 @@ function LabelLayer({ object3D }) {
   );
 }
 
-function Scene({ objects = [] }) {
+function findSelectablePointMarker(object) {
+  let target = object;
+  while (target) {
+    if (target.userData?.geoType === 'selectable_point_marker') return target;
+    target = target.parent;
+  }
+  return null;
+}
+
+function SelectablePointPicker({ onSelectPoint, onClearPoint }) {
+  const { camera, gl, scene } = useThree();
+  const raycaster = useMemo(() => new THREE.Raycaster(), []);
+  const pointer = useMemo(() => new THREE.Vector2(), []);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const handlePointerDown = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(scene.children, true);
+      const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean);
+
+      if (!marker) {
+        onClearPoint();
+        return;
+      }
+
+      event.stopPropagation();
+      onSelectPoint(marker.getWorldPosition(new THREE.Vector3()));
+    };
+
+    canvas.addEventListener('pointerdown', handlePointerDown);
+    return () => canvas.removeEventListener('pointerdown', handlePointerDown);
+  }, [camera, gl, onClearPoint, onSelectPoint, pointer, raycaster, scene]);
+
+  return null;
+}
+
+function Scene({ objects = [], selectedPoint }) {
   return (
     <>
       <ambientLight intensity={0.6} />
@@ -160,6 +202,18 @@ function Scene({ objects = [] }) {
         );
       })}
 
+      {selectedPoint && (
+        <group position={[
+          selectedPoint.position.x + 0.12,
+          selectedPoint.position.y + 0.12,
+          selectedPoint.position.z,
+        ]}>
+          <Html distanceFactor={8}>
+            <div className="label coordinate-label">{selectedPoint.text}</div>
+          </Html>
+        </group>
+      )}
+
     </>
   );
 }
@@ -168,9 +222,14 @@ export default function Scene3D({ objects = [] }) {
 
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
+  const [selectedPoint, setSelectedPoint] = useState(null);
 
   const initialCamPos = useMemo(() => new THREE.Vector3(45, 45, 8), []);
   const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
+
+  useEffect(() => {
+    setSelectedPoint(null);
+  }, [objects]);
 
   const recenter = () => {
     if (!cameraRef.current || !controlsRef.current) return;
@@ -178,6 +237,18 @@ export default function Scene3D({ objects = [] }) {
     controlsRef.current.target.copy(initialTarget);
     controlsRef.current.update();
   };
+
+  const handleSelectPoint = useCallback((position) => {
+    setSelectedPoint({
+      position,
+      text: fmtVec(position),
+    });
+  }, []);
+
+  const handleClearPoint = useCallback(() => {
+    setSelectedPoint(null);
+  }, []);
+
   return (
     <div className="editor-body-3d">
       <div className="relative flex-1 min-h-0">
@@ -188,7 +259,8 @@ export default function Scene3D({ objects = [] }) {
         >
           <OrbitControls ref={controlsRef}/>
           <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
-          <Scene objects={objects} />
+          <SelectablePointPicker onSelectPoint={handleSelectPoint} onClearPoint={handleClearPoint} />
+          <Scene objects={objects} selectedPoint={selectedPoint} />
           <color attach="background" args={['#0e0e12']} />
         </Canvas>
         <button className="recenter-btn" onClick={recenter} aria-label="Recenter camera" title="Recenter">

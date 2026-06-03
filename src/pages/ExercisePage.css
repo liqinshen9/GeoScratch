@@ -1,0 +1,237 @@
+.exercise-page--editor {
+  --exercise-task-width: clamp(15.5rem, 20vw, 19rem);
+  --exercise-toolbox-width: clamp(5.6rem, 8vw, 7.75rem);
+  --exercise-palette-width: clamp(12rem, 18vw, 17rem);
+  --exercise-view-width: clamp(18rem, 28vw, 26rem);
+  --landing-nav-height: 4.5rem;
+  --landing-nav-title-size: 1.875rem;
+  --landing-nav-curve-depth: 4.5rem;
+  --landing-gutter: clamp(2rem, 6vw, 5rem);
+  --exercise-blue: #002ea6;
+
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  color: var(--geo-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.exercise-editor-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid rgba(0, 46, 166, 0.08);
+  background: var(--bg-main);
+}
+
+.exercise-editor-header-row,
+.exercise-editor-body-row {
+  display: grid;
+  grid-template-columns:
+    var(--exercise-task-width)
+    var(--exercise-toolbox-width)
+    var(--exercise-palette-width)
+    minmax(20rem, 1fr)
+    var(--exercise-view-width);
+}
+
+.exercise-editor-header-row {
+  flex-shrink: 0;
+  min-height: 3.75rem;
+}
+
+.exercise-editor-body-row {
+  flex: 1;
+  min-height: 0;
+}
+
+.exercise-head {
+  background: var(--geo-surface);
+  border-right: 1px solid var(--geo-border-light);
+}
+
+.exercise-head--last {
+  border-right: none;
+}
+
+.exercise-workspace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.exercise-workspace-head [data-slot='button'] {
+  color: var(--geo-text-on-light);
+}
+
+.exercise-workspace-head [data-slot='button']:hover,
+.exercise-workspace-head [data-slot='button']:active,
+.exercise-workspace-head [data-slot='button']:focus-visible {
+  background: var(--bg-soft) !important;
+  color: var(--geo-text-on-light) !important;
+}
+
+.exercise-editor-body-row > #blocks-canvas.blocks-shell {
+  display: grid;
+  grid-column: 2 / 5;
+  grid-template-columns: subgrid;
+  min-height: 0;
+}
+
+.exercise-editor-body-row > .editor-body-3d {
+  grid-column: 5;
+  min-height: 0;
+}
+
+.exercise-task-panel {
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 0.85rem;
+  border-right: 1px solid var(--geo-border-light);
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+.exercise-task-panel__top {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.exercise-task-number {
+  color: var(--geo-text-muted-on-light);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.exercise-task-panel h1 {
+  margin: 0;
+  color: var(--exercise-blue);
+  font-size: clamp(1.25rem, 1.8vw, 1.75rem);
+  line-height: 1.12;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.exercise-task-panel p {
+  margin: 0;
+  color: var(--geo-text-muted-on-light);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.exercise-task-button svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.exercise-task-steps {
+  margin: 0;
+  padding-left: 1.35rem;
+  color: #123f9b;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.exercise-task-steps li + li {
+  margin-top: 0.45rem;
+}
+
+.exercise-task-actions {
+  display: flex;
+  margin-top: auto;
+}
+
+.exercise-task-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: var(--exercise-blue);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  width: 100%;
+}
+
+.exercise-task-button:hover {
+  background: #00258a;
+}
+
+.exercise-task-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.exercise-page--editor .blocks-col--toolbox .category-toolbox-list {
+  padding: 0.55rem 0.45rem;
+  gap: 0.45rem;
+}
+
+.exercise-page--editor .category-card {
+  gap: 0;
+  padding: 0.55rem 0.45rem;
+  border-radius: 0.5rem;
+}
+
+.exercise-page--editor .category-card strong {
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+.exercise-page--editor .category-card span {
+  display: none;
+}
+
+.exercise-page--editor .block-palette-scroll {
+  padding-top: 0.55rem;
+}
+
+.exercise-page--editor .palette-block-preview {
+  margin-inline: 0.5rem;
+  min-height: 42px;
+}
+
+.exercise-page--editor .palette-group-label {
+  padding-inline: 0.65rem;
+}
+
+.exercise-page--editor .block-palette-hint {
+  padding: 0.55rem 0.65rem;
+}
+
+@media (max-width: 1180px) {
+  .exercise-page--editor {
+    --exercise-task-width: 14.5rem;
+    --exercise-toolbox-width: 5.25rem;
+    --exercise-palette-width: 11.5rem;
+    --exercise-view-width: 17rem;
+  }
+}
+
+@media (max-width: 960px) {
+  .exercise-page--editor {
+    overflow: auto;
+  }
+
+  .exercise-editor-shell {
+    min-width: 58rem;
+    min-height: 42rem;
+  }
+}

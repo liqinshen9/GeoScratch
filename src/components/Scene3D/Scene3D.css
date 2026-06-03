@@ -122,3 +122,18 @@ html, body, #root {
 .recenter-btn:active {
     transform: translateY(1px);
 }
+
+.editor-body-3d .label {
+    color: #ffffff;
+    white-space: nowrap;
+    min-width: max-content;
+    display: inline-block;
+    font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+.coordinate-label {
+    white-space: nowrap;
+    min-width: max-content;
+    display: inline-block;
+}

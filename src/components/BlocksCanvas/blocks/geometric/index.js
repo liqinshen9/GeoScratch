@@ -4,6 +4,7 @@ import initGeoPlaneBlock from './geoPlane'
 import initParametricPlaneBlock from './parametricPlane'
 import { initGeoSphereBlock } from './geoSphere'
 import initGeoCubeBlock from './geoCube.js'
+import initObjectCompositionBlocks from './objectComposition.js'
 
 export function initGeometricBlocks() {
   initPointBlock()
@@ -12,4 +13,5 @@ export function initGeometricBlocks() {
   initParametricPlaneBlock()
   initGeoSphereBlock()
   initGeoCubeBlock()
+  initObjectCompositionBlocks()
 }

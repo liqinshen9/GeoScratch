@@ -161,6 +161,18 @@
   justify-content: space-between;
 }
 
+.workspace-panel-header [data-slot='button'] {
+  color: var(--geo-text-on-light);
+}
+
+.workspace-panel-header [data-slot='button']:hover,
+.workspace-panel-header [data-slot='button']:active,
+.workspace-panel-header [data-slot='button']:focus-visible,
+.workspace-panel-header [data-slot='button'][aria-pressed='true'] {
+  background: var(--bg-soft) !important;
+  color: var(--geo-text-on-light) !important;
+}
+
 .workspace-host {
   flex: 1;
   min-height: 0;

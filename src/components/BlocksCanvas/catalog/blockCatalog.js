@@ -32,6 +32,7 @@ export const BLOCK_CATEGORIES = {
         label: 'Points & Vectors',
         blocks: [
           { type: 'geo_point', label: 'Point' },
+          { type: 'geo_show_point_on_object', label: 'Show any point on object' },
           { type: 'geo_vector', label: 'Vector line' },
           { type: 'linalg_vec3', label: 'Vector (x, y, z)' },
           { type: 'scalar', label: 'Scalar' },
@@ -44,6 +45,7 @@ export const BLOCK_CATEGORIES = {
       {
         label: 'Solids',
         blocks: [
+          { type: 'geo_composite_object', label: 'Composite object' },
           { type: 'geo_cube', label: 'Cube' },
           { type: 'geo_sphere', label: 'Sphere' },
         ],

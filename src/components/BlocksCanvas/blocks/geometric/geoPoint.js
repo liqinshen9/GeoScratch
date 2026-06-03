@@ -22,8 +22,8 @@ export default function initPointBlock() {
     const pos = generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) || 'new THREE.Vector3()'
     const code = `(function(){
     const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+      new THREE.SphereGeometry(0.05, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.4, metalness: 0.1 })
     );
     m.position.copy(${pos});
     m.userData.geoType = 'geo_point';

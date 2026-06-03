@@ -60,10 +60,12 @@ export function initTransformPipelineBlock() {
 
   Blockly.Blocks.transform_pipeline = {
     init() {
-      this.appendDummyInput().appendField('Transform Pipeline (Top \u2192 Bottom)')
+      this.appendDummyInput().appendField('Transform Pipeline')
       this.appendValueInput('INPUT').setCheck('obj3D').appendField('Input object')
       this.appendStatementInput('STEPS').setCheck('transformStep').appendField('Transforms')
-      appendMatrixPreviewUI(this, computePipelineMatrix3, computePipelineMatrix4)
+      appendMatrixPreviewUI(this, computePipelineMatrix3, computePipelineMatrix4, {
+        spacerHeight: 28,
+      })
       this.setStyle(BLOCK_STYLES.TRANSFORM_PIPELINE)
       this.setTooltip('Connect an input object and a stack of transforms.')
 

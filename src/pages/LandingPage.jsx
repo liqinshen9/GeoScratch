@@ -18,6 +18,9 @@ export default function LandingPage() {
           <NavLink to="/" end className={({ isActive }) => landingNavLinkClass(isActive)}>
             Home
           </NavLink>
+          <NavLink to="/exercise" className={({ isActive }) => landingNavLinkClass(isActive)}>
+            Exercise
+          </NavLink>
           <NavLink to="/sandbox" className={({ isActive }) => landingNavLinkClass(isActive)}>
             Sandbox
           </NavLink>

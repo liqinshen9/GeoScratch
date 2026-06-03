@@ -10,7 +10,7 @@
 .editor-header-row,
 .editor-body-row {
   display: grid;
-  grid-template-columns: 140px minmax(260px, 290px) minmax(0, 1fr) 34%;
+  grid-template-columns: 140px minmax(300px, 340px) minmax(0, 1fr) 34%;
 }
 
 .editor-header-row {

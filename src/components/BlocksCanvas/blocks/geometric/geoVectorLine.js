@@ -63,11 +63,11 @@ export function initVector3Block() {
     const line     = new THREE.Line(lineGeom, lineMat);
 
     // Small sphere geometry reused for markers
-    const r = 0.08;
+    const r = 0.05;
     const sphereGeom = new THREE.SphereGeometry(r, 16, 12);
 
     // Position marker (always): cyan
-    const posMat = new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.4, metalness: 0.1 });
+    const posMat = new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.4, metalness: 0.1 });
     const posSphere = new THREE.Mesh(sphereGeom, posMat);
     posSphere.position.copy(origin);
 

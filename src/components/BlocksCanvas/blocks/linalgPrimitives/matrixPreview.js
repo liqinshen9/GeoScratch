@@ -370,11 +370,13 @@ function toggleDrawer(workspace, block, field, mode, computeMatrix) {
  * @param {ComputeMatrixFn} mat3
  * @param {ComputeMatrixFn} mat4
  */
-export function appendMatrixPreviewUI(block, mat3, mat4) {
-  const spacerHeight = block.type === 'transform_pipeline' ? 32 : 8
-  block
-    .appendDummyInput('MATRIX_MIN_SPACER')
-    .appendField(new FieldMatrixSpacer(spacerHeight), 'MIN_SPACER')
+export function appendMatrixPreviewUI(block, mat3, mat4, options = {}) {
+  const spacerHeight = options.spacerHeight ?? 8
+  if (spacerHeight > 0) {
+    block
+      .appendDummyInput('MATRIX_MIN_SPACER')
+      .appendField(new FieldMatrixSpacer(spacerHeight), 'MIN_SPACER')
+  }
   block
     .appendDummyInput('MATRIX_PREVIEW')
     .setAlign(Blockly.inputs.Align.RIGHT)

@@ -51,15 +51,31 @@ const initParametricPlaneBlock = () => {
     const nUnit = nRaw.clone().normalize(); // for plane orientation
 
     // Plane — large extent with soft edge fade (reads as infinite)
-    const plane = createInfinitePlaneMesh({ color: 0xffb6c1, opacity: 0.14, fadeStart: 8, fadeEnd: 48 });
+    const planeSize = 12;
+    const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize);
+    const planeMat = new THREE.MeshStandardMaterial({
+      color: 0xffd84a,
+      transparent: true,
+      opacity: 0.34,
+      roughness: 0.55,
+      metalness: 0.02,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const plane = new THREE.Mesh(planeGeom, planeMat);
+    const planeEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(planeGeom),
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })
+    );
+    plane.add(planeEdges);
     const quat  = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1), nUnit);
     plane.setRotationFromQuaternion(quat);
     plane.position.copy(p);
 
     // Point marker (same style as before)
     const pointMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08, 16, 12),
-      new THREE.MeshStandardMaterial({ color: 0x22d3ee, roughness: 0.4, metalness: 0.1 })
+      new THREE.SphereGeometry(0.05, 16, 12),
+      new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.4, metalness: 0.1 })
     );
     pointMesh.position.copy(p);
 
@@ -81,7 +97,7 @@ const initParametricPlaneBlock = () => {
     group.userData.point       = p.clone();
     group.userData.normalRaw   = nRaw.clone();  // input
     group.userData.normalUnit  = nUnit.clone(); // used for orientation
-    group.userData.planeSize   = 'infinite';
+    group.userData.planeSize   = planeSize;
 
     group.userData.labelAnchors = {
       pAnchor: { type:'world', position:[p.x,    p.y,    p.z   ] },
@@ -105,10 +121,7 @@ const initParametricPlaneBlock = () => {
     // Registry
     if (typeof threeObjStore==='object' && threeObjStore){
       const base=${JSON.stringify(block.id)};
-      threeObjStore[base + '_plane']  = plane;
-      threeObjStore[base + '_point']  = pointMesh;
-      threeObjStore[base + '_normal'] = arrow;
-      threeObjStore[base]             = group;
+      threeObjStore[base] = group;
     }
 
     return group;
