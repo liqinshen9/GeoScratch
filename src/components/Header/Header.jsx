@@ -145,8 +145,8 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
       spheres: `
         <xml xmlns="https://developers.google.com/blockly/xml">
           <block type="geo_sphere" x="24" y="24">
-            <field name="R">2.4</field>
-            <value name="pos">
+            <field name="Radius">2.4</field>
+            <value name="CENTRE">
               <block type="linalg_vec3">
                 <field name="X">1</field>
                 <field name="Y">-4</field>
@@ -182,8 +182,8 @@ export default function Header({ onRun, onLoadExample, autoRender, onAutoRenderC
             <!-- Target: Cube (side 2.3, centre (-2, 4, -6)) -->
             <value name="TARGET">
               <block type="geo_cube">
-                <field name="SIDE">2.3</field>
-                <value name="center">
+                <field name="SIDE_LENGTH">2.3</field>
+                <value name="CENTRE">
                   <block type="linalg_vec3">
                     <field name="X">-2</field>
                     <field name="Y">4</field>
