@@ -1,17 +1,37 @@
-
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
-let REGISTERED = false
+function geoSphereDefinition(centreInput, radiusInput, blockId, THREE, threeObjStore) {
+  const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
+  const radius = Math.max(0.01, Number(radiusInput) || 1)
+  const geometry = new THREE.SphereGeometry(radius, 32, 16)
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x3b82f6,
+    roughness: 0.5,
+    metalness: 0.1,
+    opacity: 0.8,
+    transparent: true,
+  })
 
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.copy(centre)
+  mesh.userData.geoType = 'geo_sphere'
+  mesh.userData.centre = centre.clone()
+  mesh.userData.radius = radius
+  mesh.userData.srcBlockId = blockId
+
+  if (threeObjStore) threeObjStore[blockId] = mesh
+  return mesh
+}
+
+let REGISTERED = false
 
 export function initGeoSphereBlock() {
   if (REGISTERED) return
   REGISTERED = true
 
-  //Describes a plane in 3D space using the plane's equation in Hessian form
-  Blockly.Blocks['geo_sphere'] = {
+  Blockly.Blocks.geo_sphere = {
     init() {
       this.appendDummyInput().appendField('Sphere')
       this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
@@ -21,32 +41,22 @@ export function initGeoSphereBlock() {
       this.setOutput(true, 'obj3D')
       this.appendDummyInput()
         .appendField('Radius:')
-        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'R')
-      this.appendValueInput('pos').appendField('Centre:').setCheck('vector3')
+        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'RADIUS')
+      this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     },
   }
 
-  javascriptGenerator.forBlock['geo_sphere'] = function (block, generator) {
-    const pos =
-      generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) ||
+  javascriptGenerator.forBlock.geo_sphere = function (block, generator) {
+    const valueToCode = (name) =>
+      block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
+    const centre =
+      valueToCode('CENTRE') ||
+      valueToCode('pos') ||
       'new THREE.Vector3()'
-    const r = Number(block.getFieldValue('R')) || 1
+    const radius = Number(block.getFieldValue('RADIUS') ?? block.getFieldValue('R'))
+    const blockId = JSON.stringify(block.id)
+    const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId}, THREE, threeObjStore)`
 
-    const code = `(function(){
-  const centre = (${pos}).clone();
-  const radius = Math.max(0.01, ${r});
-  const geom = new THREE.SphereGeometry(radius, 32, 16);
-  const mat  = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.5, metalness: 0.1, opacity:0.8, transparent:true });
-  const mesh = new THREE.Mesh(geom, mat);
-  mesh.position.copy(centre);
-
-  mesh.userData.geoType = 'geo_sphere';
-  mesh.userData.radius  = radius;
-  mesh.userData.srcBlockId = ${JSON.stringify(block.id)}
-  threeObjStore[${JSON.stringify(block.id)}] = mesh   
-  return mesh;
-})()`
-
-    return [code, Order.ATOMIC]
+    return [code, Order.FUNCTION_CALL]
   }
 }

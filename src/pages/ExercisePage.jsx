@@ -29,7 +29,7 @@ const exercises = [
     steps: [
       'Create at least two primitives such as cubes and spheres.',
       'Place them at different centres so they form a recognizable structure.',
-      'Connect them to Composite object and run the scene.',
+      'Run the scene and inspect how the primitives align in 3D.',
     ],
   },
   {

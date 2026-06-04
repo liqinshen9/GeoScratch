@@ -4,12 +4,6 @@ import { BLOCK_STYLES } from '../blockColours'
 
 let REGISTERED = false
 
-function childSourceIds(block) {
-  return ['OBJECT_A', 'OBJECT_B', 'OBJECT_C', 'OBJECT_D']
-    .map((name) => block.getInputTargetBlock(name)?.id)
-    .filter(Boolean)
-}
-
 export default function initObjectCompositionBlocks() {
   if (REGISTERED) return
   REGISTERED = true
@@ -91,51 +85,6 @@ export default function initObjectCompositionBlocks() {
         if (${objectBlockIdCode}) {
           for (const key of Object.keys(threeObjStore)) {
             if (key === ${objectBlockIdCode} || key.startsWith(${objectBlockIdCode} + '_')) {
-              delete threeObjStore[key];
-            }
-          }
-        }
-        threeObjStore[${JSON.stringify(block.id)}] = group;
-      }
-      return group;
-    })()`
-
-    return [code, Order.ATOMIC]
-  }
-
-  Blockly.Blocks.geo_composite_object = {
-    init() {
-      this.appendDummyInput().appendField('Composite object')
-      this.appendValueInput('OBJECT_A').appendField('object 1:').setCheck('obj3D')
-      this.appendValueInput('OBJECT_B').appendField('object 2:').setCheck('obj3D')
-      this.appendValueInput('OBJECT_C').appendField('object 3:').setCheck('obj3D')
-      this.appendValueInput('OBJECT_D').appendField('object 4:').setCheck('obj3D')
-      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
-      this.setTooltip('Combines several primitive objects into one reusable 3D object.')
-      this.setOutput(true, 'obj3D')
-    },
-  }
-
-  javascriptGenerator.forBlock.geo_composite_object = function (block, generator) {
-    const objectCodes = ['OBJECT_A', 'OBJECT_B', 'OBJECT_C', 'OBJECT_D'].map(
-      (name) => generator.valueToCode(block, name, Order.FUNCTION_CALL) || 'null',
-    )
-    const sourceIds = childSourceIds(block)
-
-    const code = `(function(){
-      const parts = [${objectCodes.map((part) => `(${part})`).join(', ')}].filter((part) => part && part.isObject3D);
-      const group = new THREE.Group();
-      for (const part of parts) group.add(part);
-
-      group.userData.geoType = 'composite_object';
-      group.userData.partCount = parts.length;
-      group.userData.srcBlockId = ${JSON.stringify(block.id)};
-
-      if (typeof threeObjStore === 'object' && threeObjStore) {
-        const sourceIds = ${JSON.stringify(sourceIds)};
-        for (const sourceId of sourceIds) {
-          for (const key of Object.keys(threeObjStore)) {
-            if (key === sourceId || key.startsWith(sourceId + '_')) {
               delete threeObjStore[key];
             }
           }

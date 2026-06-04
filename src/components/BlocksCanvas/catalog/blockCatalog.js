@@ -45,7 +45,6 @@ export const BLOCK_CATEGORIES = {
       {
         label: 'Solids',
         blocks: [
-          { type: 'geo_composite_object', label: 'Composite object' },
           { type: 'geo_cube', label: 'Cube' },
           { type: 'geo_sphere', label: 'Sphere' },
         ],

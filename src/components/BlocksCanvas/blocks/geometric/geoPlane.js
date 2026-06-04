@@ -1,3 +1,9 @@
+/*
+ *==============================
+ * THIS IS DEAD CODE
+ *==============================
+ */
+
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
@@ -21,7 +27,7 @@ const initGeoPlaneBlock = () => {
     }
   }
 
-  javascriptGenerator.forBlock['geo_plane'] = function (block, generator) {
+  javascriptGenerator.forBlock['geo_plane'] = function(block, generator) {
     const pos = generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) || 'new THREE.Vector3()'
     const side = generator.valueToCode(block, 'side', Order.FUNCTION_CALL) || '1'
 
