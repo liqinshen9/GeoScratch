@@ -46,14 +46,11 @@ export function initGeoSphereBlock() {
     },
   }
 
-  javascriptGenerator.forBlock.geo_sphere = function (block, generator) {
+  javascriptGenerator.forBlock.geo_sphere = function(block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
-    const centre =
-      valueToCode('CENTRE') ||
-      valueToCode('pos') ||
-      'new THREE.Vector3()'
-    const radius = Number(block.getFieldValue('RADIUS') ?? block.getFieldValue('R'))
+    const centre = valueToCode('CENTRE') || 'new THREE.Vector3()'
+    const radius = Number(block.getFieldValue('RADIUS'))
     const blockId = JSON.stringify(block.id)
     const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId}, THREE, threeObjStore)`
 

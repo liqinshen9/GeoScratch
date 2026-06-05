@@ -36,10 +36,7 @@ export default function initPointBlock() {
   javascriptGenerator.forBlock.geo_point = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
-    const pos =
-      valueToCode('POS') ||
-      valueToCode('pos') ||
-      'new THREE.Vector3()'
+    const pos = valueToCode('POS') || 'new THREE.Vector3()'
     const blockId = JSON.stringify(block.id)
     const code = `(${geoPointDefinition.toString()})(${pos}, ${blockId}, THREE, threeObjStore)`
 

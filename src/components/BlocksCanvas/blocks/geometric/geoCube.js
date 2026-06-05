@@ -58,11 +58,8 @@ export default function initGeoCubeBlock() {
   javascriptGenerator.forBlock.geo_cube = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
-    const centre =
-      valueToCode('CENTRE') ||
-      valueToCode('center') ||
-      'new THREE.Vector3(0,0,0)'
-    const sideLength = Number(block.getFieldValue('SIDE_LENGTH') ?? block.getFieldValue('SIDE'))
+    const centre = valueToCode('CENTRE') || 'new THREE.Vector3(0,0,0)'
+    const sideLength = Number(block.getFieldValue('SIDE_LENGTH'))
     const blockId = JSON.stringify(block.id)
     const code = `(${geoCubeDefinition.toString()})(${centre}, ${sideLength}, ${blockId}, THREE, threeObjStore)`
 

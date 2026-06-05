@@ -3,6 +3,7 @@ import { Home } from '@icon-park/react'
 import Title from './Title'
 import AutoRenderToggle from '@/components/Header/AutoRenderToggle'
 import RunButton from '@/components/Header/RunButton'
+import ViewSettingsDropdown from '@/components/Header/ViewSettingsDropdown'
 
 export default function Header({ onRun, autoRender, onAutoRenderChange }) {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export default function Header({ onRun, autoRender, onAutoRenderChange }) {
       <div className="flex gap-8 items-center relative" />
 
       <div className="flex gap-6 justify-end items-center relative">
+        <ViewSettingsDropdown />
         <AutoRenderToggle autoRender={autoRender} onAutoRenderChange={onAutoRenderChange} />
         <RunButton autoRender={autoRender} onRun={onRun} />
         <Home

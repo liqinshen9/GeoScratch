@@ -41,20 +41,24 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   )
   pointMesh.position.copy(point)
 
-  const headLenRatio = 0.25
-  const headWidthRatio = 0.1
-  const visualArrowLength = Math.min(5, normalLength)
+  // Purely static visual proportions. The blue arrow asset size will never change.
+  const visualArrowLength = 3.5
+  const absoluteHeadLength = 0.7
+  const absoluteHeadWidth = 0.35
+
   const arrow = new THREE.ArrowHelper(
     normalUnit.clone(),
     point.clone(),
-    visualArrowLength,
+    visualArrowLength, // Static length
     0x3b82f6,
-    Math.max(0.001, visualArrowLength * headLenRatio),
-    Math.max(0.001, visualArrowLength * headWidthRatio)
+    absoluteHeadLength, // Static head length
+    absoluteHeadWidth  // Static head width
   )
 
   const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map((v) => Number(v.toFixed(3))).join(', ') + ']'
-  const normalTip = point.clone().add(normalRaw)
+
+  // Track the label anchor directly to the static tip of the visual asset
+  const visualNormalTip = point.clone().addScaledVector(normalUnit, visualArrowLength)
 
   const group = new THREE.Group()
   group.add(plane, pointMesh, arrow)
@@ -66,7 +70,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   group.userData.planeSize = planeSize
   group.userData.labelAnchors = {
     pAnchor: { type: 'world', position: [point.x, point.y, point.z] },
-    nTip: { type: 'world', position: [normalTip.x, normalTip.y, normalTip.z] },
+    nTip: { type: 'world', position: [visualNormalTip.x, visualNormalTip.y, visualNormalTip.z] },
   }
   group.userData.labels = [
     { anchor: 'pAnchor', text: 'point = ' + fmt(point), distanceFactor: 8, offset: [0.12, 0.12, 0] },
@@ -78,8 +82,8 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   arrow.userData = Object.assign(arrow.userData || {}, {
     geoType: 'normal_arrow',
     name: normLabel,
-    headLenRatio,
-    headWidthRatio,
+    headLenRatio: absoluteHeadLength / visualArrowLength,
+    headWidthRatio: absoluteHeadWidth / visualArrowLength,
     srcBlockId: blockId,
   })
 
@@ -106,7 +110,7 @@ export function initParametricPlaneBlock() {
     },
   }
 
-  javascriptGenerator.forBlock.parametric_plane = function (block, generator) {
+  javascriptGenerator.forBlock.parametric_plane = function(block, generator) {
     const point = generator.valueToCode(block, 'point', Order.FUNCTION_CALL) || 'new THREE.Vector3()'
     const norm = generator.valueToCode(block, 'norm', Order.FUNCTION_CALL) || 'new THREE.Vector3(0,1,0)'
     const normalLabel = (() => {
