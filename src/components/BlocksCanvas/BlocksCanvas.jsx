@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import addBlockToWorkspace from '@/utils/addBlockToWorkspace'
 import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
 import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
@@ -9,11 +9,15 @@ export default function BlocksCanvas({
   onObjectsChange,
   categoryId,
   workspaceMaximized,
+  floatingControls = false,
+  paletteOpen = false,
+  hideInlineControls = false,
   onCategoryChange,
   onRegisterClear,
 }) {
   const workspaceHostRef = useRef(null)
   const onObjectsChangeRef = useRef(onObjectsChange)
+  const [toolboxPosition, setToolboxPosition] = useState(null)
   useEffect(() => {
     onObjectsChangeRef.current = onObjectsChange
   }, [onObjectsChange])
@@ -62,19 +66,80 @@ export default function BlocksCanvas({
     [workspace],
   )
 
+  const handleToolboxDragStart = useCallback(
+    (event) => {
+      if (!floatingControls || event.button !== 0) return
+      const panel = event.currentTarget.closest('.blocks-floating-toolbox')
+      const parent = panel?.offsetParent
+      if (!panel || !parent) return
+      event.preventDefault()
+
+      const panelRect = panel.getBoundingClientRect()
+      const parentRect = parent.getBoundingClientRect()
+      const origin = toolboxPosition ?? {
+        x: panelRect.left - parentRect.left,
+        y: panelRect.top - parentRect.top,
+      }
+
+      setToolboxPosition(origin)
+
+      function moveToolbox(moveEvent) {
+        const currentPanelRect = panel.getBoundingClientRect()
+        const currentParentRect = parent.getBoundingClientRect()
+        const maxX = Math.max(8, currentParentRect.width - currentPanelRect.width - 8)
+        const maxY = Math.max(8, currentParentRect.height - currentPanelRect.height - 8)
+        const nextX = Math.min(Math.max(8, origin.x + moveEvent.clientX - event.clientX), maxX)
+        const nextY = Math.min(Math.max(8, origin.y + moveEvent.clientY - event.clientY), maxY)
+        setToolboxPosition({ x: nextX, y: nextY })
+      }
+
+      function stopToolbox() {
+        window.removeEventListener('mousemove', moveToolbox)
+        window.removeEventListener('mouseup', stopToolbox)
+      }
+
+      window.addEventListener('mousemove', moveToolbox)
+      window.addEventListener('mouseup', stopToolbox)
+    },
+    [floatingControls, toolboxPosition],
+  )
+
+  const toolbox = (
+    <aside className="blocks-col blocks-col--toolbox">
+      <CategoryToolbox selected={categoryId} onSelect={onCategoryChange} />
+    </aside>
+  )
+
+  const palette = (
+    <aside className="blocks-col blocks-col--palette">
+      <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
+    </aside>
+  )
+
   return (
-    <div id="blocks-canvas" className="blocks-shell">
-      {!workspaceMaximized && (
-        <aside className="blocks-col blocks-col--toolbox">
-          <CategoryToolbox selected={categoryId} onSelect={onCategoryChange} />
-        </aside>
+    <div
+      id="blocks-canvas"
+      className={`blocks-shell${floatingControls ? ' blocks-shell--floating-controls' : ''}`}
+    >
+      {floatingControls && (
+        <div
+          className="blocks-floating-toolbox"
+          style={toolboxPosition ? { left: toolboxPosition.x, top: toolboxPosition.y } : undefined}
+        >
+          <div className="blocks-floating-toolbox__handle" onMouseDown={handleToolboxDragStart}>
+            <span aria-hidden="true">::</span>
+            <strong>Toolbox</strong>
+          </div>
+          <div className="blocks-floating-toolbox__body">
+            {toolbox}
+            {paletteOpen && palette}
+          </div>
+        </div>
       )}
 
-      {!workspaceMaximized && (
-        <aside className="blocks-col blocks-col--palette">
-          <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
-        </aside>
-      )}
+      {!floatingControls && !hideInlineControls && !workspaceMaximized && toolbox}
+
+      {!floatingControls && !hideInlineControls && !workspaceMaximized && palette}
 
       <section className="blocks-col blocks-col--workspace">
         <div

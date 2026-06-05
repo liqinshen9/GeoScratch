@@ -8,6 +8,7 @@ const Title = () => {
     <GeoScratchLogo
       className="app-nav__logo"
       wordmark={title}
+      showMark={false}
       showWordmark
     />
   )

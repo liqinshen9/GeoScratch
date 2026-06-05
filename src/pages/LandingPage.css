@@ -1,5 +1,5 @@
 .landing-page {
-  --bg-main: #ffe76f;
+  --bg-main: #ffffff;
   --bg-soft: #fff0a3;
   --accent: #002ea6;
   --accent-hover: #00258a;
@@ -12,7 +12,7 @@
   --nav-fg: #ffffff;
   --landing-gutter: clamp(2rem, 6vw, 5rem);
   --landing-nav-height: 4.5rem;
-  --landing-nav-title-size: 1.875rem;
+  --landing-nav-title-size: var(--app-nav-title-size);
   --landing-nav-curve-depth: 4.5rem;
   --landing-welcome-kia: #0d9488;
   --landing-welcome-text: #c2410c;
@@ -92,6 +92,7 @@
   width: 100%;
   padding: 1.25rem var(--landing-gutter) 1.5rem;
   box-sizing: border-box;
+  position: relative;
 }
 
 .landing-hero__mark {
@@ -116,7 +117,7 @@
 }
 
 .landing-hero__content {
-  max-width: 36rem;
+  max-width: 44rem;
   text-align: left;
 }
 
@@ -133,7 +134,7 @@
   font-size: clamp(2.5rem, 5vw, 3.75rem);
   font-weight: 700;
   line-height: 1.15;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
   color: var(--text-main);
   text-align: left;
 }
@@ -141,6 +142,11 @@
 .landing-hero__title-line {
   display: block;
   margin-top: 0.1em;
+  white-space: nowrap;
+}
+
+.landing-hero__title-line:first-child {
+  margin-top: 0;
 }
 
 .landing-hero__accent {

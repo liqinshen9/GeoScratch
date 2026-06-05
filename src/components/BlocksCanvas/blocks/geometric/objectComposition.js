@@ -30,8 +30,39 @@ export default function initObjectCompositionBlocks() {
       const getAnyPointOnObject = (target) => {
         target.updateMatrixWorld(true);
 
+        const randomBetween = (min, max) => min + Math.random() * (max - min);
+        const randomInteriorOffset = (halfSize) => randomBetween(-halfSize * 0.65, halfSize * 0.65);
+        const randomSigned = (value) => (Math.random() < 0.5 ? -value : value);
+
         const planePoint = target.userData?.point;
+        const planeNormal = target.userData?.normalUnit;
+        if (planePoint?.isVector3 && planeNormal?.isVector3) {
+          const planeSize = Math.max(1, Number(target.userData?.planeSize) || 12);
+          const normal = planeNormal.clone().normalize();
+          const tangent = new THREE.Vector3(1, 0, 0);
+          if (Math.abs(tangent.dot(normal)) > 0.85) tangent.set(0, 0, 1);
+          tangent.cross(normal).normalize();
+          const bitangent = normal.clone().cross(tangent).normalize();
+          return planePoint
+            .clone()
+            .addScaledVector(tangent, randomInteriorOffset(planeSize / 2))
+            .addScaledVector(bitangent, randomInteriorOffset(planeSize / 2));
+        }
+
         if (planePoint?.isVector3) return planePoint.clone();
+
+        if (target.userData?.geoType === 'geo_cube') {
+          const sideLength = Math.max(0.01, Number(target.userData.sideLength ?? target.userData.side) || 1);
+          const half = sideLength / 2;
+          const faceAxis = Math.floor(Math.random() * 3);
+          const local = new THREE.Vector3(
+            randomInteriorOffset(half),
+            randomInteriorOffset(half),
+            randomInteriorOffset(half)
+          );
+          local.setComponent(faceAxis, randomSigned(half));
+          return target.localToWorld(local);
+        }
 
         if (target.userData?.geoType === 'geo_sphere') {
           const centre = new THREE.Vector3();
@@ -39,25 +70,47 @@ export default function initObjectCompositionBlocks() {
           target.getWorldPosition(centre);
           target.getWorldScale(scale);
           const radius = Math.max(0.01, Number(target.userData.radius) || 1);
-          return centre.add(new THREE.Vector3(radius * Math.max(scale.x, scale.y, scale.z), 0, 0));
+          const direction = new THREE.Vector3(
+            randomBetween(-1, 1),
+            randomBetween(-0.85, 0.85),
+            randomBetween(-1, 1)
+          );
+          if (direction.lengthSq() < 0.001) direction.set(1, 0.2, 0.3);
+          direction.normalize();
+          return centre.add(direction.multiplyScalar(radius * Math.max(scale.x, scale.y, scale.z)));
         }
 
         if (target.isMesh && target.geometry?.attributes?.position) {
-          const positions = target.geometry.attributes.position;
-          if (positions.count > 0) {
-            return target.localToWorld(new THREE.Vector3(
-              positions.getX(0),
-              positions.getY(0),
-              positions.getZ(0)
-            ));
+          const box = new THREE.Box3().setFromObject(target);
+          if (!box.isEmpty()) {
+            const centre = new THREE.Vector3();
+            const size = new THREE.Vector3();
+            box.getCenter(centre);
+            box.getSize(size);
+            const half = size.multiplyScalar(0.5);
+            const faceAxis = Math.floor(Math.random() * 3);
+            const point = centre.clone();
+            const axes = ['x', 'y', 'z'];
+            point[axes[faceAxis]] += randomSigned(half[axes[faceAxis]]);
+            for (const axis of axes.filter((_, index) => index !== faceAxis)) {
+              point[axis] += randomInteriorOffset(half[axis]);
+            }
+            return point;
           }
         }
 
         const box = new THREE.Box3().setFromObject(target);
         if (!box.isEmpty()) {
           const centre = new THREE.Vector3();
+          const size = new THREE.Vector3();
           box.getCenter(centre);
-          return new THREE.Vector3(box.max.x, centre.y, centre.z);
+          box.getSize(size);
+          const half = size.multiplyScalar(0.5);
+          return new THREE.Vector3(
+            box.max.x,
+            centre.y + randomInteriorOffset(half.y),
+            centre.z + randomInteriorOffset(half.z)
+          );
         }
 
         const fallback = new THREE.Vector3();

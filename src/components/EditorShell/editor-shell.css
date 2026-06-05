@@ -10,7 +10,7 @@
 .editor-header-row,
 .editor-body-row {
   display: grid;
-  grid-template-columns: 140px minmax(300px, 340px) minmax(0, 1fr) 34%;
+  grid-template-columns: 140px minmax(300px, 340px) minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .editor-header-row {
@@ -48,7 +48,7 @@
 
 .editor-shell--maximized .editor-header-row,
 .editor-shell--maximized .editor-body-row {
-  grid-template-columns: minmax(0, 1fr) 34%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .editor-shell--maximized .editor-body-row > #blocks-canvas.blocks-shell {

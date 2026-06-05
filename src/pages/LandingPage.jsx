@@ -11,7 +11,7 @@ export default function LandingPage() {
     <div className="landing-page">
       <header className="landing-nav">
         <Link to="/" className="landing-nav__logo app-nav__logo">
-          <GeoScratchLogo showWordmark />
+          <GeoScratchLogo showMark={false} showWordmark />
         </Link>
 
         <nav className="landing-nav__links" aria-label="Main">
@@ -30,7 +30,9 @@ export default function LandingPage() {
       <main className="landing-hero">
         <div className="landing-hero__content">
           <h1 className="landing-hero__title">
-            Snap blocks together.
+            <span className="landing-hero__title-line">
+              Snap blocks together.
+            </span>
             <span className="landing-hero__title-line landing-hero__accent">
               See it in 3D.
             </span>

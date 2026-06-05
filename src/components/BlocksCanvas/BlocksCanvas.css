@@ -3,6 +3,11 @@
   min-height: 0;
 }
 
+#blocks-canvas.blocks-shell--floating-controls {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .blocks-col {
   display: flex;
   flex-direction: column;
@@ -22,6 +27,92 @@
 .blocks-col--workspace .workspace-host {
   flex: 1;
   position: relative;
+}
+
+.blocks-shell--floating-controls .blocks-col--toolbox,
+.blocks-shell--floating-controls .blocks-col--palette {
+  border: 1px solid rgba(0, 46, 166, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.blocks-shell--floating-controls .blocks-col--toolbox {
+  width: 8rem;
+}
+
+.blocks-shell--floating-controls .blocks-col--palette {
+  width: min(18rem, calc(100vw - 12rem));
+}
+
+.blocks-shell--floating-controls .blocks-col--workspace {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.blocks-floating-toolbox {
+  position: absolute;
+  z-index: 12;
+  left: 0.875rem;
+  top: 0.875rem;
+  display: grid;
+  gap: 0.4rem;
+  max-width: calc(100% - 1.75rem);
+  touch-action: none;
+}
+
+.blocks-floating-toolbox__handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: max-content;
+  max-width: 100%;
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid rgba(0, 46, 166, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 24px rgba(0, 46, 166, 0.12);
+  color: var(--geo-text-on-light);
+  cursor: grab;
+  user-select: none;
+}
+
+.blocks-floating-toolbox__handle:active {
+  cursor: grabbing;
+}
+
+.blocks-floating-toolbox__handle span {
+  color: var(--geo-text-muted-on-light);
+  font-weight: 900;
+  letter-spacing: -0.12em;
+}
+
+.blocks-floating-toolbox__handle strong {
+  font-size: 0.8125rem;
+}
+
+.blocks-floating-toolbox__body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-width: 100%;
+  filter: drop-shadow(0 12px 30px rgba(0, 46, 166, 0.14));
+}
+
+.blocks-shell--floating-controls .category-toolbox-list {
+  overflow: visible;
+}
+
+.blocks-shell--floating-controls .block-palette {
+  max-height: min(34rem, calc(100vh - 11rem));
+}
+
+.blocks-shell--floating-controls .block-palette-scroll {
+  overflow-y: auto;
+}
+
+.blocks-shell--floating-controls .block-palette-hint {
+  display: none;
 }
 
 /* Toolbox */
