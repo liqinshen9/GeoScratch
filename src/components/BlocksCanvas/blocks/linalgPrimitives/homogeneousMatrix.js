@@ -95,18 +95,20 @@ function rotationZ(angleRad) {
   ]
 }
 
+function getAxisRotation(axis, angleRad) {
+  if (axis === 'X') return rotationX(angleRad)
+  if (axis === 'Y') return rotationY(angleRad)
+  return rotationZ(angleRad)
+}
+
 /**
- * Homogeneous rotation: R = Rz · Ry · Rx.
- * @param {number} rxDeg
- * @param {number} ryDeg
- * @param {number} rzDeg
+ * Homogeneous rotation around one selected axis.
+ * @param {'X' | 'Y' | 'Z'} axis
+ * @param {number} degrees
  * @returns {Mat4}
  */
-export function rotationMatrixFromDegrees(rxDeg, ryDeg, rzDeg) {
-  const Rx = rotationX(rxDeg * DEG)
-  const Ry = rotationY(ryDeg * DEG)
-  const Rz = rotationZ(rzDeg * DEG)
-  return multiplyMat4(multiplyMat4(Rz, Ry), Rx)
+export function rotationMatrixAroundAxisFromDegrees(axis, degrees) {
+  return getAxisRotation(axis, degrees * DEG)
 }
 
 /**
@@ -148,13 +150,12 @@ export function mat4ToMat3(m4) {
 }
 
 /**
- * @param {number} rxDeg
- * @param {number} ryDeg
- * @param {number} rzDeg
+ * @param {'X' | 'Y' | 'Z'} axis
+ * @param {number} degrees
  * @returns {Mat3}
  */
-export function rotationMatrix3x3FromDegrees(rxDeg, ryDeg, rzDeg) {
-  return mat4ToMat3(rotationMatrixFromDegrees(rxDeg, ryDeg, rzDeg))
+export function rotationMatrix3x3AroundAxisFromDegrees(axis, degrees) {
+  return mat4ToMat3(rotationMatrixAroundAxisFromDegrees(axis, degrees))
 }
 
 /**

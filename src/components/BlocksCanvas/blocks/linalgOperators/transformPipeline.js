@@ -16,8 +16,8 @@ function computePipelineMatrix4(block) {
   const chain = collectStatementChain(block.getInputTargetBlock('STEPS'))
   const combined = new THREE.Matrix4().identity()
 
-  for (let i = chain.length - 1; i >= 0; i -= 1) {
-    combined.premultiply(matrix4FromTransformStepBlock(chain[i], { fallbackToIdentity: true }))
+  for (const step of chain) {
+    combined.premultiply(matrix4FromTransformStepBlock(step, { fallbackToIdentity: true }))
   }
 
   return matrix4ToRowMajor(combined)

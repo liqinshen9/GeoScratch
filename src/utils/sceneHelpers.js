@@ -55,6 +55,12 @@ export function createInfinitePlaneMesh({
 }
 
 //Transform pipeline
+function matrix4FromAxisRotationDegrees(axis, degrees) {
+  const angle = THREE.MathUtils.degToRad(degrees)
+  if (axis === 'Y') return new THREE.Matrix4().makeRotationY(angle)
+  if (axis === 'Z') return new THREE.Matrix4().makeRotationZ(angle)
+  return new THREE.Matrix4().makeRotationX(angle)
+}
 
 /**
  * @param {import('blockly/core').Block | null} block
@@ -64,13 +70,9 @@ export function matrix4FromTransformStepBlock(block, { fallbackToIdentity = fals
   if (!block) return fallbackToIdentity ? new THREE.Matrix4() : null
 
   if (block.type === 'rot_matrix') {
-    const rx = Number(block.getFieldValue('RX')) || 0
-    const ry = Number(block.getFieldValue('RY')) || 0
-    const rz = Number(block.getFieldValue('RZ')) || 0
-    const Rx = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(rx))
-    const Ry = new THREE.Matrix4().makeRotationY(THREE.MathUtils.degToRad(ry))
-    const Rz = new THREE.Matrix4().makeRotationZ(THREE.MathUtils.degToRad(rz))
-    return new THREE.Matrix4().multiplyMatrices(new THREE.Matrix4().multiplyMatrices(Rz, Ry), Rx)
+    const axis = block.getFieldValue('AXIS') || 'X'
+    const degrees = Number(block.getFieldValue('DEGREES')) || 0
+    return matrix4FromAxisRotationDegrees(axis, degrees)
   }
 
   if (block.type === 'trans_matrix') {

@@ -2,13 +2,18 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator } from 'blockly/javascript'
 import {
-  rotationMatrix3x3FromDegrees,
-  rotationMatrixFromDegrees,
+  rotationMatrix3x3AroundAxisFromDegrees,
+  rotationMatrixAroundAxisFromDegrees,
 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
 
 let REGISTERED = false
+const AXIS_OPTIONS = [
+  ['X', 'X'],
+  ['Y', 'Y'],
+  ['Z', 'Z'],
+]
 
 export function initRotMatrixBlock() {
   if (REGISTERED) return
@@ -18,31 +23,29 @@ export function initRotMatrixBlock() {
     init() {
       this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
       this.appendDummyInput().appendField('Rotation (degrees)')
-      this.appendDummyInput().appendField('Around Axis:')
       this.appendDummyInput()
-        .appendField('x')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'RX')
-        .appendField('y')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'RY')
-        .appendField('z')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'RZ')
+        .appendField('Rotate around')
+        .appendField(new Blockly.FieldDropdown(AXIS_OPTIONS), 'AXIS')
+        .appendField('axis')
+      this.appendDummyInput()
+        .appendField('by')
+        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'DEGREES')
+        .appendField('degrees')
       appendMatrixPreviewUI(
         this,
         (b) =>
-          rotationMatrix3x3FromDegrees(
-            Number(b.getFieldValue('RX')) || 0,
-            Number(b.getFieldValue('RY')) || 0,
-            Number(b.getFieldValue('RZ')) || 0
+          rotationMatrix3x3AroundAxisFromDegrees(
+            b.getFieldValue('AXIS') || 'X',
+            Number(b.getFieldValue('DEGREES')) || 0
           ),
         (b) =>
-          rotationMatrixFromDegrees(
-            Number(b.getFieldValue('RX')) || 0,
-            Number(b.getFieldValue('RY')) || 0,
-            Number(b.getFieldValue('RZ')) || 0
+          rotationMatrixAroundAxisFromDegrees(
+            b.getFieldValue('AXIS') || 'X',
+            Number(b.getFieldValue('DEGREES')) || 0
           )
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
-      this.setTooltip('Homogeneous rotation about X, then Y, then Z (degrees).')
+      this.setTooltip('Rotate around one selected axis. Stack rotation blocks to control rotation order.')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
       useSingleStepDrag(this)
