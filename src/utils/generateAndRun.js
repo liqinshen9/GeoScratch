@@ -54,8 +54,8 @@ function runConnectedTransformPipelines(workspace, threeObjStore) {
 
     const steps = collectStatementChain(pipeline.getInputTargetBlock('STEPS'))
 
-    for (let i = steps.length - 1; i >= 0; i -= 1) {
-      applyWorldMatrix4ToObject(object, matrix4FromTransformStepBlock(steps[i]))
+    for (const step of steps) {
+      applyWorldMatrix4ToObject(object, matrix4FromTransformStepBlock(step))
     }
 
     object.updateMatrixWorld(true)
