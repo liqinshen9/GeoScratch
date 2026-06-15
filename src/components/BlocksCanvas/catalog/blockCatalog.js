@@ -88,6 +88,7 @@ export const BLOCK_CATEGORIES = {
           { type: 'vector_normalise', label: 'Normalise' },
           { type: 'vector_project', label: 'Project' },
           { type: 'vector_magnitude', label: 'Magnitude' },
+          { type: 'line_intersection_3d', label: 'Intersect 3D lines' },
         ],
       },
     ],
