@@ -458,11 +458,11 @@ export default function ExercisePage() {
             {selectedExercise.validation === 'line-intersection' ? (
               <ol className="exercise-subtask-list">
                 <li className={lineIntersectionProgress.hasTargetLines ? 'is-complete' : ''}>
-                  <strong>Create the two lines</strong>
+                  <strong>Create the two lines: </strong>
                   <span>Use the generated position and direction values exactly.</span>
                 </li>
                 <li className={lineIntersectionProgress.hasIntersectionResult ? 'is-complete' : ''}>
-                  <strong>Find the intersection or distance</strong>
+                  <strong>Find the intersection or distance: </strong>
                   <span>Use Intersect 3D lines. For skew lines, read the closest midpoint and gap.</span>
                 </li>
               </ol>

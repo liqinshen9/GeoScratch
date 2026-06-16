@@ -22,7 +22,7 @@ export function initRotMatrixBlock() {
   Blockly.Blocks['rot_matrix'] = {
     init() {
       this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
-      this.appendDummyInput().appendField('Rotation (degrees)')
+      this.appendDummyInput().appendField('Rotation')
       this.appendDummyInput()
         .appendField('Rotate around')
         .appendField(new Blockly.FieldDropdown(AXIS_OPTIONS), 'AXIS')
