@@ -23,6 +23,9 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)
 
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry),
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })

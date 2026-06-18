@@ -1,6 +1,5 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
-import { useThree } from "@react-three/fiber"
-import { Canvas } from '@react-three/fiber'
+import { useThree, Canvas } from '@react-three/fiber'
 import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import './Scene3D.css'
@@ -186,14 +185,38 @@ function SelectablePointPicker({ onSelectPoint, onClearPoint }) {
 const globalThreeObjStore = {}
 
 function Scene({ objects = [], selectedPoint }) {
-  // Read label toggle updates actively from your Zustand store
   const { settings } = useSettingsStore()
 
   return (
     <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[3, 5, 2]} intensity={1} />
-      <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.01, 0]} />
+      <ambientLight intensity={0.4} />
+      
+      <directionalLight 
+        position={[8, 15, 8]} 
+        intensity={1.2} 
+        castShadow 
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-near={0.5}
+        shadow-camera-far={50}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+      />
+      
+      <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.005, 0]} />
+
+      {/* FIX: Turned off depth-writing (`depthWrite={false}`).
+        This ensures the shadow-catcher catches the alpha darkness pass of the shadows 
+        at the floor surface level, but doesn't fill the depth buffer. Sub-surface parts 
+        of your cubes will render right through it without being clipped!
+      */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[40, 40]} />
+        <shadowMaterial opacity={0.4} depthWrite={false} />
+      </mesh>
+
       <AxisLabels size={40} step={1} />
       <Axes length={20} position={[0, 0, 0]} />
 
@@ -230,7 +253,6 @@ export default function Scene3D({ objects = [] }) {
   const initialCamPos = useMemo(() => new THREE.Vector3(45, 45, 8), []);
   const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
 
-  // Guarantee that THREE and the tracker object store map cleanly to window BEFORE executing sandbox runs
   useEffect(() => {
     window.THREE = THREE
     window.threeObjStore = globalThreeObjStore
@@ -267,6 +289,7 @@ export default function Scene3D({ objects = [] }) {
     <div className="editor-body-3d">
       <div className="relative flex-1 min-h-0">
         <Canvas
+          shadows
           camera={{ position: [45, 45, 8], fov: 45, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
