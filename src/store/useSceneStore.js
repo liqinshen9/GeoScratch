@@ -1,34 +1,24 @@
 import { create } from 'zustand'
-import { LINE_STYLES } from './lineStyles';
 
 const useSceneStore = create((set) => ({
+  // The currently rendered object
   objects: [],
+  // Object to be rendered
   pendingObjects: [],
+  // Automatic rendering switch
   autoRender: true,
-
+  
+  // Update the object
   setObjects: (objects) => set({ objects }),
   setPendingObjects: (objects) => set({ pendingObjects: objects }),
+  
+  // Switch to automatic rendering
   toggleAutoRender: () => set((state) => ({ autoRender: !state.autoRender })),
-  commitRender: () => set((state) => ({
-    objects: state.pendingObjects
-  })),
-
-  settings: {
-    lineStyle: LINE_STYLES.PLAIN_LINE,
-    showLabels: true,
-    gridOpacity: 0.5,
-  },
-
-  updateSetting: (key, value) => set((state) => ({
-    settings: {
-      ...state.settings,
-      [key]: value
-    }
+  
+  // Submit rendering
+  commitRender: () => set((state) => ({ 
+    objects: state.pendingObjects 
   }))
 }))
-
-if (typeof window !== 'undefined') {
-  window.useSceneStore = useSceneStore;
-}
 
 export default useSceneStore

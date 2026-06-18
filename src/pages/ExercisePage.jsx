@@ -13,6 +13,7 @@ import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import './LandingPage.css'
 import './ExercisePage.css'
+import MainNavigation from '@/components/Header/MainNavigation'
 
 const exercises = [
   {
@@ -195,7 +196,7 @@ export default function ExercisePage() {
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [toolboxPosition, setToolboxPosition] = useState(null)
-  const clearWorkspaceRef = useRef(() => {})
+  const clearWorkspaceRef = useRef(() => { })
 
   const selectedExercise = exercises[exerciseIndex] ?? exercises[0]
 
@@ -322,23 +323,9 @@ export default function ExercisePage() {
 
   return (
     <div className={`exercise-page exercise-page--editor${workspaceMaximized ? ' exercise-page--workspace-maximized' : ''}`}>
-      <header className="landing-nav exercise-landing-nav">
-        <Link to="/" className="landing-nav__logo app-nav__logo">
-          <GeoScratchLogo showMark={false} showWordmark />
-        </Link>
 
-        <nav className="landing-nav__links" aria-label="Main">
-          <NavLink to="/" end className={({ isActive }) => landingNavLinkClass(isActive)}>
-            Home
-          </NavLink>
-          <NavLink to="/exercise" className={({ isActive }) => landingNavLinkClass(isActive)}>
-            Exercise
-          </NavLink>
-          <NavLink to="/sandbox" className={({ isActive }) => landingNavLinkClass(isActive)}>
-            Sandbox
-          </NavLink>
-        </nav>
-      </header>
+      {/* Replaced old raw header block cleanly with MainNavigation abstraction */}
+      <MainNavigation extraClass="exercise-landing-nav" />
 
       <main className="exercise-editor-shell">
         <div className="exercise-editor-header-row">
@@ -367,7 +354,7 @@ export default function ExercisePage() {
                 aria-pressed={workspaceMaximized}
               >
                 {workspaceMaximized ? (
-                  <OffScreen theme="outline" size="24" fill="currentColor" />
+                  <Trash2 theme="outline" size="24" fill="currentColor" />
                 ) : (
                   <FullScreenOne theme="outline" size="24" fill="currentColor" />
                 )}
