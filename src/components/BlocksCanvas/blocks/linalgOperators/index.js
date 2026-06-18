@@ -10,6 +10,7 @@ import { initDeterminantBlock } from "./determinant"
 import { initNormInplaceBlock } from "./vectorNormalise.js"
 import { initVectorProjectBlock } from "./vectorProject.js"
 import { initVectorMagnitude } from "./vectorMagnitude.js"
+import { initLineIntersectionBlock } from "./lineIntersection.js"
 
 export function initLinalgOperatorsBlocks() {
   initTransformPipelineBlock()
@@ -24,4 +25,5 @@ export function initLinalgOperatorsBlocks() {
   initNormInplaceBlock()
   initVectorProjectBlock()
   initVectorMagnitude()
+  initLineIntersectionBlock()
 }

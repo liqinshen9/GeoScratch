@@ -17,9 +17,24 @@ import MainNavigation from '@/components/Header/MainNavigation'
 
 const exercises = [
   {
+    id: 'line-intersection',
+    title: 'Intersect two 3D lines',
+    prompt: 'Find where the two 3D lines meet. If they do not intersect, find the shortest distance between them.',
+    preview: 'line-intersection',
+    validation: 'line-intersection',
+    steps: [
+      'Create two Vector Equation of Line blocks.',
+      'Use the position and direction values shown in the question.',
+      'Use the Intersect 3D lines block from Compute.',
+      'Connect both lines to the intersection block. If the lines are skew, use the closest midpoint and gap shown in the 3D view.',
+    ],
+  },
+  {
     id: 'mickey-spheres',
     title: 'Build a Mickey Mouse head',
     prompt: 'Make a simple 3D Mickey shape.',
+    preview: 'mickey',
+    validation: 'mickey',
     steps: [
       'Create one large sphere as the head.',
       'Create two smaller spheres above the head.',
@@ -29,19 +44,161 @@ const exercises = [
   },
 ]
 
+function landingNavLinkClass(isActive) {
+  return `landing-nav__link${isActive ? ' is-active' : ''}`
+}
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+function vecDot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+function vecSub(a, b) {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+function vecAdd(a, b) {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+function vecScale(a, scalar) {
+  return [a[0] * scalar, a[1] * scalar, a[2] * scalar]
+}
+
+function vecLength(a) {
+  return Math.hypot(a[0], a[1], a[2])
+}
+
+function vecCross(a, b) {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ]
+}
+
+function closestLineData(lineA, lineB) {
+  const p1 = lineA.position
+  const d1 = lineA.direction
+  const p3 = lineB.position
+  const d2 = lineB.direction
+  const w0 = vecSub(p1, p3)
+  const a = vecDot(d1, d1)
+  const b = vecDot(d1, d2)
+  const c = vecDot(d2, d2)
+  const d = vecDot(d1, w0)
+  const e = vecDot(d2, w0)
+  const denominator = a * c - b * b
+
+  if (Math.abs(denominator) < 1e-10) return null
+
+  const t1 = (b * e - c * d) / denominator
+  const t2 = (a * e - b * d) / denominator
+  const pointA = vecAdd(p1, vecScale(d1, t1))
+  const pointB = vecAdd(p3, vecScale(d2, t2))
+  const midpoint = vecScale(vecAdd(pointA, pointB), 0.5)
+  const gap = vecLength(vecSub(pointA, pointB))
+
+  return { t1, t2, pointA, pointB, midpoint, gap }
+}
+
+function generateLineIntersectionProblem() {
+  for (let attempts = 0; attempts < 80; attempts += 1) {
+    const lineA = {
+      position: [randomInt(-4, 4), randomInt(-4, 4), randomInt(-4, 4)],
+      direction: [randomInt(-5, 5), randomInt(-5, 5), randomInt(-5, 5)],
+    }
+    const lineB = {
+      position: [randomInt(-4, 4), randomInt(-4, 4), randomInt(-4, 4)],
+      direction: [randomInt(-5, 5), randomInt(-5, 5), randomInt(-5, 5)],
+    }
+
+    if (vecLength(lineA.direction) < 1 || vecLength(lineB.direction) < 1) continue
+    if (vecLength(vecCross(lineA.direction, lineB.direction)) < 1) continue
+
+    const solution = closestLineData(lineA, lineB)
+    if (!solution) continue
+    if (solution.gap < 0.35 || solution.gap > 8) continue
+
+    return { lineA, lineB, solution }
+  }
+
+  const lineA = { position: [2, 3, 2], direction: [1, 4, 1] }
+  const lineB = { position: [2, 1, 1], direction: [5, 2, 1] }
+  return { lineA, lineB, solution: closestLineData(lineA, lineB) }
+}
+
+function formatNumber(value) {
+  const rounded = Number(value.toFixed(3))
+  return Object.is(rounded, -0) ? '0' : String(rounded)
+}
+
+function formatVec(vec) {
+  return `(${vec.map(formatNumber).join(', ')})`
+}
+
+function vectorFromThree(vec) {
+  if (!vec?.isVector3) return null
+  return [vec.x, vec.y, vec.z]
+}
+
+function closeNumber(a, b, tolerance = 1e-3) {
+  return Math.abs(a - b) <= tolerance
+}
+
+function closeVec(a, b, tolerance = 1e-3) {
+  return Boolean(a && b && a.every((value, index) => closeNumber(value, b[index], tolerance)))
+}
+
+function lineMatchesTarget(object, target) {
+  const origin = vectorFromThree(object?.userData?.origin)
+  const direction = vectorFromThree(object?.userData?.direction)
+  return closeVec(origin, target.position) && closeVec(direction, target.direction)
+}
+
+function vectorFromVec3Block(block) {
+  if (block?.type !== 'linalg_vec3') return null
+  return ['X', 'Y', 'Z'].map((field) => Number(block.getFieldValue(field)))
+}
+
+function workspaceHasTargetLine(workspace, target) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('geo_vector', false).some((block) => {
+    const position = vectorFromVec3Block(block.getInputTargetBlock('POS'))
+    const direction = vectorFromVec3Block(block.getInputTargetBlock('DIR'))
+    return closeVec(position, target.position) && closeVec(direction, target.direction)
+  })
+}
+
+function findVariable(objects, type, name) {
+  return objects.find(
+    (object) =>
+      object?.userData?.geoType === type &&
+      String(object.userData.variableName).toLowerCase() === name,
+  )
+}
+
+function getWorldPosition(object) {
+  const userCentre = object?.userData?.centre ?? object?.userData?.center
+  if (userCentre?.isVector3) return userCentre
+  return object?.position
+}
+
 export default function ExercisePage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
-
-  // Combined and retained all state hooks from both HEAD and remote branch
+  const lineProblem = useMemo(() => generateLineIntersectionProblem(), [])
   const [categoryId, setCategoryId] = useState('create')
-  const [selectedId, setSelectedId] = useState(exercises[0].id)
+  const [exerciseIndex, setExerciseIndex] = useState(0)
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [toolboxPosition, setToolboxPosition] = useState(null)
   const clearWorkspaceRef = useRef(() => { })
 
-  const selectedExercise = exercises[0]
+  const selectedExercise = exercises[exerciseIndex] ?? exercises[0]
 
   const mickeyPassed = useMemo(() => {
     const getWorldPosition = (object) => {
@@ -81,7 +238,36 @@ export default function ExercisePage() {
       return leftEar && rightEar
     })
   }, [objects])
+  const lineIntersectionProgress = useMemo(() => {
+    const lines = objects.filter((object) => object?.userData?.geoType === 'geo_vector_line')
+    const lineA = lines.find((line) => lineMatchesTarget(line, lineProblem.lineA))
+    const lineB = lines.find((line) => lineMatchesTarget(line, lineProblem.lineB))
+    const intersections = objects.filter((object) => object?.userData?.geoType === 'geo_line_intersection')
+    const hasTargetLines =
+      Boolean(lineA && lineB) ||
+      (
+        workspaceHasTargetLine(workspace, lineProblem.lineA) &&
+        workspaceHasTargetLine(workspace, lineProblem.lineB)
+      )
+    const hasIntersectionResult = intersections.some((intersection) => {
+      const point = vectorFromThree(intersection.userData?.point)
+      return (
+        intersection.userData?.status === 'skew' &&
+        closeVec(point, lineProblem.solution.midpoint, 0.01) &&
+        closeNumber(Number(intersection.userData?.distance), lineProblem.solution.gap, 0.01)
+      )
+    })
 
+    return {
+      hasTargetLines,
+      hasIntersectionResult,
+      passed: hasTargetLines && hasIntersectionResult,
+    }
+  }, [objects, lineProblem, workspace])
+
+  const exercisePassed = selectedExercise.validation === 'line-intersection'
+    ? lineIntersectionProgress.passed
+    : mickeyPassed
   const handleObjectsChange = useCallback(
     (objs) => {
       setPendingObjects(objs)
@@ -192,23 +378,58 @@ export default function ExercisePage() {
         </div>
 
         <div className="exercise-editor-body-row">
-          <aside className={`exercise-task-panel${mickeyPassed ? ' is-passed' : ''}`}>
+          <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
             <div className="exercise-task-panel__top">
               <div className="exercise-task-panel__meta-row">
                 <span className="exercise-task-number">
-                  Exercise 1 of 1
+                  Exercise {exerciseIndex + 1} of {exercises.length}
                 </span>
               </div>
-              {mickeyPassed && (
+              <div className="exercise-selector" aria-label="Exercises">
+                {exercises.map((exercise, index) => (
+                  <button
+                    key={exercise.id}
+                    type="button"
+                    className={`exercise-selector__button${index === exerciseIndex ? ' is-active' : ''}`}
+                    onClick={() => setExerciseIndex(index)}
+                    aria-pressed={index === exerciseIndex}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+              </div>
+              {exercisePassed && (
                 <div className="exercise-pass-badge">Passed</div>
               )}
               <h1>{selectedExercise.title}</h1>
-              <div className="exercise-target-preview exercise-target-preview--mickey" aria-label="Target 3D Mickey sphere preview">
-                <div className="exercise-target-preview__ear exercise-target-preview__ear--left" />
-                <div className="exercise-target-preview__ear exercise-target-preview__ear--right" />
-                <div className="exercise-target-preview__face" />
-              </div>
+              {selectedExercise.preview === 'line-intersection' ? (
+                <div className="exercise-target-preview exercise-target-preview--line-intersection" aria-label="Target 3D line intersection preview">
+                  <div className="exercise-target-preview__line exercise-target-preview__line--a" />
+                  <div className="exercise-target-preview__line exercise-target-preview__line--b" />
+                  <div className="exercise-target-preview__intersection-dot" />
+                </div>
+              ) : (
+                <div className="exercise-target-preview exercise-target-preview--mickey" aria-label="Target 3D Mickey sphere preview">
+                  <div className="exercise-target-preview__ear exercise-target-preview__ear--left" />
+                  <div className="exercise-target-preview__ear exercise-target-preview__ear--right" />
+                  <div className="exercise-target-preview__face" />
+                </div>
+              )}
               <p>{selectedExercise.prompt}</p>
+              {selectedExercise.validation === 'line-intersection' && (
+                <div className="exercise-line-question" aria-label="Generated line values">
+                  <section>
+                    <h3>Line 1</h3>
+                    <p>Position {formatVec(lineProblem.lineA.position)}</p>
+                    <p>Direction {formatVec(lineProblem.lineA.direction)}</p>
+                  </section>
+                  <section>
+                    <h3>Line 2</h3>
+                    <p>Position {formatVec(lineProblem.lineB.position)}</p>
+                    <p>Direction {formatVec(lineProblem.lineB.direction)}</p>
+                  </section>
+                </div>
+              )}
             </div>
 
             {paletteOpen && (
@@ -221,11 +442,24 @@ export default function ExercisePage() {
               </div>
             )}
 
-            <ol className="exercise-task-steps">
-              {selectedExercise.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
+            {selectedExercise.validation === 'line-intersection' ? (
+              <ol className="exercise-subtask-list">
+                <li className={lineIntersectionProgress.hasTargetLines ? 'is-complete' : ''}>
+                  <strong>Create the two lines: </strong>
+                  <span>Use the generated position and direction values exactly.</span>
+                </li>
+                <li className={lineIntersectionProgress.hasIntersectionResult ? 'is-complete' : ''}>
+                  <strong>Find the intersection or distance: </strong>
+                  <span>Use Intersect 3D lines. For skew lines, read the closest midpoint and gap.</span>
+                </li>
+              </ol>
+            ) : (
+              <ol className="exercise-task-steps">
+                {selectedExercise.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            )}
           </aside>
 
           <aside className="exercise-category-panel">
