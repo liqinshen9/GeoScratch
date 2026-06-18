@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 import Layout from '@/layout/Layout'
 import LandingPage from '@/pages/LandingPage'
 import ExercisePage from '@/pages/ExercisePage'
+import SettingsPage from '@/pages/SettingsPage'
 import App from '../App'
 
 const router = createBrowserRouter([
@@ -12,6 +13,10 @@ const router = createBrowserRouter([
   {
     path: '/exercise',
     element: <ExercisePage />,
+  },
+  {
+    path: '/settings',
+    element: <SettingsPage />,
   },
   {
     path: '/sandbox',
