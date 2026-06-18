@@ -1,8 +1,9 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { closestLineData, leastSquares2 } from '@/utils/lineIntersectionMath'
 
-function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, threeObjStore) {
+function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, threeObjStore, closestLineDataFn, leastSquares2Fn) {
   const getLineData = (input) => {
     if (!input?.isObject3D || input.userData?.geoType !== 'geo_vector_line') return null
     const origin = input.userData.origin?.isVector3 ? input.userData.origin.clone() : null
@@ -45,38 +46,14 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
     return group
   }
 
-  const p1 = lineA.origin
-  const d1 = lineA.direction
-  const p3 = lineB.origin
-  const d2 = lineB.direction
-
-  const w0 = p1.clone().sub(p3)
-  const a = d1.dot(d1)
-  const b = d1.dot(d2)
-  const c = d2.dot(d2)
-  const d = d1.dot(w0)
-  const e = d2.dot(w0)
-  const denominator = a * c - b * b
-
-  if (Math.abs(denominator) < 1e-10) {
-    const midpoint = p1.clone().add(p3).multiplyScalar(0.5)
-    group.add(marker(midpoint, 0xef4444, 0.1))
-    group.userData.status = 'parallel'
-    group.userData.point = midpoint.clone()
-    group.userData.labels = [
-      { anchor: 'status', text: 'No unique intersection: lines are parallel', distanceFactor: 8, offset: [0.12, 0.12, 0] },
-    ]
-    group.userData.labelAnchors = { status: { type: 'world', position: [midpoint.x, midpoint.y, midpoint.z] } }
-    if (threeObjStore) threeObjStore[blockId] = group
-    return group
-  }
-
-  const tA = (b * e - c * d) / denominator
-  const tB = (a * e - b * d) / denominator
-  const pointA = p1.clone().addScaledVector(d1, tA)
-  const pointB = p3.clone().addScaledVector(d2, tB)
-  const midpoint = pointA.clone().add(pointB).multiplyScalar(0.5)
-  const distance = pointA.distanceTo(pointB)
+  const result = closestLineDataFn(lineA, lineB, {
+    dot: (a, b) => a.dot(b),
+    sub: (a, b) => a.clone().sub(b),
+    add: (a, b) => a.clone().add(b),
+    scale: (a, scalar) => a.clone().multiplyScalar(scalar),
+    distance: (a, b) => a.distanceTo(b),
+  }, leastSquares2Fn)
+  const { pointA, pointB, midpoint, gap: distance, t1: tA, t2: tB } = result
   const hasIntersection = distance <= 1e-4
 
   group.add(marker(midpoint, hasIntersection ? 0x22c55e : 0xf59e0b, hasIntersection ? 0.14 : 0.11))
@@ -138,7 +115,7 @@ export function initLineIntersectionBlock() {
     const lineA = generator.valueToCode(block, 'LINE_A', Order.FUNCTION_CALL) || 'null'
     const lineB = generator.valueToCode(block, 'LINE_B', Order.FUNCTION_CALL) || 'null'
     const blockId = JSON.stringify(block.id)
-    const code = `(${lineIntersectionDefinition.toString()})(${lineA}, ${lineB}, ${blockId}, THREE, threeObjStore)`
+    const code = `(${lineIntersectionDefinition.toString()})(${lineA}, ${lineB}, ${blockId}, THREE, threeObjStore, ${closestLineData.toString()}, ${leastSquares2.toString()})`
 
     return [code, Order.FUNCTION_CALL]
   }

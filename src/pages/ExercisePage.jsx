@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
-import { FullScreenOne, OffScreen } from '@icon-park/react'
+import { FullScreenOne, OffScreenOne } from '@icon-park/react'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
 import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
@@ -14,6 +14,7 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import './LandingPage.css'
 import './ExercisePage.css'
 import MainNavigation from '@/components/Header/MainNavigation'
+import { closestLineData } from '@/utils/lineIntersectionMath'
 
 const exercises = [
   {
@@ -80,29 +81,18 @@ function vecCross(a, b) {
   ]
 }
 
-function closestLineData(lineA, lineB) {
-  const p1 = lineA.position
-  const d1 = lineA.direction
-  const p3 = lineB.position
-  const d2 = lineB.direction
-  const w0 = vecSub(p1, p3)
-  const a = vecDot(d1, d1)
-  const b = vecDot(d1, d2)
-  const c = vecDot(d2, d2)
-  const d = vecDot(d1, w0)
-  const e = vecDot(d2, w0)
-  const denominator = a * c - b * b
-
-  if (Math.abs(denominator) < 1e-10) return null
-
-  const t1 = (b * e - c * d) / denominator
-  const t2 = (a * e - b * d) / denominator
-  const pointA = vecAdd(p1, vecScale(d1, t1))
-  const pointB = vecAdd(p3, vecScale(d2, t2))
-  const midpoint = vecScale(vecAdd(pointA, pointB), 0.5)
-  const gap = vecLength(vecSub(pointA, pointB))
-
-  return { t1, t2, pointA, pointB, midpoint, gap }
+function closestExerciseLineData(lineA, lineB) {
+  return closestLineData(
+    { origin: lineA.position, direction: lineA.direction },
+    { origin: lineB.position, direction: lineB.direction },
+    {
+      dot: vecDot,
+      sub: vecSub,
+      add: vecAdd,
+      scale: vecScale,
+      distance: (a, b) => vecLength(vecSub(a, b)),
+    },
+  )
 }
 
 function generateLineIntersectionProblem() {
@@ -119,7 +109,7 @@ function generateLineIntersectionProblem() {
     if (vecLength(lineA.direction) < 1 || vecLength(lineB.direction) < 1) continue
     if (vecLength(vecCross(lineA.direction, lineB.direction)) < 1) continue
 
-    const solution = closestLineData(lineA, lineB)
+    const solution = closestExerciseLineData(lineA, lineB)
     if (!solution) continue
     if (solution.gap < 0.35 || solution.gap > 8) continue
 
@@ -128,7 +118,7 @@ function generateLineIntersectionProblem() {
 
   const lineA = { position: [2, 3, 2], direction: [1, 4, 1] }
   const lineB = { position: [2, 1, 1], direction: [5, 2, 1] }
-  return { lineA, lineB, solution: closestLineData(lineA, lineB) }
+  return { lineA, lineB, solution: closestExerciseLineData(lineA, lineB) }
 }
 
 function formatNumber(value) {
@@ -329,13 +319,17 @@ export default function ExercisePage() {
 
       <main className="exercise-editor-shell">
         <div className="exercise-editor-header-row">
-          <header className="panel-column-header exercise-head">
-            <h2>Exercise</h2>
-          </header>
+          {!workspaceMaximized && (
+            <header className="panel-column-header exercise-head">
+              <h2>Exercise</h2>
+            </header>
+          )}
 
-          <header className="panel-column-header exercise-head">
-            <h2>Toolbox</h2>
-          </header>
+          {!workspaceMaximized && (
+            <header className="panel-column-header exercise-head">
+              <h2>Toolbox</h2>
+            </header>
+          )}
 
           <header className="panel-column-header exercise-head exercise-workspace-head">
             <div>
@@ -354,9 +348,9 @@ export default function ExercisePage() {
                 aria-pressed={workspaceMaximized}
               >
                 {workspaceMaximized ? (
-                  <Trash2 theme="outline" size="24" fill="currentColor" />
+                  <OffScreenOne theme="outline" size="24" fill="#333" />
                 ) : (
-                  <FullScreenOne theme="outline" size="24" fill="currentColor" />
+                  <FullScreenOne theme="outline" size="24" fill="#333" />
                 )}
               </Button>
               <Button
@@ -432,7 +426,7 @@ export default function ExercisePage() {
               )}
             </div>
 
-            {paletteOpen && (
+            {paletteOpen && !workspaceMaximized && (
               <div
                 className={`exercise-blocks-panel${toolboxPosition ? ' is-dragging' : ''}`}
                 style={toolboxPosition ? { left: toolboxPosition.x, top: toolboxPosition.y } : undefined}

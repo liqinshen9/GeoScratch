@@ -1,7 +1,7 @@
 import { getCategory } from '@/components/BlocksCanvas/catalog/blockCatalog'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
-import { FullScreenOne, OffScreen } from '@icon-park/react'
+import { FullScreenOne, OffScreenOne } from '@icon-park/react'
 
 export default function EditorColumnHeaders({
   categoryId,
@@ -44,9 +44,9 @@ export default function EditorColumnHeaders({
             aria-pressed={workspaceMaximized}
           >
             {workspaceMaximized ? (
-              <OffScreen theme="outline" size="24" fill="currentColor" />
+              <OffScreenOne theme="outline" size="24" fill="#333" />
             ) : (
-              <FullScreenOne theme="outline" size="24" fill="currentColor" />
+              <FullScreenOne theme="outline" size="24" fill="#333" />
             )}
           </Button>
           <Button

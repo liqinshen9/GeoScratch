@@ -106,19 +106,30 @@
 .exercise-page--workspace-maximized .exercise-editor-header-row,
 .exercise-page--workspace-maximized .exercise-editor-body-row {
   grid-template-columns:
-    var(--exercise-task-width)
-    var(--exercise-toolbox-width)
     minmax(0, 1fr)
     minmax(0, 1fr);
 }
 
+.exercise-page--workspace-maximized .exercise-task-panel,
+.exercise-page--workspace-maximized .exercise-category-panel {
+  display: none;
+}
+
+.exercise-page--workspace-maximized .exercise-workspace-head {
+  grid-column: 1;
+}
+
+.exercise-page--workspace-maximized .exercise-head--last {
+  grid-column: 2;
+}
+
 .exercise-page--workspace-maximized .exercise-editor-body-row > #blocks-canvas.blocks-shell {
-  grid-column: 3;
+  grid-column: 1;
   grid-template-columns: 1fr;
 }
 
 .exercise-page--workspace-maximized .exercise-editor-body-row > .editor-body-3d {
-  grid-column: 4;
+  grid-column: 2;
 }
 
 .exercise-task-panel {
