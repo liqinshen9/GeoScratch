@@ -2,7 +2,13 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
-function geoCubeDefinition(centreInput, sideLengthInput, blockId, THREE, threeObjStore) {
+function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
+  // Pull context strictly from the window where Three has been cleanly mounted
+  const THREE = window.THREE
+  const threeObjStore = window.threeObjStore
+
+  if (!THREE) return null
+
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const sideLength = Math.max(0.0001, Number(sideLengthInput) || 1)
   const geometry = new THREE.BoxGeometry(sideLength, sideLength, sideLength)
@@ -19,7 +25,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId, THREE, threeOb
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25 })
+    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
   )
   mesh.add(edges)
 
@@ -55,13 +61,16 @@ export default function initGeoCubeBlock() {
     },
   }
 
-  javascriptGenerator.forBlock.geo_cube = function (block, generator) {
+  javascriptGenerator.forBlock.geo_cube = function(block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
-    const centre = valueToCode('CENTRE') || 'new THREE.Vector3(0,0,0)'
+
+    // Fall back safely to window scope context inside the output execution block string
+    const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
     const sideLength = Number(block.getFieldValue('SIDE_LENGTH'))
     const blockId = JSON.stringify(block.id)
-    const code = `(${geoCubeDefinition.toString()})(${centre}, ${sideLength}, ${blockId}, THREE, threeObjStore)`
+
+    const code = `(${geoCubeDefinition.toString()})(${centre}, ${sideLength}, ${blockId})`
 
     return [code, Order.FUNCTION_CALL]
   }

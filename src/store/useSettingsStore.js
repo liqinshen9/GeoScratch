@@ -1,12 +1,14 @@
 import { create } from 'zustand'
 import { LINE_STYLES } from './lineStyles'
 
+// Extract defaults so you only have to maintain them in one place
+const DEFAULT_SETTINGS = {
+  lineStyle: LINE_STYLES.PLAIN_LINE,
+  showLabels: true,
+}
+
 const useSettingsStore = create((set) => ({
-  settings: {
-    lineStyle: LINE_STYLES.PLAIN_LINE,
-    showLabels: true,
-    gridOpacity: 0.5,
-  },
+  settings: { ...DEFAULT_SETTINGS },
 
   updateSetting: (key, value) => set((state) => ({
     settings: {
@@ -16,12 +18,12 @@ const useSettingsStore = create((set) => ({
   })),
 
   resetSettings: () => set({
-    settings: {
-      lineStyle: LINE_STYLES.PLAIN_LINE,
-      showLabels: true,
-      gridOpacity: 0.5,
-    }
+    settings: { ...DEFAULT_SETTINGS }
   })
 }))
+
+if (typeof window !== 'undefined') {
+  window.useSettingsStore = useSettingsStore;
+}
 
 export default useSettingsStore

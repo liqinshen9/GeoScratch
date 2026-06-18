@@ -4,7 +4,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import './Scene3D.css'
-
+import useSettingsStore from '@/store/useSettingsStore'
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -30,39 +30,39 @@ const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#
   );
 };
 
-function AxisArrow({ dir = [1,0,0], color = 'red', length = 3 }) {
-    const arrow = useMemo(() => {
-        const direction = new THREE.Vector3(...dir).normalize()
-        const origin = new THREE.Vector3(0, 0, 0)
-        const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
-        return helper
-    }, [dir, color, length])
+function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3 }) {
+  const arrow = useMemo(() => {
+    const direction = new THREE.Vector3(...dir).normalize()
+    const origin = new THREE.Vector3(0, 0, 0)
+    const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
+    return helper
+  }, [dir, color, length])
 
-    const tip = useMemo(() => {
-        const d = new THREE.Vector3(...dir).normalize()
-        return d.multiplyScalar(length + 0.25)
-    }, [dir, length])
+  const tip = useMemo(() => {
+    const d = new THREE.Vector3(...dir).normalize()
+    return d.multiplyScalar(length + 0.25)
+  }, [dir, length])
 
-    return (
-        <group>
-            <primitive object={arrow} />
-            <Billboard position={[tip.x, tip.y, tip.z]}>
-                <Text fontSize={0.35} color={color} anchorX="center" anchorY="middle">
-                    {dir[0] ? 'X' : dir[1] ? 'Y' : 'Z'}
-                </Text>
-            </Billboard>
-        </group>
-    )
+  return (
+    <group>
+      <primitive object={arrow} />
+      <Billboard position={[tip.x, tip.y, tip.z]}>
+        <Text fontSize={0.35} color={color} anchorX="center" anchorY="middle">
+          {dir[0] ? 'X' : dir[1] ? 'Y' : 'Z'}
+        </Text>
+      </Billboard>
+    </group>
+  )
 }
 
 function Axes({ length = 3 }) {
-    return (
-        <group>
-            <AxisArrow dir={[1,0,0]} color="#ef4444" length={length} />
-            <AxisArrow dir={[0,1,0]} color="#22c55e" length={length} />
-            <AxisArrow dir={[0,0,1]} color="#3b82f6" length={length} />
-        </group>
-    )
+  return (
+    <group>
+      <AxisArrow dir={[1, 0, 0]} color="#ef4444" length={length} />
+      <AxisArrow dir={[0, 1, 0]} color="#22c55e" length={length} />
+      <AxisArrow dir={[0, 0, 1]} color="#3b82f6" length={length} />
+    </group>
+  )
 }
 
 function fmtVec(v) {
@@ -183,21 +183,26 @@ function SelectablePointPicker({ onSelectPoint, onClearPoint }) {
   return null;
 }
 
+const globalThreeObjStore = {}
+
 function Scene({ objects = [], selectedPoint }) {
+  // Read label toggle updates actively from your Zustand store
+  const { settings } = useSettingsStore()
+
   return (
     <>
       <ambientLight intensity={0.6} />
       <directionalLight position={[3, 5, 2]} intensity={1} />
       <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.01, 0]} />
       <AxisLabels size={40} step={1} />
-      <Axes length={20} position={[0, 0, 0]}/>
+      <Axes length={20} position={[0, 0, 0]} />
 
       {objects.map((o, i) => {
         if (!o) return null;
         return (
           <group key={i}>
             <primitive object={o} />
-            <LabelLayer object3D={o} />
+            {settings.showLabels && <LabelLayer object3D={o} />}
           </group>
         );
       })}
@@ -213,19 +218,28 @@ function Scene({ objects = [], selectedPoint }) {
           </Html>
         </group>
       )}
-
     </>
   );
 }
 
 export default function Scene3D({ objects = [] }) {
-
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
 
   const initialCamPos = useMemo(() => new THREE.Vector3(45, 45, 8), []);
   const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
+
+  // Guarantee that THREE and the tracker object store map cleanly to window BEFORE executing sandbox runs
+  useEffect(() => {
+    window.THREE = THREE
+    window.threeObjStore = globalThreeObjStore
+
+    return () => {
+      delete window.THREE
+      delete window.threeObjStore
+    }
+  }, []);
 
   useEffect(() => {
     setSelectedPoint(null);
@@ -257,7 +271,7 @@ export default function Scene3D({ objects = [] }) {
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >
-          <OrbitControls ref={controlsRef}/>
+          <OrbitControls ref={controlsRef} />
           <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
           <SelectablePointPicker onSelectPoint={handleSelectPoint} onClearPoint={handleClearPoint} />
           <Scene objects={objects} selectedPoint={selectedPoint} />
@@ -265,7 +279,7 @@ export default function Scene3D({ objects = [] }) {
         </Canvas>
         <button className="recenter-btn" onClick={recenter} aria-label="Recenter camera" title="Recenter">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </button>
       </div>
