@@ -85,7 +85,7 @@ export function initTransformPipelineBlock() {
   }
 
   javascriptGenerator.forBlock.transform_pipeline = function (block, generator) {
-    generator.valueToCode(block, 'INPUT', Order.NONE)
-    return ''
+    const inputObject = generator.valueToCode(block, 'INPUT', Order.NONE)
+    return inputObject ? `${inputObject};\n` : ''
   }
 }
