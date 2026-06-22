@@ -1,12 +1,12 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
-import MainNavigation from '@/components/Header/MainNavigation'
 import './LandingPage.css'
 
 export default function LandingPage() {
   return (
     <div className="landing-page">
-      <MainNavigation />
+      {/* Absolute backdrop block creating the background swoop */}
+      <div className="landing-curve-swoop" aria-hidden="true" />
 
       <main className="landing-hero">
         <div className="landing-hero__content">

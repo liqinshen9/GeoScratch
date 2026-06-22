@@ -1,30 +1,14 @@
 import { Outlet } from 'react-router-dom'
-import Header from '@/components/Header/Header'
-import useSceneStore from '@/store/useSceneStore'
-import { useCallback } from 'react'
+import Header from '@/components/Header/Header' // Or MainNavigation depending on your final file name
 
-const Layout = () => {
-  const { autoRender, pendingObjects, setObjects, toggleAutoRender } = useSceneStore()
-
-  const handleRun = useCallback(() => {
-    if (!autoRender) setObjects(pendingObjects)
-  }, [autoRender, pendingObjects, setObjects])
-
+export default function Layout() {
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[var(--bg-main)]">
-      <header className="app-nav shrink-0 w-full text-white">
-        <Header
-          autoRender={autoRender}
-          onAutoRenderChange={toggleAutoRender}
-          onRun={handleRun}
-        />
-      </header>
+    <div className="app-container flex flex-col min-h-screen">
+      <Header />
 
-      <main className="flex-1 min-h-0 bg-[var(--bg-main)]">
+      <main className="flex-1 min-h-0">
         <Outlet />
       </main>
     </div>
   )
 }
-
-export default Layout

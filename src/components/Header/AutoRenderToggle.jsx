@@ -1,13 +1,18 @@
-export default function AutoRenderToggle({ autoRender, onAutoRenderChange }) {
+import useSceneStore from '@/store/useSceneStore'
+import { Switch } from '@/components/ui/switch' // replace with your actual UI primitive
+
+export default function AutoRenderToggle() {
+  const { autoRender, setAutoRender } = useSceneStore()
   return (
-    <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-      <input
-        type="checkbox"
+    <div className="flex items-center gap-2 px-2 text-sm font-medium">
+      <label htmlFor="auto-render-switch" className="cursor-pointer select-none">
+        Auto Render
+      </label>
+      <Switch
+        id="auto-render-switch"
         checked={autoRender}
-        onChange={(e) => onAutoRenderChange?.(e.target.checked)}
-        className="cursor-pointer"
+        onCheckedChange={setAutoRender}
       />
-      Auto Render
-    </label>
+    </div>
   )
 }

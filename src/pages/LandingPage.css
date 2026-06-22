@@ -35,8 +35,7 @@
   justify-content: space-between;
   width: 100%;
   min-height: calc(var(--landing-nav-height) + var(--landing-nav-curve-depth));
-  padding: 1.125rem var(--landing-gutter)
-    calc(0.75rem + var(--landing-nav-curve-depth));
+  padding: 1.125rem var(--landing-gutter) calc(0.75rem + var(--landing-nav-curve-depth));
   border-radius: 0 0 65% 65% / 0 0 var(--landing-nav-curve-depth) var(--landing-nav-curve-depth);
   background: var(--accent);
   color: var(--nav-fg);
@@ -230,5 +229,52 @@
 
   .landing-hero__mark .geoscratch-logo {
     --geoscratch-logo-size: min(clamp(9rem, 56vw, 14rem), 40dvh);
+  }
+}
+
+/* ==========================================
+   ADDED FOR BACKGROUND SWOOP DECORATION 
+   ========================================== */
+
+/* 1. Establish absolute positioning context */
+.landing-page {
+  position: relative;
+}
+
+/* 2. Render the blue curve perfectly behind the layout header */
+.landing-curve-swoop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(1.5rem + var(--landing-nav-curve-depth));
+  background: var(--accent);
+  border-radius: 0 0 65% 65% / 0 0 var(--landing-nav-curve-depth) var(--landing-nav-curve-depth);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 3. Layer the page elements above the backdrop */
+.landing-hero {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-hero__accent {
+  color: var(--text-main);
+}
+
+/* 5. SURGICAL BLEND: Erase the Tailwind shadow and border from the global header 
+      ONLY while viewing the landing page view */
+:root:has(.landing-page) header.app-nav {
+  box-shadow: none !important;
+  border-bottom: none !important;
+}
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+  .landing-curve-swoop {
+    --landing-nav-curve-depth: 3.5rem;
+    height: calc(3.5rem + var(--landing-nav-curve-depth));
   }
 }

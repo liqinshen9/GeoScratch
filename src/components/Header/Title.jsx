@@ -1,17 +1,8 @@
-import useWorkspaceStore from '@/store/useWorkspaceStore'
-import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
-
-const Title = () => {
-  const { title } = useWorkspaceStore()
-
+export default function Title({ text, badge }) {
   return (
-    <GeoScratchLogo
-      className="app-nav__logo"
-      wordmark={title}
-      showMark={false}
-      showWordmark
-    />
+    <div className="header-title-group">
+      <h1 className="header-title-text">{text}</h1>
+      {badge && <span className="header-title-badge">{badge}</span>}
+    </div>
   )
 }
-
-export default Title

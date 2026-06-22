@@ -18,21 +18,6 @@
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-.exercise-landing-nav {
-  align-items: center;
-  min-height: var(--landing-nav-height);
-  padding: 0 var(--landing-gutter);
-  border-radius: 0;
-}
-
-.exercise-landing-nav .landing-nav__logo.app-nav__logo {
-  margin-top: 0;
-}
-
-.exercise-landing-nav .landing-nav__links {
-  padding-top: 0;
-}
-
 .exercise-editor-shell {
   flex: 1;
   min-height: 0;

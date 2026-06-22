@@ -11,9 +11,9 @@ import { Button } from '@/components/ui/button'
 import addBlockToWorkspace from '@/utils/addBlockToWorkspace'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
-import './LandingPage.css'
+
 import './ExercisePage.css'
-import MainNavigation from '@/components/Header/MainNavigation'
+import Header from '@/components/Header/Header'
 
 const exercises = [
   {
@@ -323,9 +323,6 @@ export default function ExercisePage() {
 
   return (
     <div className={`exercise-page exercise-page--editor${workspaceMaximized ? ' exercise-page--workspace-maximized' : ''}`}>
-
-      {/* Replaced old raw header block cleanly with MainNavigation abstraction */}
-      <MainNavigation extraClass="exercise-landing-nav" />
 
       <main className="exercise-editor-shell">
         <div className="exercise-editor-header-row">
