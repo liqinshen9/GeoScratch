@@ -11,7 +11,7 @@ export default function SandboxPage() {
   const { workspace } = useWorkspaceStore()
   const [categoryId, setCategoryId] = useState('create')
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
-  const clearWorkspaceRef = useRef(() => {})
+  const clearWorkspaceRef = useRef(() => { })
 
   const handleObjectsChange = useCallback(
     (objs) => {
@@ -32,6 +32,7 @@ export default function SandboxPage() {
       />
       <div className="editor-body-row">
         <BlocksCanvas
+          id="sandbox" // <-- NEW: Ties this canvas to the 'sandbox' memory bank
           categoryId={categoryId}
           workspaceMaximized={workspaceMaximized}
           onCategoryChange={setCategoryId}

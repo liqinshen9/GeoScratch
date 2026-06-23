@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as Blockly from 'blockly/core'
 import addBlockToWorkspace from '@/utils/addBlockToWorkspace'
 import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
 import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
 import { useBlocksWorkspace } from '@/components/BlocksCanvas/hooks/useBlocksWorkspace'
+import useWorkspaceStore from '@/store/useWorkspaceStore'
 import './BlocksCanvas.css'
 
 export default function BlocksCanvas({
+  id,
   onObjectsChange,
   categoryId,
   workspaceMaximized,
@@ -18,6 +21,12 @@ export default function BlocksCanvas({
   const workspaceHostRef = useRef(null)
   const onObjectsChangeRef = useRef(onObjectsChange)
   const [toolboxPosition, setToolboxPosition] = useState(null)
+
+  // FIX 1: Only subscribe to the save function. 
+  // Do NOT extract savedXml here, otherwise your entire canvas re-renders every time a block moves!
+  const saveWorkspaceXml = useWorkspaceStore((state) => state.saveWorkspaceXml)
+  const isFirstLoad = useRef(true)
+
   useEffect(() => {
     onObjectsChangeRef.current = onObjectsChange
   }, [onObjectsChange])
@@ -27,6 +36,51 @@ export default function BlocksCanvas({
     onObjectsChangeRef,
     workspaceMaximized,
   })
+
+  // Auto-Save and Auto-Load Logic
+  useEffect(() => {
+    // FIX 2: Ensure workspace exists AND is fully injected/rendered before manipulating it.
+    // This stops the "Cannot create a rendered block in a headless workspace" crash.
+    if (!workspace || !workspace.rendered || !id) return
+
+    // 1. If we have saved data in the store, load it immediately on mount
+    if (isFirstLoad.current) {
+      // FIX 3: Fetch the current saved state directly without triggering React re-renders
+      const initialXml = useWorkspaceStore.getState().savedXml[id]
+
+      if (initialXml) {
+        try {
+          // FIX 4: Temporarily disable events so loading the XML doesn't trigger the auto-save listener
+          Blockly.Events.disable()
+          const dom = Blockly.utils.xml.textToDom(initialXml)
+          Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, workspace)
+          syncScene(workspace)
+        } catch (err) {
+          console.error('Failed to restore workspace state:', err)
+        } finally {
+          // Always re-enable events
+          Blockly.Events.enable()
+        }
+      }
+      isFirstLoad.current = false
+    }
+
+    // 2. Listen to all workspace events and save to store silently
+    const handleWorkspaceChange = (event) => {
+      // Ignore purely visual events and prevent saving if the workspace is in the process of being destroyed
+      if (event.isUiEvent || !workspace.rendered) return
+
+      const dom = Blockly.Xml.workspaceToDom(workspace)
+      const xmlText = Blockly.Xml.domToText(dom)
+      saveWorkspaceXml(id, xmlText)
+    }
+
+    workspace.addChangeListener(handleWorkspaceChange)
+
+    return () => {
+      workspace.removeChangeListener(handleWorkspaceChange)
+    }
+  }, [workspace, id, saveWorkspaceXml, syncScene])
 
   const handleClearWorkspace = useCallback(() => {
     if (!workspace) return
