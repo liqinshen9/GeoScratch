@@ -6,7 +6,7 @@ import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import '@/components/EditorShell/editor-shell.css'
 
-export default function App() {
+export default function SandboxPage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const [categoryId, setCategoryId] = useState('create')

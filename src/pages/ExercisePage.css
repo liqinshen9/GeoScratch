@@ -2,13 +2,15 @@
   --exercise-task-width: clamp(16rem, 18vw, 20rem);
   --exercise-toolbox-width: clamp(5.25rem, 7vw, 6.75rem);
   --exercise-palette-width: clamp(11rem, 15vw, 15rem);
-  --landing-nav-height: 3.75rem;
+
+  --landing-nav-height: var(--app-nav-height);
+
   --landing-nav-title-size: var(--app-nav-title-size);
   --landing-nav-curve-depth: 0rem;
   --landing-gutter: clamp(1.25rem, 3vw, 2.5rem);
   --exercise-blue: var(--geo-highlight);
 
-  height: 100dvh;
+  height: calc(100dvh - var(--landing-nav-height));
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -31,10 +33,7 @@
 .exercise-editor-body-row {
   display: grid;
   grid-template-columns:
-    var(--exercise-task-width)
-    var(--exercise-toolbox-width)
-    minmax(20rem, 1fr)
-    minmax(20rem, 1fr);
+    var(--exercise-task-width) var(--exercise-toolbox-width) minmax(20rem, 1fr) minmax(20rem, 1fr);
 }
 
 .exercise-editor-header-row {
@@ -76,14 +75,14 @@
   color: var(--geo-text-on-light) !important;
 }
 
-.exercise-editor-body-row > #blocks-canvas.blocks-shell {
+.exercise-editor-body-row>#blocks-canvas.blocks-shell {
   display: grid;
   grid-column: 3;
   grid-template-columns: minmax(0, 1fr);
   min-height: 0;
 }
 
-.exercise-editor-body-row > .editor-body-3d {
+.exercise-editor-body-row>.editor-body-3d {
   grid-column: 4;
   min-height: 0;
 }
@@ -91,8 +90,7 @@
 .exercise-page--workspace-maximized .exercise-editor-header-row,
 .exercise-page--workspace-maximized .exercise-editor-body-row {
   grid-template-columns:
-    minmax(0, 1fr)
-    minmax(0, 1fr);
+    minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .exercise-page--workspace-maximized .exercise-task-panel,
@@ -108,12 +106,12 @@
   grid-column: 2;
 }
 
-.exercise-page--workspace-maximized .exercise-editor-body-row > #blocks-canvas.blocks-shell {
+.exercise-page--workspace-maximized .exercise-editor-body-row>#blocks-canvas.blocks-shell {
   grid-column: 1;
   grid-template-columns: 1fr;
 }
 
-.exercise-page--workspace-maximized .exercise-editor-body-row > .editor-body-3d {
+.exercise-page--workspace-maximized .exercise-editor-body-row>.editor-body-3d {
   grid-column: 2;
 }
 
@@ -212,7 +210,7 @@
   background: var(--geo-panel-muted);
 }
 
-.exercise-line-question section + section {
+.exercise-line-question section+section {
   padding-top: 0.45rem;
   border-top: 1px solid var(--geo-border-light);
 }
@@ -290,12 +288,10 @@
   bottom: 12%;
   height: 0.3rem;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(0, 46, 166, 0.12),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(0, 46, 166, 0.12),
+      transparent);
 }
 
 .exercise-target-preview--line-intersection {
@@ -342,7 +338,7 @@
   line-height: 1.45;
 }
 
-.exercise-task-steps li + li {
+.exercise-task-steps li+li {
   margin-top: 0.45rem;
 }
 
