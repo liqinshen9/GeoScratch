@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
-import { useThree, Canvas } from '@react-three/fiber'
-import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
+import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
+import { Edges, OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
@@ -9,6 +9,71 @@ function CameraHandle({ onReady }) {
   const { camera } = useThree();
   useEffect(() => { onReady?.(camera); }, [camera, onReady]);
   return null;
+}
+
+// --- ADDED: Camera Headlight ---
+// This light acts like a miner's headlamp. It syncs its position
+// with the camera every frame so it always illuminates what you look at.
+function HeadLight() {
+  const lightRef = useRef();
+  const targetRef = useRef();
+  // Small, mostly-vertical offset: enough to break line-of-sight occlusion,
+  // not enough to throw the shadow noticeably off to one side.
+  const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), []);
+
+  useFrame(({ camera }) => {
+    if (lightRef.current && targetRef.current) {
+      const worldOffset = offset.clone().applyQuaternion(camera.quaternion);
+      lightRef.current.position.copy(camera.position).add(worldOffset);
+
+      targetRef.current.position.set(0, 0, 0);
+      lightRef.current.target = targetRef.current;
+
+      const distToCenter = lightRef.current.position.length();
+      const shadowCam = lightRef.current.shadow.camera;
+      shadowCam.near = 0.5;
+      shadowCam.far = distToCenter + 30;
+      shadowCam.updateProjectionMatrix();
+    }
+  });
+
+  return (
+    <>
+      <spotLight
+        ref={lightRef}
+        color="#dbe9ff"
+        intensity={2.5}
+        decay={0}
+        angle={Math.PI / 4}
+        penumbra={2}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0008}
+        shadow-normalBias={0.06}
+        shadow-radius={8}
+      />
+      <object3D ref={targetRef} />
+    </>
+  );
+}
+
+// --- ADDED: Bounding Box Room ---
+// A giant cube that renders on the inside to catch all shadows
+// --- FIXED: Bounding Box Room ---
+function BoundingBoxRoom({ size = 40 }) {
+  return (
+    // Centered exactly back at [0, 0, 0]
+    <mesh position={[0, 0, 0]} receiveShadow>
+      <boxGeometry args={[size, size, size]} />
+
+      {/* BackSide hides the front faces but catches shadows on the back walls/floor */}
+      <meshStandardMaterial
+        color="#52525b"
+        side={THREE.BackSide}
+        roughness={1}
+      />
+    </mesh>
+  );
 }
 
 const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#9aa0a6', showZero = true }) => {
@@ -190,32 +255,27 @@ function Scene({ objects = [], selectedPoint }) {
   return (
     <>
       <ambientLight intensity={0.4} />
-      
-      <directionalLight 
-        position={[8, 15, 8]} 
-        intensity={1.2} 
-        castShadow 
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-near={0.5}
-        shadow-camera-far={50}
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+
+      {/* 1. The Headlight (Camera Light) */}
+      <HeadLight />
+
+      {/* 2. The Point Light */}
+      <pointLight
+        position={[8, 18, 0]}
+        color="#fff4e0"
+        intensity={2.5}
+        decay={0}
+        distance={100}
+        castShadow
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-bias={-0.001}
       />
-      
+
       <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.005, 0]} />
 
-      {/* FIX: Turned off depth-writing (`depthWrite={false}`).
-        This ensures the shadow-catcher catches the alpha darkness pass of the shadows 
-        at the floor surface level, but doesn't fill the depth buffer. Sub-surface parts 
-        of your cubes will render right through it without being clipped!
-      */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
-        <shadowMaterial opacity={0.4} depthWrite={false} />
-      </mesh>
+      {/* 3. The Bounding Box */}
+      <BoundingBoxRoom size={40} />
 
       <AxisLabels size={40} step={1} />
       <Axes length={20} position={[0, 0, 0]} />
@@ -224,6 +284,8 @@ function Scene({ objects = [], selectedPoint }) {
         if (!o) return null;
         return (
           <group key={i}>
+            {/* MAKE SURE: The objects you feed into this array have `castShadow` 
+                and `receiveShadow` set on their meshes, or they won't cast shadows! */}
             <primitive object={o} />
             {settings.showLabels && <LabelLayer object3D={o} />}
           </group>

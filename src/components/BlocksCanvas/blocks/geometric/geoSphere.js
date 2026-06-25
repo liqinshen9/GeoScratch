@@ -2,7 +2,10 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
-function geoSphereDefinition(centreInput, radiusInput, blockId, THREE, threeObjStore) {
+function geoSphereDefinition(centreInput, radiusInput, blockId) {
+  const THREE = window.THREE
+  const threeObjStore = window.threeObjStore
+  if (!THREE) return null
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const radius = Math.max(0.01, Number(radiusInput) || 1)
   const geometry = new THREE.SphereGeometry(radius, 32, 16)
@@ -13,24 +16,26 @@ function geoSphereDefinition(centreInput, radiusInput, blockId, THREE, threeObjS
     opacity: 0.8,
     transparent: true,
   })
-
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)
+  mesh.castShadow = true
+  mesh.receiveShadow = true
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geometry),
+    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
+  )
+  mesh.add(edges)
   mesh.userData.geoType = 'geo_sphere'
   mesh.userData.centre = centre.clone()
   mesh.userData.radius = radius
   mesh.userData.srcBlockId = blockId
-
   if (threeObjStore) threeObjStore[blockId] = mesh
   return mesh
 }
-
 let REGISTERED = false
-
 export function initGeoSphereBlock() {
   if (REGISTERED) return
   REGISTERED = true
-
   Blockly.Blocks.geo_sphere = {
     init() {
       this.appendDummyInput().appendField('Sphere')
@@ -45,15 +50,14 @@ export function initGeoSphereBlock() {
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     },
   }
-
   javascriptGenerator.forBlock.geo_sphere = function(block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
-    const centre = valueToCode('CENTRE') || 'new THREE.Vector3()'
+    // Fall back safely to window scope context inside the output execution block string
+    const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
     const radius = Number(block.getFieldValue('RADIUS'))
     const blockId = JSON.stringify(block.id)
-    const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId}, THREE, threeObjStore)`
-
+    const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId})`
     return [code, Order.FUNCTION_CALL]
   }
 }
