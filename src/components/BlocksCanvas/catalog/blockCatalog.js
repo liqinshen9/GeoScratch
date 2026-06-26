@@ -47,6 +47,7 @@ export const BLOCK_CATEGORIES = {
         blocks: [
           { type: 'geo_cube', label: 'Cube' },
           { type: 'geo_sphere', label: 'Sphere' },
+          { type: 'geo_teapot', label: 'Teapot' },
         ],
       },
     ],

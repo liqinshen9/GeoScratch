@@ -7,6 +7,7 @@ const TOOLBOX_XML = `
 <!--            <block type="geo_plane"></block>-->
             <block type="geo_cube"></block>
             <block type="geo_sphere"></block>
+            <block type="geo_teapot"></block>
         </category>
         <category name="Linear Algebra Primitives" categorystyle="text_category">
             <block type="linalg_vec3"></block>

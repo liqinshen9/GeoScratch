@@ -1,9 +1,14 @@
-import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react'
+import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
 import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
 import { Edges, OrbitControls, Text, Billboard, Html } from '@react-three/drei'
-import * as THREE from 'three'
+import * as THREEBase from 'three'
+import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
+const THREE = { ...THREEBase, TeapotGeometry }
+
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
+
+const DEFAULT_CAMERA_POSITION = [20, 35, 40]
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -312,10 +317,10 @@ export default function Scene3D({ objects = [] }) {
   const cameraRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
 
-  const initialCamPos = useMemo(() => new THREE.Vector3(45, 45, 8), []);
+  const initialCamPos = useMemo(() => new THREE.Vector3(...DEFAULT_CAMERA_POSITION), []);
   const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     window.THREE = THREE
     window.threeObjStore = globalThreeObjStore
 
@@ -352,7 +357,7 @@ export default function Scene3D({ objects = [] }) {
       <div className="relative flex-1 min-h-0">
         <Canvas
           shadows
-          camera={{ position: [45, 45, 8], fov: 45, near: 0.1, far: 5000 }}
+          camera={{ position: [20, 35, 40], fov: 45, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >
