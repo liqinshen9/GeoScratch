@@ -19,46 +19,35 @@ function CameraHandle({ onReady }) {
 // --- ADDED: Camera Headlight ---
 // This light acts like a miner's headlamp. It syncs its position
 // with the camera every frame so it always illuminates what you look at.
+// It's a pointLight (not a spotLight) so its shadow is an omnidirectional
+// cube map, just like the scene's other point light — no target/frustum
+// aiming math required, and no risk of the shadow cone drifting off-axis
+// as the camera orbits.
 function HeadLight() {
   const lightRef = useRef();
-  const targetRef = useRef();
   // Small, mostly-vertical offset: enough to break line-of-sight occlusion,
   // not enough to throw the shadow noticeably off to one side.
   const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), []);
 
   useFrame(({ camera }) => {
-    if (lightRef.current && targetRef.current) {
+    if (lightRef.current) {
       const worldOffset = offset.clone().applyQuaternion(camera.quaternion);
       lightRef.current.position.copy(camera.position).add(worldOffset);
-
-      targetRef.current.position.set(0, 0, 0);
-      lightRef.current.target = targetRef.current;
-
-      const distToCenter = lightRef.current.position.length();
-      const shadowCam = lightRef.current.shadow.camera;
-      shadowCam.near = 0.5;
-      shadowCam.far = distToCenter + 30;
-      shadowCam.updateProjectionMatrix();
     }
   });
 
   return (
-    <>
-      <spotLight
-        ref={lightRef}
-        color="#dbe9ff"
-        intensity={2.5}
-        decay={0}
-        angle={Math.PI / 4}
-        penumbra={2}
-        castShadow
-        shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0008}
-        shadow-normalBias={0.06}
-        shadow-radius={8}
-      />
-      <object3D ref={targetRef} />
-    </>
+    <pointLight
+      ref={lightRef}
+      color="#dbe9ff"
+      intensity={2.5}
+      decay={0}
+      distance={100}
+      castShadow
+      shadow-mapSize-width={2048}
+      shadow-mapSize-height={2048}
+      shadow-bias={-0.001}
+    />
   );
 }
 
