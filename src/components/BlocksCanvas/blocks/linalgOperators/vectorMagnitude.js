@@ -31,17 +31,24 @@ export function initVectorMagnitude() {
     if (!vVal || !vVal.isVector3) return null;
 
     const len = vVal.length();
+    const isPointPlaneProjection = vVal.userData?.geoType === 'point_plane_distance_projection_vector';
     const safeLen = (x) => (Number.isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;
+    const arrowOrigin = isPointPlaneProjection && vVal.userData.start?.isVector3
+      ? vVal.userData.start.clone()
+      : new THREE.Vector3(0,0,0);
+    const arrowTip = isPointPlaneProjection && vVal.userData.end?.isVector3
+      ? vVal.userData.end.clone()
+      : vVal.clone();
 
     // Render vector as arrow, or sphere if zero-length
     let obj;
     if (len > 1e-8) {
       obj = new THREE.ArrowHelper(
         vVal.clone().normalize(),
-        new THREE.Vector3(0,0,0),
+        arrowOrigin.clone(),
         safeLen(len),
-        0x0ea5e9, // teal-ish
+        isPointPlaneProjection ? 0xfacc15 : 0x0ea5e9,
         headLenRatio,
         headWidthRatio
       );
@@ -57,19 +64,31 @@ export function initVectorMagnitude() {
     group.add(obj);
 
     // Metadata
-    group.userData.geoType = 'geo_vector_magnitude';
+    group.userData.geoType = isPointPlaneProjection
+      ? 'point_plane_distance_projection_magnitude'
+      : 'geo_vector_magnitude';
     group.userData.srcBlockId = ${JSON.stringify(block.id)};
     group.userData.input = vVal.clone();
     group.userData.length = len;
+    if (isPointPlaneProjection) group.userData.distance = len;
 
     // Label: only one line -> "length of <name> = <len>"
-    const tip = (len > 1e-8) ? vVal.clone() : new THREE.Vector3(0,0,0);
+    const tip = (len > 1e-8) ? arrowTip.clone() : arrowOrigin.clone();
     const fmtLen = Number(len.toFixed(3));
     group.userData.labelAnchors = {
       tip: { type: 'world', position: [tip.x, tip.y, tip.z] },
     };
     group.userData.labels = [
-      { anchor: 'tip', text: 'length of ${name} = ' + fmtLen, distanceFactor: 8, offset: [0.12, 0.12, 0] },
+      {
+        anchor: 'tip',
+        text: isPointPlaneProjection
+          ? 'distance = |proj(P - Q onto n)| = ' + fmtLen
+          : 'length of ${name} = ' + fmtLen,
+        distanceFactor: isPointPlaneProjection ? 6 : 8,
+        offset: [0.12, 0.12, 0],
+        emphasis: isPointPlaneProjection,
+        className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
+      },
     ];
 
     if (typeof threeObjStore === 'object' && threeObjStore) {

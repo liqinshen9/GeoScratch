@@ -1,7 +1,6 @@
 const TOOLBOX_XML = `
     <xml id="toolbox" style="display: none">
         <category name="Geometric Objects" categorystyle="math_category">
-            <block type="geo_point"></block>
             <block type="geo_vector"></block>
             <block type="parametric_plane"></block>
 <!--            <block type="geo_plane"></block>-->

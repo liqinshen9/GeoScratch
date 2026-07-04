@@ -201,7 +201,9 @@ function LabelLayer({ object3D }) {
         return (
           <group key={`lbl-${i}`} position={[pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]]}>
             <Html distanceFactor={df}>
-              <div className="label">{text}</div>
+              <div className={`label${lbl.emphasis ? ' label--emphasis' : ''}${lbl.className ? ` ${lbl.className}` : ''}`}>
+                {text}
+              </div>
             </Html>
           </group>
         );

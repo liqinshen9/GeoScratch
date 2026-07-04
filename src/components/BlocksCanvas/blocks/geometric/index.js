@@ -1,4 +1,3 @@
-import initPointBlock from './geoPoint.js'
 import { initVector3Block } from './geoVectorLine.js'
 import initGeoPlaneBlock from './geoPlane'
 import initParametricPlaneBlock from './parametricPlane'
@@ -8,7 +7,6 @@ import initObjectCompositionBlocks from './objectComposition.js'
 import { initGeoTeapotBlock } from './geoTeapot'
 
 export function initGeometricBlocks() {
-  initPointBlock()
   initVector3Block()
   initGeoPlaneBlock()
   initParametricPlaneBlock()

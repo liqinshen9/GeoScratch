@@ -15,9 +15,9 @@ export function initVectorProjectBlock() {
       this.appendValueInput('V').setCheck('vector3').appendField('onto ').appendField('v:')
       this.setInputsInline(true)
 
-      this.setOutput(true, 'obj3D')
+      this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Compute projection of U onto V')
+      this.setTooltip('Compute projection of u onto v, show it, and return the projection vector')
       this.setDeletable(true)
       this.setMovable(true)
     },
@@ -51,19 +51,25 @@ export function initVectorProjectBlock() {
     );
 
     // Projection u onto v
-    let projObj, projVec=new THREE.Vector3(), projLen=0;
+    let projObj, projVec=new THREE.Vector3(), projLen=0, projOrigin=new THREE.Vector3(0,0,0);
+    const isPointPlaneDistanceProjection = uVal.userData?.geoType === 'point_difference_vector';
+    const pointEnd = isPointPlaneDistanceProjection && uVal.userData.end?.isVector3
+      ? uVal.userData.end.clone()
+      : null;
     const denom = vVal.lengthSq();
     if (denom>1e-12) {
       const scale = uVal.dot(vVal) / denom;
       projVec = vVal.clone().multiplyScalar(scale);
       projLen = projVec.length();
+      projOrigin = pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0);
       if (projLen>1e-8) {
         projObj = new THREE.ArrowHelper(
-          projVec.clone().normalize(), new THREE.Vector3(0,0,0),
-          safeLen(projLen), 0x7c3aed, headLenRatio, headWidthRatio
+          projVec.clone().normalize(), projOrigin.clone(),
+          safeLen(projLen), isPointPlaneDistanceProjection ? 0xfacc15 : 0x7c3aed, headLenRatio, headWidthRatio
         );
       } else {
         projVec.set(0,0,0);
+        projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
         projObj = new THREE.Mesh(
           new THREE.SphereGeometry(0.05, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
@@ -71,6 +77,7 @@ export function initVectorProjectBlock() {
       }
     } else {
       projVec.set(0,0,0);
+      projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
       projObj = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
@@ -80,41 +87,63 @@ export function initVectorProjectBlock() {
     const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};
     tag(arrowU,lenU); tag(arrowV,lenV); tag(projObj,projLen);
 
-    // Guide: tip(u) -> tip(proj)
-    const uTip = uVal.clone();
-    const pTip = projVec.clone();
-    const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
-    const guideMat  = new THREE.LineBasicMaterial({ color: 0xffff00, transparent:true, opacity:1 });
-    const guideLine = new THREE.Line(guideGeom, guideMat);
-    guideLine.userData.geoType='geo_helper';
-    guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
+    // Guide: tip(u) -> tip(proj). Hide it for point-plane distance so it is not mistaken for the distance.
+    const uTip = pointEnd ? pointEnd.clone() : uVal.clone();
+    const pTip = projOrigin.clone().add(projVec);
+    let guideLine = null;
+    if (!isPointPlaneDistanceProjection) {
+      const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
+      const guideMat  = new THREE.LineBasicMaterial({ color: 0xffff00, transparent:true, opacity:1 });
+      guideLine = new THREE.Line(guideGeom, guideMat);
+      guideLine.userData.geoType='geo_helper';
+      guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
+    }
 
     const group = new THREE.Group();
-    group.add(arrowU, arrowV, projObj, guideLine);
+    if (isPointPlaneDistanceProjection) {
+      group.add(projObj);
+    } else {
+      group.add(arrowU, arrowV, projObj, guideLine);
+    }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
     // Labels at tips
     group.userData.labelAnchors = {
-      uTip:{type:'world', position:[uVal.x,     uVal.y,     uVal.z    ]},
+      uTip:{type:'world', position:[uTip.x,     uTip.y,     uTip.z    ]},
       vTip:{type:'world', position:[vVal.x,     vVal.y,     vVal.z    ]},
-      pTip:{type:'world', position:[projVec.x,  projVec.y,  projVec.z ]},
+      pTip:{type:'world', position:[pTip.x,  pTip.y,  pTip.z ]},
     };
-    group.userData.labels = [
-      { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0] },
-    ];
+    group.userData.labels = isPointPlaneDistanceProjection
+      ? [
+        { anchor:'pTip', text:'projection = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0] },
+      ]
+      : [
+        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0] },
+      ];
 
     if (typeof threeObjStore==='object' && threeObjStore){
       const base=${JSON.stringify(block.id)};
-      threeObjStore[base + '_u']     = arrowU;
-      threeObjStore[base + '_v']     = arrowV;
+      if (!isPointPlaneDistanceProjection) {
+        threeObjStore[base + '_u']     = arrowU;
+        threeObjStore[base + '_v']     = arrowV;
+        threeObjStore[base + '_guide'] = guideLine;
+      }
       threeObjStore[base + '_proj']  = projObj;
-      threeObjStore[base + '_guide'] = guideLine;
       threeObjStore[base]            = group;
     }
-    return group;
+    const resultVector = projVec.clone();
+    if (isPointPlaneDistanceProjection) {
+      resultVector.userData = {
+        geoType: 'point_plane_distance_projection_vector',
+        start: projOrigin.clone(),
+        end: pTip.clone(),
+        label: 'proj(P - Q onto n)',
+      };
+    }
+    return resultVector;
   })()`;
 
     return [code, Order.FUNCTION_CALL];
