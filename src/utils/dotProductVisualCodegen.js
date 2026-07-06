@@ -14,6 +14,69 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
     const fmtN = (n) => Number(Number(n).toFixed(3));
     const origin = new THREE.Vector3(0, 0, 0);
+    const isPointPlaneDistance = uVal.userData?.geoType === 'point_difference_vector';
+    if (isPointPlaneDistance) {
+      const distance = lenQ > 1e-12 ? Math.abs(dot) / lenQ : 0;
+      const projection = lenQ > 1e-12
+        ? vVal.clone().multiplyScalar(dot / vVal.lengthSq())
+        : new THREE.Vector3(0, 0, 0);
+      const distanceStart = uVal.userData.end.clone().sub(projection);
+      const distanceEnd = uVal.userData.end.clone();
+      const labelPos = distanceStart
+        .clone()
+        .add(distanceEnd)
+        .multiplyScalar(0.5)
+        .add(new THREE.Vector3(0.18, 0.18, 0));
+
+      let distanceVector;
+      if (distance > 1e-8) {
+        distanceVector = new THREE.ArrowHelper(
+          projection.clone().normalize(),
+          distanceStart.clone(),
+          safeLen(distance),
+          0xfacc15,
+          headLenRatio,
+          headWidthRatio
+        );
+      } else {
+        distanceVector = new THREE.Mesh(
+          new THREE.SphereGeometry(0.05, 16, 12),
+          new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.1 })
+        );
+        distanceVector.position.copy(distanceStart);
+      }
+      distanceVector.userData.geoType = 'geo_vector';
+      distanceVector.userData.length = safeLen(distance);
+      distanceVector.userData.headLenRatio = headLenRatio;
+      distanceVector.userData.headWidthRatio = headWidthRatio;
+      distanceVector.userData.srcBlockId = ${id};
+
+      const group = new THREE.Group();
+      group.add(distanceVector);
+      group.userData.geoType = 'point_plane_distance_dot';
+      group.userData.srcBlockId = ${id};
+      group.userData.dot = dot;
+      group.userData.distance = distance;
+      group.userData.labelAnchors = {
+        formula: { type: 'world', position: [labelPos.x, labelPos.y, labelPos.z] },
+      };
+      group.userData.labels = [
+        {
+          anchor: 'formula',
+          text: 'distance = |(P - Q) dot n| = ' + fmtN(distance),
+          distanceFactor: 6,
+          offset: [0, 0, 0],
+          emphasis: true,
+          className: 'distance-highlight-label',
+        },
+      ];
+
+      if (typeof threeObjStore === 'object' && threeObjStore) {
+        threeObjStore[${id} + '_distance'] = distanceVector;
+        threeObjStore[${id}] = group;
+      }
+      return distance;
+    }
 
     const arrowP = new THREE.ArrowHelper(
       (lenP > 0 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),

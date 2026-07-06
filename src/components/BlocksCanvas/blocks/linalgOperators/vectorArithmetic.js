@@ -22,11 +22,11 @@ export function initVectorArithmeticBlock() {
           'OP'
         )
 
-      // Value block output (like cross product), not a statement block
-      this.setOutput(true, 'obj3D')
+      // Value block output: visualizes the operation and returns the result vector.
+      this.setOutput(true, 'vector3')
       this.setInputsInline(true)
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Compute u ± v and return a group with arrows for u, v, and the result (registered).')
+      this.setTooltip('Compute u +/- v, show the arrows, and return the result vector.')
       this.setDeletable(true)
       this.setMovable(true)
     },
@@ -69,11 +69,17 @@ export function initVectorArithmeticBlock() {
     // Compute result
     const res = uVal.clone()[${op === 'add' ? `'add'` : `'sub'`}](vVal);
     const lenR = res.length();
+    const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && vVal.userData?.geoType === 'point_on_object_vector';
+    const resultOrigin = isPointDifference ? vVal.clone() : origin.clone();
+    const resultTip = isPointDifference ? uVal.clone() : res.clone();
+    const resultLabelPosition = isPointDifference
+      ? resultOrigin.clone().add(resultTip).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.35, 0))
+      : resultTip.clone();
 
     let resObj;
     if (lenR > 1e-8) {
       resObj = new THREE.ArrowHelper(
-        res.clone().normalize(), origin.clone(), safeLen(lenR),
+        res.clone().normalize(), resultOrigin.clone(), safeLen(lenR),
         0x7c3aed, headLenRatio, headWidthRatio
       );
     } else {
@@ -96,7 +102,11 @@ export function initVectorArithmeticBlock() {
 
     // Group return
     const group = new THREE.Group();
-    group.add(arrowU, arrowV, resObj);
+    if (isPointDifference) {
+      group.add(resObj);
+    } else {
+      group.add(arrowU, arrowV, resObj);
+    }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
@@ -104,23 +114,38 @@ export function initVectorArithmeticBlock() {
     group.userData.labelAnchors = {
       uTip:   { type:'world', position:[uVal.x, uVal.y, uVal.z] },
       vTip:   { type:'world', position:[vVal.x, vVal.y, vVal.z] },
-      rTip:   { type:'world', position:[res.x,  res.y,  res.z ] },
+      rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
     };
-    group.userData.labels = [
-      { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0] },
-    ];
+    group.userData.labels = isPointDifference
+      ? [
+        { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0] },
+      ]
+      : [
+        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0] },
+      ];
 
     // Register
     if (typeof threeObjStore==='object' && threeObjStore) {
       const base = ${JSON.stringify(block.id)};
-      threeObjStore[base + '_u'] = arrowU;
-      threeObjStore[base + '_v'] = arrowV;
+      if (!isPointDifference) {
+        threeObjStore[base + '_u'] = arrowU;
+        threeObjStore[base + '_v'] = arrowV;
+      }
       threeObjStore[base + '_r'] = resObj;
       threeObjStore[base]        = group;
     }
-    return group;
+    const resultVector = res.clone();
+    if (isPointDifference) {
+      resultVector.userData = {
+        geoType: 'point_difference_vector',
+        start: resultOrigin.clone(),
+        end: resultTip.clone(),
+        label: 'P - Q',
+      };
+    }
+    return resultVector;
   })()`;
 
     return [code, Order.FUNCTION_CALL];

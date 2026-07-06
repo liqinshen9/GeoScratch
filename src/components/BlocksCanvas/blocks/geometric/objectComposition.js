@@ -13,8 +13,8 @@ export default function initObjectCompositionBlocks() {
       this.appendDummyInput().appendField('Show any point on object')
       this.appendValueInput('OBJECT').appendField('object:').setCheck('obj3D')
       this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
-      this.setTooltip('Adds a visible point marker on the connected object without requiring exact coordinates.')
-      this.setOutput(true, 'obj3D')
+      this.setTooltip('Adds a visible point marker on the connected object and returns its R3 coordinate vector.')
+      this.setOutput(true, 'vector3')
     },
   }
 
@@ -118,7 +118,10 @@ export default function initObjectCompositionBlocks() {
         return fallback;
       }
 
-      const markerPoint = getAnyPointOnObject(object);
+      const anyPointCache = window.__geoScratchAnyPointCache || (window.__geoScratchAnyPointCache = {});
+      const cachedPoint = anyPointCache[${JSON.stringify(block.id)}];
+      const markerPoint = cachedPoint?.isVector3 ? cachedPoint.clone() : getAnyPointOnObject(object);
+      anyPointCache[${JSON.stringify(block.id)}] = markerPoint.clone();
 
       const marker = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 12),
@@ -128,11 +131,19 @@ export default function initObjectCompositionBlocks() {
       marker.userData.geoType = 'selectable_point_marker';
       marker.userData.coordinate = markerPoint.clone();
 
+      const formatPoint = (point) => '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']';
+
       const group = new THREE.Group();
       group.add(object, marker);
       group.userData.geoType = 'annotated_object';
       group.userData.point = markerPoint.clone();
       group.userData.srcBlockId = ${JSON.stringify(block.id)};
+      group.userData.labelAnchors = {
+        q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
+      };
+      group.userData.labels = [
+        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0] },
+      ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {
         if (${objectBlockIdCode}) {
@@ -144,7 +155,13 @@ export default function initObjectCompositionBlocks() {
         }
         threeObjStore[${JSON.stringify(block.id)}] = group;
       }
-      return group;
+      const pointVector = markerPoint.clone();
+      pointVector.userData = {
+        geoType: 'point_on_object_vector',
+        label: 'Q',
+        point: markerPoint.clone(),
+      };
+      return pointVector;
     })()`
 
     return [code, Order.ATOMIC]
