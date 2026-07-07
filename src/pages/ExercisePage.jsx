@@ -15,6 +15,7 @@ import './ExercisePage.css'
 
 const POINT_P = new THREE.Vector3(3, 4, 5)
 const CORRECT_DISTANCE = 4
+const POINT_VECTOR_BLOCK_TYPES = ['linalg_vec3', 'linalg_point']
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -22,7 +23,7 @@ function closeNumber(a, b, tolerance = 1e-6) {
 
 function blockMatchesVec3(block, target) {
   return (
-    block?.type === 'linalg_vec3' &&
+    POINT_VECTOR_BLOCK_TYPES.includes(block?.type) &&
     closeNumber(block.getFieldValue('X'), target.x) &&
     closeNumber(block.getFieldValue('Y'), target.y) &&
     closeNumber(block.getFieldValue('Z'), target.z)
@@ -31,7 +32,9 @@ function blockMatchesVec3(block, target) {
 
 function workspaceHasPointPVector(workspace) {
   if (!workspace) return false
-  return workspace.getBlocksByType('linalg_vec3', false).some((block) => blockMatchesVec3(block, POINT_P))
+  return POINT_VECTOR_BLOCK_TYPES.some((type) => (
+    workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P))
+  ))
 }
 
 function objectIsAtPointP(object) {

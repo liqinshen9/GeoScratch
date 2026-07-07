@@ -33,6 +33,7 @@ export const BLOCK_CATEGORIES = {
         blocks: [
           { type: 'geo_show_point_on_object', label: 'Show any point on object' },
           { type: 'geo_vector', label: 'Vector line' },
+          { type: 'linalg_point', label: 'Point (x, y, z)' },
           { type: 'linalg_vec3', label: 'Vector (x, y, z)' },
           { type: 'scalar', label: 'Scalar' },
         ],

@@ -35,6 +35,56 @@ export function initVectorProjectBlock() {
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const makeProjectionShadow = (foot, normal, sourcePoint) => {
+      const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const shadowGroup = new THREE.Group();
+
+      const shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(0.34, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0x111827,
+          transparent: true,
+          opacity: 0.24,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        })
+      );
+      shadow.setRotationFromQuaternion(
+        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalUnit)
+      );
+      shadow.position.copy(foot).addScaledVector(normalUnit, 0.012);
+
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.34, 0.39, 48),
+        new THREE.MeshBasicMaterial({
+          color: 0xfacc15,
+          transparent: true,
+          opacity: 0.78,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        })
+      );
+      ring.quaternion.copy(shadow.quaternion);
+      ring.position.copy(shadow.position).addScaledVector(normalUnit, 0.004);
+
+      const footDot = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
+      );
+      footDot.position.copy(foot);
+
+      const dropGeom = new THREE.BufferGeometry().setFromPoints([sourcePoint.clone(), foot.clone()]);
+      const dropLine = new THREE.Line(
+        dropGeom,
+        new THREE.LineDashedMaterial({ color: 0xf8fafc, dashSize: 0.16, gapSize: 0.1, transparent: true, opacity: 0.64 })
+      );
+      dropLine.computeLineDistances();
+
+      shadowGroup.add(shadow, ring, footDot, dropLine);
+      shadowGroup.userData.geoType = 'projection_shadow';
+      shadowGroup.userData.srcBlockId=${JSON.stringify(block.id)};
+      return shadowGroup;
+    };
 
     // Inputs
     const lenU = uVal.length();
@@ -91,17 +141,20 @@ export function initVectorProjectBlock() {
     const uTip = pointEnd ? pointEnd.clone() : uVal.clone();
     const pTip = projOrigin.clone().add(projVec);
     let guideLine = null;
+    let projectionShadow = null;
     if (!isPointPlaneDistanceProjection) {
       const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
       const guideMat  = new THREE.LineBasicMaterial({ color: 0xffff00, transparent:true, opacity:1 });
       guideLine = new THREE.Line(guideGeom, guideMat);
       guideLine.userData.geoType='geo_helper';
       guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
+    } else {
+      projectionShadow = makeProjectionShadow(projOrigin, vVal, uTip);
     }
 
     const group = new THREE.Group();
     if (isPointPlaneDistanceProjection) {
-      group.add(projObj);
+      group.add(projObj, projectionShadow);
     } else {
       group.add(arrowU, arrowV, projObj, guideLine);
     }
@@ -115,9 +168,7 @@ export function initVectorProjectBlock() {
       pTip:{type:'world', position:[pTip.x,  pTip.y,  pTip.z ]},
     };
     group.userData.labels = isPointPlaneDistanceProjection
-      ? [
-        { anchor:'pTip', text:'projection = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0] },
-      ]
+      ? []
       : [
         { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0] },
         { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0] },
@@ -132,6 +183,7 @@ export function initVectorProjectBlock() {
         threeObjStore[base + '_guide'] = guideLine;
       }
       threeObjStore[base + '_proj']  = projObj;
+      if (projectionShadow) threeObjStore[base + '_shadow'] = projectionShadow;
       threeObjStore[base]            = group;
     }
     const resultVector = projVec.clone();

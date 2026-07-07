@@ -25,8 +25,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       const labelPos = distanceStart
         .clone()
         .add(distanceEnd)
-        .multiplyScalar(0.5)
-        .add(new THREE.Vector3(0.18, 0.18, 0));
+        .multiplyScalar(0.5);
 
       let distanceVector;
       if (distance > 1e-8) {
@@ -65,7 +64,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           anchor: 'formula',
           text: 'distance = |(P - Q) dot n| = ' + fmtN(distance),
           distanceFactor: 6,
-          offset: [0, 0, 0],
+          offset: [0.22, 0, 0],
           emphasis: true,
           className: 'distance-highlight-label',
         },

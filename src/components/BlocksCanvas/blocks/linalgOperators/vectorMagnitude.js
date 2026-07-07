@@ -74,18 +74,20 @@ export function initVectorMagnitude() {
 
     // Label: only one line -> "length of <name> = <len>"
     const tip = (len > 1e-8) ? arrowTip.clone() : arrowOrigin.clone();
+    const distanceMid = arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5);
     const fmtLen = Number(len.toFixed(3));
     group.userData.labelAnchors = {
       tip: { type: 'world', position: [tip.x, tip.y, tip.z] },
+      distanceMid: { type: 'world', position: [distanceMid.x, distanceMid.y, distanceMid.z] },
     };
     group.userData.labels = [
       {
-        anchor: 'tip',
+        anchor: isPointPlaneProjection ? 'distanceMid' : 'tip',
         text: isPointPlaneProjection
           ? 'distance = |proj(P - Q onto n)| = ' + fmtLen
           : 'length of ${name} = ' + fmtLen,
         distanceFactor: isPointPlaneProjection ? 6 : 8,
-        offset: [0.12, 0.12, 0],
+        offset: isPointPlaneProjection ? [0.22, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
         className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
       },

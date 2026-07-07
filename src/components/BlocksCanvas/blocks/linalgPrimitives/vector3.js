@@ -13,29 +13,46 @@ export function initVec3Block() {
   if (REGISTERED) return
   REGISTERED = true
 
+  function appendCoordinateFields(block, label) {
+    block.appendDummyInput()
+      .appendField(label)
+      .appendField(new Blockly.FieldNumber(1), 'X')
+      .appendField(',')
+      .appendField(new Blockly.FieldNumber(1), 'Y')
+      .appendField(',')
+      .appendField(new Blockly.FieldNumber(1), 'Z')
+      .appendField(')')
+  }
+
+  function initVector3LikeBlock(block, label, tooltip) {
+    appendCoordinateFields(block, label)
+    block.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+    block.setTooltip(tooltip)
+    block.setDeletable(true)
+    block.setMovable(true)
+    block.setOutput(true, 'vector3')
+  }
+
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      this.appendDummyInput()
-        .appendField('R³: (')
-        .appendField(new Blockly.FieldNumber(1), 'X')
-        .appendField(',')
-        .appendField(new Blockly.FieldNumber(1), 'Y')
-        .appendField(',')
-        .appendField(new Blockly.FieldNumber(1), 'Z')
-        .appendField(')')
-      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
-      this.setTooltip('3D coordinate')
-      this.setDeletable(true)
-      this.setMovable(true)
-      this.setOutput(true, 'vector3')
+      initVector3LikeBlock(this, 'R³: (', '3D coordinate')
     },
   }
 
-  //Linalg primitives
-  javascriptGenerator.forBlock['linalg_vec3'] = function (block, generator) {
+  Blockly.Blocks['linalg_point'] = {
+    init() {
+      initVector3LikeBlock(this, 'Point: (', '3D point coordinate')
+    },
+  }
+
+  function vector3Generator(block) {
     const vecString = `new THREE.Vector3(${block.getFieldValue(
       'X'
     )}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')})`
     return [vecString, Order.ATOMIC]
   }
+
+  //Linalg primitives
+  javascriptGenerator.forBlock['linalg_vec3'] = vector3Generator
+  javascriptGenerator.forBlock['linalg_point'] = vector3Generator
 }

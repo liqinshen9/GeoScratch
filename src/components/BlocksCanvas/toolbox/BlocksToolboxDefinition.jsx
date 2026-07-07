@@ -9,6 +9,7 @@ const TOOLBOX_XML = `
             <block type="geo_teapot"></block>
         </category>
         <category name="Linear Algebra Primitives" categorystyle="text_category">
+            <block type="linalg_point"></block>
             <block type="linalg_vec3"></block>
 <!--            <block type="linalg_vec4"></block>-->
 <!--            <block type="linalg_mat3x3"></block>-->
