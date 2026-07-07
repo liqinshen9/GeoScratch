@@ -5,6 +5,8 @@ import { LINE_STYLES } from './lineStyles'
 const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_LINE,
   showLabels: true,
+  sceneBackground: 'dark',
+  showSceneChrome: true,
 }
 
 const useSettingsStore = create((set) => ({

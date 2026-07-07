@@ -57,6 +57,32 @@ export default function SettingsPage() {
                 />
               </div>
 
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Show Grid &amp; Axes</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Display the grid, bounding box, and axes in the viewport. Turn off to see only the geometric objects</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.showSceneChrome}
+                  onChange={(e) => updateSetting('showSceneChrome', e.target.checked)}
+                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Light Background</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Use a light background in the 3D viewport instead of dark</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.sceneBackground === 'light'}
+                  onChange={(e) => updateSetting('sceneBackground', e.target.checked ? 'light' : 'dark')}
+                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-900">Line Style</label>
                 <select

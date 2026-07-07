@@ -8,7 +8,7 @@ const THREE = { ...THREEBase, TeapotGeometry }
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 
-const DEFAULT_CAMERA_POSITION = [20, 35, 40]
+const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -39,10 +39,10 @@ function HeadLight() {
   return (
     <pointLight
       ref={lightRef}
-      color="#dbe9ff"
+      color="#fff4e0"
       intensity={2.5}
       decay={0}
-      distance={100}
+      distance={300}
       castShadow
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
@@ -268,13 +268,17 @@ function Scene({ objects = [], selectedPoint }) {
         shadow-bias={-0.001}
       />
 
-      <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.005, 0]} />
+      {settings.showSceneChrome && (
+        <>
+          <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.005, 0]} />
 
-      {/* 3. The Bounding Box */}
-      <BoundingBoxRoom size={40} />
+          {/* 3. The Bounding Box */}
+          <BoundingBoxRoom size={40} />
 
-      <AxisLabels size={40} step={1} />
-      <Axes length={20} position={[0, 0, 0]} />
+          <AxisLabels size={40} step={1} />
+          <Axes length={20} position={[0, 0, 0]} />
+        </>
+      )}
 
       {objects.map((o, i) => {
         if (!o) return null;
@@ -303,7 +307,13 @@ function Scene({ objects = [], selectedPoint }) {
   );
 }
 
+const BACKGROUND_COLORS = {
+  dark: '#0e0e12',
+  light: '#f7f4ee',
+}
+
 export default function Scene3D({ objects = [] }) {
+  const { settings } = useSettingsStore()
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const [selectedPoint, setSelectedPoint] = useState(null);
@@ -348,7 +358,7 @@ export default function Scene3D({ objects = [] }) {
       <div className="relative flex-1 min-h-0">
         <Canvas
           shadows
-          camera={{ position: [20, 35, 40], fov: 45, near: 0.1, far: 5000 }}
+          camera={{ position: DEFAULT_CAMERA_POSITION, fov: 45, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >
@@ -356,7 +366,7 @@ export default function Scene3D({ objects = [] }) {
           <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
           <SelectablePointPicker onSelectPoint={handleSelectPoint} onClearPoint={handleClearPoint} />
           <Scene objects={objects} selectedPoint={selectedPoint} />
-          <color attach="background" args={['#0e0e12']} />
+          <color attach="background" args={[BACKGROUND_COLORS[settings.sceneBackground] ?? BACKGROUND_COLORS.dark]} />
         </Canvas>
         <button className="recenter-btn" onClick={recenter} aria-label="Recenter camera" title="Recenter">
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
