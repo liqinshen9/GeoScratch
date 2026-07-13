@@ -90,6 +90,7 @@ export function initVectorMagnitude() {
         offset: isPointPlaneProjection ? [0.22, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
         className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
+        color: (!isPointPlaneProjection && len > 1e-8) ? '#0ea5e9' : undefined,
       },
     ];
 

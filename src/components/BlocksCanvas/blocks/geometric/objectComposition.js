@@ -142,7 +142,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0] },
+        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {

@@ -39,7 +39,7 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
     const fallback = marker(new THREE.Vector3(), 0xef4444, 0.1)
     group.add(fallback)
     group.userData.labels = [
-      { anchor: 'status', text: 'Connect two vector lines', distanceFactor: 8, offset: [0.12, 0.12, 0] },
+      { anchor: 'status', text: 'Connect two vector lines', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ef4444' },
     ]
     group.userData.labelAnchors = { status: { type: 'world', position: [0, 0, 0] } }
     if (threeObjStore) threeObjStore[blockId] = group
@@ -84,6 +84,7 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
         : `closest midpoint ${fmtVec(midpoint)}; gap=${fmt(distance)}`,
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
+      color: hasIntersection ? '#22c55e' : '#f59e0b',
     },
   ]
 

@@ -73,8 +73,8 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
     nTip: { type: 'world', position: [visualNormalTip.x, visualNormalTip.y, visualNormalTip.z] },
   }
   group.userData.labels = [
-    { anchor: 'pAnchor', text: 'point = ' + fmt(point), distanceFactor: 8, offset: [0.12, 0.12, 0] },
-    { anchor: 'nTip', text: 'normal = ' + fmt(normalRaw), distanceFactor: 8, offset: [0.12, 0.12, 0] },
+    { anchor: 'pAnchor', text: 'point = ' + fmt(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
+    { anchor: 'nTip', text: 'normal = ' + fmt(normalRaw), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#3b82f6' },
   ]
 
   plane.userData = Object.assign(plane.userData || {}, { geoType: 'plane_mesh', srcBlockId: blockId })

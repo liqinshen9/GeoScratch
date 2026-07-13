@@ -59,13 +59,52 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium text-slate-900">Show Grid &amp; Axes</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Display the grid, bounding box, and axes in the viewport. Turn off to see only the geometric objects</p>
+                  <label className="text-sm font-medium text-slate-900">Show Grid</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Display the ground grid in the viewport</p>
                 </div>
                 <input
                   type="checkbox"
-                  checked={settings.showSceneChrome}
-                  onChange={(e) => updateSetting('showSceneChrome', e.target.checked)}
+                  checked={settings.showGrid}
+                  onChange={(e) => updateSetting('showGrid', e.target.checked)}
+                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Show Box</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Display the bounding box in the viewport</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.showBox}
+                  onChange={(e) => updateSetting('showBox', e.target.checked)}
+                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Show Axes</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Display the X, Y, Z axes and axis labels in the viewport</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.showAxes}
+                  onChange={(e) => updateSetting('showAxes', e.target.checked)}
+                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Object Shadows</label>
+                  <p className="text-xs text-slate-500 mt-0.5">Let objects receive shadows cast by other objects</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={settings.objectsReceiveShadows}
+                  onChange={(e) => updateSetting('objectsReceiveShadows', e.target.checked)}
                   className="w-5 h-5 accent-indigo-600 cursor-pointer"
                 />
               </div>

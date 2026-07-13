@@ -76,9 +76,9 @@ export function initCrossProductBlock() {
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
     group.userData.labels = [
-      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'cTip', text:'result = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0] },
+      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
+      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
+      { anchor:'cTip', text:'result = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#22c55e' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

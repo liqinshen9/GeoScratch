@@ -123,13 +123,34 @@ html, body, #root {
     transform: translateY(1px);
 }
 
+.recenter-btn--light {
+    background: rgba(0, 0, 0, 0.06);
+    color: #000;
+}
+
+.recenter-btn--light:hover {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.label-anchor {
+    position: relative;
+    pointer-events: none;
+}
+
 .editor-body-3d .label {
     color: #ffffff;
     white-space: nowrap;
     min-width: max-content;
     display: inline-block;
     font: 12px/1.2 ui-monospace, Menlo, Consolas, monospace;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(12, 12, 16, 0.55);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    text-shadow: none;
+    backdrop-filter: blur(2px);
+    will-change: transform;
+    transform-origin: 0 0;
 }
 
 .editor-body-3d .label--emphasis {

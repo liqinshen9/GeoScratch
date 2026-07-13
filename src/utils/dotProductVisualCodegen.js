@@ -166,10 +166,10 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       formula: { type: 'world', position: [formulaPos.x, formulaPos.y, formulaPos.z] },
     };
     group.userData.labels = [
-      { anchor: 'pTip', text: 'p = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0] },
-      { anchor: 'qTip', text: 'q = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0] },
-      { anchor: 'pMid', text: '|p| = ' + fmtN(lenP), distanceFactor: 8, offset: [0.1, 0.1, 0] },
-      { anchor: 'projTip', text: '|proj q| = ' + fmtN(projLen), distanceFactor: 8, offset: [0.1, 0.1, 0] },
+      { anchor: 'pTip', text: 'p = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#eab308' },
+      { anchor: 'qTip', text: 'q = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ec4899' },
+      { anchor: 'pMid', text: '|p| = ' + fmtN(lenP), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#eab308' },
+      { anchor: 'projTip', text: '|proj q| = ' + fmtN(projLen), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#f472b6' },
       {
         anchor: 'formula',
         text: dot >= 0

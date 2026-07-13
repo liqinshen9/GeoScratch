@@ -59,7 +59,7 @@ function createPointPMarker() {
     p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
   }
   marker.userData.labels = [
-    { anchor: 'p', text: 'P = [3, 4, 5]', distanceFactor: 8, offset: [0.12, 0.12, 0] },
+    { anchor: 'p', text: 'P = [3, 4, 5]', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
   ]
 
   return marker

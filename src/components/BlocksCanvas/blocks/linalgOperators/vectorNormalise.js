@@ -68,8 +68,8 @@ export function initNormInplaceBlock() {
       normTip:{ type:'world', position:[normVec.x, normVec.y, normVec.z] },
     };
     group.userData.labels = [
-      { anchor:'vTip',    text:'w = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0] },
-      { anchor:'normTip', text:'result = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0] },
+      { anchor:'vTip',    text:'w = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
+      { anchor:'normTip', text:'result = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#22c55e' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

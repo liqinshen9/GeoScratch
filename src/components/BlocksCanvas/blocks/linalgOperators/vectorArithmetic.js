@@ -116,14 +116,15 @@ export function initVectorArithmeticBlock() {
       vTip:   { type:'world', position:[vVal.x, vVal.y, vVal.z] },
       rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
     };
+    const resultColor = lenR > 1e-8 ? '#7c3aed' : '#ffff00';
     group.userData.labels = isPointDifference
       ? [
-        { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
       : [
-        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0] },
-        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0] },
-        { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
+        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
+        { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 
     // Register

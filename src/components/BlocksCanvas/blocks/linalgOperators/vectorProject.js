@@ -170,9 +170,9 @@ export function initVectorProjectBlock() {
     group.userData.labels = isPointPlaneDistanceProjection
       ? []
       : [
-        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0] },
-        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0] },
-        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0] },
+        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
+        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
+        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#7c3aed' : '#ffff00' },
       ];
 
     if (typeof threeObjStore==='object' && threeObjStore){
