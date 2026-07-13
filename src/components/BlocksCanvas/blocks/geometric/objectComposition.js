@@ -27,49 +27,34 @@ export default function initObjectCompositionBlocks() {
       const object = (${objectCode});
       if (!object || !object.isObject3D) return null;
 
-      const getAnyPointOnObject = (target) => {
-        target.updateMatrixWorld(true);
+      // The marker's point is randomly chosen on the object's surface, but we
+      // don't want it to re-randomize on every unrelated workspace edit (any
+      // edit anywhere regenerates the whole scene). So instead of caching the
+      // final world-space position, we cache the *recipe* used to pick it
+      // (axis choices / ratios along the object's current bounds, relative
+      // offsets, etc) and re-resolve it against the object's current
+      // transform/size every time. That keeps the chosen point stable while
+      // still tracking the object if it's moved, resized, or rotated.
+      const randomBetween = (min, max) => min + Math.random() * (max - min);
+      const randomInteriorRatio = () => randomBetween(-0.65, 0.65);
+      const randomSignRatio = () => (Math.random() < 0.5 ? -1 : 1);
 
-        const randomBetween = (min, max) => min + Math.random() * (max - min);
-        const randomInteriorOffset = (halfSize) => randomBetween(-halfSize * 0.65, halfSize * 0.65);
-        const randomSigned = (value) => (Math.random() < 0.5 ? -value : value);
-
+      const pickPointParams = (target) => {
         const planePoint = target.userData?.point;
         const planeNormal = target.userData?.normalUnit;
         if (planePoint?.isVector3 && planeNormal?.isVector3) {
-          const planeSize = Math.max(1, Number(target.userData?.planeSize) || 12);
-          const normal = planeNormal.clone().normalize();
-          const tangent = new THREE.Vector3(1, 0, 0);
-          if (Math.abs(tangent.dot(normal)) > 0.85) tangent.set(0, 0, 1);
-          tangent.cross(normal).normalize();
-          const bitangent = normal.clone().cross(tangent).normalize();
-          return planePoint
-            .clone()
-            .addScaledVector(tangent, randomInteriorOffset(planeSize / 2))
-            .addScaledVector(bitangent, randomInteriorOffset(planeSize / 2));
+          return { type: 'plane', tangentRatio: randomInteriorRatio(), bitangentRatio: randomInteriorRatio() };
         }
 
-        if (planePoint?.isVector3) return planePoint.clone();
+        if (planePoint?.isVector3) return { type: 'plane-point' };
 
         if (target.userData?.geoType === 'geo_cube') {
-          const sideLength = Math.max(0.01, Number(target.userData.sideLength ?? target.userData.side) || 1);
-          const half = sideLength / 2;
           const faceAxis = Math.floor(Math.random() * 3);
-          const local = new THREE.Vector3(
-            randomInteriorOffset(half),
-            randomInteriorOffset(half),
-            randomInteriorOffset(half)
-          );
-          local.setComponent(faceAxis, randomSigned(half));
-          return target.localToWorld(local);
+          const ratios = [0, 1, 2].map((axis) => (axis === faceAxis ? randomSignRatio() : randomInteriorRatio()));
+          return { type: 'cube', ratios };
         }
 
         if (target.userData?.geoType === 'geo_sphere') {
-          const centre = new THREE.Vector3();
-          const scale = new THREE.Vector3();
-          target.getWorldPosition(centre);
-          target.getWorldScale(scale);
-          const radius = Math.max(0.01, Number(target.userData.radius) || 1);
           const direction = new THREE.Vector3(
             randomBetween(-1, 1),
             randomBetween(-0.85, 0.85),
@@ -77,10 +62,68 @@ export default function initObjectCompositionBlocks() {
           );
           if (direction.lengthSq() < 0.001) direction.set(1, 0.2, 0.3);
           direction.normalize();
-          return centre.add(direction.multiplyScalar(radius * Math.max(scale.x, scale.y, scale.z)));
+          return { type: 'sphere', direction: [direction.x, direction.y, direction.z] };
         }
 
         if (target.isMesh && target.geometry?.attributes?.position) {
+          const box = new THREE.Box3().setFromObject(target);
+          if (!box.isEmpty()) {
+            const faceAxis = Math.floor(Math.random() * 3);
+            const ratios = [0, 1, 2].map((axis) => (axis === faceAxis ? randomSignRatio() : randomInteriorRatio()));
+            return { type: 'mesh-box', ratios };
+          }
+        }
+
+        const fallbackBox = new THREE.Box3().setFromObject(target);
+        if (!fallbackBox.isEmpty()) {
+          return { type: 'box-max-x', ratioY: randomInteriorRatio(), ratioZ: randomInteriorRatio() };
+        }
+
+        return { type: 'origin' };
+      };
+
+      const resolvePointFromParams = (target, params) => {
+        target.updateMatrixWorld(true);
+
+        if (params.type === 'plane' && target.userData?.point?.isVector3 && target.userData?.normalUnit?.isVector3) {
+          const planeSize = Math.max(1, Number(target.userData?.planeSize) || 12);
+          const normal = target.userData.normalUnit.clone().normalize();
+          const tangent = new THREE.Vector3(1, 0, 0);
+          if (Math.abs(tangent.dot(normal)) > 0.85) tangent.set(0, 0, 1);
+          tangent.cross(normal).normalize();
+          const bitangent = normal.clone().cross(tangent).normalize();
+          return target.userData.point
+            .clone()
+            .addScaledVector(tangent, params.tangentRatio * (planeSize / 2))
+            .addScaledVector(bitangent, params.bitangentRatio * (planeSize / 2));
+        }
+
+        if (params.type === 'plane-point' && target.userData?.point?.isVector3) {
+          return target.userData.point.clone();
+        }
+
+        if (params.type === 'cube') {
+          const sideLength = Math.max(0.01, Number(target.userData.sideLength ?? target.userData.side) || 1);
+          const half = sideLength / 2;
+          const local = new THREE.Vector3(
+            params.ratios[0] * half,
+            params.ratios[1] * half,
+            params.ratios[2] * half
+          );
+          return target.localToWorld(local);
+        }
+
+        if (params.type === 'sphere') {
+          const centre = new THREE.Vector3();
+          const scale = new THREE.Vector3();
+          target.getWorldPosition(centre);
+          target.getWorldScale(scale);
+          const radius = Math.max(0.01, Number(target.userData.radius) || 1);
+          const direction = new THREE.Vector3(params.direction[0], params.direction[1], params.direction[2]);
+          return centre.add(direction.multiplyScalar(radius * Math.max(scale.x, scale.y, scale.z)));
+        }
+
+        if (params.type === 'mesh-box') {
           const box = new THREE.Box3().setFromObject(target);
           if (!box.isEmpty()) {
             const centre = new THREE.Vector3();
@@ -88,40 +131,43 @@ export default function initObjectCompositionBlocks() {
             box.getCenter(centre);
             box.getSize(size);
             const half = size.multiplyScalar(0.5);
-            const faceAxis = Math.floor(Math.random() * 3);
             const point = centre.clone();
-            const axes = ['x', 'y', 'z'];
-            point[axes[faceAxis]] += randomSigned(half[axes[faceAxis]]);
-            for (const axis of axes.filter((_, index) => index !== faceAxis)) {
-              point[axis] += randomInteriorOffset(half[axis]);
-            }
+            ['x', 'y', 'z'].forEach((axis, index) => {
+              point[axis] += half[axis] * params.ratios[index];
+            });
             return point;
           }
         }
 
-        const box = new THREE.Box3().setFromObject(target);
-        if (!box.isEmpty()) {
-          const centre = new THREE.Vector3();
-          const size = new THREE.Vector3();
-          box.getCenter(centre);
-          box.getSize(size);
-          const half = size.multiplyScalar(0.5);
-          return new THREE.Vector3(
-            box.max.x,
-            centre.y + randomInteriorOffset(half.y),
-            centre.z + randomInteriorOffset(half.z)
-          );
+        if (params.type === 'box-max-x') {
+          const box = new THREE.Box3().setFromObject(target);
+          if (!box.isEmpty()) {
+            const centre = new THREE.Vector3();
+            const size = new THREE.Vector3();
+            box.getCenter(centre);
+            box.getSize(size);
+            const half = size.multiplyScalar(0.5);
+            return new THREE.Vector3(
+              box.max.x,
+              centre.y + half.y * params.ratioY,
+              centre.z + half.z * params.ratioZ
+            );
+          }
         }
 
         const fallback = new THREE.Vector3();
         target.getWorldPosition(fallback);
         return fallback;
-      }
+      };
 
       const anyPointCache = window.__geoScratchAnyPointCache || (window.__geoScratchAnyPointCache = {});
-      const cachedPoint = anyPointCache[${JSON.stringify(block.id)}];
-      const markerPoint = cachedPoint?.isVector3 ? cachedPoint.clone() : getAnyPointOnObject(object);
-      anyPointCache[${JSON.stringify(block.id)}] = markerPoint.clone();
+      // Re-roll the recipe if a different object gets connected to this
+      // block, but keep it stable while it's still the same one.
+      const cacheKey = ${JSON.stringify(block.id)} + ':' + (${objectBlockIdCode} || 'none');
+      const cachedParams = anyPointCache[cacheKey];
+      const pointParams = cachedParams || pickPointParams(object);
+      anyPointCache[cacheKey] = pointParams;
+      const markerPoint = resolvePointFromParams(object, pointParams);
 
       const marker = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 12),
