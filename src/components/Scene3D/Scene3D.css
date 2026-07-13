@@ -168,8 +168,3 @@ html, body, #root {
     text-shadow: none;
 }
 
-.coordinate-label {
-    white-space: nowrap;
-    min-width: max-content;
-    display: inline-block;
-}
