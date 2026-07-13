@@ -7,6 +7,7 @@ const THREE = { ...THREEBase, TeapotGeometry }
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
+import { createStyledArrow } from '@/utils/styledArrow'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 
@@ -92,7 +93,7 @@ function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3 }) {
   const arrow = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const origin = new THREE.Vector3(0, 0, 0)
-    const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
+    const helper = createStyledArrow(THREE, direction, origin, length, new THREE.Color(color), 0.1, 0.1)
     return helper
   }, [dir, color, length])
 

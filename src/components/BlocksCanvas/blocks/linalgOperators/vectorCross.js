@@ -39,18 +39,18 @@ export function initCrossProductBlock() {
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
 
-    const arrowU = new THREE.ArrowHelper(
+    const arrowU = THREE.makeArrow(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
       new THREE.Vector3(0,0,0), safeLen(lenU), 0x1d4ed8, headLenRatio, headWidthRatio
     );
-    const arrowV = new THREE.ArrowHelper(
+    const arrowV = THREE.makeArrow(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
       new THREE.Vector3(0,0,0), safeLen(lenV), 0xdc2626, headLenRatio, headWidthRatio
     );
 
     let crossObj;
     if (lenC>1e-8) {
-      crossObj = new THREE.ArrowHelper(
+      crossObj = THREE.makeArrow(
         cross.clone().normalize(), new THREE.Vector3(0,0,0),
         safeLen(lenC), 0x22c55e, headLenRatio, headWidthRatio
       );

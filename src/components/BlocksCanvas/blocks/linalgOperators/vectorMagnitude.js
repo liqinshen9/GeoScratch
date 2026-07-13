@@ -44,7 +44,7 @@ export function initVectorMagnitude() {
     // Render vector as arrow, or sphere if zero-length
     let obj;
     if (len > 1e-8) {
-      obj = new THREE.ArrowHelper(
+      obj = THREE.makeArrow(
         vVal.clone().normalize(),
         arrowOrigin.clone(),
         safeLen(len),

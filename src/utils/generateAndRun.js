@@ -1,7 +1,9 @@
 import { javascriptGenerator } from 'blockly/javascript'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
+import { createStyledArrow } from '@/utils/styledArrow'
 const THREE = { ...THREEBase, TeapotGeometry }
+THREE.makeArrow = (...args) => createStyledArrow(THREE, ...args)
 import {
   applyWorldMatrix4ToObject,
   collectStatementChain,

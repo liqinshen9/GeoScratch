@@ -46,7 +46,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   const absoluteHeadLength = 0.7
   const absoluteHeadWidth = 0.35
 
-  const arrow = new THREE.ArrowHelper(
+  const arrow = THREE.makeArrow(
     normalUnit.clone(),
     point.clone(),
     visualArrowLength, // Static length

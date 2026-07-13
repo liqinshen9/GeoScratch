@@ -29,7 +29,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
 
       let distanceVector;
       if (distance > 1e-8) {
-        distanceVector = new THREE.ArrowHelper(
+        distanceVector = THREE.makeArrow(
           projection.clone().normalize(),
           distanceStart.clone(),
           safeLen(distance),
@@ -77,11 +77,11 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       return distance;
     }
 
-    const arrowP = new THREE.ArrowHelper(
+    const arrowP = THREE.makeArrow(
       (lenP > 0 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
       origin, safeLen(lenP), 0xeab308, headLenRatio, headWidthRatio
     );
-    const arrowQ = new THREE.ArrowHelper(
+    const arrowQ = THREE.makeArrow(
       (lenQ > 0 ? vVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
       origin, safeLen(lenQ), 0xec4899, headLenRatio, headWidthRatio
     );
@@ -94,7 +94,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       projQ.copy(uVal).multiplyScalar(vVal.dot(uVal) / denom);
       projLen = projQ.length();
       if (projLen > 1e-8) {
-        projObj = new THREE.ArrowHelper(
+        projObj = THREE.makeArrow(
           projQ.clone().normalize(), origin, safeLen(projLen),
           0xf472b6, headLenRatio, headWidthRatio
         );

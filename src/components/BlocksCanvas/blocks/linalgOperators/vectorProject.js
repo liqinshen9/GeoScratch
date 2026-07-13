@@ -90,12 +90,12 @@ export function initVectorProjectBlock() {
     const lenU = uVal.length();
     const lenV = vVal.length();
 
-    const arrowU = new THREE.ArrowHelper(
+    const arrowU = THREE.makeArrow(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
       new THREE.Vector3(0,0,0), safeLen(lenU), 0x1d4ed8, headLenRatio, headWidthRatio
     );
 
-    const arrowV = new THREE.ArrowHelper(
+    const arrowV = THREE.makeArrow(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
       new THREE.Vector3(0,0,0), safeLen(lenV), 0xdc2626, headLenRatio, headWidthRatio
     );
@@ -113,7 +113,7 @@ export function initVectorProjectBlock() {
       projLen = projVec.length();
       projOrigin = pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0);
       if (projLen>1e-8) {
-        projObj = new THREE.ArrowHelper(
+        projObj = THREE.makeArrow(
           projVec.clone().normalize(), projOrigin.clone(),
           safeLen(projLen), isPointPlaneDistanceProjection ? 0xfacc15 : 0x7c3aed, headLenRatio, headWidthRatio
         );

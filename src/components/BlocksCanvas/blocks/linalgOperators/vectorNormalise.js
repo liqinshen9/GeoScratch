@@ -34,7 +34,7 @@ export function initNormInplaceBlock() {
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
 
     // Original arrow
-    const arrowIn = new THREE.ArrowHelper(
+    const arrowIn = THREE.makeArrow(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
       new THREE.Vector3(0,0,0), safeLen(lenV), 0x1d4ed8, headLenRatio, headWidthRatio
     );
@@ -43,7 +43,7 @@ export function initNormInplaceBlock() {
     let normObj, normVec=new THREE.Vector3();
     if (lenV>1e-8) {
       normVec.copy(vVal).normalize(); // unit vector components
-      normObj = new THREE.ArrowHelper(
+      normObj = THREE.makeArrow(
         normVec.clone(), new THREE.Vector3(0,0,0), 1, 0x22c55e, headLenRatio, headWidthRatio
       );
     } else {
