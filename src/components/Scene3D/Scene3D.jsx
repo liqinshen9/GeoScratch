@@ -293,7 +293,11 @@ function LabelDeclutter() {
   return null;
 }
 
-function LabelLayer({ object3D }) {
+function getLabelVisibilityKey(labelIdBase, lbl, index) {
+  return `${labelIdBase}:${lbl.anchor ?? index}:${index}`;
+}
+
+function LabelLayer({ object3D, hiddenLabelKeys }) {
   const ud = object3D.userData || {};
   const labels = Array.isArray(ud.labels) ? ud.labels : [];
   // Prefer the Blockly block's own id over the Three.js object's uuid: every
@@ -317,6 +321,8 @@ function LabelLayer({ object3D }) {
   return (
     <>
       {derived.map((lbl, i) => {
+        if (hiddenLabelKeys?.has(getLabelVisibilityKey(labelIdBase, lbl, i))) return null;
+
         const pos = resolveAnchor(object3D, lbl.anchor);
         if (!pos) return null;
 
@@ -364,7 +370,21 @@ function findSelectablePointMarker(object) {
   return null;
 }
 
-function SelectablePointPicker({ onSelectPoint, onClearPoint }) {
+function findToggleablePointLabelKey(marker) {
+  let target = marker;
+  while (target) {
+    const labels = Array.isArray(target.userData?.labels) ? target.userData.labels : [];
+    const labelIndex = labels.findIndex((label) => label?.anchor === 'q');
+    if (labelIndex !== -1) {
+      const labelIdBase = target.userData?.srcBlockId ?? target.uuid;
+      return getLabelVisibilityKey(labelIdBase, labels[labelIndex], labelIndex);
+    }
+    target = target.parent;
+  }
+  return null;
+}
+
+function SelectablePointPicker({ onTogglePointLabel }) {
   const { camera, gl, scene } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const pointer = useMemo(() => new THREE.Vector2(), []);
@@ -381,25 +401,23 @@ function SelectablePointPicker({ onSelectPoint, onClearPoint }) {
       const hits = raycaster.intersectObjects(scene.children, true);
       const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean);
 
-      if (!marker) {
-        onClearPoint();
-        return;
-      }
+      if (!marker) return;
 
       event.stopPropagation();
-      onSelectPoint(marker.getWorldPosition(new THREE.Vector3()));
+      const labelKey = findToggleablePointLabelKey(marker);
+      if (labelKey) onTogglePointLabel(labelKey);
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown);
     return () => canvas.removeEventListener('pointerdown', handlePointerDown);
-  }, [camera, gl, onClearPoint, onSelectPoint, pointer, raycaster, scene]);
+  }, [camera, gl, onTogglePointLabel, pointer, raycaster, scene]);
 
   return null;
 }
 
 const globalThreeObjStore = {}
 
-function Scene({ objects = [], selectedPoint }) {
+function Scene({ objects = [], hiddenLabelKeys }) {
   const { settings } = useSettingsStore()
 
   useEffect(() => {
@@ -455,27 +473,10 @@ function Scene({ objects = [], selectedPoint }) {
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
-            {settings.showLabels && <LabelLayer object3D={o} />}
+            {settings.showLabels && <LabelLayer object3D={o} hiddenLabelKeys={hiddenLabelKeys} />}
           </group>
         );
       })}
-
-      {selectedPoint && (() => {
-        const worldPos = [
-          selectedPoint.position.x + 0.12,
-          selectedPoint.position.y + 0.12,
-          selectedPoint.position.z,
-        ];
-        return (
-          <group position={worldPos}>
-            <Html>
-              <LabelAnchor id="selected-point" className="label coordinate-label" worldPos={worldPos}>
-                {selectedPoint.text}
-              </LabelAnchor>
-            </Html>
-          </group>
-        );
-      })()}
     </>
   );
 }
@@ -489,7 +490,7 @@ export default function Scene3D({ objects = [] }) {
   const { settings } = useSettingsStore()
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
-  const [selectedPoint, setSelectedPoint] = useState(null);
+  const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
 
   const initialCamPos = useMemo(() => new THREE.Vector3(...DEFAULT_CAMERA_POSITION), []);
   const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
@@ -504,10 +505,6 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
-  useEffect(() => {
-    setSelectedPoint(null);
-  }, [objects]);
-
   const recenter = () => {
     if (!cameraRef.current || !controlsRef.current) return;
     cameraRef.current.position.copy(initialCamPos);
@@ -515,15 +512,13 @@ export default function Scene3D({ objects = [] }) {
     controlsRef.current.update();
   };
 
-  const handleSelectPoint = useCallback((position) => {
-    setSelectedPoint({
-      position,
-      text: fmtVec(position),
+  const handleTogglePointLabel = useCallback((labelKey) => {
+    setHiddenLabelKeys((current) => {
+      const next = new Set(current);
+      if (next.has(labelKey)) next.delete(labelKey);
+      else next.add(labelKey);
+      return next;
     });
-  }, []);
-
-  const handleClearPoint = useCallback(() => {
-    setSelectedPoint(null);
   }, []);
 
   return (
@@ -537,8 +532,8 @@ export default function Scene3D({ objects = [] }) {
         >
           <OrbitControls ref={controlsRef} />
           <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
-          <SelectablePointPicker onSelectPoint={handleSelectPoint} onClearPoint={handleClearPoint} />
-          <Scene objects={objects} selectedPoint={selectedPoint} />
+          <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
+          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} />
           <color attach="background" args={[BACKGROUND_COLORS[settings.sceneBackground] ?? BACKGROUND_COLORS.dark]} />
         </Canvas>
         <button
