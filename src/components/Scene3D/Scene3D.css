@@ -115,11 +115,8 @@ html, body, #root {
     justify-content: center;
     background: rgba(255, 255, 255, 0.86);
     color: #8a8f98;
-    background: rgba(255, 255, 255, 0.86);
-    color: #8a8f98;
     cursor: pointer;
     backdrop-filter: blur(6px);
-    box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
     box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
 }
 

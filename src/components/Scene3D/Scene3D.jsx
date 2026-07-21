@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
 import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
 import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
-import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 const THREE = { ...THREEBase, TeapotGeometry }
@@ -97,30 +96,7 @@ const AxisLabels = ({ size = 40, step = 5, y = 0.01, fontSize = 0.28, color = DE
 
 function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
   const arrowGroup = useMemo(() => {
-function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
-  const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
-    const group = new THREE.Group()
-    const material = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(color),
-      transparent: true,
-      opacity,
-      depthWrite: false,
-    })
-    const headHeight = 0.46
-    const shaftStart = -length
-    const shaftEnd = length
-    const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, shaftLength, 12), material)
-    shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
-    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
-
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, headHeight, 18), material)
-    head.position.copy(direction).multiplyScalar(length - headHeight / 2)
-    head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
-
-    group.add(shaft, head)
-    return group
     const group = new THREE.Group()
     const material = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
@@ -147,16 +123,12 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
   const tip = useMemo(() => {
     const d = new THREE.Vector3(...dir).normalize()
     return d.multiplyScalar(length + 0.55)
-    return d.multiplyScalar(length + 0.55)
   }, [dir, length])
 
   return (
     <group>
       <primitive object={arrowGroup} />
-      <primitive object={arrowGroup} />
       <Billboard position={[tip.x, tip.y, tip.z]}>
-        <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
-          {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
         <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
           {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
         </Text>
@@ -168,9 +140,6 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
 function Axes({ length = 3 }) {
   return (
     <group>
-      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
-      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
-      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
       <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
       <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
       <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
@@ -640,13 +609,7 @@ export default function Scene3D({ objects = [] }) {
   }, [objects]);
 
   const resetDefaultView = () => {
-  const resetDefaultView = () => {
     if (!cameraRef.current || !controlsRef.current) return;
-    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION);
-    cameraRef.current.up.set(0, 1, 0);
-    cameraRef.current.zoom = 1;
-    cameraRef.current.updateProjectionMatrix();
-    controlsRef.current.target.set(0, 0, 0);
     cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION);
     cameraRef.current.up.set(0, 1, 0);
     cameraRef.current.zoom = 1;
