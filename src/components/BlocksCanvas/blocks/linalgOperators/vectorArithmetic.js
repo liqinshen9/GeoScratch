@@ -116,7 +116,9 @@ export function initVectorArithmeticBlock() {
       vTip:   { type:'world', position:[vVal.x, vVal.y, vVal.z] },
       rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
     };
-    const resultColor = lenR > 1e-8 ? '#7c3aed' : '#ffff00';
+    const resultColor = isPointDifference
+      ? '#15803d'
+      : (lenR > 1e-8 ? '#7c3aed' : '#ffff00');
     group.userData.labels = isPointDifference
       ? [
         { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },

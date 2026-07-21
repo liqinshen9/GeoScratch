@@ -158,13 +158,22 @@ html, body, #root {
 }
 
 .editor-body-3d .distance-highlight-label {
-    padding: 7px 10px;
-    border: 2px solid #facc15;
-    border-radius: 8px;
-    background: rgba(250, 204, 21, 0.94);
-    color: #1f2937;
-    font: 700 14px/1.2 ui-monospace, Menlo, Consolas, monospace;
-    box-shadow: 0 0 0 2px rgba(31, 41, 55, 0.35), 0 8px 22px rgba(250, 204, 21, 0.28);
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #eab308;
+    font: 900 18px/1.2 ui-monospace, Menlo, Consolas, monospace;
+    box-shadow: none;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
+}
+
+.editor-body-3d .normal-vector-label {
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #ef4444;
+    font: 800 16px/1.2 ui-monospace, Menlo, Consolas, monospace;
+    box-shadow: none;
     text-shadow: none;
 }
 

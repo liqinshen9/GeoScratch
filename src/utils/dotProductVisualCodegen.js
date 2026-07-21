@@ -13,6 +13,30 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
     const fmtN = (n) => Number(Number(n).toFixed(3));
+    const makeSegment = (start, end, color, radius = 0.035) => {
+      const delta = end.clone().sub(start);
+      const length = delta.length();
+      const segment = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, safeLen(length), 18),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, depthWrite: false })
+      );
+      segment.position.copy(start).add(end).multiplyScalar(0.5);
+      if (length > 1e-8) {
+        segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
+      }
+      return segment;
+    };
+    const makeArrowHead = (tip, direction, color) => {
+      const dir = direction.lengthSq() > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const height = 0.38;
+      const head = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, height, 24),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
+      );
+      head.position.copy(tip).addScaledVector(dir, -height / 2);
+      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      return head;
+    };
     const origin = new THREE.Vector3(0, 0, 0);
     const isPointPlaneDistance = uVal.userData?.geoType === 'point_difference_vector';
     if (isPointPlaneDistance) {
@@ -20,8 +44,10 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       const projection = lenQ > 1e-12
         ? vVal.clone().multiplyScalar(dot / vVal.lengthSq())
         : new THREE.Vector3(0, 0, 0);
-      const distanceStart = uVal.userData.end.clone().sub(projection);
-      const distanceEnd = uVal.userData.end.clone();
+      const distanceStart = uVal.userData.start?.isVector3
+        ? uVal.userData.start.clone()
+        : uVal.userData.end.clone().sub(projection);
+      const distanceEnd = distanceStart.clone().add(projection);
       const labelPos = distanceStart
         .clone()
         .add(distanceEnd)
@@ -29,14 +55,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
 
       let distanceVector;
       if (distance > 1e-8) {
-        distanceVector = new THREE.ArrowHelper(
-          projection.clone().normalize(),
-          distanceStart.clone(),
-          safeLen(distance),
-          0xfacc15,
-          headLenRatio,
-          headWidthRatio
-        );
+        distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), 0xfacc15);
       } else {
         distanceVector = new THREE.Mesh(
           new THREE.SphereGeometry(0.05, 16, 12),
@@ -44,34 +63,92 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
         );
         distanceVector.position.copy(distanceStart);
       }
-      distanceVector.userData.geoType = 'geo_vector';
+      distanceVector.userData.geoType = 'distance_segment';
       distanceVector.userData.length = safeLen(distance);
       distanceVector.userData.headLenRatio = headLenRatio;
       distanceVector.userData.headWidthRatio = headWidthRatio;
       distanceVector.userData.srcBlockId = ${id};
 
+      const normalUnit = lenQ > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const labelSide = uVal.userData.end.clone().sub(distanceStart);
+      labelSide.addScaledVector(normalUnit, -labelSide.dot(normalUnit));
+      if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
+      labelSide.normalize().multiplyScalar(-1);
+      const normalExtent = Math.max(2.2, distance + 1.4);
+      const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
+        distanceStart.clone().addScaledVector(normalUnit, -1.0),
+        distanceStart.clone().addScaledVector(normalUnit, normalExtent),
+      ]);
+      const normalLine = new THREE.Line(
+        normalLineGeom,
+        new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+      );
+      normalLine.computeLineDistances();
+      const normalTip = distanceStart.clone().addScaledVector(normalUnit, normalExtent);
+      const normalArrowHead = makeArrowHead(normalTip, normalUnit, 0xef4444);
+
+      const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), uVal.userData.end.clone()]);
+      const guideLine = new THREE.Line(
+        guideGeom,
+        new THREE.LineDashedMaterial({ color: 0x111827, dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
+      );
+      guideLine.computeLineDistances();
+
+      const tangent = uVal.userData.end.clone().sub(distanceEnd);
+      if (tangent.lengthSq() < 1e-10) {
+        tangent.set(1, 0, 0);
+        if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
+      }
+      tangent.addScaledVector(normalUnit, -tangent.dot(normalUnit));
+      if (tangent.lengthSq() < 1e-10) tangent.set(1, 0, 0);
+      tangent.normalize();
+      const markerSize = Math.min(0.42, Math.max(0.18, distance * 0.16));
+      const rightAngle = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          distanceEnd.clone().addScaledVector(normalUnit, -markerSize),
+          distanceEnd.clone().addScaledVector(normalUnit, -markerSize).addScaledVector(tangent, markerSize),
+          distanceEnd.clone().addScaledVector(tangent, markerSize),
+        ]),
+        new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.9 })
+      );
+      normalLine.userData.geoType = 'geo_helper';
+      normalArrowHead.userData.geoType = 'geo_helper';
+      guideLine.userData.geoType = 'geo_helper';
+      rightAngle.userData.geoType = 'geo_helper';
+      normalLine.userData.srcBlockId = ${id};
+      normalArrowHead.userData.srcBlockId = ${id};
+      guideLine.userData.srcBlockId = ${id};
+      rightAngle.userData.srcBlockId = ${id};
+
       const group = new THREE.Group();
-      group.add(distanceVector);
+      group.add(distanceVector, normalLine, normalArrowHead, guideLine, rightAngle);
       group.userData.geoType = 'point_plane_distance_dot';
       group.userData.srcBlockId = ${id};
       group.userData.dot = dot;
       group.userData.distance = distance;
       group.userData.labelAnchors = {
-        formula: { type: 'world', position: [labelPos.x, labelPos.y, labelPos.z] },
+        formula: { type: 'world', position: [labelPos.x + labelSide.x * 0.36, labelPos.y + labelSide.y * 0.36, labelPos.z + labelSide.z * 0.36] },
+        normal: { type: 'world', position: [normalTip.x + labelSide.x * 0.42, normalTip.y + labelSide.y * 0.42, normalTip.z + labelSide.z * 0.42] },
       };
       group.userData.labels = [
         {
+          anchor: 'normal',
+          text: 'n',
+          distanceFactor: 8,
+          offset: [0, 0, 0],
+          className: 'normal-vector-label',
+        },
+        {
           anchor: 'formula',
-          text: 'distance = |(P - Q) dot n| = ' + fmtN(distance),
+          text: 'd',
           distanceFactor: 6,
-          offset: [0.22, 0, 0],
+          offset: [0, 0, 0],
           emphasis: true,
           className: 'distance-highlight-label',
         },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {
-        threeObjStore[${id} + '_distance'] = distanceVector;
         threeObjStore[${id}] = group;
       }
       return distance;

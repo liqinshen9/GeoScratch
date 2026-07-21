@@ -35,6 +35,30 @@ export function initVectorProjectBlock() {
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const makeSegment = (start, end, color, radius = 0.035) => {
+      const delta = end.clone().sub(start);
+      const length = delta.length();
+      const segment = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, safeLen(length), 18),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, depthWrite: false })
+      );
+      segment.position.copy(start).add(end).multiplyScalar(0.5);
+      if (length > 1e-8) {
+        segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
+      }
+      return segment;
+    };
+    const makeArrowHead = (tip, direction, color) => {
+      const dir = direction.lengthSq() > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const height = 0.38;
+      const head = new THREE.Mesh(
+        new THREE.ConeGeometry(0.16, height, 24),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
+      );
+      head.position.copy(tip).addScaledVector(dir, -height / 2);
+      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      return head;
+    };
     const makeProjectionShadow = (foot, normal, sourcePoint) => {
       const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
       const shadowGroup = new THREE.Group();
@@ -73,17 +97,58 @@ export function initVectorProjectBlock() {
       );
       footDot.position.copy(foot);
 
-      const dropGeom = new THREE.BufferGeometry().setFromPoints([sourcePoint.clone(), foot.clone()]);
-      const dropLine = new THREE.Line(
-        dropGeom,
-        new THREE.LineDashedMaterial({ color: 0xf8fafc, dashSize: 0.16, gapSize: 0.1, transparent: true, opacity: 0.64 })
-      );
-      dropLine.computeLineDistances();
-
-      shadowGroup.add(shadow, ring, footDot, dropLine);
+      shadowGroup.add(shadow, ring, footDot);
       shadowGroup.userData.geoType = 'projection_shadow';
       shadowGroup.userData.srcBlockId=${JSON.stringify(block.id)};
       return shadowGroup;
+    };
+    const makeDistanceIllustration = (basePoint, topPoint, pointP, normal, distanceLength) => {
+      const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const group = new THREE.Group();
+
+      const normalExtent = Math.max(2.2, distanceLength + 1.4);
+      const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
+        basePoint.clone().addScaledVector(normalUnit, -1.0),
+        basePoint.clone().addScaledVector(normalUnit, normalExtent),
+      ]);
+      const normalLine = new THREE.Line(
+        normalLineGeom,
+        new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+      );
+      normalLine.computeLineDistances();
+      const normalTip = basePoint.clone().addScaledVector(normalUnit, normalExtent);
+      const normalArrowHead = makeArrowHead(normalTip, normalUnit, 0xef4444);
+
+      const guideGeom = new THREE.BufferGeometry().setFromPoints([topPoint.clone(), pointP.clone()]);
+      const guideLine = new THREE.Line(
+        guideGeom,
+        new THREE.LineDashedMaterial({ color: 0x111827, dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
+      );
+      guideLine.computeLineDistances();
+
+      const tangent = pointP.clone().sub(topPoint);
+      if (tangent.lengthSq() < 1e-10) {
+        tangent.set(1, 0, 0);
+        if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
+      }
+      tangent.addScaledVector(normalUnit, -tangent.dot(normalUnit));
+      if (tangent.lengthSq() < 1e-10) tangent.set(1, 0, 0);
+      tangent.normalize();
+      const markerSize = Math.min(0.42, Math.max(0.18, distanceLength * 0.16));
+      const cornerPoints = [
+        topPoint.clone().addScaledVector(normalUnit, -markerSize),
+        topPoint.clone().addScaledVector(normalUnit, -markerSize).addScaledVector(tangent, markerSize),
+        topPoint.clone().addScaledVector(tangent, markerSize),
+      ];
+      const rightAngle = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(cornerPoints),
+        new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.9 })
+      );
+
+      group.add(normalLine, normalArrowHead, guideLine, rightAngle);
+      group.userData.geoType = 'distance_projection_illustration';
+      group.userData.srcBlockId=${JSON.stringify(block.id)};
+      return group;
     };
 
     // Inputs
@@ -111,12 +176,16 @@ export function initVectorProjectBlock() {
       const scale = uVal.dot(vVal) / denom;
       projVec = vVal.clone().multiplyScalar(scale);
       projLen = projVec.length();
-      projOrigin = pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0);
+      projOrigin = isPointPlaneDistanceProjection && uVal.userData.start?.isVector3
+        ? uVal.userData.start.clone()
+        : (pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0));
       if (projLen>1e-8) {
-        projObj = new THREE.ArrowHelper(
-          projVec.clone().normalize(), projOrigin.clone(),
-          safeLen(projLen), isPointPlaneDistanceProjection ? 0xfacc15 : 0x7c3aed, headLenRatio, headWidthRatio
-        );
+        projObj = isPointPlaneDistanceProjection
+          ? makeSegment(projOrigin.clone(), projOrigin.clone().add(projVec), 0xfacc15)
+          : new THREE.ArrowHelper(
+            projVec.clone().normalize(), projOrigin.clone(),
+            safeLen(projLen), 0x7c3aed, headLenRatio, headWidthRatio
+          );
       } else {
         projVec.set(0,0,0);
         projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
@@ -136,12 +205,14 @@ export function initVectorProjectBlock() {
 
     const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};
     tag(arrowU,lenU); tag(arrowV,lenV); tag(projObj,projLen);
+    if (isPointPlaneDistanceProjection) projObj.userData.geoType = 'distance_segment';
 
     // Guide: tip(u) -> tip(proj). Hide it for point-plane distance so it is not mistaken for the distance.
     const uTip = pointEnd ? pointEnd.clone() : uVal.clone();
     const pTip = projOrigin.clone().add(projVec);
     let guideLine = null;
     let projectionShadow = null;
+    let distanceIllustration = null;
     if (!isPointPlaneDistanceProjection) {
       const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
       const guideMat  = new THREE.LineBasicMaterial({ color: 0xffff00, transparent:true, opacity:1 });
@@ -150,25 +221,39 @@ export function initVectorProjectBlock() {
       guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
     } else {
       projectionShadow = makeProjectionShadow(projOrigin, vVal, uTip);
+      distanceIllustration = makeDistanceIllustration(projOrigin, pTip, uTip, vVal, projLen);
     }
 
     const group = new THREE.Group();
     if (isPointPlaneDistanceProjection) {
-      group.add(projObj, projectionShadow);
+      group.add(projObj, projectionShadow, distanceIllustration);
     } else {
       group.add(arrowU, arrowV, projObj, guideLine);
     }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
+    const normalLabelUnit = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+    const normalLabelExtent = Math.max(2.2, projLen + 1.4);
+    const normalLabelSide = uTip.clone().sub(projOrigin);
+    normalLabelSide.addScaledVector(normalLabelUnit, -normalLabelSide.dot(normalLabelUnit));
+    if (normalLabelSide.lengthSq() < 1e-10) normalLabelSide.set(1, 0, 0);
+    normalLabelSide.normalize();
+    const normalLabelTip = projOrigin.clone()
+      .addScaledVector(normalLabelUnit, normalLabelExtent)
+      .addScaledVector(normalLabelSide, -0.42);
+
     // Labels at tips
     group.userData.labelAnchors = {
       uTip:{type:'world', position:[uTip.x,     uTip.y,     uTip.z    ]},
       vTip:{type:'world', position:[vVal.x,     vVal.y,     vVal.z    ]},
       pTip:{type:'world', position:[pTip.x,  pTip.y,  pTip.z ]},
+      normal:{type:'world', position:[normalLabelTip.x, normalLabelTip.y, normalLabelTip.z]},
     };
     group.userData.labels = isPointPlaneDistanceProjection
-      ? []
+      ? [
+        { anchor:'normal', text:'n', distanceFactor:8, offset:[0,0,0], className: 'normal-vector-label' },
+      ]
       : [
         { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
         { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
@@ -182,16 +267,23 @@ export function initVectorProjectBlock() {
         threeObjStore[base + '_v']     = arrowV;
         threeObjStore[base + '_guide'] = guideLine;
       }
-      threeObjStore[base + '_proj']  = projObj;
-      if (projectionShadow) threeObjStore[base + '_shadow'] = projectionShadow;
+      if (!isPointPlaneDistanceProjection) {
+        threeObjStore[base + '_proj'] = projObj;
+      }
       threeObjStore[base]            = group;
     }
     const resultVector = projVec.clone();
     if (isPointPlaneDistanceProjection) {
+      const labelSide = uTip.clone().sub(projOrigin);
+      const normalUnitForLabel = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      labelSide.addScaledVector(normalUnitForLabel, -labelSide.dot(normalUnitForLabel));
+      if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
+      labelSide.normalize().multiplyScalar(-1);
       resultVector.userData = {
         geoType: 'point_plane_distance_projection_vector',
         start: projOrigin.clone(),
         end: pTip.clone(),
+        labelSide,
         label: 'proj(P - Q onto n)',
       };
     }

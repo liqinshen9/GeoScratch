@@ -61,7 +61,7 @@ export function initVectorMagnitude() {
 
     // Group wrapper
     const group = new THREE.Group();
-    group.add(obj);
+    if (!isPointPlaneProjection) group.add(obj);
 
     // Metadata
     group.userData.geoType = isPointPlaneProjection
@@ -75,19 +75,22 @@ export function initVectorMagnitude() {
     // Label: only one line -> "length of <name> = <len>"
     const tip = (len > 1e-8) ? arrowTip.clone() : arrowOrigin.clone();
     const distanceMid = arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5);
+    const distanceLabelPosition = isPointPlaneProjection && vVal.userData.labelSide?.isVector3
+      ? distanceMid.clone().addScaledVector(vVal.userData.labelSide, 0.36)
+      : distanceMid.clone();
     const fmtLen = Number(len.toFixed(3));
     group.userData.labelAnchors = {
       tip: { type: 'world', position: [tip.x, tip.y, tip.z] },
-      distanceMid: { type: 'world', position: [distanceMid.x, distanceMid.y, distanceMid.z] },
+      distanceMid: { type: 'world', position: [distanceLabelPosition.x, distanceLabelPosition.y, distanceLabelPosition.z] },
     };
     group.userData.labels = [
       {
         anchor: isPointPlaneProjection ? 'distanceMid' : 'tip',
         text: isPointPlaneProjection
-          ? 'distance = |proj(P - Q onto n)| = ' + fmtLen
+          ? 'd'
           : 'length of ${name} = ' + fmtLen,
         distanceFactor: isPointPlaneProjection ? 6 : 8,
-        offset: isPointPlaneProjection ? [0.22, 0, 0] : [0.12, 0.12, 0],
+        offset: isPointPlaneProjection ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
         className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
         color: (!isPointPlaneProjection && len > 1e-8) ? '#0ea5e9' : undefined,

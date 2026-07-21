@@ -16,9 +16,9 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   const planeSize = 12
   const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
   const planeMat = new THREE.MeshStandardMaterial({
-    color: 0xffd84a,
+    color: 0xbfdbfe,
     transparent: true,
-    opacity: 0.34,
+    opacity: 0.42,
     roughness: 0.55,
     metalness: 0.02,
     side: THREE.DoubleSide,
@@ -27,7 +27,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   const plane = new THREE.Mesh(planeGeom, planeMat)
   const planeEdges = new THREE.LineSegments(
     new THREE.EdgesGeometry(planeGeom),
-    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55 })
+    new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.9 })
   )
   plane.add(planeEdges)
   plane.setRotationFromQuaternion(
@@ -35,57 +35,18 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   )
   plane.position.copy(point)
 
-  const pointMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05, 16, 12),
-    new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.4, metalness: 0.1 })
-  )
-  pointMesh.position.copy(point)
-
-  // Purely static visual proportions. The blue arrow asset size will never change.
-  const visualArrowLength = 3.5
-  const absoluteHeadLength = 0.7
-  const absoluteHeadWidth = 0.35
-
-  const arrow = new THREE.ArrowHelper(
-    normalUnit.clone(),
-    point.clone(),
-    visualArrowLength, // Static length
-    0x3b82f6,
-    absoluteHeadLength, // Static head length
-    absoluteHeadWidth  // Static head width
-  )
-
-  const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map((v) => Number(v.toFixed(3))).join(', ') + ']'
-
-  // Track the label anchor directly to the static tip of the visual asset
-  const visualNormalTip = point.clone().addScaledVector(normalUnit, visualArrowLength)
-
   const group = new THREE.Group()
-  group.add(plane, pointMesh, arrow)
+  group.add(plane)
   group.userData.geoType = 'point_normal_plane_group'
   group.userData.srcBlockId = blockId
   group.userData.point = point.clone()
   group.userData.normalRaw = normalRaw.clone()
   group.userData.normalUnit = normalUnit.clone()
   group.userData.planeSize = planeSize
-  group.userData.labelAnchors = {
-    pAnchor: { type: 'world', position: [point.x, point.y, point.z] },
-    nTip: { type: 'world', position: [visualNormalTip.x, visualNormalTip.y, visualNormalTip.z] },
-  }
-  group.userData.labels = [
-    { anchor: 'pAnchor', text: 'point = ' + fmt(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
-    { anchor: 'nTip', text: 'normal = ' + fmt(normalRaw), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#3b82f6' },
-  ]
+  group.userData.labelAnchors = {}
+  group.userData.labels = []
 
   plane.userData = Object.assign(plane.userData || {}, { geoType: 'plane_mesh', srcBlockId: blockId })
-  pointMesh.userData = Object.assign(pointMesh.userData || {}, { geoType: 'point_marker', srcBlockId: blockId })
-  arrow.userData = Object.assign(arrow.userData || {}, {
-    geoType: 'normal_arrow',
-    name: normLabel,
-    headLenRatio: absoluteHeadLength / visualArrowLength,
-    headWidthRatio: absoluteHeadWidth / visualArrowLength,
-    srcBlockId: blockId,
-  })
 
   if (threeObjStore) threeObjStore[blockId] = group
   return group

@@ -9,6 +9,7 @@ import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
+const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -62,7 +63,7 @@ function BoundingBoxRoom({ size = 40 }) {
 
       {/* BackSide hides the front faces but catches shadows on the back walls/floor */}
       <meshStandardMaterial
-        color="#52525b"
+        color="#ffffff"
         side={THREE.BackSide}
         roughness={1}
       />
@@ -70,31 +71,38 @@ function BoundingBoxRoom({ size = 40 }) {
   );
 }
 
-const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#9aa0a6', showZero = true }) => {
+const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#cbd5e1', showZero = true }) => {
   const ticks = useMemo(() => Array.from({ length: Math.floor(size / step) + 1 }, (_, i) => i * step - size / 2), [size, step]);
   return (
     <group>
       {ticks.map(t => (showZero || t !== 0) && (
         <Billboard key={`x-${t}`} position={[t, y, 0]}>
-          <Text fontSize={fontSize} color={color} anchorX="center" anchorY="middle">{t}</Text>
+          <Text fontSize={fontSize} color={color} fillOpacity={0.5} anchorX="center" anchorY="middle">{t}</Text>
         </Billboard>
       ))}
       {ticks.map(t => (showZero || t !== 0) && (
         <Billboard key={`z-${t}`} position={[0, y, t]}>
-          <Text fontSize={fontSize} color={color} anchorX="center" anchorY="middle">{t}</Text>
+          <Text fontSize={fontSize} color={color} fillOpacity={0.5} anchorX="center" anchorY="middle">{t}</Text>
         </Billboard>
       ))}
     </group>
   );
 };
 
-function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3 }) {
+function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3, opacity = 0.45 }) {
   const arrow = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const origin = new THREE.Vector3(0, 0, 0)
     const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
+    helper.traverse?.((child) => {
+      if (!child.material) return;
+      child.material = child.material.clone();
+      child.material.transparent = true;
+      child.material.opacity = opacity;
+      child.material.depthWrite = false;
+    });
     return helper
-  }, [dir, color, length])
+  }, [dir, color, length, opacity])
 
   const tip = useMemo(() => {
     const d = new THREE.Vector3(...dir).normalize()
@@ -105,7 +113,7 @@ function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3 }) {
     <group>
       <primitive object={arrow} />
       <Billboard position={[tip.x, tip.y, tip.z]}>
-        <Text fontSize={0.35} color={color} anchorX="center" anchorY="middle">
+        <Text fontSize={0.35} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
           {dir[0] ? 'X' : dir[1] ? 'Y' : 'Z'}
         </Text>
       </Billboard>
@@ -116,11 +124,70 @@ function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3 }) {
 function Axes({ length = 3 }) {
   return (
     <group>
-      <AxisArrow dir={[1, 0, 0]} color="#ef4444" length={length} />
-      <AxisArrow dir={[0, 1, 0]} color="#22c55e" length={length} />
-      <AxisArrow dir={[0, 0, 1]} color="#3b82f6" length={length} />
+      <AxisArrow dir={[1, 0, 0]} color="#ef4444" length={length} opacity={0.42} />
+      <AxisArrow dir={[0, 1, 0]} color="#22c55e" length={length} opacity={0.42} />
+      <AxisArrow dir={[0, 0, 1]} color="#3b82f6" length={length} opacity={0.42} />
     </group>
   )
+}
+
+function FadedGrid({ opacity = 0.18 }) {
+  const gridRef = useRef(null);
+  const gridOpacity = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : 0.18));
+
+  useLayoutEffect(() => {
+    if (!gridRef.current) return;
+    const materials = Array.isArray(gridRef.current.material)
+      ? gridRef.current.material
+      : [gridRef.current.material];
+
+    materials.forEach((material, index) => {
+      material.transparent = true;
+      material.opacity = index === 0 ? Math.min(0.35, gridOpacity * 1.35) : gridOpacity;
+      material.depthWrite = false;
+      material.color.set(index === 0 ? 0x94a3b8 : 0x64748b);
+      material.needsUpdate = true;
+    });
+  }, [gridOpacity]);
+
+  return (
+    <gridHelper
+      ref={gridRef}
+      args={[40, 40, 0x94a3b8, 0x64748b]}
+      position={[0, -0.005, 0]}
+      renderOrder={-1}
+    />
+  );
+}
+
+function getObjectFocus(objects) {
+  const box = new THREE.Box3();
+  const childBox = new THREE.Box3();
+  let hasBounds = false;
+
+  objects.forEach((object) => {
+    if (!object?.isObject3D) return;
+    object.updateMatrixWorld(true);
+    object.traverse((child) => {
+      if (!child.isObject3D || child.userData?.geoType === 'plane_mesh') return;
+      if (!child.isMesh && !child.isLine && !child.isLineSegments) return;
+
+      childBox.setFromObject(child);
+      if (childBox.isEmpty()) return;
+      box.union(childBox);
+      hasBounds = true;
+    });
+  });
+
+  if (!hasBounds) return null;
+  const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
+  box.getCenter(center);
+  box.getSize(size);
+  return {
+    center,
+    radius: Math.max(size.x, size.y, size.z, 1) * 0.5,
+  };
 }
 
 function fmtVec(v) {
@@ -451,7 +518,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
       />
 
       {settings.showGrid && (
-        <gridHelper args={[40, 40, 0x444444, 0x222222]} position={[0, -0.005, 0]} />
+        <FadedGrid opacity={settings.gridOpacity} />
       )}
 
       {settings.showBox && (
@@ -482,7 +549,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
 }
 
 const BACKGROUND_COLORS = {
-  dark: '#1a1a1c',
+  dark: '#ffffff',
   light: '#f7f4ee',
 }
 
@@ -490,10 +557,8 @@ export default function Scene3D({ objects = [] }) {
   const { settings } = useSettingsStore()
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
+  const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
-
-  const initialCamPos = useMemo(() => new THREE.Vector3(...DEFAULT_CAMERA_POSITION), []);
-  const initialTarget = useMemo(() => new THREE.Vector3(0, 0, 0), []);
 
   useLayoutEffect(() => {
     window.THREE = THREE
@@ -505,10 +570,34 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
+  useEffect(() => {
+    const focus = getObjectFocus(objects);
+    if (!focus) return;
+
+    focusRef.current = focus;
+    if (!cameraRef.current || !controlsRef.current) return;
+
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    const oldTarget = controls.target.clone();
+    const oldOffset = camera.position.clone().sub(oldTarget);
+    const offset = oldOffset.lengthSq() > 1e-8
+      ? oldOffset
+      : DEFAULT_CAMERA_OFFSET.clone();
+    const minDistance = Math.max(focus.radius * 2.6, 8);
+
+    if (offset.length() < minDistance) offset.setLength(minDistance);
+    controls.target.copy(focus.center);
+    camera.position.copy(focus.center).add(offset);
+    controls.update();
+  }, [objects]);
+
   const recenter = () => {
     if (!cameraRef.current || !controlsRef.current) return;
-    cameraRef.current.position.copy(initialCamPos);
-    controlsRef.current.target.copy(initialTarget);
+    const { center, radius } = focusRef.current;
+    const offset = DEFAULT_CAMERA_OFFSET.clone().setLength(Math.max(radius * 3.2, DEFAULT_CAMERA_OFFSET.length()));
+    cameraRef.current.position.copy(center).add(offset);
+    controlsRef.current.target.copy(center);
     controlsRef.current.update();
   };
 
