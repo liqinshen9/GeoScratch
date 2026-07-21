@@ -96,10 +96,16 @@ html, body, #root {
     background: #ffffff;
 }
 
-.recenter-btn {
+.scene-view-controls {
     position: absolute;
-    right: 12px;
-    bottom: 12px;
+    right: 16px;
+    bottom: 16px;
+    display: grid;
+    gap: 10px;
+    z-index: 10;
+}
+
+.scene-view-btn {
     width: 36px;
     height: 36px;
     border: none;
@@ -107,29 +113,31 @@ html, body, #root {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.10);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.86);
+    color: #8a8f98;
     cursor: pointer;
-    z-index: 10;
     backdrop-filter: blur(6px);
+    box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
 }
 
 
-.recenter-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
+.scene-view-btn:hover {
+    background: rgba(255, 255, 255, 0.96);
+    color: #6b7280;
 }
 
-.recenter-btn:active {
+.scene-view-btn:active {
     transform: translateY(1px);
 }
 
-.recenter-btn--light {
-    background: rgba(0, 0, 0, 0.06);
-    color: #000;
+.scene-view-btn--light {
+    background: rgba(255, 255, 255, 0.86);
+    color: #8a8f98;
 }
 
-.recenter-btn--light:hover {
-    background: rgba(0, 0, 0, 0.12);
+.scene-view-btn--light:hover {
+    background: rgba(255, 255, 255, 0.96);
+    color: #6b7280;
 }
 
 .label-anchor {
@@ -161,7 +169,7 @@ html, body, #root {
     padding: 0;
     border: none;
     background: transparent;
-    color: #eab308;
+    color: #ca8a04;
     font: 900 18px/1.2 ui-monospace, Menlo, Consolas, monospace;
     box-shadow: none;
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
@@ -171,7 +179,7 @@ html, body, #root {
     padding: 0;
     border: none;
     background: transparent;
-    color: #ef4444;
+    color: #b91c1c;
     font: 800 16px/1.2 ui-monospace, Menlo, Consolas, monospace;
     box-shadow: none;
     text-shadow: none;

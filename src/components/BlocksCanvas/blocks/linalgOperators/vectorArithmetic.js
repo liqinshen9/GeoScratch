@@ -56,14 +56,14 @@ export function initVectorArithmeticBlock() {
       (lenU > 0 ? uVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       origin.clone(),
       safeLen(lenU),
-      0x1d4ed8, headLenRatio, headWidthRatio
+      0x1e40af, headLenRatio, headWidthRatio
     );
 
     const arrowV = new THREE.ArrowHelper(
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       origin.clone(),
       safeLen(lenV),
-      0xdc2626, headLenRatio, headWidthRatio
+      0xb91c1c, headLenRatio, headWidthRatio
     );
 
     // Compute result
@@ -80,11 +80,11 @@ export function initVectorArithmeticBlock() {
     if (lenR > 1e-8) {
       resObj = new THREE.ArrowHelper(
         res.clone().normalize(), resultOrigin.clone(), safeLen(lenR),
-        0x7c3aed, headLenRatio, headWidthRatio
+        0x5b21b6, headLenRatio, headWidthRatio
       );
     } else {
       resObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }
@@ -118,14 +118,14 @@ export function initVectorArithmeticBlock() {
     };
     const resultColor = isPointDifference
       ? '#15803d'
-      : (lenR > 1e-8 ? '#7c3aed' : '#ffff00');
+      : (lenR > 1e-8 ? '#5b21b6' : '#ffff00');
     group.userData.labels = isPointDifference
       ? [
         { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
       : [
-        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
-        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
+        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
         { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 

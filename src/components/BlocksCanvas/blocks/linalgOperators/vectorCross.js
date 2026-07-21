@@ -41,22 +41,22 @@ export function initCrossProductBlock() {
 
     const arrowU = new THREE.ArrowHelper(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1d4ed8, headLenRatio, headWidthRatio
+      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1e40af, headLenRatio, headWidthRatio
     );
     const arrowV = new THREE.ArrowHelper(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenV), 0xdc2626, headLenRatio, headWidthRatio
+      new THREE.Vector3(0,0,0), safeLen(lenV), 0xb91c1c, headLenRatio, headWidthRatio
     );
 
     let crossObj;
     if (lenC>1e-8) {
       crossObj = new THREE.ArrowHelper(
         cross.clone().normalize(), new THREE.Vector3(0,0,0),
-        safeLen(lenC), 0x22c55e, headLenRatio, headWidthRatio
+        safeLen(lenC), 0x15803d, headLenRatio, headWidthRatio
       );
     } else {
       crossObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }
@@ -76,9 +76,9 @@ export function initCrossProductBlock() {
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
     group.userData.labels = [
-      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
-      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
-      { anchor:'cTip', text:'result = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#22c55e' : '#ffff00' },
+      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
+      { anchor:'cTip', text:'result = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

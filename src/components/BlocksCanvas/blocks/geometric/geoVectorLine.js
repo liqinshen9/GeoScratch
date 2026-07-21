@@ -37,7 +37,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // 1. TECHNIQUE STYLE: Plain Line
   const plainLine = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([p1, p2]),
-    new THREE.LineBasicMaterial({ color: 0x6b7280 })
+    new THREE.LineBasicMaterial({ color: 0x374151 })
   )
   group.add(plainLine)
 
@@ -53,7 +53,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     uniforms: {
       lightPosition: { value: new THREE.Vector3(5, 10, 7).normalize() },
       ambientColor: { value: new THREE.Color(0x222222) },
-      diffuseColor: { value: new THREE.Color(0xffffff) },
+      diffuseColor: { value: new THREE.Color(0x4b5563) },
       specularColor: { value: new THREE.Color(0xffffff) },
       shininess: { value: 32.0 }
     },
@@ -107,7 +107,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const distance = p1.distanceTo(p2)
   const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
   const cylGeom = new THREE.CylinderGeometry(0.015, 0.015, distance, 12)
-  const cylMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+  const cylMat = new THREE.MeshBasicMaterial({ color: 0x475569 })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
   cylinder.position.copy(midPoint)
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
@@ -118,12 +118,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const baseTube = new THREE.Mesh(
     new THREE.CylinderGeometry(0.025, 0.025, distance, 16),
-    new THREE.MeshStandardMaterial({ color: 0x71717a, roughness: 0.4 })
+    new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.4 })
   )
   ringedTube.add(baseTube)
 
   const ringGeom = new THREE.CylinderGeometry(0.028, 0.028, 0.15, 16)
-  const ringMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f5, roughness: 0.3 })
+  const ringMat = new THREE.MeshStandardMaterial({ color: 0xa1a1aa, roughness: 0.3 })
 
   const step = 0.3
   const halfDist = distance / 2
@@ -135,7 +135,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   }
 
   const capGeom = new THREE.SphereGeometry(0.032, 16, 16)
-  const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.2 })
 
   const topCap = new THREE.Mesh(capGeom, capMat)
   topCap.position.set(0, halfDist, 0)
@@ -180,10 +180,10 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  const sphereGeom = new THREE.SphereGeometry(0.05, 16, 12)
+  const sphereGeom = new THREE.SphereGeometry(0.04, 16, 12)
   const originSphere = new THREE.Mesh(
     sphereGeom,
-    new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.4, metalness: 0.1 })
+    new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.4, metalness: 0.1 })
   )
   originSphere.position.copy(origin)
   group.add(originSphere)

@@ -49,8 +49,8 @@ function objectIsAtPointP(object) {
 
 function createPointPMarker() {
   const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 20, 14),
-    new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.35, metalness: 0.05 }),
+    new THREE.SphereGeometry(0.04, 20, 14),
+    new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 }),
   )
 
   marker.position.copy(POINT_P)
@@ -59,7 +59,7 @@ function createPointPMarker() {
     p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
   }
   marker.userData.labels = [
-    { anchor: 'p', text: 'P = [3, 4, 5]', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
+    { anchor: 'p', text: 'P = [3, 4, 5]', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
   ]
 
   return marker

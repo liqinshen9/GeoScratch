@@ -36,7 +36,7 @@ export function initNormInplaceBlock() {
     // Original arrow
     const arrowIn = new THREE.ArrowHelper(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenV), 0x1d4ed8, headLenRatio, headWidthRatio
+      new THREE.Vector3(0,0,0), safeLen(lenV), 0x1e40af, headLenRatio, headWidthRatio
     );
 
     // Normalized object
@@ -44,12 +44,12 @@ export function initNormInplaceBlock() {
     if (lenV>1e-8) {
       normVec.copy(vVal).normalize(); // unit vector components
       normObj = new THREE.ArrowHelper(
-        normVec.clone(), new THREE.Vector3(0,0,0), 1, 0x22c55e, headLenRatio, headWidthRatio
+        normVec.clone(), new THREE.Vector3(0,0,0), 1, 0x15803d, headLenRatio, headWidthRatio
       );
     } else {
       normVec.set(0,0,0);
       normObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }
@@ -68,8 +68,8 @@ export function initNormInplaceBlock() {
       normTip:{ type:'world', position:[normVec.x, normVec.y, normVec.z] },
     };
     group.userData.labels = [
-      { anchor:'vTip',    text:'w = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
-      { anchor:'normTip', text:'result = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#22c55e' : '#ffff00' },
+      { anchor:'vTip',    text:'w = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+      { anchor:'normTip', text:'result = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#15803d' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

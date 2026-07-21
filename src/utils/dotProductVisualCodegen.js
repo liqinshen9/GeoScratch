@@ -58,7 +58,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
         distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), 0xfacc15);
       } else {
         distanceVector = new THREE.Mesh(
-          new THREE.SphereGeometry(0.05, 16, 12),
+          new THREE.SphereGeometry(0.04, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.1 })
         );
         distanceVector.position.copy(distanceStart);
@@ -156,11 +156,11 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
 
     const arrowP = new THREE.ArrowHelper(
       (lenP > 0 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
-      origin, safeLen(lenP), 0xeab308, headLenRatio, headWidthRatio
+      origin, safeLen(lenP), 0xca8a04, headLenRatio, headWidthRatio
     );
     const arrowQ = new THREE.ArrowHelper(
       (lenQ > 0 ? vVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
-      origin, safeLen(lenQ), 0xec4899, headLenRatio, headWidthRatio
+      origin, safeLen(lenQ), 0xbe185d, headLenRatio, headWidthRatio
     );
 
     const projQ = new THREE.Vector3();
@@ -173,18 +173,18 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       if (projLen > 1e-8) {
         projObj = new THREE.ArrowHelper(
           projQ.clone().normalize(), origin, safeLen(projLen),
-          0xf472b6, headLenRatio, headWidthRatio
+          0xbe185d, headLenRatio, headWidthRatio
         );
       } else {
         projObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.05, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.4, metalness: 0.1 })
+          new THREE.SphereGeometry(0.04, 16, 12),
+          new THREE.MeshStandardMaterial({ color: 0xbe185d, roughness: 0.4, metalness: 0.1 })
         );
       }
     } else {
       projObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xf472b6, roughness: 0.4, metalness: 0.1 })
+        new THREE.SphereGeometry(0.04, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0xbe185d, roughness: 0.4, metalness: 0.1 })
       );
     }
 
@@ -243,10 +243,10 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       formula: { type: 'world', position: [formulaPos.x, formulaPos.y, formulaPos.z] },
     };
     group.userData.labels = [
-      { anchor: 'pTip', text: 'p = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#eab308' },
-      { anchor: 'qTip', text: 'q = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ec4899' },
-      { anchor: 'pMid', text: '|p| = ' + fmtN(lenP), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#eab308' },
-      { anchor: 'projTip', text: '|proj q| = ' + fmtN(projLen), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#f472b6' },
+      { anchor: 'pTip', text: 'p = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ca8a04' },
+      { anchor: 'qTip', text: 'q = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#be185d' },
+      { anchor: 'pMid', text: '|p| = ' + fmtN(lenP), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#ca8a04' },
+      { anchor: 'projTip', text: '|proj q| = ' + fmtN(projLen), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#be185d' },
       {
         anchor: 'formula',
         text: dot >= 0

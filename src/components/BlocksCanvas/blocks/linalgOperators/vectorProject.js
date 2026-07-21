@@ -62,7 +62,7 @@ export function initVectorProjectBlock() {
     const makeProjectionShadow = (foot) => {
       const shadowGroup = new THREE.Group();
       const footDot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.055, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
       );
       footDot.position.copy(foot);
@@ -127,12 +127,12 @@ export function initVectorProjectBlock() {
 
     const arrowU = new THREE.ArrowHelper(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1d4ed8, headLenRatio, headWidthRatio
+      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1e40af, headLenRatio, headWidthRatio
     );
 
     const arrowV = new THREE.ArrowHelper(
       (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenV), 0xdc2626, headLenRatio, headWidthRatio
+      new THREE.Vector3(0,0,0), safeLen(lenV), 0xb91c1c, headLenRatio, headWidthRatio
     );
 
     // Projection u onto v
@@ -154,13 +154,13 @@ export function initVectorProjectBlock() {
           ? makeSegment(projOrigin.clone(), projOrigin.clone().add(projVec), 0xfacc15)
           : new THREE.ArrowHelper(
             projVec.clone().normalize(), projOrigin.clone(),
-            safeLen(projLen), 0x7c3aed, headLenRatio, headWidthRatio
+            safeLen(projLen), 0x5b21b6, headLenRatio, headWidthRatio
           );
       } else {
         projVec.set(0,0,0);
         projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
         projObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.05, 16, 12),
+          new THREE.SphereGeometry(0.04, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
         );
       }
@@ -168,7 +168,7 @@ export function initVectorProjectBlock() {
       projVec.set(0,0,0);
       projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
       projObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }
@@ -225,9 +225,9 @@ export function initVectorProjectBlock() {
         { anchor:'normal', text:'n', distanceFactor:8, offset:[0,0,0], className: 'normal-vector-label' },
       ]
       : [
-        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1d4ed8' },
-        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#dc2626' },
-        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#7c3aed' : '#ffff00' },
+        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
+        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
       ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

@@ -170,8 +170,8 @@ export default function initObjectCompositionBlocks() {
       const markerPoint = resolvePointFromParams(object, pointParams);
 
       const marker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0x49a1ff, roughness: 0.35, metalness: 0.05 })
+        new THREE.SphereGeometry(0.04, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
       );
       marker.position.copy(markerPoint);
       marker.userData.geoType = 'selectable_point_marker';
@@ -188,7 +188,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
+        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {

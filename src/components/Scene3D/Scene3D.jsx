@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
 import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
-import { Edges, OrbitControls, Text, Billboard, Html } from '@react-three/drei'
+import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 const THREE = { ...THREEBase, TeapotGeometry }
@@ -10,6 +10,12 @@ import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
+const DESMOS_TICK_COLOR = '#6b7280'
+const AXIS_COLORS = {
+  x: '#b56f6f',
+  y: '#6f9b72',
+  z: '#6f86b5',
+}
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -57,64 +63,74 @@ function HeadLight() {
 // --- FIXED: Bounding Box Room ---
 function BoundingBoxRoom({ size = 40 }) {
   return (
-    // Centered exactly back at [0, 0, 0]
-    <mesh position={[0, 0, 0]} receiveShadow>
-      <boxGeometry args={[size, size, size]} />
-
-      {/* BackSide hides the front faces but catches shadows on the back walls/floor */}
-      <meshStandardMaterial
-        color="#ffffff"
-        side={THREE.BackSide}
-        roughness={1}
-      />
-    </mesh>
+    <group>
+      <mesh position={[0, 0, 0]} receiveShadow>
+        <boxGeometry args={[size, size, size]} />
+        <meshStandardMaterial color="#ffffff" side={THREE.BackSide} roughness={1} />
+      </mesh>
+      <lineSegments>
+        <edgesGeometry args={[new THREE.BoxGeometry(size, size, size)]} />
+        <lineBasicMaterial color="#a3a3a3" transparent opacity={0.42} depthWrite={false} />
+      </lineSegments>
+    </group>
   );
 }
 
-const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#cbd5e1', showZero = true }) => {
+const AxisLabels = ({ size = 40, step = 5, y = 0.01, fontSize = 0.28, color = DESMOS_TICK_COLOR, showZero = true }) => {
   const ticks = useMemo(() => Array.from({ length: Math.floor(size / step) + 1 }, (_, i) => i * step - size / 2), [size, step]);
   return (
     <group>
       {ticks.map(t => (showZero || t !== 0) && (
         <Billboard key={`x-${t}`} position={[t, y, 0]}>
-          <Text fontSize={fontSize} color={color} fillOpacity={0.5} anchorX="center" anchorY="middle">{t}</Text>
+          <Text fontSize={fontSize} color={color} fillOpacity={0.64} anchorX="center" anchorY="middle">{t}</Text>
         </Billboard>
       ))}
       {ticks.map(t => (showZero || t !== 0) && (
         <Billboard key={`z-${t}`} position={[0, y, t]}>
-          <Text fontSize={fontSize} color={color} fillOpacity={0.5} anchorX="center" anchorY="middle">{t}</Text>
+          <Text fontSize={fontSize} color={color} fillOpacity={0.64} anchorX="center" anchorY="middle">{t}</Text>
         </Billboard>
       ))}
     </group>
   );
 };
 
-function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3, opacity = 0.45 }) {
-  const arrow = useMemo(() => {
+function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
+  const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
-    const origin = new THREE.Vector3(0, 0, 0)
-    const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
-    helper.traverse?.((child) => {
-      if (!child.material) return;
-      child.material = child.material.clone();
-      child.material.transparent = true;
-      child.material.opacity = opacity;
-      child.material.depthWrite = false;
-    });
-    return helper
+    const group = new THREE.Group()
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    })
+    const headHeight = 0.46
+    const shaftStart = -length
+    const shaftEnd = length
+    const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, shaftLength, 12), material)
+    shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
+    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, headHeight, 18), material)
+    head.position.copy(direction).multiplyScalar(length - headHeight / 2)
+    head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+
+    group.add(shaft, head)
+    return group
   }, [dir, color, length, opacity])
 
   const tip = useMemo(() => {
     const d = new THREE.Vector3(...dir).normalize()
-    return d.multiplyScalar(length + 0.25)
+    return d.multiplyScalar(length + 0.55)
   }, [dir, length])
 
   return (
     <group>
-      <primitive object={arrow} />
+      <primitive object={arrowGroup} />
       <Billboard position={[tip.x, tip.y, tip.z]}>
-        <Text fontSize={0.35} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
-          {dir[0] ? 'X' : dir[1] ? 'Y' : 'Z'}
+        <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
+          {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
         </Text>
       </Billboard>
     </group>
@@ -124,9 +140,9 @@ function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3, opacity = 0.45 
 function Axes({ length = 3 }) {
   return (
     <group>
-      <AxisArrow dir={[1, 0, 0]} color="#ef4444" length={length} opacity={0.42} />
-      <AxisArrow dir={[0, 1, 0]} color="#22c55e" length={length} opacity={0.42} />
-      <AxisArrow dir={[0, 0, 1]} color="#3b82f6" length={length} opacity={0.42} />
+      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
+      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
+      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
     </group>
   )
 }
@@ -143,9 +159,9 @@ function FadedGrid({ opacity = 0.18 }) {
 
     materials.forEach((material, index) => {
       material.transparent = true;
-      material.opacity = index === 0 ? Math.min(0.35, gridOpacity * 1.35) : gridOpacity;
+      material.opacity = index === 0 ? Math.min(0.44, gridOpacity * 1.7) : Math.min(0.28, gridOpacity * 0.9);
       material.depthWrite = false;
-      material.color.set(index === 0 ? 0x94a3b8 : 0x64748b);
+      material.color.set(index === 0 ? 0xb0b0b0 : 0xd2d2d2);
       material.needsUpdate = true;
     });
   }, [gridOpacity]);
@@ -153,7 +169,7 @@ function FadedGrid({ opacity = 0.18 }) {
   return (
     <gridHelper
       ref={gridRef}
-      args={[40, 40, 0x94a3b8, 0x64748b]}
+      args={[40, 40, 0xb0b0b0, 0xd2d2d2]}
       position={[0, -0.005, 0]}
       renderOrder={-1}
     />
@@ -378,7 +394,7 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
   const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line';
   const derived = needsDefault
     ? [
-      { anchor: 'origin', text: `Pos ${fmtVec(ud.origin)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#49a1ff' },
+      { anchor: 'origin', text: `Pos ${fmtVec(ud.origin)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
       ...(ud.rPoint != null && Number.isFinite(ud.t)
         ? [{ anchor: 'rPoint', text: `r(t=${ud.t}) ${fmtVec(ud.rPoint)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ffff00' }]
         : []),
@@ -527,7 +543,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
 
       {settings.showAxes && (
         <>
-          <AxisLabels size={40} step={1} />
+          <AxisLabels size={40} step={5} />
           <Axes length={20} position={[0, 0, 0]} />
         </>
       )}
@@ -592,12 +608,13 @@ export default function Scene3D({ objects = [] }) {
     controls.update();
   }, [objects]);
 
-  const recenter = () => {
+  const resetDefaultView = () => {
     if (!cameraRef.current || !controlsRef.current) return;
-    const { center, radius } = focusRef.current;
-    const offset = DEFAULT_CAMERA_OFFSET.clone().setLength(Math.max(radius * 3.2, DEFAULT_CAMERA_OFFSET.length()));
-    cameraRef.current.position.copy(center).add(offset);
-    controlsRef.current.target.copy(center);
+    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION);
+    cameraRef.current.up.set(0, 1, 0);
+    cameraRef.current.zoom = 1;
+    cameraRef.current.updateProjectionMatrix();
+    controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
   };
 
@@ -625,16 +642,20 @@ export default function Scene3D({ objects = [] }) {
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} />
           <color attach="background" args={[BACKGROUND_COLORS[settings.sceneBackground] ?? BACKGROUND_COLORS.dark]} />
         </Canvas>
-        <button
-          className={`recenter-btn${settings.sceneBackground === 'light' ? ' recenter-btn--light' : ''}`}
-          onClick={recenter}
-          aria-label="Recenter camera"
-          title="Recenter"
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </button>
+        <div className="scene-view-controls">
+          <button
+            className={`scene-view-btn${settings.sceneBackground === 'light' ? ' scene-view-btn--light' : ''}`}
+            onClick={resetDefaultView}
+            aria-label="Reset to default 3D view"
+            title="Default view"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

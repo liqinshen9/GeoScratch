@@ -29,14 +29,14 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
   group.userData.status = 'missing-lines'
 
   const markerMaterial = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.34, metalness: 0.08 })
-  const marker = (position, color, radius = 0.12) => {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 24, 16), markerMaterial(color))
+  const marker = (position, color) => {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), markerMaterial(color))
     mesh.position.copy(position)
     return mesh
   }
 
   if (!lineA || !lineB) {
-    const fallback = marker(new THREE.Vector3(), 0xef4444, 0.1)
+    const fallback = marker(new THREE.Vector3(), 0xef4444)
     group.add(fallback)
     group.userData.labels = [
       { anchor: 'status', text: 'Connect two vector lines', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ef4444' },
@@ -56,13 +56,13 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
   const { pointA, pointB, midpoint, gap: distance, t1: tA, t2: tB } = result
   const hasIntersection = distance <= 1e-4
 
-  group.add(marker(midpoint, hasIntersection ? 0x22c55e : 0xf59e0b, hasIntersection ? 0.14 : 0.11))
+  group.add(marker(midpoint, hasIntersection ? 0x22c55e : 0xf59e0b))
 
   if (!hasIntersection) {
     const segmentGeometry = new THREE.BufferGeometry().setFromPoints([pointA, pointB])
     group.add(new THREE.Line(segmentGeometry, new THREE.LineBasicMaterial({ color: 0xf59e0b })))
-    group.add(marker(pointA, 0x60a5fa, 0.07))
-    group.add(marker(pointB, 0xfb7185, 0.07))
+    group.add(marker(pointA, 0x60a5fa))
+    group.add(marker(pointB, 0xfb7185))
   }
 
   group.userData.hasIntersection = hasIntersection

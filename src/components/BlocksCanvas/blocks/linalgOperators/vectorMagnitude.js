@@ -48,13 +48,13 @@ export function initVectorMagnitude() {
         vVal.clone().normalize(),
         arrowOrigin.clone(),
         safeLen(len),
-        isPointPlaneProjection ? 0xfacc15 : 0x0ea5e9,
+        isPointPlaneProjection ? 0xca8a04 : 0x0369a1,
         headLenRatio,
         headWidthRatio
       );
     } else {
       obj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
+        new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
     }
@@ -93,7 +93,7 @@ export function initVectorMagnitude() {
         offset: isPointPlaneProjection ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
         className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
-        color: (!isPointPlaneProjection && len > 1e-8) ? '#0ea5e9' : undefined,
+        color: (!isPointPlaneProjection && len > 1e-8) ? '#0369a1' : undefined,
       },
     ];
 
