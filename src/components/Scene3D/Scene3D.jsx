@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
 import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
-import { Edges, OrbitControls, Text, Billboard, Html } from '@react-three/drei'
+import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 const THREE = { ...THREEBase, TeapotGeometry }
@@ -10,6 +10,11 @@ import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
+const AXIS_COLORS = {
+  x: '#b56f6f',
+  y: '#6f9b72',
+  z: '#6f86b5',
+}
 
 function CameraHandle({ onReady }) {
   const { camera } = useThree();
@@ -89,32 +94,43 @@ const AxisLabels = ({ size = 40, step = 1, y = 0.01, fontSize = 0.25, color = '#
   );
 };
 
-function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3, opacity = 0.45 }) {
-  const arrow = useMemo(() => {
+function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
+  const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
-    const origin = new THREE.Vector3(0, 0, 0)
-    const helper = new THREE.ArrowHelper(direction, origin, length, new THREE.Color(color), 0.1, 0.1)
-    helper.traverse?.((child) => {
-      if (!child.material) return;
-      child.material = child.material.clone();
-      child.material.transparent = true;
-      child.material.opacity = opacity;
-      child.material.depthWrite = false;
-    });
-    return helper
+    const group = new THREE.Group()
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    })
+    const headHeight = 0.46
+    const shaftStart = -length
+    const shaftEnd = length
+    const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, shaftLength, 12), material)
+    shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
+    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, headHeight, 18), material)
+    head.position.copy(direction).multiplyScalar(length - headHeight / 2)
+    head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+
+    group.add(shaft, head)
+    return group
   }, [dir, color, length, opacity])
 
   const tip = useMemo(() => {
     const d = new THREE.Vector3(...dir).normalize()
-    return d.multiplyScalar(length + 0.25)
+    return d.multiplyScalar(length + 0.55)
   }, [dir, length])
 
   return (
     <group>
-      <primitive object={arrow} />
+      <primitive object={arrowGroup} />
       <Billboard position={[tip.x, tip.y, tip.z]}>
-        <Text fontSize={0.35} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
-          {dir[0] ? 'X' : dir[1] ? 'Y' : 'Z'}
+        <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
+          {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
         </Text>
       </Billboard>
     </group>
@@ -124,9 +140,9 @@ function AxisArrow({ dir = [1, 0, 0], color = 'red', length = 3, opacity = 0.45 
 function Axes({ length = 3 }) {
   return (
     <group>
-      <AxisArrow dir={[1, 0, 0]} color="#ef4444" length={length} opacity={0.42} />
-      <AxisArrow dir={[0, 1, 0]} color="#22c55e" length={length} opacity={0.42} />
-      <AxisArrow dir={[0, 0, 1]} color="#3b82f6" length={length} opacity={0.42} />
+      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
+      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
+      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
     </group>
   )
 }
@@ -592,12 +608,13 @@ export default function Scene3D({ objects = [] }) {
     controls.update();
   }, [objects]);
 
-  const recenter = () => {
+  const resetDefaultView = () => {
     if (!cameraRef.current || !controlsRef.current) return;
-    const { center, radius } = focusRef.current;
-    const offset = DEFAULT_CAMERA_OFFSET.clone().setLength(Math.max(radius * 3.2, DEFAULT_CAMERA_OFFSET.length()));
-    cameraRef.current.position.copy(center).add(offset);
-    controlsRef.current.target.copy(center);
+    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION);
+    cameraRef.current.up.set(0, 1, 0);
+    cameraRef.current.zoom = 1;
+    cameraRef.current.updateProjectionMatrix();
+    controlsRef.current.target.set(0, 0, 0);
     controlsRef.current.update();
   };
 
@@ -627,12 +644,14 @@ export default function Scene3D({ objects = [] }) {
         </Canvas>
         <button
           className={`recenter-btn${settings.sceneBackground === 'light' ? ' recenter-btn--light' : ''}`}
-          onClick={recenter}
-          aria-label="Recenter camera"
-          title="Recenter"
+          onClick={resetDefaultView}
+          aria-label="Reset to default 3D view"
+          title="Default view"
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M12 7a5 5 0 1 1 0 10a5 5 0 0 1 0-10Z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </button>
       </div>

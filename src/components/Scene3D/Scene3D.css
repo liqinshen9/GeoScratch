@@ -98,8 +98,8 @@ html, body, #root {
 
 .recenter-btn {
     position: absolute;
-    right: 12px;
-    bottom: 12px;
+    right: 16px;
+    bottom: 16px;
     width: 36px;
     height: 36px;
     border: none;
@@ -107,16 +107,18 @@ html, body, #root {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.10);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.86);
+    color: #8a8f98;
     cursor: pointer;
     z-index: 10;
     backdrop-filter: blur(6px);
+    box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
 }
 
 
 .recenter-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.96);
+    color: #6b7280;
 }
 
 .recenter-btn:active {
@@ -124,12 +126,13 @@ html, body, #root {
 }
 
 .recenter-btn--light {
-    background: rgba(0, 0, 0, 0.06);
-    color: #000;
+    background: rgba(255, 255, 255, 0.86);
+    color: #8a8f98;
 }
 
 .recenter-btn--light:hover {
-    background: rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.96);
+    color: #6b7280;
 }
 
 .label-anchor {
