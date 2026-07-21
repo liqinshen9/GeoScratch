@@ -59,45 +59,15 @@ export function initVectorProjectBlock() {
       head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       return head;
     };
-    const makeProjectionShadow = (foot, normal, sourcePoint) => {
-      const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+    const makeProjectionShadow = (foot) => {
       const shadowGroup = new THREE.Group();
-
-      const shadow = new THREE.Mesh(
-        new THREE.CircleGeometry(0.34, 48),
-        new THREE.MeshBasicMaterial({
-          color: 0x111827,
-          transparent: true,
-          opacity: 0.24,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        })
-      );
-      shadow.setRotationFromQuaternion(
-        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalUnit)
-      );
-      shadow.position.copy(foot).addScaledVector(normalUnit, 0.012);
-
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.34, 0.39, 48),
-        new THREE.MeshBasicMaterial({
-          color: 0xfacc15,
-          transparent: true,
-          opacity: 0.78,
-          depthWrite: false,
-          side: THREE.DoubleSide,
-        })
-      );
-      ring.quaternion.copy(shadow.quaternion);
-      ring.position.copy(shadow.position).addScaledVector(normalUnit, 0.004);
-
       const footDot = new THREE.Mesh(
         new THREE.SphereGeometry(0.055, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
       );
       footDot.position.copy(foot);
 
-      shadowGroup.add(shadow, ring, footDot);
+      shadowGroup.add(footDot);
       shadowGroup.userData.geoType = 'projection_shadow';
       shadowGroup.userData.srcBlockId=${JSON.stringify(block.id)};
       return shadowGroup;
@@ -220,7 +190,7 @@ export function initVectorProjectBlock() {
       guideLine.userData.geoType='geo_helper';
       guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
     } else {
-      projectionShadow = makeProjectionShadow(projOrigin, vVal, uTip);
+      projectionShadow = makeProjectionShadow(projOrigin);
       distanceIllustration = makeDistanceIllustration(projOrigin, pTip, uTip, vVal, projLen);
     }
 
