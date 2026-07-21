@@ -1,4 +1,5 @@
 import { generateAndRun } from '@/utils/generateAndRun'
+import { applyTubeCollisions } from '@/utils/tubeCollision'
 
 const runAndSync = (workspace, onObjectsChange, registry) => {
   // Clear the window target object completely before code execution
@@ -6,6 +7,9 @@ const runAndSync = (workspace, onObjectsChange, registry) => {
 
   // Run the code generator (mutates window.threeObjStore)
   generateAndRun(workspace)
+
+  // Flag vector-line tubes that pass into a solid object so they render ringed there
+  applyTubeCollisions(window.threeObjStore)
 
   // Extract the generated meshes directly from the window container
   const objects = Object.values(window.threeObjStore || {})

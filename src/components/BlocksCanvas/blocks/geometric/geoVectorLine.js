@@ -149,6 +149,72 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
 
+  // 5. COLLISION ACCENT: localized dark corrugation rings shown ONLY across
+  // the exact stretch(es) where this line's tube passes into a solid object
+  // -- laid directly over the plain-tube shaft (radius 0.015), not a
+  // whole-line style swap. Line-vs-line overlap is handled separately (as a
+  // halo, not a ringed accent). Sized close to the shaft's own radius so it reads
+  // as a textured band on the tube rather than a separate object bulging
+  // off it. Lives in the same local frame as cylinder/ringedTube (Y axis
+  // along the line, origin at y=0), so a zone {start, end} from
+  // tubeCollision.js maps directly onto local y positions here.
+  const collisionAccent = new THREE.Group()
+  collisionAccent.position.copy(midPoint)
+  collisionAccent.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  collisionAccent.visible = false
+  group.add(collisionAccent)
+
+  const COLLISION_RING_HEIGHT = 0.09
+  const COLLISION_RING_HALF_HEIGHT = COLLISION_RING_HEIGHT / 2
+  const collisionRingGeom = new THREE.CylinderGeometry(0.02, 0.02, COLLISION_RING_HEIGHT, 16)
+  const collisionRingMat = new THREE.MeshStandardMaterial({
+    color: 0x3f3f46,
+    roughness: 0.65,
+    metalness: 0.15,
+  })
+  const COLLISION_RING_STEP = 0.16
+
+  group.userData.hasCollisionAccent = false
+  group.userData.setCollisionZones = (zones = []) => {
+    while (collisionAccent.children.length) {
+      collisionAccent.remove(collisionAccent.children[0])
+    }
+    zones.forEach(({ start, end }) => {
+      // A ring's CENTER sitting exactly at the zone boundary still pokes its
+      // own half-height past it (a real cylinder, not a point) -- so the
+      // usable placement range has to be inset by the ring's half-height on
+      // each side for its actual body to stay within [start, end].
+      const usableStart = start + COLLISION_RING_HALF_HEIGHT
+      const usableEnd = end - COLLISION_RING_HALF_HEIGHT
+      if (usableStart > usableEnd) {
+        if (end > start) {
+          const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
+          ringSegment.position.set(0, (start + end) / 2, 0)
+          collisionAccent.add(ringSegment)
+        }
+        return
+      }
+      // Stepping from usableStart only ever leaves leftover room on the far
+      // (usableEnd) side, since the zone width is rarely an exact multiple
+      // of the step -- that leftover always landing on one side is what
+      // made the accent look closer to one edge than the other. Centering
+      // the whole ring sequence within [usableStart, usableEnd] splits that
+      // leftover evenly instead, without changing ring size, spacing, or
+      // the zone's own length.
+      const usableRange = usableEnd - usableStart
+      const ringCount = Math.floor(usableRange / COLLISION_RING_STEP) + 1
+      const coveredSpan = (ringCount - 1) * COLLISION_RING_STEP
+      const firstY = usableStart + (usableRange - coveredSpan) / 2
+      for (let i = 0; i < ringCount; i += 1) {
+        const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
+        ringSegment.position.set(0, firstY + i * COLLISION_RING_STEP, 0)
+        collisionAccent.add(ringSegment)
+      }
+    })
+    group.userData.hasCollisionAccent = zones.length > 0
+    group.userData.refreshGlyph?.()
+  }
+
   // Direct lookup map pairing style keys
   const glyphMap = {
     plain_line: plainLine,
@@ -163,6 +229,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         glyphMap[key].visible = (key === activeStyle)
       }
     })
+    // Ringed_tube already looks ringed everywhere, so the accent only adds
+    // value layered on top of the plain tube.
+    collisionAccent.visible = activeStyle === 'plain_tube' && group.userData.hasCollisionAccent
+  }
+
+  // Lets an external pass (tubeCollision.js) re-apply visibility after
+  // calling setCollisionZones(), without duplicating the style lookup.
+  group.userData.refreshGlyph = () => {
+    const settings = useSettingsStore?.getState().settings || {}
+    applyGlyphVisibility(settings.lineStyle || 'plain_line')
   }
 
   // FIXED: Look up configurations out of useSettingsStore safely

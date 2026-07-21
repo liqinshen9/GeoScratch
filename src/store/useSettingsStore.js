@@ -3,7 +3,7 @@ import { LINE_STYLES } from './lineStyles'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
-  lineStyle: LINE_STYLES.PLAIN_LINE,
+  lineStyle: LINE_STYLES.PLAIN_TUBE,
   showLabels: true,
   sceneBackground: 'dark',
   showGrid: true,
