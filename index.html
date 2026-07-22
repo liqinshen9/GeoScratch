@@ -5,6 +5,34 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GeoScratch</title>
+    <script>
+      ;(() => {
+        const fallbackVersion = '19.1.1'
+        const patchHook = (hook) => {
+          if (!hook || hook.__geoScratchVersionPatch || typeof hook.inject !== 'function') return hook
+          const inject = hook.inject
+          hook.inject = function patchedInject(renderer) {
+            if (renderer && renderer.version === '') renderer.version = fallbackVersion
+            return inject.apply(this, arguments)
+          }
+          hook.__geoScratchVersionPatch = true
+          return hook
+        }
+
+        let hook = patchHook(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+        try {
+          Object.defineProperty(window, '__REACT_DEVTOOLS_GLOBAL_HOOK__', {
+            configurable: true,
+            get: () => hook,
+            set: (nextHook) => {
+              hook = patchHook(nextHook)
+            },
+          })
+        } catch {
+          patchHook(window.__REACT_DEVTOOLS_GLOBAL_HOOK__)
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
