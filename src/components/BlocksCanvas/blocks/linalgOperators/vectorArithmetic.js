@@ -70,6 +70,8 @@ export function initVectorArithmeticBlock() {
     const res = uVal.clone()[${op === 'add' ? `'add'` : `'sub'`}](vVal);
     const lenR = res.length();
     const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && vVal.userData?.geoType === 'point_on_object_vector';
+    const pointLabel = vVal.userData?.label || 'Q';
+    const pointDifferenceLabel = 'P - ' + pointLabel;
     const resultOrigin = isPointDifference ? vVal.clone() : origin.clone();
     const resultTip = isPointDifference ? uVal.clone() : res.clone();
     const resultLabelPosition = isPointDifference
@@ -121,7 +123,7 @@ export function initVectorArithmeticBlock() {
       : (lenR > 1e-8 ? '#5b21b6' : '#ffff00');
     group.userData.labels = isPointDifference
       ? [
-        { anchor:'rTip', text:'P - Q = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'rTip', text: pointDifferenceLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
       : [
         { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
@@ -145,7 +147,7 @@ export function initVectorArithmeticBlock() {
         geoType: 'point_difference_vector',
         start: resultOrigin.clone(),
         end: resultTip.clone(),
-        label: 'P - Q',
+        label: pointDifferenceLabel,
       };
     }
     return resultVector;

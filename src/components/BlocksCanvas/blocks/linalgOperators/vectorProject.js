@@ -138,6 +138,7 @@ export function initVectorProjectBlock() {
     // Projection u onto v
     let projObj, projVec=new THREE.Vector3(), projLen=0, projOrigin=new THREE.Vector3(0,0,0);
     const isPointPlaneDistanceProjection = uVal.userData?.geoType === 'point_difference_vector';
+    const inputLabel = uVal.userData?.label || 'u';
     const pointEnd = isPointPlaneDistanceProjection && uVal.userData.end?.isVector3
       ? uVal.userData.end.clone()
       : null;
@@ -254,7 +255,7 @@ export function initVectorProjectBlock() {
         start: projOrigin.clone(),
         end: pTip.clone(),
         labelSide,
-        label: 'proj(P - Q onto n)',
+        label: 'proj(' + inputLabel + ' onto n)',
       };
     }
     return resultVector;

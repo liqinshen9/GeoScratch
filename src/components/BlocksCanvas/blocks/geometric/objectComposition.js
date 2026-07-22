@@ -254,6 +254,10 @@ export default function initObjectCompositionBlocks() {
       const pointParams = cachedParams || pickPointParams(object);
       anyPointCache[cacheKey] = pointParams;
       const markerPoint = resolvePointFromParams(object, pointParams);
+      const labelRun = window.__geoScratchAnyPointLabelRun || (window.__geoScratchAnyPointLabelRun = { next: 1, labelsByBlockId: {} });
+      const labelBlockId = ${JSON.stringify(block.id)};
+      const pointLabel = labelRun.labelsByBlockId[labelBlockId] || ('Q' + labelRun.next++);
+      labelRun.labelsByBlockId[labelBlockId] = pointLabel;
 
       const marker = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
@@ -274,7 +278,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: 'Q = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+        { anchor: 'q', text: pointLabel + ' = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {
@@ -290,7 +294,7 @@ export default function initObjectCompositionBlocks() {
       const pointVector = markerPoint.clone();
       pointVector.userData = {
         geoType: 'point_on_object_vector',
-        label: 'Q',
+        label: pointLabel,
         point: markerPoint.clone(),
       };
       return pointVector;

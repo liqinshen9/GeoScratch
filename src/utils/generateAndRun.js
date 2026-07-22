@@ -37,6 +37,7 @@ export function generateAndRun(workspace) {
     // Standardize runtime variables safely on the window scope
     window.THREE = THREE
     if (!window.threeObjStore) window.threeObjStore = {}
+    window.__geoScratchAnyPointLabelRun = { next: 1, labelsByBlockId: {} }
 
     const runWorkspace = new Function(
       'THREE',
