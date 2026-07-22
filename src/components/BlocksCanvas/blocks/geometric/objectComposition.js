@@ -38,6 +38,60 @@ export default function initObjectCompositionBlocks() {
       const randomBetween = (min, max) => min + Math.random() * (max - min);
       const randomInteriorRatio = () => randomBetween(-0.65, 0.65);
       const randomSignRatio = () => (Math.random() < 0.5 ? -1 : 1);
+      
+      //Three.js mesh geometry is rendered/stored internally as triangles, even when the visible edge grid looks rectangular
+      const getTriangleVertexIndices = (geometry, triangleIndex) => {
+        const index = geometry.index;
+        if (index) {
+          const offset = triangleIndex * 3;
+          return [index.getX(offset), index.getX(offset + 1), index.getX(offset + 2)];
+        }
+        const offset = triangleIndex * 3;
+        return [offset, offset + 1, offset + 2];
+      };
+      const pickTeapotSurfaceParams = (target) => {
+        const position = target.geometry?.attributes?.position;
+        if (!position || position.count < 3) return null;
+
+        const triangleCount = target.geometry.index
+          ? Math.floor(target.geometry.index.count / 3)
+          : Math.floor(position.count / 3);
+        if (triangleCount < 1) return null;
+
+        const a = new THREE.Vector3();
+        const b = new THREE.Vector3();
+        const c = new THREE.Vector3();
+        const ab = new THREE.Vector3();
+        const ac = new THREE.Vector3();
+        const areas = [];
+        let totalArea = 0;
+
+        for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex += 1) {
+          const [ia, ib, ic] = getTriangleVertexIndices(target.geometry, triangleIndex);
+          a.fromBufferAttribute(position, ia);
+          b.fromBufferAttribute(position, ib);
+          c.fromBufferAttribute(position, ic);
+          const area = ab.subVectors(b, a).cross(ac.subVectors(c, a)).length() * 0.5;
+          totalArea += area;
+          areas.push(area);
+        }
+
+        if (totalArea <= 0) return null;
+
+        let remainingArea = Math.random() * totalArea;
+        let triangleIndex = 0;
+        for (; triangleIndex < areas.length - 1; triangleIndex += 1) {
+          remainingArea -= areas[triangleIndex];
+          if (remainingArea <= 0) break;
+        }
+
+        const [ia, ib, ic] = getTriangleVertexIndices(target.geometry, triangleIndex);
+        const sqrtR1 = Math.sqrt(Math.random());
+        const u = 1 - sqrtR1;
+        const v = sqrtR1 * (1 - Math.random());
+        const w = 1 - u - v;
+        return { type: 'teapot-surface', triangleIndex, indices: [ia, ib, ic], barycentric: [u, v, w] };
+      };
 
       const pickPointParams = (target) => {
         const planePoint = target.userData?.point;
@@ -63,6 +117,12 @@ export default function initObjectCompositionBlocks() {
           if (direction.lengthSq() < 0.001) direction.set(1, 0.2, 0.3);
           direction.normalize();
           return { type: 'sphere', direction: [direction.x, direction.y, direction.z] };
+        }
+
+        //added a geo_teapot path
+        if (target.userData?.geoType === 'geo_teapot') {
+          const params = pickTeapotSurfaceParams(target);
+          if (params) return params;
         }
 
         if (target.isMesh && target.geometry?.attributes?.position) {
@@ -121,6 +181,32 @@ export default function initObjectCompositionBlocks() {
           const radius = Math.max(0.01, Number(target.userData.radius) || 1);
           const direction = new THREE.Vector3(params.direction[0], params.direction[1], params.direction[2]);
           return centre.add(direction.multiplyScalar(radius * Math.max(scale.x, scale.y, scale.z)));
+        }
+
+        if (params.type === 'teapot-surface') {
+          const position = target.geometry?.attributes?.position;
+          const indices = Array.isArray(params.indices) ? params.indices : [];
+          const barycentric = Array.isArray(params.barycentric) ? params.barycentric : [];
+          const validCachedIndices = indices.length === 3 && indices.every((index) => Number.isInteger(index) && index >= 0 && index < position?.count);
+          let surfaceIndices = validCachedIndices ? indices : null;
+          if (!surfaceIndices && position && Number.isInteger(params.triangleIndex)) {
+            const triangleCount = target.geometry.index
+              ? Math.floor(target.geometry.index.count / 3)
+              : Math.floor(position.count / 3);
+            if (triangleCount > 0) {
+              surfaceIndices = getTriangleVertexIndices(target.geometry, Math.abs(params.triangleIndex) % triangleCount);
+            }
+          }
+          if (position && surfaceIndices && barycentric.length === 3) {
+            const a = new THREE.Vector3().fromBufferAttribute(position, surfaceIndices[0]);
+            const b = new THREE.Vector3().fromBufferAttribute(position, surfaceIndices[1]);
+            const c = new THREE.Vector3().fromBufferAttribute(position, surfaceIndices[2]);
+            const local = a
+              .multiplyScalar(Number(barycentric[0]) || 0)
+              .addScaledVector(b, Number(barycentric[1]) || 0)
+              .addScaledVector(c, Number(barycentric[2]) || 0);
+            return target.localToWorld(local);
+          }
         }
 
         if (params.type === 'mesh-box') {
