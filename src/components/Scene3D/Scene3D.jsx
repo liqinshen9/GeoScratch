@@ -574,6 +574,8 @@ export default function Scene3D({ objects = [] }) {
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
+  const didInitialFocusRef = useRef(false);
+  const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
 
   useLayoutEffect(() => {
@@ -586,12 +588,23 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
+  // Auto-frame the scene on first load and whenever a new object is added
+  // (so it isn't left out of view), but never just because an existing
+  // object moved — otherwise dragging/editing one object would drag the
+  // camera along with it every time.
   useEffect(() => {
     const focus = getObjectFocus(objects);
     if (!focus) return;
 
     focusRef.current = focus;
+
+    const isNewObjectAdded = objects.length > prevObjectCountRef.current;
+    const isFirstFocus = !didInitialFocusRef.current;
+    prevObjectCountRef.current = objects.length;
+
     if (!cameraRef.current || !controlsRef.current) return;
+    if (!isFirstFocus && !isNewObjectAdded) return;
+    didInitialFocusRef.current = true;
 
     const camera = cameraRef.current;
     const controls = controlsRef.current;
