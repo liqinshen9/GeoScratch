@@ -10,7 +10,7 @@ export default function MainNavigation({ extraClass = '' }) {
   return (
     <header className={`landing-nav ${extraClass}`}>
       <Link to="/" className="landing-nav__logo app-nav__logo">
-        <GeoScratchLogo showWordmark />
+        <GeoScratchLogo showWordmark compact />
       </Link>
 
       <nav className="landing-nav__links" aria-label="Main">

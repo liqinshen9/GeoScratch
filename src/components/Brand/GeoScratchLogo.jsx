@@ -1,4 +1,5 @@
 import logoMark from '@/assets/brand/geoscratch-logo.png'
+import logoMarkCompact from '@/assets/brand/geoscratch-logo-mark.png'
 import './GeoScratchLogo.css'
 
 export default function GeoScratchLogo({
@@ -7,6 +8,7 @@ export default function GeoScratchLogo({
   wordmark = 'GeoScratch',
   showMark = true,
   showWordmark = false,
+  compact = false,
 }) {
   const markSize =
     typeof size === 'number' && Number.isFinite(size)
@@ -21,7 +23,7 @@ export default function GeoScratchLogo({
       {showMark && (
         <img
           className="geoscratch-logo__mark"
-          src={logoMark}
+          src={compact ? logoMarkCompact : logoMark}
           alt=""
           aria-hidden={showWordmark ? undefined : true}
         />
