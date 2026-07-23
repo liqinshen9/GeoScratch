@@ -46,10 +46,20 @@ export function initVec3Block() {
   }
 
   function vector3Generator(block) {
-    const vecString = `new THREE.Vector3(${block.getFieldValue(
-      'X'
-    )}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')})`
-    return [vecString, Order.ATOMIC]
+    const coords = `${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')}`
+    if (block.type === 'linalg_point') {
+      return [`(function(){
+        const point = new THREE.Vector3(${coords});
+        const label = vectorNotation.assignPointLabel(${JSON.stringify(block.id)});
+        point.userData = {
+          geoType: 'linalg_point_vector',
+          label,
+          point: point.clone(),
+        };
+        return point;
+      })()`, Order.FUNCTION_CALL]
+    }
+    return [`new THREE.Vector3(${coords})`, Order.ATOMIC]
   }
 
   //Linalg primitives

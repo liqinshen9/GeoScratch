@@ -254,10 +254,7 @@ export default function initObjectCompositionBlocks() {
       const pointParams = cachedParams || pickPointParams(object);
       anyPointCache[cacheKey] = pointParams;
       const markerPoint = resolvePointFromParams(object, pointParams);
-      const labelRun = window.__geoScratchAnyPointLabelRun || (window.__geoScratchAnyPointLabelRun = { next: 1, labelsByBlockId: {} });
-      const labelBlockId = ${JSON.stringify(block.id)};
-      const pointLabel = labelRun.labelsByBlockId[labelBlockId] || ('Q' + labelRun.next++);
-      labelRun.labelsByBlockId[labelBlockId] = pointLabel;
+      const pointLabel = vectorNotation.assignAnyPointLabel(${JSON.stringify(block.id)});
 
       const marker = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
@@ -266,8 +263,6 @@ export default function initObjectCompositionBlocks() {
       marker.position.copy(markerPoint);
       marker.userData.geoType = 'selectable_point_marker';
       marker.userData.coordinate = markerPoint.clone();
-
-      const formatPoint = (point) => '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']';
 
       const group = new THREE.Group();
       group.add(object, marker);
@@ -278,7 +273,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: pointLabel + ' = ' + formatPoint(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+        { anchor: 'q', text: pointLabel + ' = ' + vectorNotation.formatVector(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {
@@ -295,6 +290,7 @@ export default function initObjectCompositionBlocks() {
       pointVector.userData = {
         geoType: 'point_on_object_vector',
         label: pointLabel,
+        labelVisible: true,
         point: markerPoint.clone(),
       };
       return pointVector;

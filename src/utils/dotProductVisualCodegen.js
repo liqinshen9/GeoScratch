@@ -9,10 +9,13 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const dot = uVal.dot(vVal);
     const lenP = uVal.length();
     const lenQ = vVal.length();
+    const uLabel = vectorNotation.getLabel(uVal, 'p');
+    const vLabel = vectorNotation.getLabel(vVal, 'q');
+    const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;
-    const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
-    const fmtN = (n) => Number(Number(n).toFixed(3));
+    const fmt = vectorNotation.formatVector;
+    const fmtN = vectorNotation.formatNumber;
     const makeSegment = (start, end, color, radius = 0.035) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
@@ -38,15 +41,20 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       return head;
     };
     const origin = new THREE.Vector3(0, 0, 0);
-    const isPointPlaneDistance = uVal.userData?.geoType === 'point_difference_vector';
+    const pointDifferenceVal = uVal.userData?.geoType === 'point_difference_vector' ? uVal : (
+      vVal.userData?.geoType === 'point_difference_vector' ? vVal : null
+    );
+    const normalVal = pointDifferenceVal === uVal ? vVal : uVal;
+    const normalLen = normalVal.length();
+    const isPointPlaneDistance = Boolean(pointDifferenceVal);
     if (isPointPlaneDistance) {
-      const distance = lenQ > 1e-12 ? Math.abs(dot) / lenQ : 0;
-      const projection = lenQ > 1e-12
-        ? vVal.clone().multiplyScalar(dot / vVal.lengthSq())
+      const distance = normalLen > 1e-12 ? Math.abs(dot) / normalLen : 0;
+      const projection = normalLen > 1e-12
+        ? normalVal.clone().multiplyScalar(dot / normalVal.lengthSq())
         : new THREE.Vector3(0, 0, 0);
-      const distanceStart = uVal.userData.start?.isVector3
-        ? uVal.userData.start.clone()
-        : uVal.userData.end.clone().sub(projection);
+      const distanceStart = pointDifferenceVal.userData.start?.isVector3
+        ? pointDifferenceVal.userData.start.clone()
+        : pointDifferenceVal.userData.end.clone().sub(projection);
       const distanceEnd = distanceStart.clone().add(projection);
       const labelPos = distanceStart
         .clone()
@@ -69,8 +77,8 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       distanceVector.userData.headWidthRatio = headWidthRatio;
       distanceVector.userData.srcBlockId = ${id};
 
-      const normalUnit = lenQ > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const labelSide = uVal.userData.end.clone().sub(distanceStart);
+      const normalUnit = normalLen > 1e-12 ? normalVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const labelSide = pointDifferenceVal.userData.end.clone().sub(distanceStart);
       labelSide.addScaledVector(normalUnit, -labelSide.dot(normalUnit));
       if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
       labelSide.normalize().multiplyScalar(-1);
@@ -87,14 +95,14 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       const normalTip = distanceStart.clone().addScaledVector(normalUnit, normalExtent);
       const normalArrowHead = makeArrowHead(normalTip, normalUnit, 0xef4444);
 
-      const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), uVal.userData.end.clone()]);
+      const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), pointDifferenceVal.userData.end.clone()]);
       const guideLine = new THREE.Line(
         guideGeom,
         new THREE.LineDashedMaterial({ color: 0x111827, dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
       );
       guideLine.computeLineDistances();
 
-      const tangent = uVal.userData.end.clone().sub(distanceEnd);
+      const tangent = pointDifferenceVal.userData.end.clone().sub(distanceEnd);
       if (tangent.lengthSq() < 1e-10) {
         tangent.set(1, 0, 0);
         if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
@@ -140,7 +148,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
         },
         {
           anchor: 'formula',
-          text: 'd',
+          text: 'd = ' + fmtN(distance),
           distanceFactor: 6,
           offset: [0, 0, 0],
           emphasis: true,
@@ -228,7 +236,6 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     group.userData.srcBlockId = ${id};
     group.userData.dot = dot;
 
-    const pMid = uVal.clone().multiplyScalar(0.5);
     const projTip = projQ.clone();
     const formulaPos = new THREE.Vector3()
       .addVectors(uVal, vVal)
@@ -238,20 +245,17 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     group.userData.labelAnchors = {
       pTip: { type: 'world', position: [uVal.x, uVal.y, uVal.z] },
       qTip: { type: 'world', position: [vVal.x, vVal.y, vVal.z] },
-      pMid: { type: 'world', position: [pMid.x, pMid.y, pMid.z] },
       projTip: { type: 'world', position: [projTip.x, projTip.y, projTip.z] },
       formula: { type: 'world', position: [formulaPos.x, formulaPos.y, formulaPos.z] },
     };
     group.userData.labels = [
-      { anchor: 'pTip', text: 'p = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ca8a04' },
-      { anchor: 'qTip', text: 'q = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#be185d' },
-      { anchor: 'pMid', text: '|p| = ' + fmtN(lenP), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#ca8a04' },
-      { anchor: 'projTip', text: '|proj q| = ' + fmtN(projLen), distanceFactor: 8, offset: [0.1, 0.1, 0], color: '#be185d' },
+      ...(showOperandLabels ? [
+        { anchor: 'pTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ca8a04' },
+        { anchor: 'qTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#be185d' },
+      ] : []),
       {
         anchor: 'formula',
-        text: dot >= 0
-          ? 'p · q = (|proj q|)(|p|) = ' + fmtN(projLen) + ' × ' + fmtN(lenP) + ' = ' + fmtN(dot)
-          : 'p · q = ' + fmtN(dot) + '  (|proj q| = ' + fmtN(projLen) + ', |p| = ' + fmtN(lenP) + ')',
+        text: vectorNotation.dotLabel(uVal, vVal) + ' = ' + fmtN(dot),
         distanceFactor: 6,
         offset: [0, 0, 0],
         emphasis: true,

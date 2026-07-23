@@ -8,6 +8,7 @@ import {
   createInfinitePlaneMesh,
   matrix4FromTransformStepBlock,
 } from '@/utils/sceneHelpers'
+import { createVectorNotationRuntime } from '@/utils/vectorNotation'
 
 function runConnectedTransformPipelines(workspace) {
   const pipelines = workspace.getBlocksByType('transform_pipeline', false)
@@ -37,17 +38,18 @@ export function generateAndRun(workspace) {
     // Standardize runtime variables safely on the window scope
     window.THREE = THREE
     if (!window.threeObjStore) window.threeObjStore = {}
-    window.__geoScratchAnyPointLabelRun = { next: 1, labelsByBlockId: {} }
+    window.vectorNotation = createVectorNotationRuntime()
 
     const runWorkspace = new Function(
       'THREE',
       'threeObjStore',
       'createInfinitePlaneMesh',
+      'vectorNotation',
       generatedUserCode,
     )
 
     // Pass the window reference down into the function argument parameters
-    runWorkspace(THREE, window.threeObjStore, createInfinitePlaneMesh)
+    runWorkspace(THREE, window.threeObjStore, createInfinitePlaneMesh, window.vectorNotation)
 
     // Run pipelines modifying those exact object instances in place
     runConnectedTransformPipelines(workspace)

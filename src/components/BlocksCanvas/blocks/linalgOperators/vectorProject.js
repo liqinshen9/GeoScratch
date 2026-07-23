@@ -34,7 +34,11 @@ export function initVectorProjectBlock() {
 
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
-    const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const fmt = vectorNotation.formatVector;
+    const uLabel = vectorNotation.getLabel(uVal, 'u');
+    const vLabel = vectorNotation.getLabel(vVal, 'v');
+    const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
+    const projectionLabel = 'proj ' + uLabel + ' on ' + vLabel;
     const makeSegment = (start, end, color, radius = 0.035) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
@@ -138,7 +142,7 @@ export function initVectorProjectBlock() {
     // Projection u onto v
     let projObj, projVec=new THREE.Vector3(), projLen=0, projOrigin=new THREE.Vector3(0,0,0);
     const isPointPlaneDistanceProjection = uVal.userData?.geoType === 'point_difference_vector';
-    const inputLabel = uVal.userData?.label || 'u';
+    const inputLabel = vectorNotation.getLabel(uVal, 'u');
     const pointEnd = isPointPlaneDistanceProjection && uVal.userData.end?.isVector3
       ? uVal.userData.end.clone()
       : null;
@@ -225,10 +229,14 @@ export function initVectorProjectBlock() {
       ? [
         { anchor:'normal', text:'n', distanceFactor:8, offset:[0,0,0], className: 'normal-vector-label' },
       ]
-      : [
-        { anchor:'uTip', text:'u = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-        { anchor:'vTip', text:'v = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
-        { anchor:'pTip', text:'result = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
+      : showOperandLabels
+        ? [
+        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
+        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
+      ]
+        : [
+        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
       ];
 
     if (typeof threeObjStore==='object' && threeObjStore){
@@ -250,13 +258,18 @@ export function initVectorProjectBlock() {
       labelSide.addScaledVector(normalUnitForLabel, -labelSide.dot(normalUnitForLabel));
       if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
       labelSide.normalize().multiplyScalar(-1);
-      resultVector.userData = {
+      vectorNotation.setVectorMetadata(resultVector, {
         geoType: 'point_plane_distance_projection_vector',
         start: projOrigin.clone(),
         end: pTip.clone(),
         labelSide,
         label: 'proj(' + inputLabel + ' onto n)',
-      };
+      });
+    } else {
+      vectorNotation.setVectorMetadata(resultVector, {
+        geoType: 'named_vector_expression',
+        label: projectionLabel,
+      });
     }
     return resultVector;
   })()`;

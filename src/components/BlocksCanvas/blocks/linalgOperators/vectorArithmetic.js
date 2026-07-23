@@ -46,7 +46,10 @@ export function initVectorArithmeticBlock() {
     const origin = new THREE.Vector3();
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
-    const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const fmt = vectorNotation.formatVector;
+    const uLabel = vectorNotation.getLabel(uVal, 'a');
+    const vLabel = vectorNotation.getLabel(vVal, 'b');
+    const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
 
     // Build input arrows
     const lenU = uVal.length();
@@ -71,7 +74,10 @@ export function initVectorArithmeticBlock() {
     const lenR = res.length();
     const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && vVal.userData?.geoType === 'point_on_object_vector';
     const pointLabel = vVal.userData?.label || 'Q';
-    const pointDifferenceLabel = 'P - ' + pointLabel;
+    const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
+    const genericResultLabel = showOperandLabels
+      ? 'result'
+      : vectorNotation.binaryLabel(uVal, '${op === 'add' ? '+' : '-'}', vVal);
     const resultOrigin = isPointDifference ? vVal.clone() : origin.clone();
     const resultTip = isPointDifference ? uVal.clone() : res.clone();
     const resultLabelPosition = isPointDifference
@@ -125,10 +131,14 @@ export function initVectorArithmeticBlock() {
       ? [
         { anchor:'rTip', text: pointDifferenceLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
-      : [
-        { anchor:'uTip', text:'a = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-        { anchor:'vTip', text:'b = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
-        { anchor:'rTip', text:'result = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+      : showOperandLabels
+        ? [
+        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
+        { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+      ]
+        : [
+        { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 
     // Register
@@ -149,6 +159,11 @@ export function initVectorArithmeticBlock() {
         end: resultTip.clone(),
         label: pointDifferenceLabel,
       };
+    } else if (!showOperandLabels) {
+      vectorNotation.setVectorMetadata(resultVector, {
+        geoType: 'named_vector_expression',
+        label: genericResultLabel,
+      });
     }
     return resultVector;
   })()`;

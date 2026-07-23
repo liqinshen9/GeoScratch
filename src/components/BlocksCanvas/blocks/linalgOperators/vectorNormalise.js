@@ -31,7 +31,10 @@ export function initNormInplaceBlock() {
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const lenV = vVal.length();
-    const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const fmt = vectorNotation.formatVector;
+    const valueLabel = vectorNotation.getLabel(vVal, 'w');
+    const showOperandLabels = vectorNotation.shouldShowOperandLabels(vVal, null);
+    const normLabel = 'normalize ' + valueLabel;
 
     // Original arrow
     const arrowIn = new THREE.ArrowHelper(
@@ -67,9 +70,13 @@ export function initNormInplaceBlock() {
       vTip:   { type:'world', position:[vVal.x,    vVal.y,    vVal.z   ] },
       normTip:{ type:'world', position:[normVec.x, normVec.y, normVec.z] },
     };
-    group.userData.labels = [
-      { anchor:'vTip',    text:'w = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-      { anchor:'normTip', text:'result = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#15803d' : '#ffff00' },
+    group.userData.labels = showOperandLabels
+      ? [
+      { anchor:'vTip',    text: valueLabel + ' = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
+      { anchor:'normTip', text: normLabel + ' = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#15803d' : '#ffff00' },
+    ]
+      : [
+      { anchor:'normTip', text: normLabel + ' = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: lenV > 1e-8 ? '#15803d' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

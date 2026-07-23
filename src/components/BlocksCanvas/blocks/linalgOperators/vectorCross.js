@@ -37,7 +37,11 @@ export function initCrossProductBlock() {
     const lenU = uVal.length(), lenV = vVal.length(), lenC = cross.length();
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;
-    const fmt = (vec) => '[' + [vec.x, vec.y, vec.z].map(n => Number(n.toFixed(3))).join(', ') + ']';
+    const fmt = vectorNotation.formatVector;
+    const uLabel = vectorNotation.getLabel(uVal, 'p');
+    const vLabel = vectorNotation.getLabel(vVal, 'q');
+    const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
+    const crossLabel = uLabel + ' x ' + vLabel;
 
     const arrowU = new THREE.ArrowHelper(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
@@ -75,10 +79,14 @@ export function initCrossProductBlock() {
       vTip:{type:'world', position:[vVal.x,vVal.y,vVal.z]},
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
-    group.userData.labels = [
+    group.userData.labels = showOperandLabels
+      ? [
       { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
       { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
-      { anchor:'cTip', text:'result = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+    ]
+      : [
+      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

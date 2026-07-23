@@ -22,8 +22,6 @@ export function initVectorMagnitude() {
   }
 
   javascriptGenerator.forBlock['vector_magnitude'] = function (block, g) {
-    // Optional name field on the block; fallback to 'v'
-    const name = 'j';
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
 
     const code = `(function () {
@@ -32,6 +30,7 @@ export function initVectorMagnitude() {
 
     const len = vVal.length();
     const isPointPlaneProjection = vVal.userData?.geoType === 'point_plane_distance_projection_vector';
+    const valueLabel = vectorNotation.getLabel(vVal, 'j');
     const safeLen = (x) => (Number.isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const arrowOrigin = isPointPlaneProjection && vVal.userData.start?.isVector3
@@ -87,8 +86,8 @@ export function initVectorMagnitude() {
       {
         anchor: isPointPlaneProjection ? 'distanceMid' : 'tip',
         text: isPointPlaneProjection
-          ? 'd'
-          : 'length of ${name} = ' + fmtLen,
+          ? 'd = ' + fmtLen
+          : '|' + valueLabel + '| = ' + fmtLen,
         distanceFactor: isPointPlaneProjection ? 6 : 8,
         offset: isPointPlaneProjection ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
