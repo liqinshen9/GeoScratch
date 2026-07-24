@@ -22,21 +22,25 @@ const SOLID_GEO_TYPES = new Set([
 ])
 
 function worldSegment(group) {
-  const { origin, direction, lineExtent } = group.userData
-  if (!origin?.isVector3 || !direction?.isVector3) return null
+  const { segmentMid, direction, segmentHalfLength } = group.userData
+  if (!segmentMid?.isVector3 || !direction?.isVector3) return null
 
   const unitDirection = direction.clone().normalize()
   if (!Number.isFinite(unitDirection.lengthSq()) || unitDirection.lengthSq() === 0) return null
 
   // Transform pipelines mutate the group's local matrix after creation, so
-  // origin/direction (stored in local space at build time) must be pushed
-  // through matrixWorld to compare against solids that live under different
-  // transforms.
+  // segmentMid/direction (stored in local space at build time) must be
+  // pushed through matrixWorld to compare against solids that live under
+  // different transforms. segmentMid (not the vector equation's origin) is
+  // the point the tube's own local geometry is centred on -- the line can
+  // now extend a different distance in each direction (to reach the scene's
+  // bounding box), so that's the only point a single symmetric half-extent
+  // is still valid around.
   group.updateMatrixWorld(true)
-  const worldOrigin = origin.clone().applyMatrix4(group.matrixWorld)
+  const worldOrigin = segmentMid.clone().applyMatrix4(group.matrixWorld)
   const worldDirection = unitDirection.clone().transformDirection(group.matrixWorld).normalize()
 
-  return { origin: worldOrigin, direction: worldDirection, halfExtent: lineExtent ?? 20 }
+  return { origin: worldOrigin, direction: worldDirection, halfExtent: segmentHalfLength ?? 20 }
 }
 
 // Analytic ray/segment vs sphere intersection, clamped to [tMin, tMax].

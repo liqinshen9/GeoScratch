@@ -18,6 +18,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
     metalness: 0.1,
     transparent: true,
     opacity: 0.7,
+    depthWrite: false,
   })
 
   const mesh = new THREE.Mesh(geometry, material)

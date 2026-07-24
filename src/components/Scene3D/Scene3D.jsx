@@ -108,7 +108,11 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     const shaftStart = -length
     const shaftEnd = length
     const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, shaftLength, 12), material)
+    // Kept thinner than the thinnest line glyph (plain_tube, radius 0.015) so
+    // that a coincident axis-aligned line -- same centerline, same length --
+    // always wins the depth test and stays visible, instead of this
+    // semi-transparent axis shaft drawing over its entire surface.
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, shaftLength, 12), material)
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
@@ -576,6 +580,18 @@ export default function Scene3D({ objects = [] }) {
   const didInitialFocusRef = useRef(false);
   const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
+  // R3F mounts the camera/OrbitControls asynchronously, on its own render
+  // loop -- independently of the outer React tree. Blockly's initial workspace
+  // load can (and often does) fire the `objects` update below before that
+  // finishes, so cameraRef/controlsRef aren't populated yet on that first
+  // pass. Without this, the "first load" auto-frame doesn't get dropped, it
+  // just waits for the *next* `objects` change to retry -- which could be any
+  // later, unrelated block edit, making the camera appear to jump for no
+  // reason well after the scene already looked "loaded" to the user. Ticking
+  // this once each ref becomes available lets the effect below retry the
+  // instant the camera is actually ready, instead of piggybacking on
+  // whatever edit happens to come next.
+  const [refsReadyTick, setRefsReadyTick] = useState(0);
 
   useLayoutEffect(() => {
     window.THREE = THREE
@@ -587,12 +603,19 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
-  // Auto-frame the scene on first load always, and whenever a new object is
-  // added if the user has opted into that (settings.autoFocusOnNewObject) —
+  // Auto-frame the scene on first load, and whenever a new object is added —
   // but never just because an existing object moved, otherwise
   // dragging/editing one object would drag the camera along with it every
-  // time.
+  // time. Entirely gated behind settings.autoFocusOnNewObject: when that's
+  // off, this effect must never touch the camera at all, including the
+  // first-load frame -- with it off, only the user's own mouse input (or the
+  // explicit "reset view" button) is allowed to move the camera. Also
+  // re-runs on refsReadyTick (see its declaration above) so the first-load
+  // frame fires as soon as the camera exists, not whenever the next
+  // unrelated edit happens to land.
   useEffect(() => {
+    if (!settings.autoFocusOnNewObject) return;
+
     const focus = getObjectFocus(objects);
     if (!focus) return;
 
@@ -603,7 +626,7 @@ export default function Scene3D({ objects = [] }) {
     prevObjectCountRef.current = objects.length;
 
     if (!cameraRef.current || !controlsRef.current) return;
-    if (!isFirstFocus && !(isNewObjectAdded && settings.autoFocusOnNewObject)) return;
+    if (!isFirstFocus && !isNewObjectAdded) return;
     didInitialFocusRef.current = true;
 
     const camera = cameraRef.current;
@@ -613,13 +636,13 @@ export default function Scene3D({ objects = [] }) {
     const offset = oldOffset.lengthSq() > 1e-8
       ? oldOffset
       : DEFAULT_CAMERA_OFFSET.clone();
-    const minDistance = Math.max(focus.radius * 2.6, 8);
+    const minDistance = Math.max(focusRef.current.radius * 2.6, 8);
 
     if (offset.length() < minDistance) offset.setLength(minDistance);
-    controls.target.copy(focus.center);
-    camera.position.copy(focus.center).add(offset);
+    controls.target.copy(focusRef.current.center);
+    camera.position.copy(focusRef.current.center).add(offset);
     controls.update();
-  }, [objects]);
+  }, [objects, refsReadyTick, settings.autoFocusOnNewObject]);
 
   const resetDefaultView = () => {
     if (!cameraRef.current || !controlsRef.current) return;
@@ -649,8 +672,18 @@ export default function Scene3D({ objects = [] }) {
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >
-          <OrbitControls ref={controlsRef} />
-          <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
+          <OrbitControls
+            ref={(instance) => {
+              controlsRef.current = instance;
+              if (instance) setRefsReadyTick((tick) => tick + 1);
+            }}
+          />
+          <CameraHandle
+            onReady={(cam) => {
+              cameraRef.current = cam;
+              setRefsReadyTick((tick) => tick + 1);
+            }}
+          />
           <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />

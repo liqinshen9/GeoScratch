@@ -85,8 +85,8 @@ export default function SettingsPage() {
 
           <SettingsSection title="Camera">
             <ToggleRow
-              label="Refocus on New Object"
-              description="Move the camera to keep newly added objects in view"
+              label="Auto-Frame Camera"
+              description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
               checked={settings.autoFocusOnNewObject}
               onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
             />
@@ -143,6 +143,13 @@ export default function SettingsPage() {
                 ))}
               </select>
             </div>
+
+            <ToggleRow
+              label="Thick Line Primitives"
+              description="Render Plain Line and Illuminated Line as thin solid tubes instead of hairline GL lines"
+              checked={settings.thickLinePrimitives}
+              onChange={(v) => updateSetting('thickLinePrimitives', v)}
+            />
           </SettingsSection>
 
           <div className="pt-8 border-t border-slate-100 flex items-center gap-4">
