@@ -16,6 +16,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
     metalness: 0.1,
     opacity: 0.8,
     transparent: true,
+    depthWrite: false,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)

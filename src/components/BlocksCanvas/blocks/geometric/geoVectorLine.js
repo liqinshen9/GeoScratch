@@ -27,12 +27,62 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     direction = new THREE.Vector3(1, 0, 0)
   }
 
-  const lineExtent = 20
   const normalised = direction.clone().normalize()
-  const p1 = origin.clone().addScaledVector(normalised, -lineExtent)
-  const p2 = origin.clone().addScaledVector(normalised, lineExtent)
+
+  // Extend the line out to the walls of the 3D view's bounding box
+  // (BoundingBoxRoom in Scene3D.jsx: a 40-unit cube centred on the world
+  // origin, so half-extent 20) rather than a flat 20 units from the line's
+  // own origin. A flat offset only actually reaches the wall when the line
+  // passes through the world origin AND is axis-aligned -- any off-centre
+  // origin falls short on one side (or shoots past the box) and any
+  // non-axis-aligned direction falls short on both, since the true distance
+  // to a face is 20 only along an axis and up to 20*sqrt(3) at a corner.
+  const BOX_HALF_EXTENT = 20
+  const FALLBACK_EXTENT = 20
+  const rayBoxExitDistance = (rayOrigin, rayDir) => {
+    let tExit = Infinity
+    for (const axis of ['x', 'y', 'z']) {
+      const d = rayDir[axis]
+      if (Math.abs(d) < 1e-9) continue
+      const boundary = d > 0 ? BOX_HALF_EXTENT : -BOX_HALF_EXTENT
+      const t = (boundary - rayOrigin[axis]) / d
+      if (t >= 0) tExit = Math.min(tExit, t)
+    }
+    return Number.isFinite(tExit) ? tExit : FALLBACK_EXTENT
+  }
+  const extentPos = rayBoxExitDistance(origin, normalised)
+  const extentNeg = rayBoxExitDistance(origin, normalised.clone().negate())
+
+  const p1 = origin.clone().addScaledVector(normalised, -extentNeg)
+  const p2 = origin.clone().addScaledVector(normalised, extentPos)
 
   const group = new THREE.Group()
+
+  // Two lines with the same origin/direction produce numerically coincident
+  // geometry, which GPU depth testing resolves inconsistently frame-to-frame
+  // (z-fighting flicker). Nudge the whole line by a tiny, deterministic
+  // (per-block) offset perpendicular to its own direction -- small enough to
+  // be visually imperceptible (well under the tube's own 0.015 radius) but
+  // enough to break exact coincidence so depth comparisons stay stable.
+  let blockHash = 2166136261
+  const blockIdStr = String(blockId)
+  for (let i = 0; i < blockIdStr.length; i += 1) {
+    blockHash = (blockHash ^ blockIdStr.charCodeAt(i)) * 16777619 >>> 0
+  }
+  const jitterAngle = (blockHash % 360) * (Math.PI / 180)
+  const jitterUp = Math.abs(normalised.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
+  const jitterA = new THREE.Vector3().crossVectors(normalised, jitterUp).normalize()
+  const jitterB = new THREE.Vector3().crossVectors(normalised, jitterA).normalize()
+  const Z_FIGHT_JITTER = 0.0015
+  group.position
+    .addScaledVector(jitterA, Math.cos(jitterAngle) * Z_FIGHT_JITTER)
+    .addScaledVector(jitterB, Math.sin(jitterAngle) * Z_FIGHT_JITTER)
+
+  const distance = p1.distanceTo(p2)
+  const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
+  // Local tube frame is centred on the segment's midpoint, not the vector
+  // equation's origin -- the two only coincide when extentPos === extentNeg.
+  const halfDist = distance / 2
 
   // 1. TECHNIQUE STYLE: Plain Line
   const plainLine = new THREE.Line(
@@ -40,6 +90,20 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     new THREE.LineBasicMaterial({ color: 0x374151 })
   )
   group.add(plainLine)
+
+  // 1b. TECHNIQUE STYLE: Plain Line (thick). WebGL clamps LineBasicMaterial's
+  // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
+  // thin solid tube is the only reliable way to make this style visibly
+  // thicker -- same flat color as the hairline version, just with real
+  // radius. Thinner than Plain Tube's own 0.015 radius so the two styles
+  // stay visually distinct.
+  const plainLineThick = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.008, 0.008, distance, 12),
+    new THREE.MeshBasicMaterial({ color: 0x374151 })
+  )
+  plainLineThick.position.copy(midPoint)
+  plainLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  group.add(plainLineThick)
 
   // 2. TECHNIQUE STYLE: True Illuminated Line (Zöckler et al. Implementation)
   const lineGeometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
@@ -103,9 +167,38 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const illumLine = new THREE.Line(lineGeometry, illumMaterial)
   group.add(illumLine)
 
+  // 2b. TECHNIQUE STYLE: Illuminated Line (thick). A real MeshStandardMaterial
+  // cylinder here would depend on actual scene lights hitting it -- at this
+  // radius, with only ambient + a couple of point lights, most of its
+  // surface reads as dim/subtle instead of the bright, consistently-lit look
+  // the hairline version guarantees. So this reuses the SAME shader/material
+  // as the hairline illumLine (its lighting is synthetic, based only on the
+  // tangent direction, never scene lights or real surface normals) applied
+  // to cylinder geometry instead of a flat line, rather than trying to get
+  // real lighting to behave the same way.
+  const illumThickGeom = new THREE.CylinderGeometry(0.008, 0.008, distance, 12)
+  const illumThickVertexCount = illumThickGeom.attributes.position.count
+  const illumThickLineDirs = new Float32Array(illumThickVertexCount * 3)
+  // Expressed in the cylinder's own local frame, where its canonical up-axis
+  // (0,1,0) *is* the tangent direction -- the quaternion below then carries
+  // that (already-correct) local tangent out to world space along with
+  // everything else, the same way cylinder/ringedTube orient themselves.
+  // Using `normalised` (a group-frame vector) here instead would be wrong:
+  // the shader's normalMatrix already applies this mesh's own rotation, so
+  // a group-frame vector would get rotated a second time.
+  for (let i = 0; i < illumThickVertexCount; i += 1) {
+    illumThickLineDirs[i * 3] = 0
+    illumThickLineDirs[i * 3 + 1] = 1
+    illumThickLineDirs[i * 3 + 2] = 0
+  }
+  illumThickGeom.setAttribute('lineDir', new THREE.BufferAttribute(illumThickLineDirs, 3))
+
+  const illumLineThick = new THREE.Mesh(illumThickGeom, illumMaterial)
+  illumLineThick.position.copy(midPoint)
+  illumLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  group.add(illumLineThick)
+
   // 3. TECHNIQUE STYLE: Plain Tube (Cylinder)
-  const distance = p1.distanceTo(p2)
-  const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
   const cylGeom = new THREE.CylinderGeometry(0.015, 0.015, distance, 12)
   const cylMat = new THREE.MeshBasicMaterial({ color: 0x475569 })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
@@ -126,7 +219,6 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const ringMat = new THREE.MeshStandardMaterial({ color: 0xa1a1aa, roughness: 0.3 })
 
   const step = 0.3
-  const halfDist = distance / 2
 
   for (let y = -halfDist; y <= halfDist; y += step) {
     const ringSegment = new THREE.Mesh(ringGeom, ringMat)
@@ -282,32 +374,25 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     group.userData.refreshGlyph?.()
   }
 
-  // Direct lookup map pairing style keys
-  const glyphMap = {
-    plain_line: plainLine,
-    illuminated_line: illumLine,
-    plain_tube: cylinder,
-    ringed_tube: ringedTube
-  }
-
   const applyGlyphVisibility = (settings) => {
     const activeStyle = settings.lineStyle || 'plain_line'
     const collisionStyle = settings.lineCollisionStyle || 'ringed'
+    const thick = !!settings.thickLinePrimitives
     const isPlainTube = activeStyle === 'plain_tube'
     // Ringed_tube already looks ringed everywhere, so accents only add value
     // layered on (or, for "dashed", swapped in for) the plain tube.
     const hasAccent = isPlainTube && group.userData.hasCollisionAccent
     const useDashedReplacement = hasAccent && collisionStyle === 'dashed'
 
-    Object.keys(glyphMap).forEach((key) => {
-      if (!glyphMap[key]) return
-      // The dashed style fully replaces the plain-tube glyph (real gaps
-      // instead of an overlay), so hide the continuous base tube while it's
-      // active.
-      glyphMap[key].visible = key === 'plain_tube'
-        ? isPlainTube && !useDashedReplacement
-        : key === activeStyle
-    })
+    plainLine.visible = activeStyle === 'plain_line' && !thick
+    plainLineThick.visible = activeStyle === 'plain_line' && thick
+    illumLine.visible = activeStyle === 'illuminated_line' && !thick
+    illumLineThick.visible = activeStyle === 'illuminated_line' && thick
+    // The dashed collision style fully replaces the plain-tube glyph (real
+    // gaps instead of an overlay), so hide the continuous base tube while
+    // it's active.
+    cylinder.visible = isPlainTube && !useDashedReplacement
+    ringedTube.visible = activeStyle === 'ringed_tube'
 
     dashedTubeGroup.visible = useDashedReplacement
     collisionAccentRinged.visible = hasAccent && collisionStyle === 'ringed'
@@ -363,7 +448,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   group.userData.geoType = 'geo_vector_line'
   group.userData.origin = origin.clone()
   group.userData.direction = direction.clone()
-  group.userData.lineExtent = lineExtent
+  // Consumed by tubeCollision.js's worldSegment(), which needs the same
+  // centre/half-length the tube's own local geometry is built around (the
+  // segment midpoint), not the vector equation's origin -- see the
+  // extentPos/extentNeg comment above for why those two points can differ.
+  group.userData.segmentMid = midPoint.clone()
+  group.userData.segmentHalfLength = halfDist
   group.userData.srcBlockId = blockId
 
   if (threeObjStore) threeObjStore[blockId] = group

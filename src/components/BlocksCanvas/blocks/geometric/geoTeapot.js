@@ -27,6 +27,7 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
     metalness: 0.1,
     opacity: 0.8,
     transparent: true,
+    depthWrite: false,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)
