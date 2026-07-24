@@ -5,6 +5,7 @@ import { javascriptGenerator, Order } from 'blockly/javascript'
 function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZInput, segmentsInput, blockId) {
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
+  const useSettingsStore = window.useSettingsStore
   if (!THREE) return null
   if (!THREE.TeapotGeometry) {
     console.warn('geo_teapot: THREE.TeapotGeometry is not registered on window.THREE. Load the TeapotGeometry addon module first.')
@@ -38,6 +39,17 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
   )
   mesh.add(edges)
+
+  edges.visible = !!useSettingsStore?.getState().settings.teapotShowGridlines
+  if (useSettingsStore) {
+    const unsubscribe = useSettingsStore.subscribe((state) => {
+      if (window.threeObjStore?.[blockId] !== mesh) {
+        unsubscribe()
+        return
+      }
+      edges.visible = !!state.settings.teapotShowGridlines
+    })
+  }
 
   mesh.userData.geoType = 'geo_teapot'
   mesh.userData.centre = centre.clone()

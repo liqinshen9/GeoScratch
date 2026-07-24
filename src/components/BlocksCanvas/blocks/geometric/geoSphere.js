@@ -5,6 +5,7 @@ import { javascriptGenerator, Order } from 'blockly/javascript'
 function geoSphereDefinition(centreInput, radiusInput, blockId) {
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
+  const useSettingsStore = window.useSettingsStore
   if (!THREE) return null
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const radius = Math.max(0.01, Number(radiusInput) || 1)
@@ -25,6 +26,18 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
   )
   mesh.add(edges)
+
+  edges.visible = !!useSettingsStore?.getState().settings.sphereShowGridlines
+  if (useSettingsStore) {
+    const unsubscribe = useSettingsStore.subscribe((state) => {
+      if (window.threeObjStore?.[blockId] !== mesh) {
+        unsubscribe()
+        return
+      }
+      edges.visible = !!state.settings.sphereShowGridlines
+    })
+  }
+
   mesh.userData.geoType = 'geo_sphere'
   mesh.userData.centre = centre.clone()
   mesh.userData.radius = radius

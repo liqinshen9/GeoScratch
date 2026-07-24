@@ -266,6 +266,7 @@ export default function ExercisePage() {
           </aside>
 
           <BlocksCanvas
+            id="exercise"
             categoryId={categoryId}
             workspaceMaximized={workspaceMaximized}
             hideInlineControls

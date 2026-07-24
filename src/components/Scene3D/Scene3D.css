@@ -130,16 +130,6 @@ html, body, #root {
     transform: translateY(1px);
 }
 
-.scene-view-btn--light {
-    background: rgba(255, 255, 255, 0.86);
-    color: #8a8f98;
-}
-
-.scene-view-btn--light:hover {
-    background: rgba(255, 255, 255, 0.96);
-    color: #6b7280;
-}
-
 .label-anchor {
     position: relative;
     pointer-events: none;

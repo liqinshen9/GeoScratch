@@ -147,9 +147,10 @@ function Axes({ length = 3 }) {
   )
 }
 
-function FadedGrid({ opacity = 0.18 }) {
+const GRID_OPACITY = 0.18;
+
+function FadedGrid() {
   const gridRef = useRef(null);
-  const gridOpacity = Math.max(0, Math.min(1, Number.isFinite(opacity) ? opacity : 0.18));
 
   useLayoutEffect(() => {
     if (!gridRef.current) return;
@@ -159,12 +160,12 @@ function FadedGrid({ opacity = 0.18 }) {
 
     materials.forEach((material, index) => {
       material.transparent = true;
-      material.opacity = index === 0 ? Math.min(0.44, gridOpacity * 1.7) : Math.min(0.28, gridOpacity * 0.9);
+      material.opacity = index === 0 ? Math.min(0.44, GRID_OPACITY * 1.7) : Math.min(0.28, GRID_OPACITY * 0.9);
       material.depthWrite = false;
       material.color.set(index === 0 ? 0xb0b0b0 : 0xd2d2d2);
       material.needsUpdate = true;
     });
-  }, [gridOpacity]);
+  }, []);
 
   return (
     <gridHelper
@@ -534,7 +535,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
       />
 
       {settings.showGrid && (
-        <FadedGrid opacity={settings.gridOpacity} />
+        <FadedGrid />
       )}
 
       {settings.showBox && (
@@ -564,16 +565,16 @@ function Scene({ objects = [], hiddenLabelKeys }) {
   );
 }
 
-const BACKGROUND_COLORS = {
-  dark: '#ffffff',
-  light: '#f7f4ee',
-}
+// Placeholder until real dark mode support lands.
+const SCENE_BACKGROUND_COLOR = '#ffffff'
 
 export default function Scene3D({ objects = [] }) {
   const { settings } = useSettingsStore()
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
+  const didInitialFocusRef = useRef(false);
+  const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
 
   useLayoutEffect(() => {
@@ -586,12 +587,24 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
+  // Auto-frame the scene on first load always, and whenever a new object is
+  // added if the user has opted into that (settings.autoFocusOnNewObject) —
+  // but never just because an existing object moved, otherwise
+  // dragging/editing one object would drag the camera along with it every
+  // time.
   useEffect(() => {
     const focus = getObjectFocus(objects);
     if (!focus) return;
 
     focusRef.current = focus;
+
+    const isNewObjectAdded = objects.length > prevObjectCountRef.current;
+    const isFirstFocus = !didInitialFocusRef.current;
+    prevObjectCountRef.current = objects.length;
+
     if (!cameraRef.current || !controlsRef.current) return;
+    if (!isFirstFocus && !(isNewObjectAdded && settings.autoFocusOnNewObject)) return;
+    didInitialFocusRef.current = true;
 
     const camera = cameraRef.current;
     const controls = controlsRef.current;
@@ -640,11 +653,11 @@ export default function Scene3D({ objects = [] }) {
           <CameraHandle onReady={(cam) => (cameraRef.current = cam)} />
           <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} />
-          <color attach="background" args={[BACKGROUND_COLORS[settings.sceneBackground] ?? BACKGROUND_COLORS.dark]} />
+          <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
         </Canvas>
         <div className="scene-view-controls">
           <button
-            className={`scene-view-btn${settings.sceneBackground === 'light' ? ' scene-view-btn--light' : ''}`}
+            className="scene-view-btn"
             onClick={resetDefaultView}
             aria-label="Reset to default 3D view"
             title="Default view"
