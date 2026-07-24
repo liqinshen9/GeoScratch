@@ -24,8 +24,26 @@ export function initVec3Block() {
       .appendField(')')
   }
 
-  function initVector3LikeBlock(block, label, tooltip) {
-    appendCoordinateFields(block, label)
+  function appendColumnVectorFields(block, label) {
+    block.appendDummyInput()
+      .appendField(label)
+    block.appendDummyInput()
+      .setAlign(Blockly.inputs.Align.CENTRE)
+      .appendField(new Blockly.FieldNumber(1), 'X')
+    block.appendDummyInput()
+      .setAlign(Blockly.inputs.Align.CENTRE)
+      .appendField(new Blockly.FieldNumber(1), 'Y')
+    block.appendDummyInput()
+      .setAlign(Blockly.inputs.Align.CENTRE)
+      .appendField(new Blockly.FieldNumber(1), 'Z')
+  }
+
+  function initVector3LikeBlock(block, label, tooltip, options = {}) {
+    if (options.column) {
+      appendColumnVectorFields(block, label)
+    } else {
+      appendCoordinateFields(block, label)
+    }
     block.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
     block.setTooltip(tooltip)
     block.setDeletable(true)
@@ -35,7 +53,7 @@ export function initVec3Block() {
 
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      initVector3LikeBlock(this, 'R³: (', '3D coordinate')
+      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', { column: true })
     },
   }
 

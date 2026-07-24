@@ -3,8 +3,21 @@ import * as en from 'blockly/msg/en'
 import * as Blockly from 'blockly/core'
 import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
 
+let CONTEXT_MENU_CONFIGURED = false
+
+function configureContextMenu() {
+  if (CONTEXT_MENU_CONFIGURED) return
+  CONTEXT_MENU_CONFIGURED = true
+
+  const registry = Blockly.ContextMenuRegistry.registry
+  if (registry.getItem('blockInline')) {
+    registry.unregister('blockInline')
+  }
+}
+
 const Workspace = (hostElement) => {
   InitLocale(en)
+  configureContextMenu()
 
   return Blockly.inject(hostElement, {
     renderer: 'geras',
