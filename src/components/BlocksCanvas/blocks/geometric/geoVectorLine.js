@@ -167,16 +167,33 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const illumLine = new THREE.Line(lineGeometry, illumMaterial)
   group.add(illumLine)
 
-  // 2b. TECHNIQUE STYLE: Illuminated Line (thick). The hairline version
-  // fakes round-tube lighting on a flat GL line via the shader above; once
-  // it has real geometric radius that trick is unnecessary -- a real thin
-  // cylinder gets correct per-fragment lighting for free, so this reuses
-  // the same lit-material approach as Plain Tube instead of forking the
-  // custom shader to work on ribbon geometry.
-  const illumLineThick = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.008, 0.008, distance, 12),
-    new THREE.MeshStandardMaterial({ color: 0x4b5563, roughness: 0.4, metalness: 0.05 })
-  )
+  // 2b. TECHNIQUE STYLE: Illuminated Line (thick). A real MeshStandardMaterial
+  // cylinder here would depend on actual scene lights hitting it -- at this
+  // radius, with only ambient + a couple of point lights, most of its
+  // surface reads as dim/subtle instead of the bright, consistently-lit look
+  // the hairline version guarantees. So this reuses the SAME shader/material
+  // as the hairline illumLine (its lighting is synthetic, based only on the
+  // tangent direction, never scene lights or real surface normals) applied
+  // to cylinder geometry instead of a flat line, rather than trying to get
+  // real lighting to behave the same way.
+  const illumThickGeom = new THREE.CylinderGeometry(0.008, 0.008, distance, 12)
+  const illumThickVertexCount = illumThickGeom.attributes.position.count
+  const illumThickLineDirs = new Float32Array(illumThickVertexCount * 3)
+  // Expressed in the cylinder's own local frame, where its canonical up-axis
+  // (0,1,0) *is* the tangent direction -- the quaternion below then carries
+  // that (already-correct) local tangent out to world space along with
+  // everything else, the same way cylinder/ringedTube orient themselves.
+  // Using `normalised` (a group-frame vector) here instead would be wrong:
+  // the shader's normalMatrix already applies this mesh's own rotation, so
+  // a group-frame vector would get rotated a second time.
+  for (let i = 0; i < illumThickVertexCount; i += 1) {
+    illumThickLineDirs[i * 3] = 0
+    illumThickLineDirs[i * 3 + 1] = 1
+    illumThickLineDirs[i * 3 + 2] = 0
+  }
+  illumThickGeom.setAttribute('lineDir', new THREE.BufferAttribute(illumThickLineDirs, 3))
+
+  const illumLineThick = new THREE.Mesh(illumThickGeom, illumMaterial)
   illumLineThick.position.copy(midPoint)
   illumLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(illumLineThick)
