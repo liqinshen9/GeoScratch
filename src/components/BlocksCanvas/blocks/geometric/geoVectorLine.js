@@ -149,20 +149,24 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
 
-  // 5. COLLISION ACCENT: localized dark corrugation rings shown ONLY across
-  // the exact stretch(es) where this line's tube passes into a solid object
-  // -- laid directly over the plain-tube shaft (radius 0.015), not a
-  // whole-line style swap. Line-vs-line overlap is handled separately (as a
-  // halo, not a ringed accent). Sized close to the shaft's own radius so it reads
-  // as a textured band on the tube rather than a separate object bulging
-  // off it. Lives in the same local frame as cylinder/ringedTube (Y axis
-  // along the line, origin at y=0), so a zone {start, end} from
-  // tubeCollision.js maps directly onto local y positions here.
-  const collisionAccent = new THREE.Group()
-  collisionAccent.position.copy(midPoint)
-  collisionAccent.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
-  collisionAccent.visible = false
-  group.add(collisionAccent)
+  // 5. COLLISION ACCENTS: how this line's tube indicates the exact
+  // stretch(es) where it passes into a solid object -- laid over/instead of
+  // the plain-tube shaft (radius 0.015), not a whole-line style swap.
+  // Line-vs-line overlap is handled separately (as a halo, not a collision
+  // accent). Three interchangeable looks, picked via
+  // settings.lineCollisionStyle. All three live in the same local frame as
+  // cylinder/ringedTube (Y axis along the line, origin at y=0), so a zone
+  // {start, end} from tubeCollision.js maps directly onto local y positions
+  // in each.
+
+  // 5a. "ringed": dark corrugation rings overlaid on top of the always-
+  // visible base tube. Sized close to the shaft's own radius so it reads as
+  // a textured band rather than a separate object bulging off it.
+  const collisionAccentRinged = new THREE.Group()
+  collisionAccentRinged.position.copy(midPoint)
+  collisionAccentRinged.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  collisionAccentRinged.visible = false
+  group.add(collisionAccentRinged)
 
   const COLLISION_RING_HEIGHT = 0.09
   const COLLISION_RING_HALF_HEIGHT = COLLISION_RING_HEIGHT / 2
@@ -174,11 +178,48 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   })
   const COLLISION_RING_STEP = 0.16
 
+  // 5b. "dark_texture": a single darker, rougher solid segment overlaid on
+  // top of the base tube -- no rings, no gaps, just a dimmed band.
+  const collisionAccentDarkTexture = new THREE.Group()
+  collisionAccentDarkTexture.position.copy(midPoint)
+  collisionAccentDarkTexture.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  collisionAccentDarkTexture.visible = false
+  group.add(collisionAccentDarkTexture)
+
+  const darkTextureMat = new THREE.MeshStandardMaterial({
+    color: 0x18181b,
+    roughness: 0.85,
+    metalness: 0.05,
+  })
+
+  // 5c. "dashed": REPLACES the base tube (rather than overlaying it) with
+  // alternating dash/gap segments across collision zones, so the solid
+  // actually shows through the gaps instead of the continuous tube covering
+  // them. Outside any zone the tube stays one continuous solid piece.
+  const dashedTubeGroup = new THREE.Group()
+  dashedTubeGroup.position.copy(midPoint)
+  dashedTubeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  dashedTubeGroup.visible = false
+  group.add(dashedTubeGroup)
+
+  const DASHED_SEGMENT_LENGTH = 0.14
+  const DASHED_GAP_LENGTH = 0.09
+  const dashedTubeMat = new THREE.MeshBasicMaterial({ color: 0x475569 })
+
+  const addTubeSegment = (targetGroup, material, radius, start, end) => {
+    const height = end - start
+    if (height <= 1e-6) return
+    const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 12), material)
+    segment.position.set(0, (start + end) / 2, 0)
+    targetGroup.add(segment)
+  }
+
   group.userData.hasCollisionAccent = false
   group.userData.setCollisionZones = (zones = []) => {
-    while (collisionAccent.children.length) {
-      collisionAccent.remove(collisionAccent.children[0])
-    }
+    while (collisionAccentRinged.children.length) collisionAccentRinged.remove(collisionAccentRinged.children[0])
+    while (collisionAccentDarkTexture.children.length) collisionAccentDarkTexture.remove(collisionAccentDarkTexture.children[0])
+    while (dashedTubeGroup.children.length) dashedTubeGroup.remove(dashedTubeGroup.children[0])
+
     zones.forEach(({ start, end }) => {
       // A ring's CENTER sitting exactly at the zone boundary still pokes its
       // own half-height past it (a real cylinder, not a point) -- so the
@@ -190,7 +231,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         if (end > start) {
           const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
           ringSegment.position.set(0, (start + end) / 2, 0)
-          collisionAccent.add(ringSegment)
+          collisionAccentRinged.add(ringSegment)
         }
         return
       }
@@ -208,9 +249,35 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       for (let i = 0; i < ringCount; i += 1) {
         const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
         ringSegment.position.set(0, firstY + i * COLLISION_RING_STEP, 0)
-        collisionAccent.add(ringSegment)
+        collisionAccentRinged.add(ringSegment)
       }
     })
+
+    zones.forEach(({ start, end }) => {
+      addTubeSegment(collisionAccentDarkTexture, darkTextureMat, 0.02, start, end)
+    })
+
+    // Walk the whole tube length once, emitting solid pieces for the
+    // stretches outside any zone and a dash/gap pattern for the stretches
+    // inside one.
+    let cursor = -halfDist
+    zones.forEach(({ start, end }) => {
+      const zoneStart = Math.max(-halfDist, start)
+      const zoneEnd = Math.min(halfDist, end)
+      if (zoneStart > cursor) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, cursor, zoneStart)
+
+      let y = zoneStart
+      let dashOn = true
+      while (y < zoneEnd - 1e-6) {
+        const segEnd = Math.min(zoneEnd, y + (dashOn ? DASHED_SEGMENT_LENGTH : DASHED_GAP_LENGTH))
+        if (dashOn) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, y, segEnd)
+        y = segEnd
+        dashOn = !dashOn
+      }
+      cursor = zoneEnd
+    })
+    if (cursor < halfDist) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, cursor, halfDist)
+
     group.userData.hasCollisionAccent = zones.length > 0
     group.userData.refreshGlyph?.()
   }
@@ -223,36 +290,49 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     ringed_tube: ringedTube
   }
 
-  const applyGlyphVisibility = (activeStyle) => {
+  const applyGlyphVisibility = (settings) => {
+    const activeStyle = settings.lineStyle || 'plain_line'
+    const collisionStyle = settings.lineCollisionStyle || 'ringed'
+    const isPlainTube = activeStyle === 'plain_tube'
+    // Ringed_tube already looks ringed everywhere, so accents only add value
+    // layered on (or, for "dashed", swapped in for) the plain tube.
+    const hasAccent = isPlainTube && group.userData.hasCollisionAccent
+    const useDashedReplacement = hasAccent && collisionStyle === 'dashed'
+
     Object.keys(glyphMap).forEach((key) => {
-      if (glyphMap[key]) {
-        glyphMap[key].visible = (key === activeStyle)
-      }
+      if (!glyphMap[key]) return
+      // The dashed style fully replaces the plain-tube glyph (real gaps
+      // instead of an overlay), so hide the continuous base tube while it's
+      // active.
+      glyphMap[key].visible = key === 'plain_tube'
+        ? isPlainTube && !useDashedReplacement
+        : key === activeStyle
     })
-    // Ringed_tube already looks ringed everywhere, so the accent only adds
-    // value layered on top of the plain tube.
-    collisionAccent.visible = activeStyle === 'plain_tube' && group.userData.hasCollisionAccent
+
+    dashedTubeGroup.visible = useDashedReplacement
+    collisionAccentRinged.visible = hasAccent && collisionStyle === 'ringed'
+    collisionAccentDarkTexture.visible = hasAccent && collisionStyle === 'dark_texture'
   }
 
   // Lets an external pass (tubeCollision.js) re-apply visibility after
   // calling setCollisionZones(), without duplicating the style lookup.
   group.userData.refreshGlyph = () => {
     const settings = useSettingsStore?.getState().settings || {}
-    applyGlyphVisibility(settings.lineStyle || 'plain_line')
+    applyGlyphVisibility(settings)
   }
 
   // FIXED: Look up configurations out of useSettingsStore safely
   const currentSettings = useSettingsStore?.getState().settings || {}
-  applyGlyphVisibility(currentSettings.lineStyle || 'plain_line')
+  applyGlyphVisibility(currentSettings)
 
   // FIXED: Attach live reactive change subscription handlers targeting the correct store identifier
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
-      if (!group.parent && threeObjStore && !threeObjStore[blockId]) {
+      if (window.threeObjStore?.[blockId] !== group) {
         unsubscribe()
         return
       }
-      applyGlyphVisibility(state.settings.lineStyle || 'plain_line')
+      applyGlyphVisibility(state.settings)
     })
   }
 

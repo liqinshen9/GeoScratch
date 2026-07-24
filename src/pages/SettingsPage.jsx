@@ -1,7 +1,35 @@
 import React, { useState } from 'react' // Import useState for feedback
 import useSettingsStore from '@/store/useSettingsStore'
-import { LINE_STYLES } from '../store/lineStyles'
+import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
 import { Button } from '@/components/ui/button'
+
+function ToggleRow({ label, description, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <label className="text-sm font-medium text-slate-900">{label}</label>
+        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+      </div>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-5 h-5 accent-indigo-600 cursor-pointer"
+      />
+    </div>
+  )
+}
+
+function SettingsSection({ title, children }) {
+  return (
+    <section>
+      <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
+        {title}
+      </h2>
+      <div className="space-y-8">{children}</div>
+    </section>
+  )
+}
 
 export default function SettingsPage() {
   const { settings, updateSetting, resetSettings } = useSettingsStore()
@@ -22,122 +50,100 @@ export default function SettingsPage() {
         </header>
 
         <main className="space-y-10">
-          <section>
-            <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
-              3D View Settings
-            </h2>
+          <SettingsSection title="Scene">
+            <ToggleRow
+              label="Show 3D Labels"
+              description="Display names of elements in the viewport"
+              checked={settings.showLabels}
+              onChange={(v) => updateSetting('showLabels', v)}
+            />
+            <ToggleRow
+              label="Show Grid"
+              description="Display the ground grid in the viewport"
+              checked={settings.showGrid}
+              onChange={(v) => updateSetting('showGrid', v)}
+            />
+            <ToggleRow
+              label="Show Box"
+              description="Display the bounding box in the viewport"
+              checked={settings.showBox}
+              onChange={(v) => updateSetting('showBox', v)}
+            />
+            <ToggleRow
+              label="Show Axes"
+              description="Display the X, Y, Z axes and axis labels in the viewport"
+              checked={settings.showAxes}
+              onChange={(v) => updateSetting('showAxes', v)}
+            />
+            <ToggleRow
+              label="Object Shadows"
+              description="Let objects receive shadows cast by other objects"
+              checked={settings.objectsReceiveShadows}
+              onChange={(v) => updateSetting('objectsReceiveShadows', v)}
+            />
+          </SettingsSection>
 
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Show 3D Labels</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Display names of elements in the viewport</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showLabels}
-                  onChange={(e) => updateSetting('showLabels', e.target.checked)}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
+          <SettingsSection title="Camera">
+            <ToggleRow
+              label="Refocus on New Object"
+              description="Move the camera to keep newly added objects in view"
+              checked={settings.autoFocusOnNewObject}
+              onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
+            />
+          </SettingsSection>
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium text-slate-900">Grid Opacity</label>
-                  <span className="text-xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
-                    {Math.round(settings.gridOpacity * 100)}%
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0" max="1" step="0.1"
-                  value={settings.gridOpacity}
-                  onChange={(e) => updateSetting('gridOpacity', parseFloat(e.target.value))}
-                  className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
+          <SettingsSection title="Sphere">
+            <ToggleRow
+              label="Show Gridlines"
+              description="Display latitude/longitude edge lines on sphere objects"
+              checked={settings.sphereShowGridlines}
+              onChange={(v) => updateSetting('sphereShowGridlines', v)}
+            />
+          </SettingsSection>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Show Grid</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Display the ground grid in the viewport</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showGrid}
-                  onChange={(e) => updateSetting('showGrid', e.target.checked)}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
+          <SettingsSection title="Teapot">
+            <ToggleRow
+              label="Show Gridlines"
+              description="Display mesh edge lines on teapot objects"
+              checked={settings.teapotShowGridlines}
+              onChange={(v) => updateSetting('teapotShowGridlines', v)}
+            />
+          </SettingsSection>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Show Box</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Display the bounding box in the viewport</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showBox}
-                  onChange={(e) => updateSetting('showBox', e.target.checked)}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Show Axes</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Display the X, Y, Z axes and axis labels in the viewport</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.showAxes}
-                  onChange={(e) => updateSetting('showAxes', e.target.checked)}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Object Shadows</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Let objects receive shadows cast by other objects</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.objectsReceiveShadows}
-                  onChange={(e) => updateSetting('objectsReceiveShadows', e.target.checked)}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Light Background</label>
-                  <p className="text-xs text-slate-500 mt-0.5">Use a light background in the 3D viewport instead of dark</p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={settings.sceneBackground === 'light'}
-                  onChange={(e) => updateSetting('sceneBackground', e.target.checked ? 'light' : 'dark')}
-                  className="w-5 h-5 accent-indigo-600 cursor-pointer"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-900">Line Style</label>
-                <select
-                  value={settings.lineStyle}
-                  onChange={(e) => updateSetting('lineStyle', e.target.value)}
-                  className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
-                >
-                  {Object.entries(LINE_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <SettingsSection title="Vector Line">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Line Style</label>
+              <select
+                value={settings.lineStyle}
+                onChange={(e) => updateSetting('lineStyle', e.target.value)}
+                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+              >
+                {Object.entries(LINE_STYLES).map(([key, value]) => (
+                  <option key={key} value={value}>
+                    {key.replace(/_/g, ' ').toLowerCase()}
+                  </option>
+                ))}
+              </select>
             </div>
-          </section>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Collision Style</label>
+              <p className="text-xs text-slate-500 mt-0.5">
+                How a plain-tube line looks where it passes through a solid object
+              </p>
+              <select
+                value={settings.lineCollisionStyle}
+                onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
+                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+              >
+                {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
+                  <option key={key} value={value}>
+                    {key.replace(/_/g, ' ').toLowerCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </SettingsSection>
 
           <div className="pt-8 border-t border-slate-100 flex items-center gap-4">
             <Button
