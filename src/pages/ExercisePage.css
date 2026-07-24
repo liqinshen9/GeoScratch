@@ -38,7 +38,7 @@
 
 .exercise-editor-header-row {
   flex-shrink: 0;
-  min-height: 3.25rem;
+  min-height: 2.5rem;
 }
 
 .exercise-editor-body-row {
@@ -50,6 +50,16 @@
 .exercise-head {
   background: var(--geo-surface);
   border-right: 1px solid var(--geo-border-light);
+}
+
+.exercise-page--editor .exercise-head {
+  display: flex;
+  align-items: center;
+  padding-block: 0.45rem;
+}
+
+.exercise-page--editor .exercise-head h2 {
+  line-height: 1.1;
 }
 
 .exercise-head--last {
@@ -65,6 +75,12 @@
 
 .exercise-workspace-head [data-slot='button'] {
   color: var(--geo-text-on-light);
+  min-height: 2rem;
+  height: 2rem;
+}
+
+.exercise-workspace-head .exercise-workspace-toggle {
+  width: 2rem;
 }
 
 .exercise-workspace-head [data-slot='button']:hover,

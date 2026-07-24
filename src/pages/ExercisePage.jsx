@@ -164,13 +164,13 @@ export default function ExercisePage() {
           <header className="panel-column-header exercise-head exercise-workspace-head">
             <div>
               <h2>Workspace</h2>
-              <p>Build here</p>
             </div>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                className="exercise-workspace-toggle"
                 onClick={() => setWorkspaceMaximized((maximized) => !maximized)}
                 disabled={!workspace}
                 title={workspaceMaximized ? 'Restore panels' : 'Maximize workspace'}
@@ -178,9 +178,9 @@ export default function ExercisePage() {
                 aria-pressed={workspaceMaximized}
               >
                 {workspaceMaximized ? (
-                  <OffScreenOne theme="outline" size="24" fill="#333" />
+                  <OffScreenOne theme="outline" size="20" fill="#333" />
                 ) : (
-                  <FullScreenOne theme="outline" size="24" fill="#333" />
+                  <FullScreenOne theme="outline" size="20" fill="#333" />
                 )}
               </Button>
               <Button
@@ -190,7 +190,7 @@ export default function ExercisePage() {
                 onClick={() => clearWorkspaceRef.current()}
                 disabled={!workspace}
               >
-                <Trash2 aria-hidden="true" />
+                <Trash2 aria-hidden="true" size={16} />
                 Clear
               </Button>
             </div>
