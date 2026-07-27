@@ -62,7 +62,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // geometry, which GPU depth testing resolves inconsistently frame-to-frame
   // (z-fighting flicker). Nudge the whole line by a tiny, deterministic
   // (per-block) offset perpendicular to its own direction -- small enough to
-  // be visually imperceptible (well under the tube's own 0.015 radius) but
+  // be visually imperceptible (well under the tube's own 0.051 radius) but
   // enough to break exact coincidence so depth comparisons stay stable.
   let blockHash = 2166136261
   const blockIdStr = String(blockId)
@@ -93,16 +93,30 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   // 1b. TECHNIQUE STYLE: Plain Line (thick). WebGL clamps LineBasicMaterial's
   // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
-  // thin solid tube is the only reliable way to make this style visibly
-  // thicker -- same flat color as the hairline version, just with real
-  // radius. Thinner than Plain Tube's own 0.015 radius so the two styles
-  // stay visually distinct.
-  const plainLineThick = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.008, 0.008, distance, 12),
-    new THREE.MeshBasicMaterial({ color: 0x374151 })
-  )
-  plainLineThick.position.copy(midPoint)
-  plainLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  // real solid-mesh line is the only way to make this style visibly
+  // thicker. Built with three's "fat lines" (Line2/LineGeometry/LineMaterial)
+  // rather than a cylinder: a cylinder is a real 3D solid, so its two ends
+  // foreshorten independently whenever they're at different distances from
+  // the camera (same reason a distant object looks smaller), which a literal
+  // GL line never does -- it's a 0-width primitive the GPU always strokes to
+  // a flat, constant-width screen-space band. LineMaterial's default
+  // worldUnits:false mode reproduces exactly that: `linewidth` is a pixel
+  // width applied per-point in screen space via the vertex shader, so this
+  // reads as "a real GL line, just actually visible" at any zoom or angle,
+  // rather than a thin 3D tube. Its resolution uniform and the "Extra Thick
+  // Lines" pixel-width multiplier are kept in sync from Scene3D's
+  // FatLineSync (geoVectorLineDefinition has no access to canvas size here).
+  const PLAIN_LINE_THICK_BASE_PX = 2.2
+  const plainLineThickGeom = new THREE.LineGeometry()
+  plainLineThickGeom.setPositions([p1.x, p1.y, p1.z, p2.x, p2.y, p2.z])
+  const plainLineThickMat = new THREE.LineMaterial({
+    color: 0x374151,
+    linewidth: PLAIN_LINE_THICK_BASE_PX,
+    worldUnits: false,
+  })
+  const plainLineThick = new THREE.Line2(plainLineThickGeom, plainLineThickMat)
+  plainLineThick.userData.isFatLine = true
+  plainLineThick.userData.fatLineBaseWidth = PLAIN_LINE_THICK_BASE_PX
   group.add(plainLineThick)
 
   // 2. TECHNIQUE STYLE: True Illuminated Line (Zöckler et al. Implementation)
@@ -176,7 +190,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // tangent direction, never scene lights or real surface normals) applied
   // to cylinder geometry instead of a flat line, rather than trying to get
   // real lighting to behave the same way.
-  const illumThickGeom = new THREE.CylinderGeometry(0.008, 0.008, distance, 12)
+  const illumThickGeom = new THREE.CylinderGeometry(0.0272, 0.0272, distance, 12)
   const illumThickVertexCount = illumThickGeom.attributes.position.count
   const illumThickLineDirs = new Float32Array(illumThickVertexCount * 3)
   // Expressed in the cylinder's own local frame, where its canonical up-axis
@@ -194,6 +208,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   illumThickGeom.setAttribute('lineDir', new THREE.BufferAttribute(illumThickLineDirs, 3))
 
   const illumLineThick = new THREE.Mesh(illumThickGeom, illumMaterial)
+  illumLineThick.userData.zoomInvariantRadius = 0.0272
   illumLineThick.position.copy(midPoint)
   illumLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(illumLineThick)
@@ -202,9 +217,10 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // MeshBasicMaterial) so it actually picks up the scene's lights and shows
   // a real shaded gradient across its curved surface, same as every other
   // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
-  const cylGeom = new THREE.CylinderGeometry(0.015, 0.015, distance, 12)
+  const cylGeom = new THREE.CylinderGeometry(0.051, 0.051, distance, 12)
   const cylMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
+  cylinder.userData.zoomInvariantRadius = 0.051
   cylinder.position.copy(midPoint)
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(cylinder)
@@ -213,30 +229,36 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const ringedTube = new THREE.Group()
 
   const baseTube = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.025, 0.025, distance, 16),
+    new THREE.CylinderGeometry(0.085, 0.085, distance, 16),
     new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.4 })
   )
+  baseTube.userData.zoomInvariantRadius = 0.085
   ringedTube.add(baseTube)
 
-  const ringGeom = new THREE.CylinderGeometry(0.028, 0.028, 0.15, 16)
+  const ringGeom = new THREE.CylinderGeometry(0.0952, 0.0952, 0.15, 16)
   const ringMat = new THREE.MeshStandardMaterial({ color: 0xa1a1aa, roughness: 0.3 })
 
   const step = 0.3
 
   for (let y = -halfDist; y <= halfDist; y += step) {
     const ringSegment = new THREE.Mesh(ringGeom, ringMat)
+    ringSegment.userData.zoomInvariantRadius = 0.0952
     ringSegment.position.set(0, y, 0)
     ringedTube.add(ringSegment)
   }
 
-  const capGeom = new THREE.SphereGeometry(0.032, 16, 16)
+  const capGeom = new THREE.SphereGeometry(0.1088, 16, 16)
   const capMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.2 })
 
   const topCap = new THREE.Mesh(capGeom, capMat)
+  topCap.userData.zoomInvariantRadius = 0.1088
+  topCap.userData.zoomInvariantUniform = true
   topCap.position.set(0, halfDist, 0)
   ringedTube.add(topCap)
 
   const bottomCap = new THREE.Mesh(capGeom, capMat)
+  bottomCap.userData.zoomInvariantRadius = 0.1088
+  bottomCap.userData.zoomInvariantUniform = true
   bottomCap.position.set(0, -halfDist, 0)
   ringedTube.add(bottomCap)
 
@@ -246,7 +268,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   // 5. COLLISION ACCENTS: how this line's tube indicates the exact
   // stretch(es) where it passes into a solid object -- laid over/instead of
-  // the plain-tube shaft (radius 0.015), not a whole-line style swap.
+  // the plain-tube shaft (radius 0.051), not a whole-line style swap.
   // Line-vs-line overlap is handled separately (as a halo, not a collision
   // accent). Three interchangeable looks, picked via
   // settings.lineCollisionStyle. All three live in the same local frame as
@@ -265,7 +287,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const COLLISION_RING_HEIGHT = 0.09
   const COLLISION_RING_HALF_HEIGHT = COLLISION_RING_HEIGHT / 2
-  const collisionRingGeom = new THREE.CylinderGeometry(0.02, 0.02, COLLISION_RING_HEIGHT, 16)
+  const collisionRingGeom = new THREE.CylinderGeometry(0.068, 0.068, COLLISION_RING_HEIGHT, 16)
   const collisionRingMat = new THREE.MeshStandardMaterial({
     color: 0x3f3f46,
     roughness: 0.65,
@@ -308,6 +330,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const height = end - start
     if (height <= 1e-6) return
     const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 12), material)
+    segment.userData.zoomInvariantRadius = radius
     segment.position.set(0, (start + end) / 2, 0)
     targetGroup.add(segment)
   }
@@ -328,6 +351,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       if (usableStart > usableEnd) {
         if (end > start) {
           const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
+          ringSegment.userData.zoomInvariantRadius = 0.068
           ringSegment.position.set(0, (start + end) / 2, 0)
           collisionAccentRinged.add(ringSegment)
         }
@@ -346,13 +370,14 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       const firstY = usableStart + (usableRange - coveredSpan) / 2
       for (let i = 0; i < ringCount; i += 1) {
         const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
+        ringSegment.userData.zoomInvariantRadius = 0.068
         ringSegment.position.set(0, firstY + i * COLLISION_RING_STEP, 0)
         collisionAccentRinged.add(ringSegment)
       }
     })
 
     zones.forEach(({ start, end }) => {
-      addTubeSegment(collisionAccentDarkTexture, darkTextureMat, 0.02, start, end)
+      addTubeSegment(collisionAccentDarkTexture, darkTextureMat, 0.068, start, end)
     })
 
     // Walk the whole tube length once, emitting solid pieces for the
@@ -362,19 +387,19 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     zones.forEach(({ start, end }) => {
       const zoneStart = Math.max(-halfDist, start)
       const zoneEnd = Math.min(halfDist, end)
-      if (zoneStart > cursor) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, cursor, zoneStart)
+      if (zoneStart > cursor) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, cursor, zoneStart)
 
       let y = zoneStart
       let dashOn = true
       while (y < zoneEnd - 1e-6) {
         const segEnd = Math.min(zoneEnd, y + (dashOn ? DASHED_SEGMENT_LENGTH : DASHED_GAP_LENGTH))
-        if (dashOn) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, y, segEnd)
+        if (dashOn) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, y, segEnd)
         y = segEnd
         dashOn = !dashOn
       }
       cursor = zoneEnd
     })
-    if (cursor < halfDist) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.015, cursor, halfDist)
+    if (cursor < halfDist) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, cursor, halfDist)
 
     group.userData.hasCollisionAccent = zones.length > 0
     group.userData.refreshGlyph?.()
@@ -432,6 +457,8 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     sphereGeom,
     new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.4, metalness: 0.1 })
   )
+  originSphere.userData.zoomInvariantRadius = 0.04
+  originSphere.userData.zoomInvariantUniform = true
   originSphere.position.copy(origin)
   group.add(originSphere)
 
@@ -442,6 +469,8 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       sphereGeom,
       new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
     )
+    tSphere.userData.zoomInvariantRadius = 0.04
+    tSphere.userData.zoomInvariantUniform = true
     tSphere.position.copy(rPoint)
     group.add(tSphere)
     group.userData.t = tVal

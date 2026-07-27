@@ -56,6 +56,8 @@ export function initVectorMagnitude() {
         new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
+      obj.userData.zoomInvariantRadius = 0.04;
+      obj.userData.zoomInvariantUniform = true;
     }
 
     // Group wrapper

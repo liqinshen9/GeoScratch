@@ -3,13 +3,33 @@ import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFra
 import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
-const THREE = { ...THREEBase, TeapotGeometry }
+import { Line2 } from 'three/examples/jsm/lines/Line2.js'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial }
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
+// Reference distance at which a zoom-invariant mesh renders at exactly its
+// authored (base) radius -- i.e. the same distance as the default camera
+// framing, so this feature changes nothing about the default view. Meshes
+// tagged with userData.zoomInvariantRadius scale up/down from that baseline
+// in direct proportion to camera distance, which keeps their *apparent*
+// on-screen size constant (world radius / distance is what apparent size
+// is proportional to under perspective projection, so holding that ratio
+// fixed is what "zoom-invariant" means here) -- clamped so they don't
+// vanish entirely at extreme zoom-out or balloon at extreme zoom-in.
+const ZOOM_INVARIANT_REFERENCE_DISTANCE = DEFAULT_CAMERA_OFFSET.length()
+const ZOOM_INVARIANT_MIN_SCALE = 0.3
+const ZOOM_INVARIANT_MAX_SCALE = 5
+// "Extra Thick Lines" setting: an additional flat multiplier on top of
+// zoom-invariant scaling, applied only to line/tube glyphs (radius scaled on
+// X/Z only) -- not to point markers (uniform-scaled spheres), since the
+// setting is specifically about line thickness.
+const EXTRA_THICK_LINE_MULTIPLIER = 2.7
 const DESMOS_TICK_COLOR = '#6b7280'
 const AXIS_COLORS = {
   x: '#b56f6f',
@@ -170,10 +190,14 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     const shaftStart = -length
     const shaftEnd = length
     const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    // Kept thinner than the thinnest line glyph (plain_tube, radius 0.015) so
-    // that a coincident axis-aligned line -- same centerline, same length --
-    // always wins the depth test and stays visible, instead of this
-    // semi-transparent axis shaft drawing over its entire surface.
+    // Kept thinner than the thinnest remaining cylinder-based line glyph
+    // (illuminated line thick, radius 0.0272) so that a coincident
+    // axis-aligned line -- same centerline, same length -- always wins the
+    // depth test and stays visible, instead of this semi-transparent axis
+    // shaft drawing over its entire surface. Plain Line (thick) is no longer
+    // part of this comparison -- it's now a screen-space "fat line" (see
+    // geoVectorLine.js) rather than a world-space cylinder, so it has no
+    // comparable radius here.
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, shaftLength, 12), material)
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
@@ -600,6 +624,98 @@ function computeNestingRenderOrders(objects) {
   });
 }
 
+// Walks the same subtree the renderer itself would draw -- an invisible
+// group's descendants never hit the screen, so there's no point computing
+// their scale. This matters here specifically because geo_vector_line ships
+// several mutually-exclusive glyph styles (plain tube, ringed tube, dashed,
+// ...) as siblings toggled via `.visible`; without this short-circuit every
+// hidden style's meshes (e.g. a ringed tube's ~100+ ring segments) would
+// still get a getWorldPosition + distance computation every frame for
+// nothing.
+function traverseVisible(object3D, callback) {
+  if (object3D.visible === false) return;
+  callback(object3D);
+  object3D.children.forEach((child) => traverseVisible(child, callback));
+}
+
+// Applies zoom-invariant scaling and/or the flat "extra thick lines"
+// multiplier to every mesh tagged with userData.zoomInvariantRadius by
+// geoVectorLine.js / objectComposition.js / the vector-operator blocks -- see
+// ZOOM_INVARIANT_REFERENCE_DISTANCE above for the zoom math. The two toggles
+// are independent: extra-thick applies (to line/tube glyphs only, not point
+// markers) whether or not zoom-invariant sizing is on, since it's a flat
+// authored-thickness multiplier rather than a camera-distance compensation.
+// Runs as its own component (rather than inline in Scene) purely so it can
+// own the scratch Vector3 via useMemo instead of allocating one per frame.
+function ZoomInvariantScaler({ objects, zoomEnabled, extraThick }) {
+  const worldPos = useMemo(() => new THREE.Vector3(), []);
+
+  useFrame(({ camera }) => {
+    objects.forEach((o) => {
+      if (!o) return;
+      traverseVisible(o, (child) => {
+        const baseRadius = child.userData?.zoomInvariantRadius;
+        if (!baseRadius) return;
+        const isUniform = !!child.userData.zoomInvariantUniform;
+
+        let zoomScale = 1;
+        if (zoomEnabled) {
+          child.getWorldPosition(worldPos);
+          const distance = camera.position.distanceTo(worldPos);
+          zoomScale = THREE.MathUtils.clamp(
+            distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
+            ZOOM_INVARIANT_MIN_SCALE,
+            ZOOM_INVARIANT_MAX_SCALE
+          );
+        }
+        const thickMultiplier = (!isUniform && extraThick) ? EXTRA_THICK_LINE_MULTIPLIER : 1;
+        const finalScale = zoomScale * thickMultiplier;
+
+        if (isUniform) {
+          child.scale.setScalar(finalScale);
+        } else {
+          child.scale.set(finalScale, 1, finalScale);
+        }
+      });
+    });
+  });
+
+  return null;
+}
+
+// Keeps "fat line" (Line2/LineMaterial) glyphs -- currently just Plain
+// Line's thick primitive -- in sync with two things a fat line's shader
+// needs that geoVectorLine.js has no access to at construction time (it only
+// ever sees window.THREE, never the renderer/canvas):
+//   1. `resolution`, so LineMaterial's shader can convert a pixel linewidth
+//      into the correct NDC-space offset for the current canvas size.
+//   2. The "Extra Thick Lines" multiplier, applied directly to `linewidth`
+//      here rather than via mesh.scale (a fat line's width is already
+//      screen-space-constant by construction -- it was never tagged
+//      zoomInvariantRadius and never goes through ZoomInvariantScaler).
+// A plain (non-visibility-gated) traverse is fine here, unlike
+// ZoomInvariantScaler's traverseVisible: there's at most one fat line per
+// vector-line block, not hundreds of ring segments, so the cost of touching
+// a currently-hidden one is negligible -- and skipping hidden ones would
+// leave their resolution stale for whenever they're switched back on.
+function FatLineSync({ objects, extraThick }) {
+  const { size } = useThree();
+
+  useEffect(() => {
+    objects.forEach((o) => {
+      if (!o) return;
+      o.traverse((child) => {
+        if (!child.userData?.isFatLine || !child.material) return;
+        child.material.resolution.set(size.width, size.height);
+        const baseWidth = child.userData.fatLineBaseWidth || 1;
+        child.material.linewidth = baseWidth * (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
+      });
+    });
+  }, [objects, size.width, size.height, extraThick]);
+
+  return null;
+}
+
 function Scene({ objects = [], hiddenLabelKeys }) {
   const { settings } = useSettingsStore()
 
@@ -627,6 +743,12 @@ function Scene({ objects = [], hiddenLabelKeys }) {
 
   return (
     <>
+      <ZoomInvariantScaler
+        objects={objects}
+        zoomEnabled={settings.zoomInvariantSizing}
+        extraThick={settings.extraThickLines}
+      />
+      <FatLineSync objects={objects} extraThick={settings.extraThickLines} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />
 

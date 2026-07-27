@@ -31,6 +31,8 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
   const markerMaterial = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.34, metalness: 0.08 })
   const marker = (position, color) => {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), markerMaterial(color))
+    mesh.userData.zoomInvariantRadius = 0.04
+    mesh.userData.zoomInvariantUniform = true
     mesh.position.copy(position)
     return mesh
   }

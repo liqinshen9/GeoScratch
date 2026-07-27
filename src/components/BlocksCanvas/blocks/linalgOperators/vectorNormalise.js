@@ -55,6 +55,8 @@ export function initNormInplaceBlock() {
         new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
+      normObj.userData.zoomInvariantRadius = 0.04;
+      normObj.userData.zoomInvariantUniform = true;
     }
 
     const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};

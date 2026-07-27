@@ -87,6 +87,12 @@ export default function SettingsPage() {
               checked={settings.objectsReceiveShadows}
               onChange={(v) => updateSetting('objectsReceiveShadows', v)}
             />
+            <ToggleRow
+              label="Zoom-Invariant Line & Point Sizing"
+              description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
+              checked={settings.zoomInvariantSizing}
+              onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+            />
           </SettingsSection>
 
           <SettingsSection title="Camera">
@@ -155,6 +161,12 @@ export default function SettingsPage() {
               description="Render Plain Line and Illuminated Line as thin solid tubes instead of hairline GL lines"
               checked={settings.thickLinePrimitives}
               onChange={(v) => updateSetting('thickLinePrimitives', v)}
+            />
+            <ToggleRow
+              label="Extra Thick Lines"
+              description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain/Illuminated Line, collision accents) at 2.7x their normal thickness"
+              checked={settings.extraThickLines}
+              onChange={(v) => updateSetting('extraThickLines', v)}
             />
           </SettingsSection>
 

@@ -69,6 +69,8 @@ export function initVectorProjectBlock() {
         new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
       );
+      footDot.userData.zoomInvariantRadius = 0.04;
+      footDot.userData.zoomInvariantUniform = true;
       footDot.position.copy(foot);
 
       shadowGroup.add(footDot);
@@ -168,6 +170,8 @@ export function initVectorProjectBlock() {
           new THREE.SphereGeometry(0.04, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
         );
+        projObj.userData.zoomInvariantRadius = 0.04;
+        projObj.userData.zoomInvariantUniform = true;
       }
     } else {
       projVec.set(0,0,0);
@@ -176,6 +180,8 @@ export function initVectorProjectBlock() {
         new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
+      projObj.userData.zoomInvariantRadius = 0.04;
+      projObj.userData.zoomInvariantUniform = true;
     }
 
     const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};

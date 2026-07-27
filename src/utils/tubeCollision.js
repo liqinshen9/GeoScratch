@@ -1,8 +1,8 @@
 import * as THREE from 'three'
 
-// The collision accent overlays the plain tube (radius 0.015, see
+// The collision accent overlays the plain tube (radius 0.051, see
 // geoVectorLine.js), so accuracy is measured against that radius.
-const PLAIN_TUBE_RADIUS = 0.015
+const PLAIN_TUBE_RADIUS = 0.051
 
 // How far the tube's own surface reaches past its centerline -- the ring
 // accent should start where the tube's SURFACE meets a solid's surface, not

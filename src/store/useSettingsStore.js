@@ -5,7 +5,7 @@ import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.RINGED,
-  thickLinePrimitives: false,
+  thickLinePrimitives: true,
   showLabels: true,
   showGrid: true,
   showBox: true,
@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   autoFocusOnNewObject: false,
   sphereShowGridlines: false,
   teapotShowGridlines: false,
+  zoomInvariantSizing: true,
+  extraThickLines: false,
 }
 
 const useSettingsStore = create((set) => ({

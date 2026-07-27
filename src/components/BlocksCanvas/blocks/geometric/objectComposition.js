@@ -261,6 +261,8 @@ export default function initObjectCompositionBlocks() {
         new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
       );
       marker.position.copy(markerPoint);
+      marker.userData.zoomInvariantRadius = 0.04;
+      marker.userData.zoomInvariantUniform = true;
       marker.userData.geoType = 'selectable_point_marker';
       marker.userData.coordinate = markerPoint.clone();
 

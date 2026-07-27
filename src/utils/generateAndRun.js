@@ -1,7 +1,10 @@
 import { javascriptGenerator } from 'blockly/javascript'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
-const THREE = { ...THREEBase, TeapotGeometry }
+import { Line2 } from 'three/examples/jsm/lines/Line2.js'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial }
 import {
   applyWorldMatrix4ToObject,
   collectStatementChain,

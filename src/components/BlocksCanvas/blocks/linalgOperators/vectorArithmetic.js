@@ -95,6 +95,8 @@ export function initVectorArithmeticBlock() {
         new THREE.SphereGeometry(0.04, 16, 12),
         new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
       );
+      resObj.userData.zoomInvariantRadius = 0.04;
+      resObj.userData.zoomInvariantUniform = true;
     }
 
     // Tag metadata on part objects
