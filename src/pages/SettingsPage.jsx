@@ -70,6 +70,12 @@ export default function SettingsPage() {
               onChange={(v) => updateSetting('showBox', v)}
             />
             <ToggleRow
+              label="Show Box Front Wireframe"
+              description="Display the wireframe on whichever box wall is currently facing the camera"
+              checked={settings.showBoxFrontWireframe}
+              onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
+            />
+            <ToggleRow
               label="Show Axes"
               description="Display the X, Y, Z axes and axis labels in the viewport"
               checked={settings.showAxes}

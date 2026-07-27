@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   showLabels: true,
   showGrid: true,
   showBox: true,
+  showBoxFrontWireframe: true,
   showAxes: true,
   objectsReceiveShadows: true,
   autoFocusOnNewObject: false,

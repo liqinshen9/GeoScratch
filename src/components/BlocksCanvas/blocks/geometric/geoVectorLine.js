@@ -198,9 +198,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   illumLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(illumLineThick)
 
-  // 3. TECHNIQUE STYLE: Plain Tube (Cylinder)
+  // 3. TECHNIQUE STYLE: Plain Tube (Cylinder). MeshStandardMaterial (not
+  // MeshBasicMaterial) so it actually picks up the scene's lights and shows
+  // a real shaded gradient across its curved surface, same as every other
+  // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
   const cylGeom = new THREE.CylinderGeometry(0.015, 0.015, distance, 12)
-  const cylMat = new THREE.MeshBasicMaterial({ color: 0x475569 })
+  const cylMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
   cylinder.position.copy(midPoint)
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
@@ -296,7 +299,10 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const DASHED_SEGMENT_LENGTH = 0.14
   const DASHED_GAP_LENGTH = 0.09
-  const dashedTubeMat = new THREE.MeshBasicMaterial({ color: 0x475569 })
+  // Same shaded material as the continuous plain tube (cylMat) -- the
+  // dashed segments are that same glyph, just chopped up, so they shouldn't
+  // suddenly look flat/unlit when the dashed collision style is active.
+  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
 
   const addTubeSegment = (targetGroup, material, radius, start, end) => {
     const height = end - start

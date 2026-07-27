@@ -61,17 +61,79 @@ function HeadLight() {
 // --- ADDED: Bounding Box Room ---
 // A giant cube that renders on the inside to catch all shadows
 // --- FIXED: Bounding Box Room ---
-function BoundingBoxRoom({ size = 40 }) {
+// The solid walls use THREE.BackSide, so any wall whose outward normal
+// currently points toward the camera is already invisible (culled) --
+// often 2 walls at once (e.g. the front AND the top from the default
+// elevated view), not just 1. Each of the cube's 12 edges borders exactly
+// 2 of its 6 faces; an edge only has no real wall backing it -- and so
+// should be hidden -- when BOTH of the faces it borders are currently
+// open. If only one side is open, the edge is still the visible rim of
+// the wall on the other (closed) side, so it must stay.
+function cubeEdges(half) {
+  return [
+    // edges running along X (y,z fixed) -- border a Y-face and a Z-face
+    { faces: ['NY', 'NZ'], a: [-half, -half, -half], b: [half, -half, -half] },
+    { faces: ['NY', 'PZ'], a: [-half, -half, half], b: [half, -half, half] },
+    { faces: ['PY', 'NZ'], a: [-half, half, -half], b: [half, half, -half] },
+    { faces: ['PY', 'PZ'], a: [-half, half, half], b: [half, half, half] },
+    // edges running along Y (x,z fixed) -- border an X-face and a Z-face
+    { faces: ['NX', 'NZ'], a: [-half, -half, -half], b: [-half, half, -half] },
+    { faces: ['NX', 'PZ'], a: [-half, -half, half], b: [-half, half, half] },
+    { faces: ['PX', 'NZ'], a: [half, -half, -half], b: [half, half, -half] },
+    { faces: ['PX', 'PZ'], a: [half, -half, half], b: [half, half, half] },
+    // edges running along Z (x,y fixed) -- border an X-face and a Y-face
+    { faces: ['NX', 'NY'], a: [-half, -half, -half], b: [-half, -half, half] },
+    { faces: ['NX', 'PY'], a: [-half, half, -half], b: [-half, half, half] },
+    { faces: ['PX', 'NY'], a: [half, -half, -half], b: [half, -half, half] },
+    { faces: ['PX', 'PY'], a: [half, half, -half], b: [half, half, half] },
+  ];
+}
+
+// Mirrors the sign test the GPU effectively performs for BackSide culling
+// of an axis-aligned face: a face is front-facing (and therefore culled,
+// i.e. "open") exactly when the camera is beyond its plane along its own
+// outward normal -- independent of the other two coordinates.
+function openFaces(cameraPosition, half) {
+  const { x, y, z } = cameraPosition;
+  return {
+    PX: x > half, NX: x < -half,
+    PY: y > half, NY: y < -half,
+    PZ: z > half, NZ: z < -half,
+  };
+}
+
+function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
+  const half = size / 2;
+  const edges = useMemo(() => cubeEdges(half), [half]);
+  const edgeRefs = useRef([]);
+
+  useFrame(({ camera }) => {
+    const open = showFrontWireframe ? null : openFaces(camera.position, half);
+    edges.forEach((edge, i) => {
+      const obj = edgeRefs.current[i];
+      if (!obj) return;
+      const [f1, f2] = edge.faces;
+      obj.visible = !open || !(open[f1] && open[f2]);
+    });
+  });
+
   return (
     <group>
       <mesh position={[0, 0, 0]} receiveShadow>
         <boxGeometry args={[size, size, size]} />
         <meshStandardMaterial color="#ffffff" side={THREE.BackSide} roughness={1} />
       </mesh>
-      <lineSegments>
-        <edgesGeometry args={[new THREE.BoxGeometry(size, size, size)]} />
-        <lineBasicMaterial color="#a3a3a3" transparent opacity={0.42} depthWrite={false} />
-      </lineSegments>
+      {edges.map((edge, i) => (
+        <line key={i} ref={(el) => { edgeRefs.current[i] = el; }}>
+          <bufferGeometry>
+            <bufferAttribute
+              attach="attributes-position"
+              args={[new Float32Array([...edge.a, ...edge.b]), 3]}
+            />
+          </bufferGeometry>
+          <lineBasicMaterial color="#a3a3a3" transparent opacity={0.42} depthWrite={false} />
+        </line>
+      ))}
     </group>
   );
 }
@@ -543,7 +605,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
       )}
 
       {settings.showBox && (
-        <BoundingBoxRoom size={40} />
+        <BoundingBoxRoom size={40} showFrontWireframe={settings.showBoxFrontWireframe} />
       )}
 
       {settings.showAxes && (
