@@ -567,6 +567,39 @@ function SelectablePointPicker({ onTogglePointLabel }) {
 
 const globalThreeObjStore = {}
 
+// Transparent objects (depthWrite: false) are painted back-to-front by
+// distance from camera, recomputed every frame off each object's bounding
+// sphere. When one object is nested fully inside another, both bounding
+// centers are nearly coincident, so that per-frame distance comparison is a
+// near-tie -- tiny floating-point jitter as the camera orbits flips which one
+// "wins", producing the arbitrary inside/outside flicker. Nesting is a
+// static fact about the scene graph (not the camera), so instead of relying
+// on distance we derive an explicit renderOrder from bounding-box
+// containment: whichever object encloses another's box always renders after
+// it (paints over it), keeping the nested object consistently occluded by
+// its container from every angle.
+function computeNestingRenderOrders(objects) {
+  const boxes = objects.map((o) => {
+    if (!o?.isObject3D) return null;
+    o.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(o);
+    return box.isEmpty() ? null : box;
+  });
+
+  return objects.map((_, i) => {
+    if (!boxes[i]) return 0;
+    let containedByCount = 0;
+    boxes.forEach((box, j) => {
+      if (j === i || !box) return;
+      if (box.containsBox(boxes[i]) && !boxes[i].containsBox(box)) {
+        containedByCount += 1;
+      }
+    });
+    // More containers wrapping this object -> render earlier (further back).
+    return -containedByCount;
+  });
+}
+
 function Scene({ objects = [], hiddenLabelKeys }) {
   const { settings } = useSettingsStore()
 
@@ -578,6 +611,19 @@ function Scene({ objects = [], hiddenLabelKeys }) {
       });
     });
   }, [objects, settings.objectsReceiveShadows]);
+
+  useEffect(() => {
+    const renderOrders = computeNestingRenderOrders(objects);
+    objects.forEach((o, i) => {
+      if (!o) return;
+      const order = renderOrders[i];
+      o.traverse((child) => {
+        if (child.isMesh || child.isLine || child.isLineSegments) {
+          child.renderOrder = order;
+        }
+      });
+    });
+  }, [objects]);
 
   return (
     <>
