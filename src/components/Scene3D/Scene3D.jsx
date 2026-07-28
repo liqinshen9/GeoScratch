@@ -13,23 +13,18 @@ import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
-// Reference distance at which a zoom-invariant mesh renders at exactly its
-// authored (base) radius -- i.e. the same distance as the default camera
-// framing, so this feature changes nothing about the default view. Meshes
-// tagged with userData.zoomInvariantRadius scale up/down from that baseline
-// in direct proportion to camera distance, which keeps their *apparent*
-// on-screen size constant (world radius / distance is what apparent size
-// is proportional to under perspective projection, so holding that ratio
-// fixed is what "zoom-invariant" means here) -- clamped so they don't
-// vanish entirely at extreme zoom-out or balloon at extreme zoom-in.
+// Camera distance at which zoom-invariant meshes render at their authored
+// (base) radius; they scale from there to keep apparent on-screen size
+// constant, clamped by MIN/MAX_SCALE.
 const ZOOM_INVARIANT_REFERENCE_DISTANCE = DEFAULT_CAMERA_OFFSET.length()
 const ZOOM_INVARIANT_MIN_SCALE = 0.3
 const ZOOM_INVARIANT_MAX_SCALE = 5
-// "Extra Thick Lines" setting: an additional flat multiplier on top of
-// zoom-invariant scaling, applied only to line/tube glyphs (radius scaled on
-// X/Z only) -- not to point markers (uniform-scaled spheres), since the
-// setting is specifically about line thickness.
+// "Extra Thick Lines" setting: flat multiplier on top of zoom-invariant
+// scaling, for line/tube glyphs only (not point markers).
 const EXTRA_THICK_LINE_MULTIPLIER = 2.7
+// Clamp range for HeadLight's camera-relative offset scale (see below).
+const HEADLIGHT_OFFSET_MIN_SCALE = 0.2
+const HEADLIGHT_OFFSET_MAX_SCALE = 4
 const DESMOS_TICK_COLOR = '#6b7280'
 const AXIS_COLORS = {
   x: '#b56f6f',
@@ -43,24 +38,37 @@ function CameraHandle({ onReady }) {
   return null;
 }
 
-// --- ADDED: Camera Headlight ---
-// This light acts like a miner's headlamp. It syncs its position
-// with the camera every frame so it always illuminates what you look at.
-// It's a pointLight (not a spotLight) so its shadow is an omnidirectional
-// cube map, just like the scene's other point light — no target/frustum
-// aiming math required, and no risk of the shadow cone drifting off-axis
-// as the camera orbits.
-function HeadLight() {
+// Camera-following headlamp; matches the fixed point light's shadow
+// settings. far kept well past the room's scale so no face's corners fall
+// outside the shadow radius. A cube-map seam can still appear at some
+// angles -- fixing that needs a single-frustum light type.
+const HEADLIGHT_SHADOW_MIN_FAR = 280
+const HEADLIGHT_SHADOW_FAR_MARGIN = 1.5
+
+function HeadLight({ controlsRef }) {
   const lightRef = useRef();
-  // Small, mostly-vertical offset: enough to break line-of-sight occlusion,
-  // not enough to throw the shadow noticeably off to one side.
+  // Offset scales with camera-to-target distance (#57) so it stays a
+  // small, consistent angle at any zoom instead of a fixed world vector.
   const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), []);
 
   useFrame(({ camera }) => {
-    if (lightRef.current) {
-      const worldOffset = offset.clone().applyQuaternion(camera.quaternion);
-      lightRef.current.position.copy(camera.position).add(worldOffset);
-    }
+    if (!lightRef.current) return;
+
+    const target = controlsRef?.current?.target;
+    const distance = target
+      ? camera.position.distanceTo(target)
+      : ZOOM_INVARIANT_REFERENCE_DISTANCE;
+    const scale = THREE.MathUtils.clamp(
+      distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
+      HEADLIGHT_OFFSET_MIN_SCALE,
+      HEADLIGHT_OFFSET_MAX_SCALE
+    );
+    const worldOffset = offset.clone().multiplyScalar(scale).applyQuaternion(camera.quaternion);
+    lightRef.current.position.copy(camera.position).add(worldOffset);
+
+    const shadowCam = lightRef.current.shadow.camera;
+    shadowCam.far = Math.max(HEADLIGHT_SHADOW_MIN_FAR, distance * HEADLIGHT_SHADOW_FAR_MARGIN);
+    shadowCam.updateProjectionMatrix();
   });
 
   return (
@@ -69,26 +77,19 @@ function HeadLight() {
       color="#fff4e0"
       intensity={2.5}
       decay={0}
-      distance={300}
+      distance={0}
       castShadow
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
       shadow-bias={-0.001}
+      shadow-camera-far={HEADLIGHT_SHADOW_MIN_FAR}
     />
   );
 }
 
-// --- ADDED: Bounding Box Room ---
-// A giant cube that renders on the inside to catch all shadows
-// --- FIXED: Bounding Box Room ---
-// The solid walls use THREE.BackSide, so any wall whose outward normal
-// currently points toward the camera is already invisible (culled) --
-// often 2 walls at once (e.g. the front AND the top from the default
-// elevated view), not just 1. Each of the cube's 12 edges borders exactly
-// 2 of its 6 faces; an edge only has no real wall backing it -- and so
-// should be hidden -- when BOTH of the faces it borders are currently
-// open. If only one side is open, the edge is still the visible rim of
-// the wall on the other (closed) side, so it must stay.
+// Bounding box room: BackSide walls so the near ones cull automatically.
+// An edge is hidden only when BOTH faces it borders are culled -- if just
+// one side is open, the edge is still the visible rim of the other wall.
 function cubeEdges(half) {
   return [
     // edges running along X (y,z fixed) -- border a Y-face and a Z-face
@@ -109,10 +110,7 @@ function cubeEdges(half) {
   ];
 }
 
-// Mirrors the sign test the GPU effectively performs for BackSide culling
-// of an axis-aligned face: a face is front-facing (and therefore culled,
-// i.e. "open") exactly when the camera is beyond its plane along its own
-// outward normal -- independent of the other two coordinates.
+// A face is culled ("open") when the camera is beyond its plane.
 function openFaces(cameraPosition, half) {
   const { x, y, z } = cameraPosition;
   return {
@@ -190,14 +188,8 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     const shaftStart = -length
     const shaftEnd = length
     const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    // Kept thinner than the thinnest remaining cylinder-based line glyph
-    // (illuminated line thick, radius 0.0272) so that a coincident
-    // axis-aligned line -- same centerline, same length -- always wins the
-    // depth test and stays visible, instead of this semi-transparent axis
-    // shaft drawing over its entire surface. Plain Line (thick) is no longer
-    // part of this comparison -- it's now a screen-space "fat line" (see
-    // geoVectorLine.js) rather than a world-space cylinder, so it has no
-    // comparable radius here.
+    // Thinner than the thinnest cylinder-based line glyph so a coincident
+    // axis-aligned line always wins the depth test over this shaft.
     const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, shaftLength, 12), material)
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
@@ -336,17 +328,10 @@ function resolveAnchor(object3D, anchorName) {
   return [v.x, v.y, v.z];
 }
 
-// --- Label decluttering ---
-// Every rendered label registers its DOM nodes here so LabelDeclutter (mounted
-// once per Scene) can read their real screen rects each frame and nudge any
-// that overlap apart, so stacked/close labels stay readable instead of piling
-// up on top of each other as the camera moves.
-//
-// This is a plain module-level registry rather than React context: drei's
-// <Html> mounts its children into their own independent ReactDOM root (see
-// its source), which is a separate React tree with no ancestors — any
-// context provided above <Html> in the Canvas tree is invisible inside it.
-// A shared JS reference sidesteps that entirely.
+// Labels register here so LabelDeclutter can nudge overlapping ones apart
+// each frame. Plain module-level registry, not React context: drei's <Html>
+// mounts children into their own separate ReactDOM root, so context from
+// above <Html> isn't visible inside it.
 const labelRegistry = new Map();
 
 // Labels scale gently with camera distance so they still feel "attached" to
@@ -436,12 +421,8 @@ function LabelDeclutter() {
             const push = (overlapY + GAP) / 2;
             const aCenter = aTop + a.height / 2;
             const bCenter = bTop + b.height / 2;
-            // Sub-pixel rendering noise makes aCenter/bCenter flicker across
-            // frames when two labels sit almost exactly on top of each other,
-            // which would otherwise flip the push direction every frame and
-            // make the pair jitter around zero instead of settling apart.
-            // Fall back to stable array order whenever the centers are
-            // ambiguously close.
+            // Fall back to array order when centers are too close -- avoids
+            // push-direction jitter from sub-pixel rendering noise.
             const aGoesUp = Math.abs(aCenter - bCenter) > 0.5 ? aCenter <= bCenter : i < j;
             if (aGoesUp) {
               a.target -= push;
@@ -474,12 +455,8 @@ function getLabelVisibilityKey(labelIdBase, lbl, index) {
 function LabelLayer({ object3D, hiddenLabelKeys }) {
   const ud = object3D.userData || {};
   const labels = Array.isArray(ud.labels) ? ud.labels : [];
-  // Prefer the Blockly block's own id over the Three.js object's uuid: every
-  // workspace edit (even just dragging a block) regenerates the whole scene
-  // from scratch with brand-new THREE.Object3D instances (new uuids), which
-  // would otherwise reset every label's declutter/scale animation state on
-  // each edit. srcBlockId stays stable across regenerations for the same
-  // block, so the label keeps its identity (and its settled position).
+  // srcBlockId stays stable across scene regenerations (uuid doesn't), so
+  // labels keep their identity and settled position across edits.
   const labelIdBase = ud.srcBlockId ?? object3D.uuid;
 
   const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line';
@@ -591,17 +568,10 @@ function SelectablePointPicker({ onTogglePointLabel }) {
 
 const globalThreeObjStore = {}
 
-// Transparent objects (depthWrite: false) are painted back-to-front by
-// distance from camera, recomputed every frame off each object's bounding
-// sphere. When one object is nested fully inside another, both bounding
-// centers are nearly coincident, so that per-frame distance comparison is a
-// near-tie -- tiny floating-point jitter as the camera orbits flips which one
-// "wins", producing the arbitrary inside/outside flicker. Nesting is a
-// static fact about the scene graph (not the camera), so instead of relying
-// on distance we derive an explicit renderOrder from bounding-box
-// containment: whichever object encloses another's box always renders after
-// it (paints over it), keeping the nested object consistently occluded by
-// its container from every angle.
+// Nested transparent objects have near-coincident bounding centers, so
+// per-frame distance-sort order flickers with camera jitter. Derive a
+// stable renderOrder from bounding-box containment instead: an object
+// always renders after whatever encloses it.
 function computeNestingRenderOrders(objects) {
   const boxes = objects.map((o) => {
     if (!o?.isObject3D) return null;
@@ -624,29 +594,18 @@ function computeNestingRenderOrders(objects) {
   });
 }
 
-// Walks the same subtree the renderer itself would draw -- an invisible
-// group's descendants never hit the screen, so there's no point computing
-// their scale. This matters here specifically because geo_vector_line ships
-// several mutually-exclusive glyph styles (plain tube, ringed tube, dashed,
-// ...) as siblings toggled via `.visible`; without this short-circuit every
-// hidden style's meshes (e.g. a ringed tube's ~100+ ring segments) would
-// still get a getWorldPosition + distance computation every frame for
-// nothing.
+// Skips invisible subtrees (e.g. geo_vector_line's hidden glyph-style
+// siblings) so they don't get a scale computation every frame for nothing.
 function traverseVisible(object3D, callback) {
   if (object3D.visible === false) return;
   callback(object3D);
   object3D.children.forEach((child) => traverseVisible(child, callback));
 }
 
-// Applies zoom-invariant scaling and/or the flat "extra thick lines"
-// multiplier to every mesh tagged with userData.zoomInvariantRadius by
-// geoVectorLine.js / objectComposition.js / the vector-operator blocks -- see
-// ZOOM_INVARIANT_REFERENCE_DISTANCE above for the zoom math. The two toggles
-// are independent: extra-thick applies (to line/tube glyphs only, not point
-// markers) whether or not zoom-invariant sizing is on, since it's a flat
-// authored-thickness multiplier rather than a camera-distance compensation.
-// Runs as its own component (rather than inline in Scene) purely so it can
-// own the scratch Vector3 via useMemo instead of allocating one per frame.
+// Applies zoom-invariant scaling and/or the "extra thick lines" multiplier
+// to meshes tagged with userData.zoomInvariantRadius. The two are
+// independent: extra-thick (line/tube glyphs only) applies regardless of
+// whether zoom-invariant sizing is on.
 function ZoomInvariantScaler({ objects, zoomEnabled, extraThick }) {
   const worldPos = useMemo(() => new THREE.Vector3(), []);
 
@@ -683,21 +642,9 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick }) {
   return null;
 }
 
-// Keeps "fat line" (Line2/LineMaterial) glyphs -- currently just Plain
-// Line's thick primitive -- in sync with two things a fat line's shader
-// needs that geoVectorLine.js has no access to at construction time (it only
-// ever sees window.THREE, never the renderer/canvas):
-//   1. `resolution`, so LineMaterial's shader can convert a pixel linewidth
-//      into the correct NDC-space offset for the current canvas size.
-//   2. The "Extra Thick Lines" multiplier, applied directly to `linewidth`
-//      here rather than via mesh.scale (a fat line's width is already
-//      screen-space-constant by construction -- it was never tagged
-//      zoomInvariantRadius and never goes through ZoomInvariantScaler).
-// A plain (non-visibility-gated) traverse is fine here, unlike
-// ZoomInvariantScaler's traverseVisible: there's at most one fat line per
-// vector-line block, not hundreds of ring segments, so the cost of touching
-// a currently-hidden one is negligible -- and skipping hidden ones would
-// leave their resolution stale for whenever they're switched back on.
+// Syncs Line2/LineMaterial glyphs with canvas resolution (for correct pixel
+// linewidth) and the extra-thick multiplier -- neither is available to
+// geoVectorLine.js at construction time.
 function FatLineSync({ objects, extraThick }) {
   const { size } = useThree();
 
@@ -716,7 +663,7 @@ function FatLineSync({ objects, extraThick }) {
   return null;
 }
 
-function Scene({ objects = [], hiddenLabelKeys }) {
+function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
   const { settings } = useSettingsStore()
 
   useEffect(() => {
@@ -753,7 +700,7 @@ function Scene({ objects = [], hiddenLabelKeys }) {
       <ambientLight intensity={0.4} />
 
       {/* 1. The Headlight (Camera Light) */}
-      <HeadLight />
+      <HeadLight controlsRef={controlsRef} />
 
       {/* 2. The Point Light */}
       <pointLight
@@ -810,17 +757,10 @@ export default function Scene3D({ objects = [] }) {
   const didInitialFocusRef = useRef(false);
   const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
-  // R3F mounts the camera/OrbitControls asynchronously, on its own render
-  // loop -- independently of the outer React tree. Blockly's initial workspace
-  // load can (and often does) fire the `objects` update below before that
-  // finishes, so cameraRef/controlsRef aren't populated yet on that first
-  // pass. Without this, the "first load" auto-frame doesn't get dropped, it
-  // just waits for the *next* `objects` change to retry -- which could be any
-  // later, unrelated block edit, making the camera appear to jump for no
-  // reason well after the scene already looked "loaded" to the user. Ticking
-  // this once each ref becomes available lets the effect below retry the
-  // instant the camera is actually ready, instead of piggybacking on
-  // whatever edit happens to come next.
+  // cameraRef/controlsRef populate async (R3F's own render loop), after the
+  // first `objects` update can already have fired; bump this once they're
+  // ready so the auto-frame effect below retries immediately instead of
+  // waiting on the next unrelated block edit.
   const [refsReadyTick, setRefsReadyTick] = useState(0);
 
   useLayoutEffect(() => {
@@ -833,16 +773,8 @@ export default function Scene3D({ objects = [] }) {
     }
   }, []);
 
-  // Auto-frame the scene on first load, and whenever a new object is added —
-  // but never just because an existing object moved, otherwise
-  // dragging/editing one object would drag the camera along with it every
-  // time. Entirely gated behind settings.autoFocusOnNewObject: when that's
-  // off, this effect must never touch the camera at all, including the
-  // first-load frame -- with it off, only the user's own mouse input (or the
-  // explicit "reset view" button) is allowed to move the camera. Also
-  // re-runs on refsReadyTick (see its declaration above) so the first-load
-  // frame fires as soon as the camera exists, not whenever the next
-  // unrelated edit happens to land.
+  // Auto-frame on first load and on new-object-added only (not on move/edit
+  // of existing objects), gated behind settings.autoFocusOnNewObject.
   useEffect(() => {
     if (!settings.autoFocusOnNewObject) return;
 
@@ -915,7 +847,7 @@ export default function Scene3D({ objects = [] }) {
             }}
           />
           <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
-          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} />
+          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
         </Canvas>
         <div className="scene-view-controls">
