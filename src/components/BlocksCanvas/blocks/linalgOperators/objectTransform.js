@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { blockMoveChangesGeneratedCode } from '@/utils/blocklyEventFilters'
 
 let REGISTERED = false
 
@@ -42,9 +43,9 @@ export function initObjectTransformBlock() {
       this.setOnChange((e) => {
         if (!e) return
         const t = e.type
+        if (t === Blockly.Events.BLOCK_MOVE && !blockMoveChangesGeneratedCode(e)) return
         const watch = (
           t === Blockly.Events.BLOCK_MOVE ||
-          t === Blockly.Events.END_DRAG ||
           t === Blockly.Events.BLOCK_CREATE ||
           t === Blockly.Events.BLOCK_DELETE
         )

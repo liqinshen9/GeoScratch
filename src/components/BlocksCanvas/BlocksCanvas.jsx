@@ -5,6 +5,7 @@ import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
 import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
 import { useBlocksWorkspace } from '@/components/BlocksCanvas/hooks/useBlocksWorkspace'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import { shouldIgnoreWorkspaceChange } from '@/utils/blocklyEventFilters'
 import './BlocksCanvas.css'
 
 export default function BlocksCanvas({
@@ -66,18 +67,25 @@ export default function BlocksCanvas({
     }
 
     // 2. Listen to all workspace events and save to store silently
+    let saveFrame = 0
     const handleWorkspaceChange = (event) => {
       // Ignore purely visual events and prevent saving if the workspace is in the process of being destroyed
-      if (event.isUiEvent || !workspace.rendered) return
+      if (!workspace.rendered || shouldIgnoreWorkspaceChange(event)) return
 
-      const dom = Blockly.Xml.workspaceToDom(workspace)
-      const xmlText = Blockly.Xml.domToText(dom)
-      saveWorkspaceXml(id, xmlText)
+      cancelAnimationFrame(saveFrame)
+      saveFrame = requestAnimationFrame(() => {
+        saveFrame = 0
+        if (!workspace.rendered) return
+        const dom = Blockly.Xml.workspaceToDom(workspace)
+        const xmlText = Blockly.Xml.domToText(dom)
+        saveWorkspaceXml(id, xmlText)
+      })
     }
 
     workspace.addChangeListener(handleWorkspaceChange)
 
     return () => {
+      cancelAnimationFrame(saveFrame)
       workspace.removeChangeListener(handleWorkspaceChange)
     }
   }, [workspace, id, saveWorkspaceXml, syncScene])

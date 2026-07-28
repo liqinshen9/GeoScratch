@@ -1,5 +1,6 @@
 import * as Blockly from 'blockly/core'
 import { Field } from 'blockly/core'
+import { blockMoveChangesGeneratedCode } from '@/utils/blocklyEventFilters'
 import { formatMatrixHtml } from './homogeneousMatrix.js'
 
 /** @typedef {import('blockly/core').BlockSvg} BlockSvg */
@@ -286,7 +287,11 @@ function bindListeners() {
       syncLayout()
       return
     }
-    if (isPipelineAnchor && event.type === Blockly.Events.BLOCK_MOVE) {
+    if (
+      isPipelineAnchor &&
+      event.type === Blockly.Events.BLOCK_MOVE &&
+      blockMoveChangesGeneratedCode(event)
+    ) {
       refreshContent()
       syncLayout()
       return
