@@ -130,6 +130,11 @@ html, body, #root {
     transform: translateY(1px);
 }
 
+.scene-view-btn--active {
+    background: rgba(37, 99, 235, 0.14);
+    color: #2563eb;
+}
+
 .label-anchor {
     position: relative;
     pointer-events: none;

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
 import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
-import { OrbitControls, Text, Billboard, Html } from '@react-three/drei'
+import { OrbitControls, Text, Billboard, Html, GizmoHelper, GizmoViewport } from '@react-three/drei'
 import * as THREEBase from 'three'
 import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
@@ -156,45 +156,35 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
   );
 }
 
-const AxisLabels = ({ size = 40, step = 5, y = 0.01, fontSize = 0.28, color = DESMOS_TICK_COLOR, showZero = true }) => {
-  const ticks = useMemo(() => Array.from({ length: Math.floor(size / step) + 1 }, (_, i) => i * step - size / 2), [size, step]);
-  return (
-    <group>
-      {ticks.map(t => (showZero || t !== 0) && (
-        <Billboard key={`x-${t}`} position={[t, y, 0]}>
-          <Text fontSize={fontSize} color={color} fillOpacity={0.64} anchorX="center" anchorY="middle">{t}</Text>
-        </Billboard>
-      ))}
-      {ticks.map(t => (showZero || t !== 0) && (
-        <Billboard key={`z-${t}`} position={[0, y, t]}>
-          <Text fontSize={fontSize} color={color} fillOpacity={0.64} anchorX="center" anchorY="middle">{t}</Text>
-        </Billboard>
-      ))}
-    </group>
-  );
-};
-
 function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
   const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const group = new THREE.Group()
-    const material = new THREE.MeshBasicMaterial({
+    // Emissive keeps the axis color readable from any angle/lighting (like
+    // the old unlit MeshBasicMaterial did); roughness/metalness add the
+    // lit specular highlight that makes it read as shiny instead of flat.
+    const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
+      emissive: new THREE.Color(color),
+      emissiveIntensity: 0.35,
+      roughness: 0.2,
+      metalness: 0.3,
       transparent: true,
       opacity,
       depthWrite: false,
     })
-    const headHeight = 0.46
+    const headHeight = 0.62
     const shaftStart = -length
     const shaftEnd = length
     const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    // Thinner than the thinnest cylinder-based line glyph so a coincident
-    // axis-aligned line always wins the depth test over this shaft.
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, shaftLength, 12), material)
+    // Kept under 0.0272 (the thinnest cylinder-based line glyph radius, see
+    // geoVectorLine.js) so a coincident axis-aligned line still wins the
+    // depth test against this shaft (#43).
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, shaftLength, 12), material)
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
-    const head = new THREE.Mesh(new THREE.ConeGeometry(0.18, headHeight, 18), material)
+    const head = new THREE.Mesh(new THREE.ConeGeometry(0.28, headHeight, 18), material)
     head.position.copy(direction).multiplyScalar(length - headHeight / 2)
     head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
@@ -219,12 +209,81 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
   )
 }
 
-function Axes({ length = 3 }) {
+// Thin rings around the shaft at each unit interval, like a collar --
+// visible from any camera angle, unlike a flat perpendicular tick would be.
+// Reuses the same "ring around a cylinder" language as the collision-ring
+// line accent (geoVectorLine.js).
+function AxisTicks({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, step = 5, showLabels = true }) {
+  const { ticksGroup, labelPositions } = useMemo(() => {
+    const direction = new THREE.Vector3(...dir).normalize()
+    const perpOffset = dir[0] ? new THREE.Vector3(0, 0, 0.3) : new THREE.Vector3(0.3, 0, 0)
+    const group = new THREE.Group()
+    const material = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.2 })
+    const ringGeom = new THREE.TorusGeometry(0.05, 0.007, 8, 20)
+    const positions = []
+
+    for (let t = step; t <= length; t += step) {
+      for (const sign of [1, -1]) {
+        const at = t * sign
+        const ring = new THREE.Mesh(ringGeom, material)
+        ring.position.copy(direction).multiplyScalar(at)
+        ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction)
+        group.add(ring)
+        positions.push({ t: at, pos: direction.clone().multiplyScalar(at).add(perpOffset) })
+      }
+    }
+
+    return { ticksGroup: group, labelPositions: positions }
+  }, [dir, color, length, step])
+
   return (
     <group>
+      <primitive object={ticksGroup} />
+      {showLabels && labelPositions.map(({ t, pos }) => (
+        <Billboard key={t} position={[pos.x, pos.y, pos.z]}>
+          <Text fontSize={0.3} color={color} fillOpacity={0.75} anchorX="center" anchorY="middle">
+            {t}
+          </Text>
+        </Billboard>
+      ))}
+    </group>
+  )
+}
+
+// A bare "0" sitting on the axis lines read as a stray digit, not a place --
+// a small marker where the three axes cross reads as the origin on its own.
+function OriginMarker({ radius = 0.06, color = DESMOS_TICK_COLOR, showLabel = false }) {
+  return (
+    <group>
+      <mesh>
+        <sphereGeometry args={[radius, 16, 12]} />
+        <meshStandardMaterial color={color} roughness={0.3} metalness={0.15} />
+      </mesh>
+      {showLabel && (
+        <Billboard position={[0.14, 0.14, 0]}>
+          <Text fontSize={0.26} color={color} fillOpacity={0.85} anchorX="left" anchorY="bottom">
+            O
+          </Text>
+        </Billboard>
+      )}
+    </group>
+  )
+}
+
+function Axes({ length = 3, showTicks = true, tickStep = 5, showOriginLabel = false, showScaleLabels = true }) {
+  return (
+    <group>
+      <OriginMarker showLabel={showOriginLabel} />
       <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
       <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
       <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
+      {showTicks && (
+        <>
+          <AxisTicks dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} step={tickStep} showLabels={showScaleLabels} />
+          <AxisTicks dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} step={tickStep} showLabels={showScaleLabels} />
+          <AxisTicks dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} step={tickStep} showLabels={showScaleLabels} />
+        </>
+      )}
     </group>
   )
 }
@@ -724,10 +783,11 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
       )}
 
       {settings.showAxes && (
-        <>
-          <AxisLabels size={40} step={5} />
-          <Axes length={20} position={[0, 0, 0]} />
-        </>
+        <Axes
+          length={20}
+          showOriginLabel={settings.showOriginLabel}
+          showScaleLabels={settings.showAxisScaleLabels}
+        />
       )}
 
       {objects.map((o, i) => {
@@ -750,7 +810,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
 const SCENE_BACKGROUND_COLOR = '#ffffff'
 
 export default function Scene3D({ objects = [] }) {
-  const { settings } = useSettingsStore()
+  const { settings, updateSetting } = useSettingsStore()
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
@@ -835,6 +895,7 @@ export default function Scene3D({ objects = [] }) {
           style={{ width: '100%', height: '100%' }}
         >
           <OrbitControls
+            makeDefault
             ref={(instance) => {
               controlsRef.current = instance;
               if (instance) setRefsReadyTick((tick) => tick + 1);
@@ -849,8 +910,30 @@ export default function Scene3D({ objects = [] }) {
           <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
+          {/* Screen-space orientation gizmo -- an alternative to the in-scene
+              axes that doesn't take up world space; the in-scene axes can be
+              hidden via the toggle below and this still shows X/Y/Z. */}
+          {settings.showAxisGizmo && (
+            <GizmoHelper alignment="top-right" margin={[56, 56]}>
+              <GizmoViewport axisColors={[AXIS_COLORS.x, AXIS_COLORS.y, AXIS_COLORS.z]} labelColor="black" />
+            </GizmoHelper>
+          )}
         </Canvas>
         <div className="scene-view-controls">
+          {/* Any additional buttons stack above Reset View, which stays
+              pinned in the true bottom-right corner. */}
+          {settings.showAxisToggleButton && (
+            <button
+              className={`scene-view-btn${settings.showAxes ? ' scene-view-btn--active' : ''}`}
+              onClick={() => updateSetting('showAxes', !settings.showAxes)}
+              aria-label={settings.showAxes ? 'Hide axes' : 'Show axes'}
+              title={settings.showAxes ? 'Hide axes' : 'Show axes'}
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                <path d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
           <button
             className="scene-view-btn"
             onClick={resetDefaultView}
