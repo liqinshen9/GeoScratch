@@ -14,7 +14,7 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import './ExercisePage.css'
 
 const POINT_P = new THREE.Vector3(3, 4, 5)
-const CORRECT_DISTANCE = 4
+const CORRECT_DISTANCE = 3
 const POINT_VECTOR_BLOCK_TYPES = ['linalg_vec3', 'linalg_point']
 
 function closeNumber(a, b, tolerance = 1e-6) {
@@ -214,7 +214,7 @@ export default function ExercisePage() {
             <div className="exercise-given-values" aria-label="Given values">
               <section>
                 <h3>Plane</h3>
-                <p>Point A = (1, 0, 2)</p>
+                <p>Point A = (1, 1, 2)</p>
                 <p>Normal n = (0, 1, 0)</p>
               </section>
               <section>
