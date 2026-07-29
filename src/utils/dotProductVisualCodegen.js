@@ -84,7 +84,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       labelSide.normalize().multiplyScalar(-1);
       const normalExtent = Math.max(2.2, distance + 1.4);
       const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
-        distanceStart.clone().addScaledVector(normalUnit, -1.0),
+        distanceStart.clone(),
         distanceStart.clone().addScaledVector(normalUnit, normalExtent),
       ]);
       const normalLine = new THREE.Line(

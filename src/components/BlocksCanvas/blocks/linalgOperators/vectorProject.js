@@ -84,7 +84,7 @@ export function initVectorProjectBlock() {
 
       const normalExtent = Math.max(2.2, distanceLength + 1.4);
       const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
-        basePoint.clone().addScaledVector(normalUnit, -1.0),
+        basePoint.clone(),
         basePoint.clone().addScaledVector(normalUnit, normalExtent),
       ]);
       const normalLine = new THREE.Line(
