@@ -22,6 +22,11 @@ const ZOOM_INVARIANT_MAX_SCALE = 5
 // "Extra Thick Lines" setting: flat multiplier on top of zoom-invariant
 // scaling, for line/tube glyphs only (not point markers).
 const EXTRA_THICK_LINE_MULTIPLIER = 2.7
+const EXTRA_LARGE_POINT_MULTIPLIER = 1.6
+// A flat 1.6x on top of ZOOM_INVARIANT_MAX_SCALE would let points balloon to
+// 8x their base radius when zoomed far out -- capped closer to the normal
+// max (5x) instead, so the multiplier mainly reads at everyday zoom levels.
+const EXTRA_LARGE_POINT_MAX_SCALE = 5.5
 // Clamp range for HeadLight's camera-relative offset scale (see below).
 const HEADLIGHT_OFFSET_MIN_SCALE = 0.2
 const HEADLIGHT_OFFSET_MAX_SCALE = 4
@@ -663,11 +668,12 @@ function traverseVisible(object3D, callback) {
   object3D.children.forEach((child) => traverseVisible(child, callback));
 }
 
-// Applies zoom-invariant scaling and/or the "extra thick lines" multiplier
-// to meshes tagged with userData.zoomInvariantRadius. The two are
-// independent: extra-thick (line/tube glyphs only) applies regardless of
-// whether zoom-invariant sizing is on.
-function ZoomInvariantScaler({ objects, zoomEnabled, extraThick }) {
+// Applies zoom-invariant scaling and/or a size multiplier to meshes tagged
+// with userData.zoomInvariantRadius. Both multipliers apply regardless of
+// whether zoom-invariant sizing is on, and are mutually exclusive by glyph
+// kind: extraThick for line/tube glyphs, extraLargePoints for point markers
+// (userData.zoomInvariantUniform).
+function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoints }) {
   const worldPos = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera }) => {
@@ -688,8 +694,13 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick }) {
             ZOOM_INVARIANT_MAX_SCALE
           );
         }
-        const thickMultiplier = (!isUniform && extraThick) ? EXTRA_THICK_LINE_MULTIPLIER : 1;
-        const finalScale = zoomScale * thickMultiplier;
+        const thickMultiplier = isUniform
+          ? (extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1)
+          : (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
+        let finalScale = zoomScale * thickMultiplier;
+        if (isUniform && extraLargePoints) {
+          finalScale = Math.min(finalScale, EXTRA_LARGE_POINT_MAX_SCALE);
+        }
 
         if (isUniform) {
           child.scale.setScalar(finalScale);
@@ -755,6 +766,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
         objects={objects}
         zoomEnabled={settings.zoomInvariantSizing}
         extraThick={settings.extraThickLines}
+        extraLargePoints={settings.extraLargePoints}
       />
       <FatLineSync objects={objects} extraThick={settings.extraThickLines} />
       <LabelDeclutter />

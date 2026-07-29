@@ -89,6 +89,21 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
+          <SettingsSection title="Points">
+            <ToggleRow
+              label="Extra Large Points"
+              description={'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'}
+              checked={settings.extraLargePoints}
+              onChange={(v) => updateSetting('extraLargePoints', v)}
+            />
+            <ToggleRow
+              label="Matte Points"
+              description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
+              checked={settings.mattePoints}
+              onChange={(v) => updateSetting('mattePoints', v)}
+            />
+          </SettingsSection>
+
           <SettingsSection title="Axis">
             <ToggleRow
               label="Show Axis Toggle in Scene"

@@ -21,6 +21,8 @@ const DEFAULT_SETTINGS = {
   teapotShowGridlines: false,
   zoomInvariantSizing: true,
   extraThickLines: false,
+  extraLargePoints: false,
+  mattePoints: false,
 }
 
 const useSettingsStore = create((set) => ({

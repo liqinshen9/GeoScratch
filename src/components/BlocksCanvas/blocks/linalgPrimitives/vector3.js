@@ -81,12 +81,15 @@ export function initVec3Block() {
           point: point.clone(),
         };
         ${isStandalone ? `
-        const marker = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
-        );
+        const markerMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+        const applyPointFinish = (mat, s) => {
+          mat.roughness = s.mattePoints ? 1 : 0.35;
+          mat.metalness = s.mattePoints ? 0 : 0.05;
+        };
+        applyPointFinish(markerMat, window.useSettingsStore?.getState().settings || {});
+        const marker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), markerMat);
         marker.position.copy(point);
-        marker.userData.zoomInvariantRadius = 0.04;
+        marker.userData.zoomInvariantRadius = 0.24;
         marker.userData.zoomInvariantUniform = true;
         marker.userData.geoType = 'linalg_point_marker';
         marker.userData.srcBlockId = ${blockId};
@@ -95,6 +98,12 @@ export function initVec3Block() {
           { anchor: 'p', text: label + ' = ' + vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
         ];
         if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = marker;
+        if (window.useSettingsStore) {
+          const unsubscribe = window.useSettingsStore.subscribe((state) => {
+            if (window.threeObjStore?.[${blockId}] !== marker) { unsubscribe(); return; }
+            applyPointFinish(markerMat, state.settings);
+          });
+        }
         ` : ''}
         return point;
       })()`, Order.FUNCTION_CALL]
