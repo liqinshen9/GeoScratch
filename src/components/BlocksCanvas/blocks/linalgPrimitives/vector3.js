@@ -65,19 +65,67 @@ export function initVec3Block() {
 
   function vector3Generator(block) {
     const coords = `${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')}`
+    const blockId = JSON.stringify(block.id)
+    // A point/vector block feeding another block's input keeps its old
+    // value-only behaviour (rendering that is handled by whatever consumes
+    // it); only a block sitting alone on the workspace gets its own glyph.
+    const isStandalone = !block.outputConnection?.targetConnection
+
     if (block.type === 'linalg_point') {
       return [`(function(){
         const point = new THREE.Vector3(${coords});
-        const label = vectorNotation.assignPointLabel(${JSON.stringify(block.id)});
+        const label = vectorNotation.assignPointLabel(${blockId});
         point.userData = {
           geoType: 'linalg_point_vector',
           label,
           point: point.clone(),
         };
+        ${isStandalone ? `
+        const marker = new THREE.Mesh(
+          new THREE.SphereGeometry(0.04, 16, 12),
+          new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
+        );
+        marker.position.copy(point);
+        marker.userData.zoomInvariantRadius = 0.04;
+        marker.userData.zoomInvariantUniform = true;
+        marker.userData.geoType = 'linalg_point_marker';
+        marker.userData.srcBlockId = ${blockId};
+        marker.userData.labelAnchors = { p: { type: 'world', position: [point.x, point.y, point.z] } };
+        marker.userData.labels = [
+          { anchor: 'p', text: label + ' = ' + vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+        ];
+        if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = marker;
+        ` : ''}
         return point;
       })()`, Order.FUNCTION_CALL]
     }
-    return [`new THREE.Vector3(${coords})`, Order.ATOMIC]
+
+    return [`(function(){
+      const vec = new THREE.Vector3(${coords});
+      ${isStandalone ? `
+      const label = vectorNotation.assignVectorLabel(${blockId});
+      const len = vec.length();
+      let visual;
+      if (len > 1e-8) {
+        visual = new THREE.ArrowHelper(vec.clone().normalize(), new THREE.Vector3(), len, 0x15803d, 0.25, 0.1);
+      } else {
+        visual = new THREE.Mesh(
+          new THREE.SphereGeometry(0.04, 16, 12),
+          new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.4, metalness: 0.1 })
+        );
+        visual.userData.zoomInvariantRadius = 0.04;
+        visual.userData.zoomInvariantUniform = true;
+      }
+      visual.userData.geoType = 'geo_vector';
+      visual.userData.srcBlockId = ${blockId};
+      visual.userData.labelAnchors = { tip: { type: 'world', position: [vec.x, vec.y, vec.z] } };
+      visual.userData.labels = [
+        { anchor: 'tip', text: label + ' = ' + vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#15803d' },
+      ];
+      if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = visual;
+      ` : ''}
+      return vec;
+    })()`, Order.FUNCTION_CALL]
   }
 
   //Linalg primitives
