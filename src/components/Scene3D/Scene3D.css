@@ -135,6 +135,12 @@ html, body, #root {
     color: #2563eb;
 }
 
+/* Camera drag-orbit shouldn't leave stray text selection on scene labels. */
+.editor-body-3d {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
 .label-anchor {
     position: relative;
     pointer-events: none;
@@ -154,6 +160,8 @@ html, body, #root {
     backdrop-filter: blur(2px);
     will-change: transform;
     transform-origin: 0 0;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .editor-body-3d .label--emphasis {

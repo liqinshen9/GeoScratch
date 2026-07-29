@@ -156,7 +156,7 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
   );
 }
 
-function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82 }) {
+function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82, showLabel = true }) {
   const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const group = new THREE.Group()
@@ -200,11 +200,13 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
   return (
     <group>
       <primitive object={arrowGroup} />
-      <Billboard position={[tip.x, tip.y, tip.z]}>
-        <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
-          {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
-        </Text>
-      </Billboard>
+      {showLabel && (
+        <Billboard position={[tip.x, tip.y, tip.z]}>
+          <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
+            {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
+          </Text>
+        </Billboard>
+      )}
     </group>
   )
 }
@@ -270,13 +272,13 @@ function OriginMarker({ radius = 0.06, color = DESMOS_TICK_COLOR, showLabel = fa
   )
 }
 
-function Axes({ length = 3, showTicks = true, tickStep = 5, showOriginLabel = false, showScaleLabels = true }) {
+function Axes({ length = 3, showTicks = true, tickStep = 5, showOriginLabel = false, showScaleLabels = true, showEndLabels = true }) {
   return (
     <group>
       <OriginMarker showLabel={showOriginLabel} />
-      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} />
-      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} />
-      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} />
+      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} showLabel={showEndLabels} />
+      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} showLabel={showEndLabels} />
+      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} showLabel={showEndLabels} />
       {showTicks && (
         <>
           <AxisTicks dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} step={tickStep} showLabels={showScaleLabels} />
@@ -787,6 +789,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
           length={20}
           showOriginLabel={settings.showOriginLabel}
           showScaleLabels={settings.showAxisScaleLabels}
+          showEndLabels={!settings.showAxisGizmo}
         />
       )}
 
