@@ -94,6 +94,10 @@ export default function initObjectCompositionBlocks() {
       };
 
       const pickPointParams = (target) => {
+        if (target.userData?.geoType === 'geo_vector_line') {
+          return { type: 'line', ratio: randomInteriorRatio() };
+        }
+
         const planePoint = target.userData?.point;
         const planeNormal = target.userData?.normalUnit;
         if (planePoint?.isVector3 && planeNormal?.isVector3) {
@@ -144,6 +148,16 @@ export default function initObjectCompositionBlocks() {
 
       const resolvePointFromParams = (target, params) => {
         target.updateMatrixWorld(true);
+
+        if (params.type === 'line' && target.userData?.geoType === 'geo_vector_line') {
+          const direction = target.userData.direction?.isVector3 ? target.userData.direction.clone() : new THREE.Vector3(1, 0, 0);
+          const directionLength = direction.length();
+          const unitDirection = directionLength > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(1, 0, 0);
+          const segmentMid = target.userData.segmentMid?.isVector3 ? target.userData.segmentMid.clone() : new THREE.Vector3();
+          const halfLength = Math.max(0.01, Number(target.userData.segmentHalfLength) || 1);
+          const clampedRatio = Math.max(-0.65, Math.min(0.65, Number(params.ratio) || 0));
+          return target.localToWorld(segmentMid.addScaledVector(unitDirection, clampedRatio * halfLength));
+        }
 
         if (params.type === 'plane' && target.userData?.point?.isVector3 && target.userData?.normalUnit?.isVector3) {
           const planeSize = Math.max(1, Number(target.userData?.planeSize) || 12);
@@ -257,11 +271,11 @@ export default function initObjectCompositionBlocks() {
       const pointLabel = vectorNotation.assignAnyPointLabel(${JSON.stringify(block.id)});
 
       const marker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
+        new THREE.SphereGeometry(0.11, 20, 14),
         new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
       );
       marker.position.copy(markerPoint);
-      marker.userData.zoomInvariantRadius = 0.04;
+      marker.userData.zoomInvariantRadius = 0.11;
       marker.userData.zoomInvariantUniform = true;
       marker.userData.geoType = 'selectable_point_marker';
       marker.userData.coordinate = markerPoint.clone();

@@ -522,7 +522,7 @@ export function initVector3Block() {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
 
-    const vecPos = valueToCode('POS') || 'new window.THREE.Vector3()'
+    const vecPos = valueToCode('POS') || 'new window.THREE.Vector3(1,1,1)'
     const vecDir = valueToCode('DIR') || 'new window.THREE.Vector3(1,0,0)'
 
     const scaleInput = block.getInput('SCALE')
