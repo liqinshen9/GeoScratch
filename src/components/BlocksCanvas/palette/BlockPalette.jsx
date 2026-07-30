@@ -6,7 +6,7 @@ import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockC
 const PALETTE_WS_OPTIONS = {
   readOnly: true,
   scrollbars: false,
-  zoom: { controls: false, wheel: false, startScale: 0.9 },
+  zoom: { controls: false, wheel: false, startScale: 0.72 },
   move: { scrollbars: false, drag: false, wheel: false },
   renderer: 'geras',
   theme: GEO_SCRATCH_BLOCK_THEME,
@@ -26,7 +26,8 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
     block.moveBy(10, 10)
 
     const hw = block.getHeightWidth()
-    host.style.height = `${Math.ceil(hw.height + 20)}px`
+    const scale = PALETTE_WS_OPTIONS.zoom.startScale
+    host.style.height = `${Math.ceil(hw.height * scale + 18)}px`
 
     const svg = block.getSvgRoot()
     if (svg) svg.style.cursor = 'pointer'

@@ -203,7 +203,6 @@ export default function ExercisePage() {
   const [categoryId, setCategoryId] = useState('create')
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [toolboxPosition, setToolboxPosition] = useState(null)
   const clearWorkspaceRef = useRef(() => {})
   const distanceAnswer = getDistanceAnswer(objects)
   const hasDistanceComputation = hasValidDistanceComputation(workspace)
@@ -232,8 +231,8 @@ export default function ExercisePage() {
   )
 
   function selectCategory(nextCategoryId) {
+    setPaletteOpen(nextCategoryId === categoryId ? !paletteOpen : true)
     setCategoryId(nextCategoryId)
-    setPaletteOpen((isOpen) => (nextCategoryId === categoryId ? !isOpen : true))
   }
 
   const handleBlockSelect = useCallback(
@@ -244,50 +243,18 @@ export default function ExercisePage() {
     [workspace],
   )
 
-  function startToolboxDrag(event) {
-    if (event.button !== 0) return
-    if (event.target.closest('.palette-block-preview')) return
-
-    const panel = event.currentTarget
-    const panelRect = panel.getBoundingClientRect()
-    const origin = toolboxPosition ?? {
-      x: panelRect.left,
-      y: panelRect.top,
-    }
-
-    event.preventDefault()
-    setToolboxPosition(origin)
-
-    function moveToolbox(moveEvent) {
-      const currentPanelRect = panel.getBoundingClientRect()
-      const maxX = Math.max(8, window.innerWidth - currentPanelRect.width - 8)
-      const maxY = Math.max(8, window.innerHeight - currentPanelRect.height - 8)
-      const nextX = Math.min(Math.max(8, origin.x + moveEvent.clientX - event.clientX), maxX)
-      const nextY = Math.min(Math.max(8, origin.y + moveEvent.clientY - event.clientY), maxY)
-      setToolboxPosition({ x: nextX, y: nextY })
-    }
-
-    function stopToolbox() {
-      window.removeEventListener('mousemove', moveToolbox)
-      window.removeEventListener('mouseup', stopToolbox)
-    }
-
-    window.addEventListener('mousemove', moveToolbox)
-    window.addEventListener('mouseup', stopToolbox)
-  }
-
   return (
-    <div className={`exercise-page exercise-page--editor${workspaceMaximized ? ' exercise-page--workspace-maximized' : ''}`}>
+    <div className={`exercise-page exercise-page--editor${workspaceMaximized ? ' exercise-page--workspace-maximized' : ''}${paletteOpen ? '' : ' exercise-page--toolbox-collapsed'}`}>
       <main className="exercise-editor-shell">
         <div className="exercise-editor-header-row">
           {!workspaceMaximized && (
-            <header className="panel-column-header exercise-head">
+            <header className="panel-column-header exercise-head exercise-head--task">
               <h2>Exercise</h2>
             </header>
           )}
 
           {!workspaceMaximized && (
-            <header className="panel-column-header exercise-head">
+            <header className="panel-column-header exercise-head exercise-tools-head">
               <h2>Toolbox</h2>
             </header>
           )}
@@ -336,10 +303,9 @@ export default function ExercisePage() {
           <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
             <div className="exercise-task-panel__top">
               <div className="exercise-task-panel__meta-row">
-                <span className="exercise-task-number">Exercise 1</span>
                 {exercisePassed && <span className="exercise-pass-badge">Passed</span>}
               </div>
-              <h1>Calculate distance from point P to a plane</h1>
+              <h1>1. <strong>Calculate distance from point P to a plane</strong></h1>
             </div>
 
             <div className="exercise-given-values" aria-label="Given values">
@@ -379,19 +345,15 @@ export default function ExercisePage() {
             </div>
           </aside>
 
-          {paletteOpen && !workspaceMaximized && (
-            <div
-              className={`exercise-blocks-panel${toolboxPosition ? ' is-dragging' : ''}`}
-              style={toolboxPosition ? { left: toolboxPosition.x, top: toolboxPosition.y } : undefined}
-              onMouseDown={startToolboxDrag}
-            >
-              <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
-            </div>
-          )}
-
           <aside className="exercise-category-panel">
             <CategoryToolbox selected={categoryId} onSelect={selectCategory} />
           </aside>
+
+          {!workspaceMaximized && paletteOpen && (
+            <div className="exercise-blocks-panel">
+              <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
+            </div>
+          )}
 
           <BlocksCanvas
             id="exercise"
