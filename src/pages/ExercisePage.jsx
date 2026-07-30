@@ -90,6 +90,8 @@ export default function ExercisePage() {
   const clearWorkspaceRef = useRef(() => {})
   const distanceAnswer = getDistanceAnswer(objects)
   const exercisePassed = distanceAnswer !== null && closeNumber(distanceAnswer, CORRECT_DISTANCE, 0.01)
+  const exerciseIncorrect = distanceAnswer !== null && !exercisePassed
+  const answerCardClass = `exercise-answer-card${exercisePassed ? ' is-correct' : ''}${exerciseIncorrect ? ' is-incorrect' : ''}`
 
   const handleObjectsChange = useCallback(
     (objs) => {
@@ -242,12 +244,9 @@ export default function ExercisePage() {
             </ol>
 
 
-            <div className={`exercise-answer-card${exercisePassed ? ' is-correct' : ''}`}>
-              <span>Correct answer should be:</span>
-              <strong>{CORRECT_DISTANCE}</strong>
-              {distanceAnswer !== null && (
-                <p>Your answer: {Number(distanceAnswer.toFixed(3))}</p>
-              )}
+            <div className={answerCardClass}>
+              <span>Your answer:</span>
+              <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
             </div>
           </aside>
 
