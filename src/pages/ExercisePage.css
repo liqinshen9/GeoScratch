@@ -1,7 +1,5 @@
 .exercise-page--editor {
   --exercise-task-width: clamp(16rem, 18vw, 20rem);
-  --exercise-toolbox-width: clamp(5.25rem, 7vw, 6.75rem);
-  --exercise-palette-width: clamp(11rem, 15vw, 15rem);
 
   --landing-nav-height: var(--app-nav-height);
 
@@ -27,108 +25,6 @@
   flex-direction: column;
   border-top: 1px solid var(--geo-border-light);
   background: var(--bg-main);
-}
-
-.exercise-editor-header-row,
-.exercise-editor-body-row {
-  display: grid;
-  grid-template-columns:
-    var(--exercise-task-width) var(--exercise-toolbox-width) minmax(20rem, 1fr) minmax(20rem, 1fr);
-}
-
-.exercise-editor-header-row {
-  flex-shrink: 0;
-  min-height: 2.5rem;
-}
-
-.exercise-editor-body-row {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-
-.exercise-head {
-  background: var(--geo-surface);
-  border-right: 1px solid var(--geo-border-light);
-}
-
-.exercise-page--editor .exercise-head {
-  display: flex;
-  align-items: center;
-  padding-block: 0.45rem;
-}
-
-.exercise-page--editor .exercise-head h2 {
-  line-height: 1.1;
-}
-
-.exercise-head--last {
-  border-right: none;
-}
-
-.exercise-workspace-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.exercise-workspace-head [data-slot='button'] {
-  color: var(--geo-text-on-light);
-  min-height: 2rem;
-  height: 2rem;
-}
-
-.exercise-workspace-head .exercise-workspace-toggle {
-  width: 2rem;
-}
-
-.exercise-workspace-head [data-slot='button']:hover,
-.exercise-workspace-head [data-slot='button']:active,
-.exercise-workspace-head [data-slot='button']:focus-visible,
-.exercise-workspace-head [data-slot='button'][aria-pressed='true'] {
-  background: var(--bg-soft) !important;
-  color: var(--geo-text-on-light) !important;
-}
-
-.exercise-editor-body-row>#blocks-canvas.blocks-shell {
-  display: grid;
-  grid-column: 3;
-  grid-template-columns: minmax(0, 1fr);
-  min-height: 0;
-}
-
-.exercise-editor-body-row>.editor-body-3d {
-  grid-column: 4;
-  min-height: 0;
-}
-
-.exercise-page--workspace-maximized .exercise-editor-header-row,
-.exercise-page--workspace-maximized .exercise-editor-body-row {
-  grid-template-columns:
-    minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.exercise-page--workspace-maximized .exercise-task-panel,
-.exercise-page--workspace-maximized .exercise-category-panel {
-  display: none;
-}
-
-.exercise-page--workspace-maximized .exercise-workspace-head {
-  grid-column: 1;
-}
-
-.exercise-page--workspace-maximized .exercise-head--last {
-  grid-column: 2;
-}
-
-.exercise-page--workspace-maximized .exercise-editor-body-row>#blocks-canvas.blocks-shell {
-  grid-column: 1;
-  grid-template-columns: 1fr;
-}
-
-.exercise-page--workspace-maximized .exercise-editor-body-row>.editor-body-3d {
-  grid-column: 2;
 }
 
 .exercise-task-panel {
@@ -467,55 +363,6 @@
   border-color: var(--geo-highlight);
   background: var(--bg-soft);
   color: var(--geo-text);
-}
-
-.exercise-category-panel {
-  grid-column: 2;
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--geo-border-light);
-  background: var(--geo-surface);
-}
-
-.exercise-blocks-panel {
-  position: fixed;
-  z-index: 20;
-  left: calc(var(--exercise-task-width) + var(--exercise-toolbox-width) + 0.875rem);
-  top: calc(var(--landing-nav-height) + 4.125rem);
-  width: min(18rem, calc(100vw - 12rem));
-  max-width: calc(100vw - 2rem);
-  cursor: grab;
-  touch-action: none;
-}
-
-.exercise-blocks-panel:active {
-  cursor: grabbing;
-}
-
-.exercise-blocks-panel .blocks-col {
-  border: 1px solid var(--geo-border-light);
-  border-radius: 8px;
-  background: var(--bg-main);
-  box-shadow: 0 16px 36px var(--geo-border-light);
-}
-
-.exercise-blocks-panel .blocks-col--palette {
-  max-height: min(28rem, calc(100vh - 10rem));
-  min-height: auto;
-}
-
-.exercise-blocks-panel .block-palette {
-  max-height: min(28rem, calc(100vh - 10rem));
-}
-
-.exercise-blocks-panel .block-palette-scroll {
-  overflow-y: auto;
-}
-
-.exercise-blocks-panel .block-palette-hint {
-  display: none;
 }
 
 .exercise-page--editor .blocks-col--toolbox .category-toolbox-list {

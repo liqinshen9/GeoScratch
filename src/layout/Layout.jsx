@@ -6,7 +6,7 @@ export default function Layout() {
     <div className="app-container flex flex-col min-h-screen">
       <Header />
 
-      <main className="flex-1 min-h-0">
+      <main className="flex-1 min-h-0 flex flex-col">
         <Outlet />
       </main>
     </div>

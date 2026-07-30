@@ -9,7 +9,6 @@ import '@/components/EditorShell/editor-shell.css'
 export default function SandboxPage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
-  const [categoryId, setCategoryId] = useState('create')
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const clearWorkspaceRef = useRef(() => { })
 
@@ -24,7 +23,6 @@ export default function SandboxPage() {
   return (
     <div className={`editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}>
       <EditorColumnHeaders
-        categoryId={categoryId}
         workspace={workspace}
         workspaceMaximized={workspaceMaximized}
         onWorkspaceMaximizedChange={setWorkspaceMaximized}
@@ -33,9 +31,7 @@ export default function SandboxPage() {
       <div className="editor-body-row">
         <BlocksCanvas
           id="sandbox" // <-- NEW: Ties this canvas to the 'sandbox' memory bank
-          categoryId={categoryId}
           workspaceMaximized={workspaceMaximized}
-          onCategoryChange={setCategoryId}
           onObjectsChange={handleObjectsChange}
           onRegisterClear={(fn) => {
             clearWorkspaceRef.current = fn

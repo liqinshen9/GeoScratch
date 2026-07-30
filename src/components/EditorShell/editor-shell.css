@@ -1,8 +1,9 @@
-/*shared 4-column layout: toolbox,palette,workspac,3d view*/
+/*shared layout: [leading?], toolbox, workspace, 3d view -- palette is an
+  anchored flyout inside the toolbox column, not its own grid track. */
 .editor-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
   background: var(--bg-main);
 }
@@ -10,7 +11,12 @@
 .editor-header-row,
 .editor-body-row {
   display: grid;
-  grid-template-columns: 140px minmax(300px, 340px) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.editor-shell--with-leading .editor-header-row,
+.editor-shell--with-leading .editor-body-row {
+  grid-template-columns: var(--exercise-task-width, 20rem) 140px minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .editor-header-row {
@@ -31,15 +37,18 @@
   border-right: none;
 }
 
+/* Counted from the end so the same rule covers both the 3-column base
+   layout and the --with-leading 4-column layout: toolbox+workspace are
+   always the two tracks before the last one, 3D view is always the last. */
 .editor-body-row > #blocks-canvas.blocks-shell {
   display: grid;
-  grid-column: 1 / 4;
+  grid-column: -4 / -2;
   grid-template-columns: subgrid;
   min-height: 0;
 }
 
 .editor-body-3d {
-  grid-column: 4;
+  grid-column: -2 / -1;
   min-height: 0;
   display: flex;
   flex-direction: column;
