@@ -160,7 +160,12 @@ export function applyTubeCollisions(threeObjStore) {
     .map((obj) => {
       obj.updateMatrixWorld(true)
       if (obj.userData?.geoType === 'geo_sphere' && obj.userData.centre?.isVector3 && Number.isFinite(obj.userData.radius)) {
-        const worldCenter = obj.userData.centre.clone().applyMatrix4(obj.matrixWorld)
+        // obj.userData.centre is the SAME local offset already baked into
+        // obj.position (see geoSphere.js) -- it's already part of
+        // matrixWorld's translation, so applying matrixWorld to it again
+        // would double-translate. getWorldPosition reads the translation
+        // matrixWorld already carries, once.
+        const worldCenter = obj.getWorldPosition(new THREE.Vector3())
         const worldScale = obj.getWorldScale(new THREE.Vector3())
         const worldRadius = obj.userData.radius * (worldScale.x + worldScale.y + worldScale.z) / 3
         return { type: 'sphere', center: worldCenter, radius: worldRadius }

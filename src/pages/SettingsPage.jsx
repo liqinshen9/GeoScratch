@@ -177,7 +177,7 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-900">Collision Style</label>
               <p className="text-xs text-slate-500 mt-0.5">
-                How a plain-tube line looks where it passes through a solid object
+                How a line visually indicates passing through a solid object
               </p>
               <select
                 value={settings.lineCollisionStyle}

@@ -6,13 +6,20 @@ import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial }
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial, LineSegments2, LineSegmentsGeometry }
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
+// Orbit zoom limits -- MIN keeps the camera from clipping through/inside
+// objects when zooming in; MAX keeps the scene from shrinking into an
+// unreadable speck (or disappearing entirely) when zooming out.
+const MIN_CAMERA_DISTANCE = 2
+const MAX_CAMERA_DISTANCE = 300
 // Camera distance at which zoom-invariant meshes render at their authored
 // (base) radius; they scale from there to keep apparent on-screen size
 // constant, clamped by MIN/MAX_SCALE.
@@ -679,21 +686,40 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
   useFrame(({ camera }) => {
     objects.forEach((o) => {
       if (!o) return;
+
+      // ONE distance -- and so one zoomScale -- per TOP-LEVEL object, not
+      // one independently computed per zoom-invariant child. A multi-piece
+      // glyph (a dashed/ringed line's many small tube/ring segments) needs
+      // to scale as a single uniform unit, the way a texture moves with its
+      // surface; letting each piece compute its own correction from its own
+      // world position made segments at different camera distances end up
+      // visibly different sizes -- a bulging/tapering artifact on any line
+      // long enough (or viewed end-on enough) that its pieces sit at
+      // meaningfully different distances from the camera. Lines expose
+      // userData.segmentMid (their own local-space centre) as a stable
+      // single reference point for this; anything else just uses its own
+      // world position, which is what already happened per-child before.
+      let zoomScale = 1;
+      if (zoomEnabled) {
+        if (o.userData?.segmentMid) {
+          o.updateMatrixWorld();
+          worldPos.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
+        } else {
+          o.getWorldPosition(worldPos);
+        }
+        const distance = camera.position.distanceTo(worldPos);
+        zoomScale = THREE.MathUtils.clamp(
+          distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
+          ZOOM_INVARIANT_MIN_SCALE,
+          ZOOM_INVARIANT_MAX_SCALE
+        );
+      }
+
       traverseVisible(o, (child) => {
         const baseRadius = child.userData?.zoomInvariantRadius;
         if (!baseRadius) return;
         const isUniform = !!child.userData.zoomInvariantUniform;
 
-        let zoomScale = 1;
-        if (zoomEnabled) {
-          child.getWorldPosition(worldPos);
-          const distance = camera.position.distanceTo(worldPos);
-          zoomScale = THREE.MathUtils.clamp(
-            distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
-            ZOOM_INVARIANT_MIN_SCALE,
-            ZOOM_INVARIANT_MAX_SCALE
-          );
-        }
         const thickMultiplier = isUniform
           ? (extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1)
           : (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
@@ -710,6 +736,43 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
       });
     });
   });
+
+  return null;
+}
+
+// Keeps each geo_vector_line's dash/ring collision-accent patterns
+// (userData.updateZoomRatio, see geoVectorLine.js) in sync with camera
+// distance -- geoVectorLineDefinition builds the glyph once, up front, with
+// no access to the camera, so re-deriving the dash/ring count as the user
+// zooms has to happen here instead. Passes the raw (unclamped) distance
+// ratio rather than a pre-clamped scale -- dashes and rings each want their
+// own clamp range (dashes read fine over a narrow range; a fine "ring
+// texture" needs to grow much more at extreme zoom-out to stay legible), so
+// that tuning lives entirely in geoVectorLine.js instead of being split
+// across two files.
+function DashZoomSync({ objects, zoomEnabled }) {
+  const worldMid = useMemo(() => new THREE.Vector3(), []);
+
+  // Explicit priority -1 (lower runs earlier) so this always runs BEFORE
+  // ZoomInvariantScaler in the same frame, not just by JSX/mount-order
+  // coincidence. It matters here specifically: rebuilding the dash pattern
+  // creates brand-new Mesh children with an unset (1,1,1) scale, and
+  // ZoomInvariantScaler is what corrects that to the right zoom-invariant
+  // cross-section radius. If it ran first (or in an unspecified order),
+  // those new segments would render at their raw, un-scaled radius for one
+  // frame every time the pattern rebuilds -- a visible thickness flicker
+  // during a continuous zoom, since rebuilds happen repeatedly as the scale
+  // crosses each threshold.
+  useFrame(({ camera }) => {
+    if (!zoomEnabled) return;
+    objects.forEach((o) => {
+      if (!o?.userData?.updateZoomRatio || !o.userData.segmentMid) return;
+      o.updateMatrixWorld();
+      worldMid.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
+      const distance = camera.position.distanceTo(worldMid);
+      o.userData.updateZoomRatio(distance / ZOOM_INVARIANT_REFERENCE_DISTANCE);
+    });
+  }, -1);
 
   return null;
 }
@@ -769,6 +832,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
         extraLargePoints={settings.extraLargePoints}
       />
       <FatLineSync objects={objects} extraThick={settings.extraThickLines} />
+      <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />
 
@@ -911,6 +975,8 @@ export default function Scene3D({ objects = [] }) {
         >
           <OrbitControls
             makeDefault
+            minDistance={MIN_CAMERA_DISTANCE}
+            maxDistance={MAX_CAMERA_DISTANCE}
             ref={(instance) => {
               controlsRef.current = instance;
               if (instance) setRefsReadyTick((tick) => tick + 1);
