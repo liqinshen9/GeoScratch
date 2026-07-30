@@ -476,12 +476,58 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // rebuild for it to race against the cross-section's own zoom-invariant
   // scaling during a fast zoom/pan.
   const RINGED_TUBE_RING_PERIOD = 0.8
+
+  // THE ACTUAL BUG: CylinderGeometry(r, r, height, radialSegments) has only
+  // ONE height segment unless told otherwise -- its side is just two giant
+  // triangles per radial facet, spanning the tube's ENTIRE length (up to
+  // ~40 world units, see extentPos/extentNeg above) against a radius of
+  // 0.085. That's an aspect ratio upwards of 1000:1 -- a "needle" triangle.
+  // The collision-accent ring (rebuildSharedAccents, below) never hits
+  // this: its cylinders are only ever as long as one collision zone (a
+  // handful of world units at most), never the whole line -- which is
+  // exactly why it renders cleanly on the SAME geometry/material recipe
+  // while this one didn't. Perspective-correct texture-coordinate
+  // interpolation across a triangle that extreme loses precision on at
+  // least some GPU/driver combinations, worse the more that triangle is
+  // foreshortened on screen (i.e. worse from an oblique angle, fine
+  // looking straight down the tube) -- matching exactly what breaks and
+  // what doesn't. Giving the tube real height segments (one roughly per
+  // ring) keeps every individual triangle short, however long the tube
+  // itself is, which is the fix -- not the ring size/count itself.
+  const RINGED_TUBE_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED_TUBE_RING_PERIOD) * 2)
+  // A 16-sided cylinder is visibly faceted under a specular highlight --
+  // each flat facet catches the light slightly differently, and wherever
+  // that per-facet brightness step happens to land on one of the texture's
+  // hard color-band edges, it reads as a jagged/torn cut instead of a
+  // clean ring. More radial segments (rounder cross-section) plus a
+  // softer, less mirror-like highlight (higher roughness) both shrink
+  // that per-facet step, independent of anything zoom- or texture-repeat-
+  // related.
+  const RINGED_TUBE_RADIAL_SEGMENTS = 48
+  const RINGED_TUBE_ROUGHNESS = 0.75
+  // Mirrors the collision-accent ring's own material recipe exactly
+  // (transparent: true, flat emissive tint, same roughness/metalness --
+  // see rebuildSharedAccents below) instead of a from-scratch material,
+  // since that one already renders clean at this same geometry/roughness.
+  // Only the color changes (a muted gray instead of pink) and both texture
+  // bands stay opaque (this is the solid base tube, not a see-through
+  // overlay sitting on top of something else).
+  const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
+  const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
+  const RINGED_TUBE_METALNESS = 0.15
   const ringedTubeTexture = makeRingTexture(0xa1a1aa, 0x3f3f46)
   setRingTextureRepeat(ringedTubeTexture, distance, RINGED_TUBE_RING_PERIOD, 1)
-  const ringedTubeMat = new THREE.MeshStandardMaterial({ map: ringedTubeTexture, roughness: 0.35 })
+  const ringedTubeMat = new THREE.MeshStandardMaterial({
+    map: ringedTubeTexture,
+    transparent: true,
+    emissive: RINGED_TUBE_EMISSIVE_COLOR,
+    emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
+    roughness: RINGED_TUBE_ROUGHNESS,
+    metalness: RINGED_TUBE_METALNESS,
+  })
 
   const baseTube = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.085, 0.085, distance, 16),
+    new THREE.CylinderGeometry(0.085, 0.085, distance, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(distance)),
     ringedTubeMat
   )
   baseTube.userData.zoomInvariantRadius = 0.085
@@ -502,8 +548,15 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const tex = ringedTubeTexture.clone()
     tex.needsUpdate = true
     setRingTextureRepeat(tex, height, RINGED_TUBE_RING_PERIOD, 1)
-    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.35 })
-    const segment = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, height, 16), mat)
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      transparent: true,
+      emissive: RINGED_TUBE_EMISSIVE_COLOR,
+      emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
+      roughness: RINGED_TUBE_ROUGHNESS,
+      metalness: RINGED_TUBE_METALNESS,
+    })
+    const segment = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, height, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(height)), mat)
     segment.userData.zoomInvariantRadius = 0.085
     segment.position.set(0, (start + end) / 2, 0)
     ringedTubeDashedGroup.add(segment)
@@ -591,10 +644,10 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         transparent: true,
         emissive: RING_ACCENT_COLOR,
         emissiveIntensity: 0.2,
-        roughness: 0.35,
+        roughness: RINGED_TUBE_ROUGHNESS,
         metalness: 0.15,
       })
-      const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 16), mat)
+      const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, RINGED_TUBE_RADIAL_SEGMENTS), mat)
       segment.userData.zoomInvariantRadius = radius
       segment.position.set(0, (start + end) / 2, 0)
       collisionAccentRinged.add(segment)
