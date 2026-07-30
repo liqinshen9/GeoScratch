@@ -505,13 +505,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // related.
   const RINGED_TUBE_RADIAL_SEGMENTS = 48
   const RINGED_TUBE_ROUGHNESS = 0.75
-  // Mirrors the collision-accent ring's own material recipe exactly
-  // (transparent: true, flat emissive tint, same roughness/metalness --
-  // see rebuildSharedAccents below) instead of a from-scratch material,
-  // since that one already renders clean at this same geometry/roughness.
-  // Only the color changes (a muted gray instead of pink) and both texture
-  // bands stay opaque (this is the solid base tube, not a see-through
-  // overlay sitting on top of something else).
+  // NOTE: deliberately NOT transparent (unlike the collision-accent ring
+  // below, which is meant to be a see-through overlay). This is the solid
+  // base tube -- setting transparent:true here (as an earlier attempt at
+  // the jagged-texture bug did, before the real fix turned out to be the
+  // height-segment change above) moves it into the transparent render
+  // queue, which sorts whole objects by distance rather than testing
+  // per-pixel depth, breaking correct occlusion against any OTHER
+  // transparent object (e.g. a see-through cube) it happens to cross.
+  // Staying opaque keeps it in the normal depth-tested pass, same as
+  // plain_tube's cylinder, which occludes/is-occluded correctly.
   const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
   const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
   const RINGED_TUBE_METALNESS = 0.15
@@ -519,7 +522,6 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   setRingTextureRepeat(ringedTubeTexture, distance, RINGED_TUBE_RING_PERIOD, 1)
   const ringedTubeMat = new THREE.MeshStandardMaterial({
     map: ringedTubeTexture,
-    transparent: true,
     emissive: RINGED_TUBE_EMISSIVE_COLOR,
     emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
     roughness: RINGED_TUBE_ROUGHNESS,
@@ -550,7 +552,6 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     setRingTextureRepeat(tex, height, RINGED_TUBE_RING_PERIOD, 1)
     const mat = new THREE.MeshStandardMaterial({
       map: tex,
-      transparent: true,
       emissive: RINGED_TUBE_EMISSIVE_COLOR,
       emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
       roughness: RINGED_TUBE_ROUGHNESS,
