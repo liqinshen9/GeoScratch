@@ -12,7 +12,7 @@ function navLinkClass(isActive) {
 export default function Header() {
   return (
     <header className="app-nav flex h-14 w-full items-center justify-between bg-[#002ea6] px-6 sm:px-8 shadow-md border-b border-white/10 z-[999] shrink-0 select-none">
-      <Link to="/" className="app-nav__logo flex items-center gap-2 no-underline text-white">
+      <Link to="/landing" className="app-nav__logo flex items-center gap-2 no-underline text-white">
         <GeoScratchLogo showWordmark compact />
       </Link>
 

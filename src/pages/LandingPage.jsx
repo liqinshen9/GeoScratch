@@ -20,8 +20,8 @@ export default function LandingPage() {
           </h1>
 
           <div className="landing-hero__actions">
-            <Link to="/sandbox" className="landing-btn landing-btn--primary">
-              Open sandbox
+            <Link to="/exercise" className="landing-btn landing-btn--primary">
+              Open exercise
             </Link>
           </div>
         </div>

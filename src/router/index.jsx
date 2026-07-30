@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import Layout from '@/layout/Layout'
 import LandingPage from '@/pages/LandingPage'
 import ExercisePage from '@/pages/ExercisePage'
@@ -12,6 +12,10 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <Navigate to="/landing" replace />,
+      },
+      {
+        path: 'landing',
         element: <LandingPage />,
       },
       {
