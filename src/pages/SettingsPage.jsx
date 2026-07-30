@@ -76,12 +76,6 @@ export default function SettingsPage() {
               onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
             />
             <ToggleRow
-              label="Show Axes"
-              description="Display the X, Y, Z axes and axis labels in the viewport"
-              checked={settings.showAxes}
-              onChange={(v) => updateSetting('showAxes', v)}
-            />
-            <ToggleRow
               label="Object Shadows"
               description="Let objects receive shadows cast by other objects"
               checked={settings.objectsReceiveShadows}
@@ -92,6 +86,48 @@ export default function SettingsPage() {
               description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
               checked={settings.zoomInvariantSizing}
               onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Points">
+            <ToggleRow
+              label="Extra Large Points"
+              description={'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'}
+              checked={settings.extraLargePoints}
+              onChange={(v) => updateSetting('extraLargePoints', v)}
+            />
+            <ToggleRow
+              label="Matte Points"
+              description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
+              checked={settings.mattePoints}
+              onChange={(v) => updateSetting('mattePoints', v)}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Axis">
+            <ToggleRow
+              label="Show Axis Toggle in Scene"
+              description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
+              checked={settings.showAxisToggleButton}
+              onChange={(v) => updateSetting('showAxisToggleButton', v)}
+            />
+            <ToggleRow
+              label="Show Origin Label"
+              description="Label the origin with a small 'O' next to its marker"
+              checked={settings.showOriginLabel}
+              onChange={(v) => updateSetting('showOriginLabel', v)}
+            />
+            <ToggleRow
+              label="Show Scale Labels"
+              description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
+              checked={settings.showAxisScaleLabels}
+              onChange={(v) => updateSetting('showAxisScaleLabels', v)}
+            />
+            <ToggleRow
+              label="Show Axis Gizmo"
+              description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
+              checked={settings.showAxisGizmo}
+              onChange={(v) => updateSetting('showAxisGizmo', v)}
             />
           </SettingsSection>
 

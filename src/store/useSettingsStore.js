@@ -11,12 +11,18 @@ const DEFAULT_SETTINGS = {
   showBox: true,
   showBoxFrontWireframe: true,
   showAxes: true,
+  showAxisToggleButton: true,
+  showOriginLabel: false,
+  showAxisScaleLabels: true,
+  showAxisGizmo: true,
   objectsReceiveShadows: true,
   autoFocusOnNewObject: false,
   sphereShowGridlines: false,
   teapotShowGridlines: false,
   zoomInvariantSizing: true,
   extraThickLines: false,
+  extraLargePoints: false,
+  mattePoints: false,
 }
 
 const useSettingsStore = create((set) => ({

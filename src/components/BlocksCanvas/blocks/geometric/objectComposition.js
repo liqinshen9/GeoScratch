@@ -270,12 +270,15 @@ export default function initObjectCompositionBlocks() {
       const markerPoint = resolvePointFromParams(object, pointParams);
       const pointLabel = vectorNotation.assignAnyPointLabel(${JSON.stringify(block.id)});
 
-      const marker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.11, 20, 14),
-        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
-      );
+      const markerMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+      const applyPointFinish = (mat, s) => {
+        mat.roughness = s.mattePoints ? 1 : 0.35;
+        mat.metalness = s.mattePoints ? 0 : 0.05;
+      };
+      applyPointFinish(markerMat, window.useSettingsStore?.getState().settings || {});
+      const marker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), markerMat);
       marker.position.copy(markerPoint);
-      marker.userData.zoomInvariantRadius = 0.11;
+      marker.userData.zoomInvariantRadius = 0.24;
       marker.userData.zoomInvariantUniform = true;
       marker.userData.geoType = 'selectable_point_marker';
       marker.userData.coordinate = markerPoint.clone();
@@ -301,6 +304,12 @@ export default function initObjectCompositionBlocks() {
           }
         }
         threeObjStore[${JSON.stringify(block.id)}] = group;
+      }
+      if (window.useSettingsStore) {
+        const unsubscribe = window.useSettingsStore.subscribe((state) => {
+          if (window.threeObjStore?.[${JSON.stringify(block.id)}] !== group) { unsubscribe(); return; }
+          applyPointFinish(markerMat, state.settings);
+        });
       }
       const pointVector = markerPoint.clone();
       pointVector.userData = {
