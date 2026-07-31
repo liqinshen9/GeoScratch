@@ -411,8 +411,8 @@ const labelRegistry = new Map();
 // their object when you zoom, but the range is clamped tightly so they never
 // shrink to illegible or balloon to distracting sizes.
 const LABEL_SCALE_REF_DISTANCE = 56; // ~ default camera distance, so the initial view sits near scale 1
-const LABEL_SCALE_MIN = 0.75;
-const LABEL_SCALE_MAX = 1.25;
+const LABEL_SCALE_MIN = 0.6;
+const LABEL_SCALE_MAX = 1.0;
 
 // Mass-spring label declutter constants. Each label is a point mass with a
 // spring pulling it back toward a home position, plus continuous pairwise
@@ -1201,8 +1201,13 @@ export default function Scene3D({ objects = [] }) {
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
           {settings.showAxisGizmo && (
-            <GizmoHelper alignment="top-right" margin={[56, 56]}>
-              <GizmoViewport axisColors={[AXIS_COLORS.x, AXIS_COLORS.y, AXIS_COLORS.z]} labelColor="black" />
+            <GizmoHelper alignment="top-right" margin={[40, 40]}>
+              <GizmoViewport
+                axisColors={[AXIS_COLORS.x, AXIS_COLORS.y, AXIS_COLORS.z]}
+                labelColor="black"
+                scale={28}
+                axisHeadScale={0.85}
+              />
             </GizmoHelper>
           )}
         </Canvas>
@@ -1216,7 +1221,7 @@ export default function Scene3D({ objects = [] }) {
               aria-label={settings.showAxes ? 'Hide axes' : 'Show axes'}
               title={settings.showAxes ? 'Hide axes' : 'Show axes'}
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <path d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
@@ -1227,7 +1232,7 @@ export default function Scene3D({ objects = [] }) {
             aria-label="Reset to default 3D view"
             title="Default view"
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
               <circle cx="12" cy="12" r="2.2" fill="currentColor" />
               <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

@@ -632,7 +632,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     clearGroupChildren(collisionAccentRinged, true) // each segment gets its own cloned texture + material
     clearGroupChildren(collisionAccentDarkTexture, false) // shares darkTextureMat
 
-    const radius = getAccentRadius(activeStyle, thick) + 0.001
+    // The "hair" of clearance from getAccentRadius's own base radius needs to
+    // be big enough to actually separate the two surfaces in the depth
+    // buffer, not just nonzero -- 0.001 (the original value) was still close
+    // enough to the base tube's own radius that at ordinary camera distances
+    // the two z-fought, and which one "won" was inconsistent per-pixel. For
+    // collisionAccentRinged (semi-transparent) that mostly just looked like a
+    // faint flicker; for collisionAccentDarkTexture (a fully opaque overlay
+    // meant to completely replace what's underneath) it meant the base
+    // tube's own ring texture kept showing through instead of being hidden.
+    const radius = getAccentRadius(activeStyle, thick) + 0.006
 
     currentZones.forEach(({ start, end }) => {
       const height = end - start
