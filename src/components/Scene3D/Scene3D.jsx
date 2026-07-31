@@ -444,11 +444,18 @@ const DAMPING_RATE = 20; // 1/s; velocity decays as exp(-DAMPING_RATE * t), inde
 // REPEL_K_OVERLAP an order of magnitude above SPRING_K pushes that residual
 // penetration down to near-zero without changing the convergence dynamics
 // (still continuous/stable, just resolves overlap "harder").
-const REPEL_K_OVERLAP = 7000; // repulsion per px of penetration once labels' rects truly overlap --
-                               // raised alongside SPRING_K so repulsion still comfortably dominates
-const MAX_PAIR_FORCE = 8000; // px/s^2 clamp per pair -- bounds single-step impulses (avoids overshoot
+const REPEL_K_OVERLAP = 13000; // repulsion per px of penetration once labels' rects truly overlap.
+                               // Needs to stay well above SPRING_K's ~30:1 ratio (not just scaled by
+                               // the same factor) -- a scene with several labels near each other has
+                               // several pairs pulling on one label at once, diluting how much any one
+                               // pair's repulsion can push against the spring; a same-factor bump left
+                               // 3-4-label clusters with a small residual overlap that this ratio clears.
+const MAX_PAIR_FORCE = 15000; // px/s^2 clamp per pair -- bounds single-step impulses (avoids overshoot
                               // when two labels start out fully coincident, e.g. two labels on one anchor)
 const GAP = 8; // px; visual gap once rects stop overlapping
+const SIGN_SMOOTH = 3; // px; smoothing width for the per-axis push direction's sign (see its comment)
+const AXIS_BLEND = 0.5; // 0..1; how much of the push direction favors the per-axis "cheap axis"
+                         // choice over the plain center-to-center diagonal -- see its comment
 // Force is 0 exactly at the overlap/no-overlap boundary (a single point), so
 // sub-pixel float/discretization noise right at that point can flip a label
 // between "just barely overlapping" and "just barely clear" every sub-step,
@@ -605,10 +612,10 @@ function LabelDeclutter() {
       });
 
       // Pairwise repulsion, O(n^2) -- fine at label counts of a few dozen.
-      // Force always points along the line between the two centers (continuous
-      // in direction) -- unlike an axis-locked "push whichever of X/Y overlaps
-      // less" rule, this can't flip discretely between push-X and push-Y mode
-      // as the offsets shift, which is what caused visible flicker.
+      // Overlap *detection* (below, via minkowskiSafeDist along the raw
+      // center-to-center direction) is unchanged -- it's already continuous
+      // and proven flicker-free. Only the *push direction* is reshaped: see
+      // the per-axis weighting comment further down.
       for (let i = 0; i < entries.length; i++) {
         for (let j = i + 1; j < entries.length; j++) {
           const a = entries[i];
@@ -627,12 +634,12 @@ function LabelDeclutter() {
             dx = Math.cos(angle); dy = Math.sin(angle); dist = 1;
           }
 
-          const nx = dx / dist;
-          const ny = dy / dist;
+          const dirX = dx / dist;
+          const dirY = dy / dist;
           const combinedHW = a._hw + b._hw + GAP;
           const combinedHH = a._hh + b._hh + GAP;
           // Zero-force point shifted outward by FORCE_DEADZONE -- see its comment.
-          const safeDist = minkowskiSafeDist(nx, ny, combinedHW, combinedHH) - FORCE_DEADZONE;
+          const safeDist = minkowskiSafeDist(dirX, dirY, combinedHW, combinedHH) - FORCE_DEADZONE;
 
           // Rects truly overlap -- linear in penetration depth, 0 exactly at
           // dist === safeDist (see REPEL_K_OVERLAP comment for why that matters).
@@ -640,8 +647,53 @@ function LabelDeclutter() {
 
           if (mag > 0) {
             mag = Math.min(mag, MAX_PAIR_FORCE);
-            a._fx += nx * mag; a._fy += ny * mag;
-            b._fx -= nx * mag; b._fy -= ny * mag;
+
+            // Per-axis (Manhattan-flavored) push direction: weight each axis
+            // inversely to its own overlap depth, so separation happens mostly
+            // along whichever axis has LESS overlap -- the "cheap" axis to
+            // resolve -- instead of the straight center-to-center diagonal,
+            // which wastes some force on an axis that may have plenty of
+            // headroom (the common case for two wide, side-by-side text
+            // labels: overlap is almost all horizontal, so the push should be
+            // too).
+            //
+            // The per-axis component is the weight times a *smoothed sign* of
+            // dx/dy (bounded to roughly +-1), not dx/dy directly: multiplying
+            // by the raw values let whichever axis had the numerically larger
+            // separation dominate regardless of the weight (e.g. dy~1px but
+            // dx~60px still produced an almost-pure-X push even when Y was
+            // clearly the cheaper axis to resolve on) -- a real 4-label case
+            // settled with a pair still overlapping because of exactly this.
+            // The smoothing (SIGN_SMOOTH) keeps it continuous through dx/dy=0
+            // instead of a hard sign() flip, same reasoning as FORCE_DEADZONE.
+            const overlapX = Math.max(combinedHW - Math.abs(dx), 0.01);
+            const overlapY = Math.max(combinedHH - Math.abs(dy), 0.01);
+            const wX = overlapY / (overlapX + overlapY);
+            const wY = overlapX / (overlapX + overlapY);
+            const sx = dx / (Math.abs(dx) + SIGN_SMOOTH);
+            const sy = dy / (Math.abs(dy) + SIGN_SMOOTH);
+            const vx = wX * sx;
+            const vy = wY * sy;
+            const vlen = Math.hypot(vx, vy) || 1;
+            const axisNx = vx / vlen;
+            const axisNy = vy / vlen;
+
+            // Blend toward the per-axis direction rather than fully committing
+            // to it. Fully committing each pair to its own "cheapest axis"
+            // works for an isolated pair, but in a scene with several labels
+            // (several pairs interacting at once), different pairs can prefer
+            // conflicting axes -- a real 4-label case left a pair still
+            // overlapping because each pair's individually "efficient" choice
+            // fought the others, something the plain diagonal (every pair
+            // pushing along the same kind of direction) never ran into.
+            // AXIS_BLEND trades some of that per-pair efficiency for the
+            // robustness of always having a diagonal component to fall back on.
+            const nx = (1 - AXIS_BLEND) * dirX + AXIS_BLEND * axisNx;
+            const ny = (1 - AXIS_BLEND) * dirY + AXIS_BLEND * axisNy;
+            const nlen = Math.hypot(nx, ny) || 1;
+
+            a._fx += (nx / nlen) * mag; a._fy += (ny / nlen) * mag;
+            b._fx -= (nx / nlen) * mag; b._fy -= (ny / nlen) * mag;
           }
         }
       }
@@ -698,8 +750,6 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
         const pos = resolveAnchor(object3D, lbl.anchor);
         if (!pos) return null;
 
-        const off = Array.isArray(lbl.offset) && lbl.offset.length === 3 ? lbl.offset : [0, 0, 0];
-
         let text = lbl.text;
         if (!text) {
           const val =
@@ -712,7 +762,14 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
           else text = '';
         }
 
-        const worldPos = [pos[0] + off[0], pos[1] + off[1], pos[2] + off[2]];
+        // Deliberately ignore lbl.offset (a small world-space authoring nudge, e.g.
+        // [0.12, 0.12, 0]) here: a world-space offset projects to wildly different
+        // screen distances depending on camera angle -- sometimes large, sometimes
+        // ~0 -- which is exactly the "label is right on the marker from one angle,
+        // way off in space from another" bug. BASE_OFFSET_X/Y in LabelDeclutter is
+        // the sole, camera-angle-consistent source of separation now; the raw
+        // anchor position is what gets projected and sprung away from.
+        const worldPos = pos;
 
         return (
           <group key={`lbl-${i}`} position={worldPos}>
