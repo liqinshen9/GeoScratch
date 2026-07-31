@@ -158,7 +158,7 @@ export default function BlocksCanvas({
       {!workspaceMaximized && (
         <div className="blocks-toolbox-slot">
           <aside className="blocks-col blocks-col--toolbox">
-            <CategoryToolbox selected={categoryId} onSelect={handleCategorySelect} />
+            <CategoryToolbox selected={paletteOpen ? categoryId : null} onSelect={handleCategorySelect} />
           </aside>
 
           {paletteOpen && (
