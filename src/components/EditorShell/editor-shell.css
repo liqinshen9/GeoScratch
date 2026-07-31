@@ -1,40 +1,54 @@
 /*shared layout: [leading?], toolbox, workspace, 3d view -- palette is an
-  anchored flyout inside the toolbox column, not its own grid track. */
+  anchored flyout inside the toolbox column, not its own grid track.
+
+  editor-shell is the ONE grid that actually owns the column tracks; the
+  header/body rows below are subgrid, not separate grids with a matching
+  grid-template-columns value. Two independent grids computing "the same"
+  fractional column widths can still paint their borders a device-pixel
+  apart (each grid's boxes get pixel-snapped on their own) -- invisible to
+  getBoundingClientRect, but a visible seam in the divider where the header
+  row meets the body row. Subgrid shares the parent's already-resolved
+  track positions instead of recomputing them, which removes the seam at
+  the source rather than trying to nudge two separate roundings into
+  agreement.
+
+  The vertical divider LINES themselves are drawn the same way: not as a
+  border-right on one cell meeting a border-left on its neighbor (still two
+  independently-painted, independently-snapped boxes, still a possible
+  seam), but as this grid's own background showing through a 1px
+  column-gap. One paint, so there's nothing for it to disagree with. */
 .editor-shell {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 1px;
   flex: 1 1 auto;
   min-height: 0;
-  background: var(--bg-main);
+  background: var(--geo-border-light);
+}
+
+.editor-shell--with-leading {
+  grid-template-columns: var(--exercise-task-width, 20rem) 96px minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .editor-header-row,
 .editor-body-row {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr);
-}
-
-.editor-shell--with-leading .editor-header-row,
-.editor-shell--with-leading .editor-body-row {
-  grid-template-columns: var(--exercise-task-width, 20rem) 140px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
 }
 
 .editor-header-row {
-  flex-shrink: 0;
+  grid-row: 1;
 }
 
 .editor-body-row {
-  flex: 1;
+  grid-row: 2;
   min-height: 0;
 }
 
 .editor-head {
   background: var(--geo-surface);
-  border-right: 1px solid var(--geo-border-light);
-}
-
-.editor-head--last {
-  border-right: none;
 }
 
 /* Counted from the end so the same rule covers both the 3-column base
@@ -44,6 +58,7 @@
   display: grid;
   grid-column: -4 / -2;
   grid-template-columns: subgrid;
+  column-gap: 1px;
   min-height: 0;
 }
 
@@ -53,10 +68,18 @@
   display: flex;
   flex-direction: column;
   background: var(--geo-workspace);
+  /* react-three-fiber measures this element's box to size its canvas. Under
+     browser zoom, that measurement can come back a hair off (rounding), and
+     since this element's own height is otherwise derived from its content,
+     the oversized canvas feeds back into a bigger box on the next
+     measurement -- runaway growth every zoom step, never settling back down.
+     contain:size decouples this box's size from its content entirely (it's
+     still sized correctly top-down by the grid), which breaks the loop. */
+  contain: layout size;
+  overflow: hidden;
 }
 
-.editor-shell--maximized .editor-header-row,
-.editor-shell--maximized .editor-body-row {
+.editor-shell--maximized {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
 

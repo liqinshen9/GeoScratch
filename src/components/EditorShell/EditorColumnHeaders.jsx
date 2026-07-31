@@ -24,7 +24,6 @@ export default function EditorColumnHeaders({
       <header className="panel-column-header editor-head workspace-panel-header">
         <div>
           <h2>Workspace</h2>
-          <p>Build your program here</p>
         </div>
         <div className="flex items-center gap-2">
           <Button

@@ -22,7 +22,7 @@ const Workspace = (hostElement) => {
   return Blockly.inject(hostElement, {
     renderer: 'geras',
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
-    zoom: { controls: true, wheel: true, startScale: 1, minScale: 0.5, maxScale: 2 },
+    zoom: { controls: true, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
     trashcan: true,
     theme: GEO_SCRATCH_BLOCK_THEME,
     move: { scrollbars: false, drag: true, wheel: true },

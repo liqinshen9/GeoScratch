@@ -102,11 +102,6 @@
   text-decoration: none;
 }
 
-.category-card {
-  border-color: var(--geo-border);
-  box-shadow: 0 1px 3px rgba(0, 46, 166, 0.06);
-}
-
 .recenter-btn {
   background: rgba(0, 46, 166, 0.08);
   color: var(--geo-text);
@@ -120,20 +115,22 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 7px 10px;
   border-bottom: 1px solid var(--geo-border-light);
   background: var(--geo-surface);
+  display: flex;
+  align-items: center;
 }
 
 .panel-column-header h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--geo-text-on-light);
 }
 
 .panel-column-header p {
-  margin: 4px 0 0;
-  font-size: 12px;
+  margin: 3px 0 0;
+  font-size: 11px;
   color: var(--geo-text-muted-on-light);
 }

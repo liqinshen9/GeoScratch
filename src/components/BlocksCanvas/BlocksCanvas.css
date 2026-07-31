@@ -8,15 +8,15 @@
   flex-direction: column;
   min-height: 0;
   background: var(--geo-surface);
-  border-right: 1px solid var(--geo-border-light);
 }
 
 .blocks-col:nth-child(2) {
   background: var(--geo-panel-muted);
 }
 
-.blocks-col--workspace {
-  border-right: none;
+.blocks-col--toolbox {
+  flex: 1;
+  min-height: 0;
 }
 
 .blocks-col--workspace .workspace-host {
@@ -67,52 +67,66 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 10px;
+  padding: 0.55rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.45rem;
 }
 
 .category-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px;
-  text-align: left;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  background: var(--geo-block-card);
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 4rem;
+  padding: 0.35rem 0.2rem;
+  text-align: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   cursor: pointer;
 }
 
+.category-card::before {
+  content: '';
+  width: 1.45rem;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: currentColor;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+}
+
+.category-card--blue {
+  color: #60a5fa;
+}
+
+.category-card--green {
+  color: #22c55e;
+}
+
+.category-card--purple {
+  color: #a78bfa;
+}
+
 .category-card strong {
-  font-size: 14px;
+  font-size: 0.72rem;
+  line-height: 1.05;
+  font-weight: 700;
   color: var(--geo-text-on-light);
 }
 
 .category-card span {
-  font-size: 11px;
-  color: var(--geo-text-muted-on-light);
+  display: none;
 }
 
-.category-card--blue.is-active,
-.category-card--green.is-active,
-.category-card--purple.is-active {
-  border-color: var(--geo-highlight);
+.category-card.is-active {
   background: rgba(0, 46, 166, 0.08);
+  box-shadow: 0 0 0 1px rgba(0, 46, 166, 0.28);
 }
 
-.category-card--blue.is-active strong,
-.category-card--green.is-active strong,
-.category-card--purple.is-active strong {
+.category-card.is-active strong {
   color: var(--geo-highlight);
-}
-
-.category-card--blue.is-active span,
-.category-card--green.is-active span,
-.category-card--purple.is-active span {
-  color: var(--geo-highlight);
-  opacity: 0.85;
 }
 
 /* Palette */
@@ -296,6 +310,11 @@
 .workspace-host .blocklySvg {
   width: 100% !important;
   height: 100% !important;
+  border: 0 !important;
+}
+
+.workspace-host .blocklyMainBackground {
+  stroke: transparent !important;
 }
 
 #blocks-canvas .blocklyZoom > image,

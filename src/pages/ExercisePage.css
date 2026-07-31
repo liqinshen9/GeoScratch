@@ -20,20 +20,16 @@
 }
 
 .exercise-editor-shell {
+  /* Only adds to .editor-shell's own display:grid/background -- this class
+     must not redeclare either here. Redeclaring display would silently
+     break header/body row subgrid resolution (computes to "none" with no
+     grid parent to inherit tracks from, collapsing every header cell onto
+     its own row). Redeclaring background would paint over the 1px
+     column-gap divider lines that are only visible because they show
+     .editor-shell's background color through the gap. */
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
   border-top: 1px solid var(--exercise-divider);
-  background: var(--bg-main);
-}
-
-.exercise-page--editor #blocks-canvas .workspace-host .blocklySvg {
-  border: 0 !important;
-}
-
-.exercise-page--editor #blocks-canvas .workspace-host .blocklyMainBackground {
-  stroke: transparent !important;
 }
 
 .exercise-task-panel {
@@ -103,7 +99,7 @@
 .exercise-task-panel h1 {
   margin: 0;
   color: var(--exercise-blue);
-  font-size: clamp(0.95rem, 1.15vw, 1.15rem);
+  font-size: clamp(1.05rem, 1.3vw, 1.3rem);
   line-height: 1.18;
   font-weight: 800;
   overflow-wrap: anywhere;
@@ -116,7 +112,7 @@
 .exercise-task-panel p {
   margin: 0;
   color: var(--geo-text-muted-on-light);
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   line-height: 1.35;
 }
 
@@ -136,14 +132,14 @@
 
 .exercise-line-question h3 {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 800;
 }
 
 .exercise-line-question p {
   color: var(--geo-text-muted-on-light);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   line-height: 1.35;
 }
 
@@ -165,7 +161,7 @@
 .exercise-given-values h3,
 .exercise-answer-card span {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   font-weight: 800;
 }
 
@@ -173,7 +169,7 @@
 .exercise-answer-card p {
   color: var(--geo-text-muted-on-light);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.74rem;
+  font-size: 0.82rem;
   line-height: 1.25;
 }
 
@@ -183,7 +179,7 @@
 
 .exercise-answer-card strong {
   color: var(--geo-text);
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   line-height: 1;
 }
 
@@ -317,8 +313,8 @@
   list-style: none;
   counter-reset: exercise-step;
   color: var(--geo-text);
-  font-size: 0.73rem;
-  line-height: 1.24;
+  font-size: 0.82rem;
+  line-height: 1.28;
 }
 
 .exercise-task-steps li {
@@ -346,7 +342,7 @@
   place-items: center;
   background: var(--geo-panel-muted);
   color: var(--geo-text-muted-on-light);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 800;
 }
 
@@ -383,59 +379,6 @@
   color: var(--geo-text);
 }
 
-.exercise-page--editor .blocks-col--toolbox .category-toolbox-list {
-  padding: 0.55rem;
-  gap: 0.45rem;
-}
-
-.exercise-page--editor .category-card {
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 4rem;
-  padding: 0.35rem 0.2rem;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  text-align: center;
-}
-
-.exercise-page--editor .category-card::before {
-  content: '';
-  width: 1.45rem;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-  background: currentColor;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
-}
-
-.exercise-page--editor .category-card--blue {
-  color: #60a5fa;
-}
-
-.exercise-page--editor .category-card--green {
-  color: #22c55e;
-}
-
-.exercise-page--editor .category-card--purple {
-  color: #a78bfa;
-}
-
-.exercise-page--editor .category-card strong {
-  color: #111827;
-  font-size: 0.69rem;
-  line-height: 1.05;
-  font-weight: 700;
-}
-
-.exercise-page--editor .category-card span {
-  display: none;
-}
-
-.exercise-page--editor .category-card.is-active {
-  background: #eaf2ff;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.28);
-}
 
 .exercise-page--editor .category-card.is-active strong {
   color: var(--exercise-blue);
