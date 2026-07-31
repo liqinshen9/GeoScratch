@@ -6,13 +6,20 @@ import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial }
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial, LineSegments2, LineSegmentsGeometry }
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
+// Orbit zoom limits -- MIN keeps the camera from clipping through/inside
+// objects when zooming in; MAX keeps the scene from shrinking into an
+// unreadable speck (or disappearing entirely) when zooming out.
+const MIN_CAMERA_DISTANCE = 2
+const MAX_CAMERA_DISTANCE = 300
 // Camera distance at which zoom-invariant meshes render at their authored
 // (base) radius; they scale from there to keep apparent on-screen size
 // constant, clamped by MIN/MAX_SCALE.
@@ -407,19 +414,116 @@ const LABEL_SCALE_REF_DISTANCE = 56; // ~ default camera distance, so the initia
 const LABEL_SCALE_MIN = 0.75;
 const LABEL_SCALE_MAX = 1.25;
 
-function LabelAnchor({ id, className, color, worldPos, children }) {
+// Mass-spring label declutter constants. Each label is a point mass with a
+// spring pulling it back toward a home position, plus continuous pairwise
+// repulsion against other labels. Hand-tuned by feel -- same spirit as the
+// LABEL_SCALE_* constants above, not derived exactly.
+const SPRING_K = 450; // spring-to-home stiffness -- strong, so a label only drifts from its own anchor
+                       // as much as truly necessary to clear another label, and snaps back close once
+                       // clear (a weak spring let labels settle far from their anchor when two labels'
+                       // homes happened to be close together on screen -- there was nothing pulling the
+                       // pushed-out label back once it escaped the other's overlap zone).
+const DAMPING_RATE = 20; // 1/s; velocity decays as exp(-DAMPING_RATE * t), independent of step size --
+                          // scaled up alongside SPRING_K (roughly sqrt(k)) to stay critically damped
+// Repulsion is linear in penetration depth and is exactly 0 the instant rects
+// stop overlapping -- force must be 0 at the overlap/no-overlap boundary from
+// BOTH sides, or the pair oscillates forever across that boundary (a label
+// gets kicked out by a discontinuous jump, drifts back in under the spring,
+// gets kicked out again, repeat). A separate "soft anticipatory" falloff zone
+// for not-yet-overlapping labels was tried and removed for exactly this
+// reason -- its force didn't go to 0 at the boundary, so it fought the
+// overlap regime and never converged.
+//
+// The spring never stops pulling a label back toward its home, even once
+// repulsion is active, so rest is wherever the two forces balance -- not
+// wherever the rects stop overlapping. That equilibrium sits at a nonzero
+// residual penetration unless repulsion heavily dominates the spring (a weak
+// ratio like the original 900:140 settled with labels still visibly
+// touching/overlapping, especially side-by-side where two wide text labels
+// need a lot of horizontal separation to fully clear each other). Keeping
+// REPEL_K_OVERLAP an order of magnitude above SPRING_K pushes that residual
+// penetration down to near-zero without changing the convergence dynamics
+// (still continuous/stable, just resolves overlap "harder").
+const REPEL_K_OVERLAP = 7000; // repulsion per px of penetration once labels' rects truly overlap --
+                               // raised alongside SPRING_K so repulsion still comfortably dominates
+const MAX_PAIR_FORCE = 8000; // px/s^2 clamp per pair -- bounds single-step impulses (avoids overshoot
+                              // when two labels start out fully coincident, e.g. two labels on one anchor)
+const GAP = 8; // px; visual gap once rects stop overlapping
+// Force is 0 exactly at the overlap/no-overlap boundary (a single point), so
+// sub-pixel float/discretization noise right at that point can flip a label
+// between "just barely overlapping" and "just barely clear" every sub-step,
+// injecting a tiny force each time -- visible as a persistent low-amplitude
+// hover that never fully settles. Shifting the zero-force point outward by a
+// couple px turns that single point into a small band, so noise within it
+// stays force-free and velocity actually decays to a true, unmoving rest.
+const FORCE_DEADZONE = 2; // px
+const MAX_OFFSET = 55; // px; hard cap on how far a label can ever drift from its anchor
+const EMPHASIS_MASS = 2.5; // emphasis labels resist being pushed more, so they "win" contested space
+const MAX_DT = 0.05; // seconds; caps a single frame's step (e.g. after a backgrounded tab regains focus)
+// Sub-step count is derived from the frame's dt (below), not fixed, so it stays
+// robust across very different refresh rates -- a fixed count tuned for 60fps
+// (small per-frame dt) was too coarse on a slow/throttled display where each
+// frame's dt is much larger, close to MAX_DT, and needs proportionally more
+// subdivision for the same stability.
+const TARGET_SUBSTEP_DT = 0.006; // seconds; each sub-step aims for roughly this duration
+const SLEEP_VELOCITY = 3; // px/s; velocity below this is snapped to 0 so near-equilibrium labels come
+                           // to a true, exact rest instead of perpetually creeping by sub-pixel amounts
+                           // (that creep was invisible in the settle-time numbers but visible on screen
+                           // once labels update every frame instead of every ~50ms).
+
+// A label's spring rests at a small, fixed *screen-space* offset from its raw
+// anchor projection -- never (0,0). A label's world-space authoring offset
+// (see LabelLayer's `offset`) can project to ~zero screen displacement from
+// some camera angles (the offset vector pointing roughly along the view
+// direction), which lets the label render directly on top of -- occluding --
+// the object it's labeling. A fixed screen-space offset can't do that: it's
+// applied after projection, so it's the same up-and-right nudge regardless of
+// camera angle, guaranteeing minimum separation from the marker.
+const BASE_OFFSET_DIST = 16; // px
+const BASE_OFFSET_ANGLE = -40 * Math.PI / 180; // up + right (CSS Y grows downward)
+const BASE_OFFSET_X = BASE_OFFSET_DIST * Math.cos(BASE_OFFSET_ANGLE);
+const BASE_OFFSET_Y = BASE_OFFSET_DIST * Math.sin(BASE_OFFSET_ANGLE);
+
+// Exact "just touching" center distance for two axis-aligned rects along a
+// given direction (nx, ny) -- the Minkowski-sum boundary of the two rects is
+// itself a rectangle with these combined half-extents, so the distance to its
+// edge along a ray is whichever axis the ray exits first.
+function minkowskiSafeDist(nx, ny, combinedHalfWidth, combinedHalfHeight) {
+  const tX = Math.abs(nx) > 1e-6 ? combinedHalfWidth / Math.abs(nx) : Infinity;
+  const tY = Math.abs(ny) > 1e-6 ? combinedHalfHeight / Math.abs(ny) : Infinity;
+  return Math.min(tX, tY);
+}
+
+function LabelAnchor({ id, className, color, worldPos, emphasis, children }) {
   const bodyRef = useRef(null);
 
   useEffect(() => {
-    const entry = { bodyRef, appliedY: 0, appliedScale: 1, worldPos };
+    const entry = {
+      bodyRef,
+      worldPos,
+      offsetX: 0,
+      offsetY: 0,
+      velX: 0,
+      velY: 0,
+      appliedScale: 1,
+      mass: emphasis ? EMPHASIS_MASS : 1,
+    };
     labelRegistry.set(id, entry);
+    applyLabelTransform(entry, 0, 0, 1);
     return () => { labelRegistry.delete(id); };
   }, [id]);
 
   useEffect(() => {
     const entry = labelRegistry.get(id);
-    if (entry) entry.worldPos = worldPos;
-  }, [id, worldPos]);
+    if (!entry) return;
+    entry.worldPos = worldPos;
+    entry.mass = emphasis ? EMPHASIS_MASS : 1;
+    // Anchor jumped (scene rebuild) -- kill velocity to avoid a flick, but
+    // keep offsetX/offsetY as a warm start since the relative clutter
+    // situation is usually similar across rebuilds.
+    entry.velX = 0;
+    entry.velY = 0;
+  }, [id, worldPos, emphasis]);
 
   const background = color ? hexToRgba(color, 0.55) : undefined;
 
@@ -432,83 +536,134 @@ function LabelAnchor({ id, className, color, worldPos, children }) {
   );
 }
 
-function applyLabelTransform(entry, y, scale) {
-  entry.appliedY = y;
+function applyLabelTransform(entry, x, y, scale) {
+  entry.offsetX = x;
+  entry.offsetY = y;
   entry.appliedScale = scale;
   if (entry.bodyRef.current) {
     const parts = [];
-    if (Math.abs(y) > 0.5) parts.push(`translate3d(0, ${y.toFixed(1)}px, 0)`);
+    if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) parts.push(`translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`);
     if (Math.abs(scale - 1) > 0.01) parts.push(`scale(${scale.toFixed(3)})`);
+    // translate3d must come before scale: a CSS transform list applies right-to-left,
+    // so this keeps the translation in true screen pixels, independent of scale.
+    // Swapping the order would make MAX_OFFSET/GAP/REPEL_* scale-dependent -- don't "clean it up".
     entry.bodyRef.current.style.transform = parts.join(' ');
   }
 }
 
 function LabelDeclutter() {
-  const frameCount = useRef(0);
   const scratchVec = useRef(new THREE.Vector3());
 
-  useFrame(({ camera }) => {
-    frameCount.current += 1;
-    if (frameCount.current % 3 !== 0) return; // ~20fps is plenty for label layout
+  useFrame(({ camera }, delta) => {
+    // Runs every rendered frame (not throttled to a fixed tick rate) so label
+    // motion matches the rest of the scene -- updating position on a coarser
+    // cadence than the render loop looked stepped/jittery next to everything
+    // else moving at full frame rate. Sub-stepping (below) keeps the physics
+    // stable regardless of how big or small this frame's dt is.
+    const dt = Math.min(delta, MAX_DT);
 
     const entries = Array.from(labelRegistry.values())
       .filter((e) => e.bodyRef.current);
 
+    // Pass 1: camera-distance scale (unchanged logic, independent of position)
     entries.forEach((e) => {
       if (!e.worldPos) return;
       const dist = scratchVec.current.set(e.worldPos[0], e.worldPos[1], e.worldPos[2]).distanceTo(camera.position);
       const rawScale = LABEL_SCALE_REF_DISTANCE / Math.max(dist, 1e-3);
-      e.targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale));
+      const targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale));
+      e.appliedScale += (targetScale - e.appliedScale) * 0.25;
     });
 
-    const items = entries.map((e) => {
+    // Pass 2: read (batch all DOM reads before any writes, avoid layout thrash).
+    // Geometry (_cx/_cy/_hw/_hh) is only valid for this outer tick -- offsets
+    // move within it below, but rect size/natural-center don't change without
+    // a fresh DOM read, so they're computed once per tick, not per sub-step.
+    entries.forEach((e) => {
       const rect = e.bodyRef.current.getBoundingClientRect();
-      return {
-        e,
-        top: rect.top - e.appliedY, // natural (un-offset) position
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        target: 0,
-      };
+      e._cx = rect.left + rect.width / 2 - e.offsetX; // natural (un-offset) center
+      e._cy = rect.top + rect.height / 2 - e.offsetY;
+      e._hw = rect.width / 2;
+      e._hh = rect.height / 2;
     });
 
-    const GAP = 4;
-    for (let iter = 0; iter < 4; iter++) {
-      for (let i = 0; i < items.length; i++) {
-        for (let j = i + 1; j < items.length; j++) {
-          const a = items[i];
-          const b = items[j];
-          const aTop = a.top + a.target;
-          const bTop = b.top + b.target;
-          const overlapY = Math.min(aTop + a.height, bTop + b.height) - Math.max(aTop, bTop);
-          const overlapX = Math.min(a.left + a.width, b.left + b.width) - Math.max(a.left, b.left);
-          if (overlapY > 0 && overlapX > 0) {
-            const push = (overlapY + GAP) / 2;
-            const aCenter = aTop + a.height / 2;
-            const bCenter = bTop + b.height / 2;
-            // Fall back to array order when centers are too close -- avoids
-            // push-direction jitter from sub-pixel rendering noise.
-            const aGoesUp = Math.abs(aCenter - bCenter) > 0.5 ? aCenter <= bCenter : i < j;
-            if (aGoesUp) {
-              a.target -= push;
-              b.target += push;
-            } else {
-              a.target += push;
-              b.target -= push;
-            }
+    // Passes 3-5: force + integrate, in several small sub-steps rather than
+    // one single frame-sized step. A single step can still be too coarse
+    // relative to how stiff the repulsion force can get when several labels
+    // overlap at once (summed pairwise forces can move a label further in
+    // one step than the separation being resolved) -- that overshoot was
+    // itself a second source of the flicker, independent of the force
+    // continuity fixed by REPEL_K_OVERLAP-only repulsion above. Sub-stepping
+    // is the standard fix for a stiff force / coarse-timestep mismatch.
+    const substeps = Math.max(1, Math.ceil(dt / TARGET_SUBSTEP_DT));
+    const subDt = dt / substeps;
+    const velDecay = Math.exp(-DAMPING_RATE * subDt);
+    for (let step = 0; step < substeps; step++) {
+      entries.forEach((e) => {
+        // Spring-to-home force (home = a fixed screen-space nudge, not (0,0) -- see BASE_OFFSET_*)
+        e._fx = -SPRING_K * (e.offsetX - BASE_OFFSET_X);
+        e._fy = -SPRING_K * (e.offsetY - BASE_OFFSET_Y);
+      });
+
+      // Pairwise repulsion, O(n^2) -- fine at label counts of a few dozen.
+      // Force always points along the line between the two centers (continuous
+      // in direction) -- unlike an axis-locked "push whichever of X/Y overlaps
+      // less" rule, this can't flip discretely between push-X and push-Y mode
+      // as the offsets shift, which is what caused visible flicker.
+      for (let i = 0; i < entries.length; i++) {
+        for (let j = i + 1; j < entries.length; j++) {
+          const a = entries[i];
+          const b = entries[j];
+          const ax = a._cx + a.offsetX, ay = a._cy + a.offsetY;
+          const bx = b._cx + b.offsetX, by = b._cy + b.offsetY;
+          let dx = ax - bx;
+          let dy = ay - by;
+          let dist = Math.hypot(dx, dy);
+
+          if (dist < 1e-3) {
+            // Perfectly coincident (common when multiple labels share one
+            // anchor) -- fan out in a deterministic direction per pair instead
+            // of an unstable/arbitrary one.
+            const angle = i * 2.399963 + j * 0.618034;
+            dx = Math.cos(angle); dy = Math.sin(angle); dist = 1;
+          }
+
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const combinedHW = a._hw + b._hw + GAP;
+          const combinedHH = a._hh + b._hh + GAP;
+          // Zero-force point shifted outward by FORCE_DEADZONE -- see its comment.
+          const safeDist = minkowskiSafeDist(nx, ny, combinedHW, combinedHH) - FORCE_DEADZONE;
+
+          // Rects truly overlap -- linear in penetration depth, 0 exactly at
+          // dist === safeDist (see REPEL_K_OVERLAP comment for why that matters).
+          let mag = dist < safeDist ? REPEL_K_OVERLAP * (safeDist - dist) : 0;
+
+          if (mag > 0) {
+            mag = Math.min(mag, MAX_PAIR_FORCE);
+            a._fx += nx * mag; a._fy += ny * mag;
+            b._fx -= nx * mag; b._fy -= ny * mag;
           }
         }
       }
+
+      // Integrate (semi-implicit Euler) + damping + clamp for this sub-step
+      entries.forEach((e) => {
+        e.velX = (e.velX + (e._fx / e.mass) * subDt) * velDecay;
+        e.velY = (e.velY + (e._fy / e.mass) * subDt) * velDecay;
+        if (Math.hypot(e.velX, e.velY) < SLEEP_VELOCITY) { e.velX = 0; e.velY = 0; }
+        e.offsetX += e.velX * subDt;
+        e.offsetY += e.velY * subDt;
+
+        const mag = Math.hypot(e.offsetX, e.offsetY);
+        if (mag > MAX_OFFSET) {
+          const s = MAX_OFFSET / mag;
+          e.offsetX *= s; e.offsetY *= s;
+          e.velX *= 0.5; e.velY *= 0.5; // bleed velocity at the clamp so it doesn't buzz against the wall
+        }
+      });
     }
 
-    items.forEach((item) => {
-      const clamped = Math.max(-90, Math.min(90, item.target));
-      const easedY = item.e.appliedY + (clamped - item.e.appliedY) * 0.25;
-      const targetScale = item.e.targetScale ?? 1;
-      const easedScale = item.e.appliedScale + (targetScale - item.e.appliedScale) * 0.25;
-      applyLabelTransform(item.e, Math.abs(easedY) < 0.1 ? 0 : easedY, easedScale);
-    });
+    entries.forEach((e) => applyLabelTransform(e, e.offsetX, e.offsetY, e.appliedScale));
   });
 
   return null;
@@ -567,6 +722,7 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
                 className={`label${lbl.emphasis ? ' label--emphasis' : ''}${lbl.className ? ` ${lbl.className}` : ''}`}
                 color={lbl.className ? undefined : lbl.color}
                 worldPos={worldPos}
+                emphasis={!!lbl.emphasis}
               >
                 {text}
               </LabelAnchor>
@@ -679,21 +835,40 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
   useFrame(({ camera }) => {
     objects.forEach((o) => {
       if (!o) return;
+
+      // ONE distance -- and so one zoomScale -- per TOP-LEVEL object, not
+      // one independently computed per zoom-invariant child. A multi-piece
+      // glyph (a dashed/ringed line's many small tube/ring segments) needs
+      // to scale as a single uniform unit, the way a texture moves with its
+      // surface; letting each piece compute its own correction from its own
+      // world position made segments at different camera distances end up
+      // visibly different sizes -- a bulging/tapering artifact on any line
+      // long enough (or viewed end-on enough) that its pieces sit at
+      // meaningfully different distances from the camera. Lines expose
+      // userData.segmentMid (their own local-space centre) as a stable
+      // single reference point for this; anything else just uses its own
+      // world position, which is what already happened per-child before.
+      let zoomScale = 1;
+      if (zoomEnabled) {
+        if (o.userData?.segmentMid) {
+          o.updateMatrixWorld();
+          worldPos.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
+        } else {
+          o.getWorldPosition(worldPos);
+        }
+        const distance = camera.position.distanceTo(worldPos);
+        zoomScale = THREE.MathUtils.clamp(
+          distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
+          ZOOM_INVARIANT_MIN_SCALE,
+          ZOOM_INVARIANT_MAX_SCALE
+        );
+      }
+
       traverseVisible(o, (child) => {
         const baseRadius = child.userData?.zoomInvariantRadius;
         if (!baseRadius) return;
         const isUniform = !!child.userData.zoomInvariantUniform;
 
-        let zoomScale = 1;
-        if (zoomEnabled) {
-          child.getWorldPosition(worldPos);
-          const distance = camera.position.distanceTo(worldPos);
-          zoomScale = THREE.MathUtils.clamp(
-            distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
-            ZOOM_INVARIANT_MIN_SCALE,
-            ZOOM_INVARIANT_MAX_SCALE
-          );
-        }
         const thickMultiplier = isUniform
           ? (extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1)
           : (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
@@ -710,6 +885,43 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
       });
     });
   });
+
+  return null;
+}
+
+// Keeps each geo_vector_line's dash/ring collision-accent patterns
+// (userData.updateZoomRatio, see geoVectorLine.js) in sync with camera
+// distance -- geoVectorLineDefinition builds the glyph once, up front, with
+// no access to the camera, so re-deriving the dash/ring count as the user
+// zooms has to happen here instead. Passes the raw (unclamped) distance
+// ratio rather than a pre-clamped scale -- dashes and rings each want their
+// own clamp range (dashes read fine over a narrow range; a fine "ring
+// texture" needs to grow much more at extreme zoom-out to stay legible), so
+// that tuning lives entirely in geoVectorLine.js instead of being split
+// across two files.
+function DashZoomSync({ objects, zoomEnabled }) {
+  const worldMid = useMemo(() => new THREE.Vector3(), []);
+
+  // Explicit priority -1 (lower runs earlier) so this always runs BEFORE
+  // ZoomInvariantScaler in the same frame, not just by JSX/mount-order
+  // coincidence. It matters here specifically: rebuilding the dash pattern
+  // creates brand-new Mesh children with an unset (1,1,1) scale, and
+  // ZoomInvariantScaler is what corrects that to the right zoom-invariant
+  // cross-section radius. If it ran first (or in an unspecified order),
+  // those new segments would render at their raw, un-scaled radius for one
+  // frame every time the pattern rebuilds -- a visible thickness flicker
+  // during a continuous zoom, since rebuilds happen repeatedly as the scale
+  // crosses each threshold.
+  useFrame(({ camera }) => {
+    if (!zoomEnabled) return;
+    objects.forEach((o) => {
+      if (!o?.userData?.updateZoomRatio || !o.userData.segmentMid) return;
+      o.updateMatrixWorld();
+      worldMid.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
+      const distance = camera.position.distanceTo(worldMid);
+      o.userData.updateZoomRatio(distance / ZOOM_INVARIANT_REFERENCE_DISTANCE);
+    });
+  }, -1);
 
   return null;
 }
@@ -769,6 +981,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
         extraLargePoints={settings.extraLargePoints}
       />
       <FatLineSync objects={objects} extraThick={settings.extraThickLines} />
+      <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />
 
@@ -911,6 +1124,8 @@ export default function Scene3D({ objects = [] }) {
         >
           <OrbitControls
             makeDefault
+            minDistance={MIN_CAMERA_DISTANCE}
+            maxDistance={MAX_CAMERA_DISTANCE}
             ref={(instance) => {
               controlsRef.current = instance;
               if (instance) setRefsReadyTick((tick) => tick + 1);

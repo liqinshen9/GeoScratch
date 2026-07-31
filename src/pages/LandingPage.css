@@ -11,16 +11,17 @@
   --text-on-accent: #ffffff;
   --nav-fg: #ffffff;
   --landing-gutter: clamp(2rem, 6vw, 5rem);
-  --landing-nav-height: 4.5rem;
+  --landing-nav-height: var(--app-nav-height);
   --landing-nav-title-size: 1.875rem;
   --landing-nav-curve-depth: 4.5rem;
   --landing-welcome-kia: #0d9488;
   --landing-welcome-text: #c2410c;
 
   min-height: 0;
-  height: 100dvh;
-  max-height: 100dvh;
+  height: calc(100dvh - var(--app-nav-height));
+  max-height: calc(100dvh - var(--app-nav-height));
   overflow: hidden;
+  overscroll-behavior: none;
   display: flex;
   flex-direction: column;
   background: var(--bg-main);
@@ -269,6 +270,11 @@
 :root:has(.landing-page) header.app-nav {
   box-shadow: none !important;
   border-bottom: none !important;
+}
+
+:root:has(.landing-page),
+:root:has(.landing-page) body {
+  overflow: hidden;
 }
 
 /* --- MOBILE RESPONSIVENESS --- */

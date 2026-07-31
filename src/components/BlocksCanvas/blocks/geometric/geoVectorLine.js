@@ -83,49 +83,122 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Local tube frame is centred on the segment's midpoint, not the vector
   // equation's origin -- the two only coincide when extentPos === extentNeg.
   const halfDist = distance / 2
+  const worldAt = (y) => midPoint.clone().addScaledVector(normalised, y)
 
-  // 1. TECHNIQUE STYLE: Plain Line
-  const plainLine = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([p1, p2]),
-    new THREE.LineBasicMaterial({ color: 0x374151 })
-  )
+  // Collision zones (local Y offsets from midPoint, filled in later by
+  // tubeCollision.js via setCollisionZones) and the dash pattern used to
+  // punch literal gaps in a glyph for the "dashed" collision style. Shared
+  // by every technique style below so there's one definition of "what does
+  // dashed look like" instead of several that could drift apart.
+  const DASHED_SEGMENT_LENGTH = 0.14
+  const DASHED_GAP_LENGTH = 0.09
+  let currentZones = []
+
+  // Returns the y-ranges (local offset from midPoint along `normalised`)
+  // that should actually be drawn, tagged by whether each is a genuine
+  // short "dash" bump (inside a collision zone) or a long continuous
+  // "solid" stretch (outside any zone, or the whole line when not dashing
+  // at all). The two get different zoom-invariant treatment further down:
+  // bumps need to grow in every dimension as the camera pulls back so they
+  // don't collapse to sub-pixel, but solid stretches must only grow in
+  // cross-section, or neighbouring stretches would visibly gap apart.
+  const computeSegmentPairs = (zones, dashed, dashLen = DASHED_SEGMENT_LENGTH, gapLen = DASHED_GAP_LENGTH) => {
+    if (!dashed || zones.length === 0) return [{ start: -halfDist, end: halfDist, isDash: false }]
+    const pairs = []
+    let cursor = -halfDist
+    zones.forEach(({ start, end }) => {
+      const zoneStart = Math.max(-halfDist, start)
+      const zoneEnd = Math.min(halfDist, end)
+      if (zoneStart > cursor) pairs.push({ start: cursor, end: zoneStart, isDash: false })
+      let y = zoneStart
+      let dashOn = true
+      while (y < zoneEnd - 1e-6) {
+        const segEnd = Math.min(zoneEnd, y + (dashOn ? dashLen : gapLen))
+        if (dashOn && segEnd > y) pairs.push({ start: y, end: segEnd, isDash: true })
+        y = segEnd
+        dashOn = !dashOn
+      }
+      cursor = zoneEnd
+    })
+    if (cursor < halfDist) pairs.push({ start: cursor, end: halfDist, isDash: false })
+    return pairs
+  }
+
+  // Every "replacement" glyph below (dashed tube segments, ring-textured
+  // dash segments, collision accent overlays) rebuilds by clearing a
+  // group's children and adding fresh ones every time the zoom scale
+  // crosses a threshold or the collision zones change -- which, during a
+  // fast zoom/pan, can fire many times a second. `.remove()` only detaches
+  // a child from the scene graph; it does NOT free the GPU-side texture/
+  // buffer resources a Geometry/Material/Texture hold, so without an
+  // explicit `.dispose()` each rebuild leaks GPU memory. A single slow
+  // zoom leaks too little to notice, but a fast one can leak enough,
+  // enough times a second, to exhaust GPU resources mid-session --
+  // surfacing as exactly this kind of corrupted/"torn" texture that
+  // doesn't self-heal once it happens. `disposeMaterial` is false for
+  // segments sharing one of this glyph's persistent materials (only their
+  // per-segment geometry is actually new each rebuild); true only where
+  // the material (and its texture, if any -- a clone made just for that
+  // segment) is itself freshly created per segment.
+  const clearGroupChildren = (targetGroup, disposeMaterial) => {
+    while (targetGroup.children.length) {
+      const child = targetGroup.children[0]
+      targetGroup.remove(child)
+      child.geometry?.dispose()
+      if (disposeMaterial && child.material) {
+        child.material.map?.dispose()
+        child.material.dispose()
+      }
+    }
+  }
+
+  // 1. TECHNIQUE STYLE: Plain Line. Built with THREE.LineSegments (disjoint
+  // vertex pairs) rather than THREE.Line (a continuous polyline), even
+  // though outside a collision zone it's just one unbroken pair -- that way
+  // the SAME primitive type can represent a literal dash/gap pattern once
+  // the "dashed" collision style is active, without swapping classes.
+  const plainLineGeom = new THREE.BufferGeometry()
+  const plainLineMat = new THREE.LineBasicMaterial({ color: 0x374151 })
+  const plainLine = new THREE.LineSegments(plainLineGeom, plainLineMat)
   group.add(plainLine)
 
   // 1b. TECHNIQUE STYLE: Plain Line (thick). WebGL clamps LineBasicMaterial's
   // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
   // real solid-mesh line is the only way to make this style visibly
-  // thicker. Built with three's "fat lines" (Line2/LineGeometry/LineMaterial)
-  // rather than a cylinder: a cylinder is a real 3D solid, so its two ends
-  // foreshorten independently whenever they're at different distances from
-  // the camera (same reason a distant object looks smaller), which a literal
-  // GL line never does -- it's a 0-width primitive the GPU always strokes to
-  // a flat, constant-width screen-space band. LineMaterial's default
-  // worldUnits:false mode reproduces exactly that: `linewidth` is a pixel
-  // width applied per-point in screen space via the vertex shader, so this
-  // reads as "a real GL line, just actually visible" at any zoom or angle,
-  // rather than a thin 3D tube. Its resolution uniform and the "Extra Thick
-  // Lines" pixel-width multiplier are kept in sync from Scene3D's
-  // FatLineSync (geoVectorLineDefinition has no access to canvas size here).
+  // thicker. Built with three's "fat lines" (LineSegments2/
+  // LineSegmentsGeometry/LineMaterial) rather than a cylinder: a cylinder is
+  // a real 3D solid, so its two ends foreshorten independently whenever
+  // they're at different distances from the camera (same reason a distant
+  // object looks smaller), which a literal GL line never does -- it's a
+  // 0-width primitive the GPU always strokes to a flat, constant-width
+  // screen-space band. LineMaterial's default worldUnits:false mode
+  // reproduces exactly that: `linewidth` is a pixel width applied per-point
+  // in screen space via the vertex shader, so this reads as "a real GL
+  // line, just actually visible" at any zoom or angle, rather than a thin
+  // 3D tube. Its resolution uniform and the "Extra Thick Lines" pixel-width
+  // multiplier are kept in sync from Scene3D's FatLineSync
+  // (geoVectorLineDefinition has no access to canvas size here).
+  //
+  // One LineSegments2 per pair (a small group), NOT one LineSegmentsGeometry
+  // holding all pairs as separate instances: a multi-instance
+  // LineSegmentsGeometry can silently fail to render some of its instances
+  // depending on camera distance/angle (reproduced directly -- 2 instances
+  // in one geometry: one vanishes when zoomed in close; the same 2 segments
+  // as 2 separate single-instance objects: both render correctly at the
+  // same camera state). Each pair gets its own tiny geometry/object instead,
+  // sharing one material.
   const PLAIN_LINE_THICK_BASE_PX = 2.2
-  const plainLineThickGeom = new THREE.LineGeometry()
-  plainLineThickGeom.setPositions([p1.x, p1.y, p1.z, p2.x, p2.y, p2.z])
   const plainLineThickMat = new THREE.LineMaterial({
     color: 0x374151,
     linewidth: PLAIN_LINE_THICK_BASE_PX,
     worldUnits: false,
   })
-  const plainLineThick = new THREE.Line2(plainLineThickGeom, plainLineThickMat)
-  plainLineThick.userData.isFatLine = true
-  plainLineThick.userData.fatLineBaseWidth = PLAIN_LINE_THICK_BASE_PX
-  group.add(plainLineThick)
+  const plainLineThickGroup = new THREE.Group()
+  group.add(plainLineThickGroup)
 
-  // 2. TECHNIQUE STYLE: True Illuminated Line (Zöckler et al. Implementation)
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-  const lineDirections = new Float32Array([
-    normalised.x, normalised.y, normalised.z,
-    normalised.x, normalised.y, normalised.z
-  ]);
-  lineGeometry.setAttribute('lineDir', new THREE.BufferAttribute(lineDirections, 3));
+  // 2. TECHNIQUE STYLE: True Illuminated Line (Zöckler et al. Implementation).
+  // LineSegments (disjoint pairs), not Line, for the same reason as 1. above.
+  const lineGeometry = new THREE.BufferGeometry();
 
   const illumMaterial = new THREE.ShaderMaterial({
     uniforms: {
@@ -178,8 +251,59 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     `
   });
 
-  const illumLine = new THREE.Line(lineGeometry, illumMaterial)
+  const illumLine = new THREE.LineSegments(lineGeometry, illumMaterial)
   group.add(illumLine)
+
+  const pairsToFlatArrays = (pairs) => {
+    const flat = new Float32Array(pairs.length * 6)
+    const dirs = new Float32Array(pairs.length * 6)
+    pairs.forEach((pair, i) => {
+      const a = worldAt(pair.start)
+      const b = worldAt(pair.end)
+      const o = i * 6
+      flat[o] = a.x; flat[o + 1] = a.y; flat[o + 2] = a.z
+      flat[o + 3] = b.x; flat[o + 4] = b.y; flat[o + 5] = b.z
+      dirs[o] = normalised.x; dirs[o + 1] = normalised.y; dirs[o + 2] = normalised.z
+      dirs[o + 3] = normalised.x; dirs[o + 4] = normalised.y; dirs[o + 5] = normalised.z
+    })
+    return { flat, dirs }
+  }
+
+  // The hairline plain-line and illuminated-line share one world-space
+  // vertex layout (they're both "0 radius" glyphs whose only difference is
+  // material) -- built/rebuilt together, on the original small dash/gap
+  // sizing (unaffected by the "thick" size fix below).
+  const setThinLineSegmentPairs = (pairs) => {
+    const { flat, dirs } = pairsToFlatArrays(pairs)
+    plainLineGeom.setAttribute('position', new THREE.BufferAttribute(flat, 3))
+    plainLineGeom.computeBoundingSphere()
+
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(flat.slice(), 3))
+    lineGeometry.setAttribute('lineDir', new THREE.BufferAttribute(dirs, 3))
+    lineGeometry.computeBoundingSphere()
+  }
+  setThinLineSegmentPairs([{ start: -halfDist, end: halfDist, isDash: false }])
+
+  // Plain Line (thick) is its own "0 radius" glyph too, but shares the
+  // bigger, zoom-responsive THICK_DASHED_* sizing with plain_tube and
+  // illuminated_line-thick (see rebuildThickDashedGlyphs) instead of the
+  // thin lines' small fixed pattern -- so the dashed look is consistent
+  // across every "thick" line style, not just plain_tube. One LineSegments2
+  // child per pair (see plainLineThickGroup's comment above for why).
+  const setThickLineSegmentPairs = (pairs) => {
+    clearGroupChildren(plainLineThickGroup, false) // shares plainLineThickMat
+    pairs.forEach((pair) => {
+      const a = worldAt(pair.start)
+      const b = worldAt(pair.end)
+      const geom = new THREE.LineSegmentsGeometry()
+      geom.setPositions([a.x, a.y, a.z, b.x, b.y, b.z])
+      const seg = new THREE.LineSegments2(geom, plainLineThickMat)
+      seg.userData.isFatLine = true
+      seg.userData.fatLineBaseWidth = PLAIN_LINE_THICK_BASE_PX
+      plainLineThickGroup.add(seg)
+    })
+  }
+  setThickLineSegmentPairs([{ start: -halfDist, end: halfDist, isDash: false }])
 
   // 2b. TECHNIQUE STYLE: Illuminated Line (thick). A real MeshStandardMaterial
   // cylinder here would depend on actual scene lights hitting it -- at this
@@ -189,29 +313,40 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // as the hairline illumLine (its lighting is synthetic, based only on the
   // tangent direction, never scene lights or real surface normals) applied
   // to cylinder geometry instead of a flat line, rather than trying to get
-  // real lighting to behave the same way.
-  const illumThickGeom = new THREE.CylinderGeometry(0.0272, 0.0272, distance, 12)
-  const illumThickVertexCount = illumThickGeom.attributes.position.count
-  const illumThickLineDirs = new Float32Array(illumThickVertexCount * 3)
-  // Expressed in the cylinder's own local frame, where its canonical up-axis
-  // (0,1,0) *is* the tangent direction -- the quaternion below then carries
-  // that (already-correct) local tangent out to world space along with
-  // everything else, the same way cylinder/ringedTube orient themselves.
-  // Using `normalised` (a group-frame vector) here instead would be wrong:
-  // the shader's normalMatrix already applies this mesh's own rotation, so
-  // a group-frame vector would get rotated a second time.
-  for (let i = 0; i < illumThickVertexCount; i += 1) {
-    illumThickLineDirs[i * 3] = 0
-    illumThickLineDirs[i * 3 + 1] = 1
-    illumThickLineDirs[i * 3 + 2] = 0
-  }
-  illumThickGeom.setAttribute('lineDir', new THREE.BufferAttribute(illumThickLineDirs, 3))
+  // real lighting to behave the same way. Wrapped in a group (rather than a
+  // single mesh, as before) so the "dashed" collision style can swap in a
+  // gapped set of segments the same way plain_tube's cylinder does.
+  const ILLUM_THICK_RADIUS = 0.0272
+  const illumThickGroup = new THREE.Group()
+  illumThickGroup.position.copy(midPoint)
+  illumThickGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  group.add(illumThickGroup)
 
-  const illumLineThick = new THREE.Mesh(illumThickGeom, illumMaterial)
-  illumLineThick.userData.zoomInvariantRadius = 0.0272
-  illumLineThick.position.copy(midPoint)
-  illumLineThick.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
-  group.add(illumLineThick)
+  // Expressed in the cylinder's own local frame, where its canonical up-axis
+  // (0,1,0) *is* the tangent direction -- the quaternion applied to
+  // illumThickGroup then carries that (already-correct) local tangent out to
+  // world space along with everything else, the same way cylinder/
+  // ringedTube orient themselves. Using `normalised` (a group-frame vector)
+  // here instead would be wrong: the shader's normalMatrix already applies
+  // this mesh's own rotation, so a group-frame vector would get rotated a
+  // second time.
+  const makeIllumSegmentMesh = (radius, height) => {
+    const geom = new THREE.CylinderGeometry(radius, radius, height, 12)
+    const vertexCount = geom.attributes.position.count
+    const dirs = new Float32Array(vertexCount * 3)
+    for (let i = 0; i < vertexCount; i += 1) dirs[i * 3 + 1] = 1
+    geom.setAttribute('lineDir', new THREE.BufferAttribute(dirs, 3))
+    const mesh = new THREE.Mesh(geom, illumMaterial)
+    mesh.userData.zoomInvariantRadius = radius
+    return mesh
+  }
+
+  const illumThickSolid = makeIllumSegmentMesh(ILLUM_THICK_RADIUS, distance)
+  illumThickGroup.add(illumThickSolid)
+
+  const illumThickDashedGroup = new THREE.Group()
+  illumThickDashedGroup.visible = false
+  illumThickGroup.add(illumThickDashedGroup)
 
   // 3. TECHNIQUE STYLE: Plain Tube (Cylinder). MeshStandardMaterial (not
   // MeshBasicMaterial) so it actually picks up the scene's lights and shows
@@ -225,26 +360,207 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(cylinder)
 
+  // 3b. "dashed" collision-style replacement for the plain tube: REPLACES
+  // the base cylinder (rather than overlaying it) with alternating
+  // solid/gap segments across collision zones, so the solid actually shows
+  // through the gaps instead of the continuous tube covering them. Outside
+  // any zone the tube stays one continuous solid piece.
+  const dashedTubeGroup = new THREE.Group()
+  dashedTubeGroup.position.copy(midPoint)
+  dashedTubeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+  dashedTubeGroup.visible = false
+  group.add(dashedTubeGroup)
+
+  // Same shaded material as the continuous plain tube (cylMat) -- the
+  // dashed segments are that same glyph, just chopped up, so they shouldn't
+  // suddenly look flat/unlit when the dashed collision style is active.
+  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
+
+  // Tuned bigger than the shared DASHED_SEGMENT_LENGTH/DASHED_GAP_LENGTH --
+  // "fewer, larger dashes" reads better on a real solid tube than the small
+  // default pattern. Shared by every "thick" dashed glyph (plain_tube,
+  // illuminated_line-thick, plain_line-thick) so they all look consistent,
+  // not just plain_tube. Deliberately NOT zoom-invariant-scaled per-segment
+  // (see addTubeSegment's `uniform` param, passed false for these): a dash
+  // is a literal piece of the glyph's own length, not a separate small
+  // accent glyph like a ring, so it should get bigger/smaller with normal
+  // perspective exactly like the glyph itself (and the solid it's crossing)
+  // does. Instead, DashZoomSync (Scene3D.jsx) multiplies these by a
+  // camera-distance-derived scale each time it changes meaningfully (see
+  // group.userData.updateDashZoomScale below) -- that's what makes the
+  // dash COUNT itself respond to zoom, not just each dash's apparent size.
+  const THICK_DASHED_SEGMENT_LENGTH = 0.45
+  const THICK_DASHED_GAP_LENGTH = 0.3
+
+  // `uniform` marks a piece as a discrete "bump" that should scale
+  // apparent-size-constant in every dimension (see the zoom-invariant note
+  // by computeSegmentPairs) rather than just in cross-section.
+  const addTubeSegment = (targetGroup, material, radius, start, end, uniform) => {
+    const height = end - start
+    if (height <= 1e-6) return
+    const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 12), material)
+    segment.userData.zoomInvariantRadius = radius
+    if (uniform) segment.userData.zoomInvariantUniform = true
+    segment.position.set(0, (start + end) / 2, 0)
+    targetGroup.add(segment)
+  }
+
+  // Single named color for the shared "ring accent" collision overlay
+  // (collisionRingTexture, below) -- pulled from HERE so retuning the whole
+  // project's ring accent color later is a one-line change instead of a
+  // hunt through several materials.
+  // TODO: replace with a shared color/theme module once colors are
+  // designed project-wide; pink is a placeholder for now.
+  const RING_ACCENT_COLOR = 0xec4899
+
+  // Builds a small repeating 2-color striped texture (alternating bands
+  // along its V axis) instead of many separate ring meshes. This is what
+  // makes a "ring texture" ACTUALLY behave like a texture: it's painted
+  // flat onto whichever cylinder it's applied to (so it structurally cannot
+  // bulge), and changing the band frequency in response to zoom is a single
+  // cheap `texture.repeat.y` write -- no geometry to destroy and rebuild
+  // every time the zoom scale crosses a threshold, which was the source of
+  // the flicker with the old many-small-rings approach (every rebuild
+  // popped in brand-new meshes with a one-frame-stale scale, and shifted
+  // every ring's position at once). `colorB` may be null for a fully
+  // transparent second band (used by the collision accent overlay, so the
+  // glyph underneath shows through in the gaps instead of a second flat
+  // color).
+  const makeRingTexture = (colorA, colorB) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 4
+    canvas.height = 64
+    const ctx = canvas.getContext('2d')
+    const hex = (c) => '#' + c.toString(16).padStart(6, '0')
+    ctx.fillStyle = hex(colorA)
+    ctx.fillRect(0, 0, 4, 32)
+    if (colorB !== null) {
+      ctx.fillStyle = hex(colorB)
+      ctx.fillRect(0, 32, 4, 32)
+    }
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    // Hard-edged 2-color stripes are worst-case content for texture
+    // filtering: bilinear magFilter blurs the band boundary into a soft
+    // gradient at any zoom where a band covers more than a few screen
+    // pixels (the "not crisp" look), and with no anisotropy the GPU's
+    // mipmap selection for a repeating pattern viewed at a shallow angle
+    // (a tube running away from the camera) picks an inconsistent mip
+    // level per screen pixel frame-to-frame -- the "flickering"/torn-edge
+    // look. Nearest magFilter keeps close-up edges crisp; a high
+    // anisotropy (clamped by three.js to whatever the GPU actually
+    // supports) fixes the grazing-angle minification aliasing. Both are
+    // read by every clone of this texture (ring dash segments, collision
+    // accent overlay) since clone() copies these fields too.
+    texture.magFilter = THREE.NearestFilter
+    texture.minFilter = THREE.LinearMipmapLinearFilter
+    texture.anisotropy = 16
+    return texture
+  }
+  // Applies a period (world units per light+dark cycle) to a texture sized
+  // for a cylinder of the given world-space length -- shared by every
+  // ring-textured glyph below (ringed_tube's own base tube and dashed
+  // segments, and the collision accent overlay) so they all resize the same
+  // way in response to zoom.
+  const setRingTextureRepeat = (texture, length, period, scale) => {
+    texture.repeat.set(1, length / (period * scale))
+  }
+
   // 4. TECHNIQUE STYLE: Ringed Tube
   const ringedTube = new THREE.Group()
 
+  // Fixed at build time and never touched again as the camera moves --
+  // ring band frequency is intentionally NOT zoom-responsive (unlike the
+  // dash length below), so there is no per-frame or per-threshold texture
+  // rebuild for it to race against the cross-section's own zoom-invariant
+  // scaling during a fast zoom/pan.
+  const RINGED_TUBE_RING_PERIOD = 0.8
+
+  // THE ACTUAL BUG: CylinderGeometry(r, r, height, radialSegments) has only
+  // ONE height segment unless told otherwise -- its side is just two giant
+  // triangles per radial facet, spanning the tube's ENTIRE length (up to
+  // ~40 world units, see extentPos/extentNeg above) against a radius of
+  // 0.085. That's an aspect ratio upwards of 1000:1 -- a "needle" triangle.
+  // The collision-accent ring (rebuildSharedAccents, below) never hits
+  // this: its cylinders are only ever as long as one collision zone (a
+  // handful of world units at most), never the whole line -- which is
+  // exactly why it renders cleanly on the SAME geometry/material recipe
+  // while this one didn't. Perspective-correct texture-coordinate
+  // interpolation across a triangle that extreme loses precision on at
+  // least some GPU/driver combinations, worse the more that triangle is
+  // foreshortened on screen (i.e. worse from an oblique angle, fine
+  // looking straight down the tube) -- matching exactly what breaks and
+  // what doesn't. Giving the tube real height segments (one roughly per
+  // ring) keeps every individual triangle short, however long the tube
+  // itself is, which is the fix -- not the ring size/count itself.
+  const RINGED_TUBE_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED_TUBE_RING_PERIOD) * 2)
+  // A 16-sided cylinder is visibly faceted under a specular highlight --
+  // each flat facet catches the light slightly differently, and wherever
+  // that per-facet brightness step happens to land on one of the texture's
+  // hard color-band edges, it reads as a jagged/torn cut instead of a
+  // clean ring. More radial segments (rounder cross-section) plus a
+  // softer, less mirror-like highlight (higher roughness) both shrink
+  // that per-facet step, independent of anything zoom- or texture-repeat-
+  // related.
+  const RINGED_TUBE_RADIAL_SEGMENTS = 48
+  const RINGED_TUBE_ROUGHNESS = 0.75
+  // NOTE: deliberately NOT transparent (unlike the collision-accent ring
+  // below, which is meant to be a see-through overlay). This is the solid
+  // base tube -- setting transparent:true here (as an earlier attempt at
+  // the jagged-texture bug did, before the real fix turned out to be the
+  // height-segment change above) moves it into the transparent render
+  // queue, which sorts whole objects by distance rather than testing
+  // per-pixel depth, breaking correct occlusion against any OTHER
+  // transparent object (e.g. a see-through cube) it happens to cross.
+  // Staying opaque keeps it in the normal depth-tested pass, same as
+  // plain_tube's cylinder, which occludes/is-occluded correctly.
+  const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
+  const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
+  const RINGED_TUBE_METALNESS = 0.15
+  const ringedTubeTexture = makeRingTexture(0xa1a1aa, 0x3f3f46)
+  setRingTextureRepeat(ringedTubeTexture, distance, RINGED_TUBE_RING_PERIOD, 1)
+  const ringedTubeMat = new THREE.MeshStandardMaterial({
+    map: ringedTubeTexture,
+    emissive: RINGED_TUBE_EMISSIVE_COLOR,
+    emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
+    roughness: RINGED_TUBE_ROUGHNESS,
+    metalness: RINGED_TUBE_METALNESS,
+  })
+
   const baseTube = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.085, 0.085, distance, 16),
-    new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.4 })
+    new THREE.CylinderGeometry(0.085, 0.085, distance, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(distance)),
+    ringedTubeMat
   )
   baseTube.userData.zoomInvariantRadius = 0.085
   ringedTube.add(baseTube)
 
-  const ringGeom = new THREE.CylinderGeometry(0.0952, 0.0952, 0.15, 16)
-  const ringMat = new THREE.MeshStandardMaterial({ color: 0xa1a1aa, roughness: 0.3 })
-
-  const step = 0.3
-
-  for (let y = -halfDist; y <= halfDist; y += step) {
-    const ringSegment = new THREE.Mesh(ringGeom, ringMat)
-    ringSegment.userData.zoomInvariantRadius = 0.0952
-    ringSegment.position.set(0, y, 0)
-    ringedTube.add(ringSegment)
+  // "dashed" collision style REPLACES the base tube (rather than overlaying
+  // it) with alternating solid/gap segments across collision zones, exactly
+  // like plain_tube's dashedTubeGroup -- reuses the same ring texture
+  // (cloned per segment so each can carry its own correctly-scaled repeat)
+  // so a solid stretch still reads as "ringed tube" rather than suddenly
+  // looking like a different style.
+  const ringedTubeDashedGroup = new THREE.Group()
+  ringedTubeDashedGroup.visible = false
+  ringedTube.add(ringedTubeDashedGroup)
+  const addRingedTubeDashSegment = (start, end) => {
+    const height = end - start
+    if (height <= 1e-6) return
+    const tex = ringedTubeTexture.clone()
+    tex.needsUpdate = true
+    setRingTextureRepeat(tex, height, RINGED_TUBE_RING_PERIOD, 1)
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      emissive: RINGED_TUBE_EMISSIVE_COLOR,
+      emissiveIntensity: RINGED_TUBE_EMISSIVE_INTENSITY,
+      roughness: RINGED_TUBE_ROUGHNESS,
+      metalness: RINGED_TUBE_METALNESS,
+    })
+    const segment = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, height, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(height)), mat)
+    segment.userData.zoomInvariantRadius = 0.085
+    segment.position.set(0, (start + end) / 2, 0)
+    ringedTubeDashedGroup.add(segment)
   }
 
   const capGeom = new THREE.SphereGeometry(0.1088, 16, 16)
@@ -266,166 +582,199 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
 
-  // 5. COLLISION ACCENTS: how this line's tube indicates the exact
-  // stretch(es) where it passes into a solid object -- laid over/instead of
-  // the plain-tube shaft (radius 0.051), not a whole-line style swap.
-  // Line-vs-line overlap is handled separately (as a halo, not a collision
-  // accent). Three interchangeable looks, picked via
-  // settings.lineCollisionStyle. All three live in the same local frame as
-  // cylinder/ringedTube (Y axis along the line, origin at y=0), so a zone
-  // {start, end} from tubeCollision.js maps directly onto local y positions
-  // in each.
-
-  // 5a. "ringed": dark corrugation rings overlaid on top of the always-
-  // visible base tube. Sized close to the shaft's own radius so it reads as
-  // a textured band rather than a separate object bulging off it.
+  // 5. COLLISION ACCENTS: how a line indicates the exact stretch(es) where
+  // it passes into a solid object. Two of the three interchangeable looks
+  // (picked via settings.lineCollisionStyle) are pure overlay geometry --
+  // small rings, or a darker band -- anchored to the same local frame as
+  // cylinder/ringedTube (Y axis along the line, origin at midPoint) but with
+  // NO dependency on the currently-active glyph having a real radius, so a
+  // single shared pair of groups works for every line style (plain_line,
+  // illuminated_line, plain_tube, ringed_tube) rather than needing its own
+  // copy per style. The third style, "dashed", instead punches a literal
+  // gap in whichever glyph is actually visible right now -- there's no
+  // "overlay" that can remove material from something else, so that one is
+  // handled per-glyph (dashedTubeGroup / illumThickDashedGroup /
+  // ringedTubeDashedGroup / setThinLineSegmentPairs /
+  // setThickLineSegmentPairs visibility, above and below).
   const collisionAccentRinged = new THREE.Group()
   collisionAccentRinged.position.copy(midPoint)
   collisionAccentRinged.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   collisionAccentRinged.visible = false
   group.add(collisionAccentRinged)
 
-  const COLLISION_RING_HEIGHT = 0.09
-  const COLLISION_RING_HALF_HEIGHT = COLLISION_RING_HEIGHT / 2
-  const collisionRingGeom = new THREE.CylinderGeometry(0.068, 0.068, COLLISION_RING_HEIGHT, 16)
-  const collisionRingMat = new THREE.MeshStandardMaterial({
-    color: 0x3f3f46,
-    roughness: 0.65,
-    metalness: 0.15,
-  })
-  const COLLISION_RING_STEP = 0.16
-
-  // 5b. "dark_texture": a single darker, rougher solid segment overlaid on
-  // top of the base tube -- no rings, no gaps, just a dimmed band.
   const collisionAccentDarkTexture = new THREE.Group()
   collisionAccentDarkTexture.position.copy(midPoint)
   collisionAccentDarkTexture.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   collisionAccentDarkTexture.visible = false
   group.add(collisionAccentDarkTexture)
 
-  const darkTextureMat = new THREE.MeshStandardMaterial({
-    color: 0x18181b,
-    roughness: 0.85,
-    metalness: 0.05,
-  })
+  // Pink bands alternating with full transparency (colorB: null), so the
+  // glyph underneath shows through in the gaps instead of a second flat
+  // color -- this is the overlay, not a whole-tube replacement.
+  const collisionRingTexture = makeRingTexture(RING_ACCENT_COLOR, null)
+  const darkTextureMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.85, metalness: 0.05 })
 
-  // 5c. "dashed": REPLACES the base tube (rather than overlaying it) with
-  // alternating dash/gap segments across collision zones, so the solid
-  // actually shows through the gaps instead of the continuous tube covering
-  // them. Outside any zone the tube stays one continuous solid piece.
-  const dashedTubeGroup = new THREE.Group()
-  dashedTubeGroup.position.copy(midPoint)
-  dashedTubeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
-  dashedTubeGroup.visible = false
-  group.add(dashedTubeGroup)
+  // Fixed, same as RINGED_TUBE_RING_PERIOD above -- not zoom-responsive.
+  const COLLISION_RING_PERIOD = 0.5
 
-  const DASHED_SEGMENT_LENGTH = 0.14
-  const DASHED_GAP_LENGTH = 0.09
-  // Same shaded material as the continuous plain tube (cylMat) -- the
-  // dashed segments are that same glyph, just chopped up, so they shouldn't
-  // suddenly look flat/unlit when the dashed collision style is active.
-  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
+  // Sized to match whichever glyph is actually visible right now (plus a
+  // hair so it sits just outside a coincident surface instead of z-fighting
+  // it), so the ring reads as a texture ON the line rather than a bump
+  // bulging off it -- picked per refresh (below), not fixed at build time.
+  const getAccentRadius = (activeStyle, thick) => {
+    if (activeStyle === 'ringed_tube') return 0.085 // == baseTube's own radius
+    if (activeStyle === 'plain_tube') return 0.051 // == cylinder's own radius
+    if (activeStyle === 'illuminated_line' && thick) return ILLUM_THICK_RADIUS
+    return 0.035 // no true radius (hairline / fat-line) -- a thin nominal size
+  }
 
-  const addTubeSegment = (targetGroup, material, radius, start, end) => {
-    const height = end - start
-    if (height <= 1e-6) return
-    const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 12), material)
-    segment.userData.zoomInvariantRadius = radius
-    segment.position.set(0, (start + end) / 2, 0)
-    targetGroup.add(segment)
+  const rebuildSharedAccents = (activeStyle, thick) => {
+    clearGroupChildren(collisionAccentRinged, true) // each segment gets its own cloned texture + material
+    clearGroupChildren(collisionAccentDarkTexture, false) // shares darkTextureMat
+
+    const radius = getAccentRadius(activeStyle, thick) + 0.001
+
+    currentZones.forEach(({ start, end }) => {
+      const height = end - start
+      if (height <= 1e-6) return
+      const tex = collisionRingTexture.clone()
+      tex.needsUpdate = true
+      setRingTextureRepeat(tex, height, COLLISION_RING_PERIOD, 1)
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex,
+        transparent: true,
+        emissive: RING_ACCENT_COLOR,
+        emissiveIntensity: 0.2,
+        roughness: RINGED_TUBE_ROUGHNESS,
+        metalness: 0.15,
+      })
+      const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, RINGED_TUBE_RADIAL_SEGMENTS), mat)
+      segment.userData.zoomInvariantRadius = radius
+      segment.position.set(0, (start + end) / 2, 0)
+      collisionAccentRinged.add(segment)
+    })
+
+    currentZones.forEach(({ start, end }) => {
+      addTubeSegment(collisionAccentDarkTexture, darkTextureMat, radius, start, end, false)
+    })
+  }
+
+  // Rebuilds plain_tube's dashedTubeGroup and illuminated_line-thick's
+  // illumThickDashedGroup (the two separate, hidden-unless-active
+  // "replacement" objects) at the given zoom scale -- called once at scale
+  // 1 below, then kept in sync with the camera by Scene3D's DashZoomSync
+  // (group.userData.updateZoomRatio), which is the only thing that can see
+  // the camera each frame. Scaling the dash/gap LENGTH (not just
+  // cross-section radius) by camera distance is what makes the actual dash
+  // COUNT respond to zoom: fewer, bigger dashes fit across the same
+  // fixed-width collision zone as the camera pulls back, and more, smaller
+  // (but still legible) ones as it moves in -- unlike a flat apparent-size-
+  // constant scale (see zoomInvariantUniform elsewhere in this file), which
+  // only changes how big each already-fixed-count dash looks. Built
+  // unconditionally "as if" dashed is active (matching the pre-existing
+  // precedent for these two groups) since actual visibility is gated
+  // separately below; plain_line-thick has no such separate object to hide
+  // behind -- its own geometry IS the toggle -- so it's handled inside
+  // applyGlyphVisibility instead, using the same lastDashZoomScale.
+  //
+  // Only the dash length/count responds to zoom -- ring band frequency
+  // (RINGED_TUBE_RING_PERIOD/COLLISION_RING_PERIOD, set where each texture
+  // is built) is fixed and never rebuilt off the camera, so there's no
+  // ring-texture rebuild to land mid-frame during a fast zoom/pan.
+  const DASH_ZOOM_MIN_SCALE = 0.38
+  const DASH_ZOOM_MAX_SCALE = 4
+  let lastDashZoomScale = 1
+  const thickDashLength = () => THICK_DASHED_SEGMENT_LENGTH * lastDashZoomScale
+  const thickGapLength = () => THICK_DASHED_GAP_LENGTH * lastDashZoomScale
+  const rebuildThickDashedGlyphs = () => {
+    const pairs = computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
+
+    clearGroupChildren(dashedTubeGroup, false) // shares dashedTubeMat
+    pairs.forEach(({ start, end }) => {
+      addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, start, end, false)
+    })
+
+    clearGroupChildren(illumThickDashedGroup, false) // shares illumMaterial
+    pairs.forEach(({ start, end }) => {
+      const height = end - start
+      if (height <= 1e-6) return
+      const seg = makeIllumSegmentMesh(ILLUM_THICK_RADIUS, height)
+      seg.position.set(0, (start + end) / 2, 0)
+      illumThickDashedGroup.add(seg)
+    })
+
+    clearGroupChildren(ringedTubeDashedGroup, true) // each segment gets its own cloned texture + material
+    pairs.forEach(({ start, end }) => addRingedTubeDashSegment(start, end))
+  }
+  group.userData.updateZoomRatio = (ratio) => {
+    const dashScale = THREE.MathUtils.clamp(ratio, DASH_ZOOM_MIN_SCALE, DASH_ZOOM_MAX_SCALE)
+    if (Math.abs(dashScale - lastDashZoomScale) < 0.08) return
+    lastDashZoomScale = dashScale
+    rebuildThickDashedGlyphs()
+    group.userData.refreshGlyph?.()
   }
 
   group.userData.hasCollisionAccent = false
   group.userData.setCollisionZones = (zones = []) => {
-    while (collisionAccentRinged.children.length) collisionAccentRinged.remove(collisionAccentRinged.children[0])
-    while (collisionAccentDarkTexture.children.length) collisionAccentDarkTexture.remove(collisionAccentDarkTexture.children[0])
-    while (dashedTubeGroup.children.length) dashedTubeGroup.remove(dashedTubeGroup.children[0])
+    currentZones = zones || []
 
-    zones.forEach(({ start, end }) => {
-      // A ring's CENTER sitting exactly at the zone boundary still pokes its
-      // own half-height past it (a real cylinder, not a point) -- so the
-      // usable placement range has to be inset by the ring's half-height on
-      // each side for its actual body to stay within [start, end].
-      const usableStart = start + COLLISION_RING_HALF_HEIGHT
-      const usableEnd = end - COLLISION_RING_HALF_HEIGHT
-      if (usableStart > usableEnd) {
-        if (end > start) {
-          const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
-          ringSegment.userData.zoomInvariantRadius = 0.068
-          ringSegment.position.set(0, (start + end) / 2, 0)
-          collisionAccentRinged.add(ringSegment)
-        }
-        return
-      }
-      // Stepping from usableStart only ever leaves leftover room on the far
-      // (usableEnd) side, since the zone width is rarely an exact multiple
-      // of the step -- that leftover always landing on one side is what
-      // made the accent look closer to one edge than the other. Centering
-      // the whole ring sequence within [usableStart, usableEnd] splits that
-      // leftover evenly instead, without changing ring size, spacing, or
-      // the zone's own length.
-      const usableRange = usableEnd - usableStart
-      const ringCount = Math.floor(usableRange / COLLISION_RING_STEP) + 1
-      const coveredSpan = (ringCount - 1) * COLLISION_RING_STEP
-      const firstY = usableStart + (usableRange - coveredSpan) / 2
-      for (let i = 0; i < ringCount; i += 1) {
-        const ringSegment = new THREE.Mesh(collisionRingGeom, collisionRingMat)
-        ringSegment.userData.zoomInvariantRadius = 0.068
-        ringSegment.position.set(0, firstY + i * COLLISION_RING_STEP, 0)
-        collisionAccentRinged.add(ringSegment)
-      }
-    })
+    rebuildThickDashedGlyphs()
 
-    zones.forEach(({ start, end }) => {
-      addTubeSegment(collisionAccentDarkTexture, darkTextureMat, 0.068, start, end)
-    })
-
-    // Walk the whole tube length once, emitting solid pieces for the
-    // stretches outside any zone and a dash/gap pattern for the stretches
-    // inside one.
-    let cursor = -halfDist
-    zones.forEach(({ start, end }) => {
-      const zoneStart = Math.max(-halfDist, start)
-      const zoneEnd = Math.min(halfDist, end)
-      if (zoneStart > cursor) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, cursor, zoneStart)
-
-      let y = zoneStart
-      let dashOn = true
-      while (y < zoneEnd - 1e-6) {
-        const segEnd = Math.min(zoneEnd, y + (dashOn ? DASHED_SEGMENT_LENGTH : DASHED_GAP_LENGTH))
-        if (dashOn) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, y, segEnd)
-        y = segEnd
-        dashOn = !dashOn
-      }
-      cursor = zoneEnd
-    })
-    if (cursor < halfDist) addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, cursor, halfDist)
-
-    group.userData.hasCollisionAccent = zones.length > 0
+    group.userData.hasCollisionAccent = currentZones.length > 0
     group.userData.refreshGlyph?.()
   }
 
   const applyGlyphVisibility = (settings) => {
     const activeStyle = settings.lineStyle || 'plain_line'
-    const collisionStyle = settings.lineCollisionStyle || 'ringed'
+    const collisionStyle = settings.lineCollisionStyle || 'dashed'
     const thick = !!settings.thickLinePrimitives
-    const isPlainTube = activeStyle === 'plain_tube'
-    // Ringed_tube already looks ringed everywhere, so accents only add value
-    // layered on (or, for "dashed", swapped in for) the plain tube.
-    const hasAccent = isPlainTube && group.userData.hasCollisionAccent
-    const useDashedReplacement = hasAccent && collisionStyle === 'dashed'
+    const hasAccent = currentZones.length > 0
+    const isDashed = hasAccent && collisionStyle === 'dashed'
+
+    // plain_line/illuminated_line have no tube radius for a ring/band accent
+    // to sit on, so "dashed" is the only collision style that reads on them
+    // at all -- it punches real gaps straight into their own geometry.
+    const linesNeedDashing = isDashed && (activeStyle === 'plain_line' || activeStyle === 'illuminated_line')
+    setThinLineSegmentPairs(computeSegmentPairs(currentZones, linesNeedDashing))
+    // plain_line-thick shares the bigger THICK_DASHED_* sizing (and its
+    // current zoom scale) with plain_tube/illuminated_line-thick instead of
+    // the thin lines' small fixed pattern, so "thick" reads consistently
+    // across every line style.
+    setThickLineSegmentPairs(
+      linesNeedDashing
+        ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
+        : computeSegmentPairs(currentZones, false)
+    )
+
+    const useTubeDashedReplacement = isDashed && activeStyle === 'plain_tube'
+    const useIllumDashedReplacement = isDashed && activeStyle === 'illuminated_line' && thick
 
     plainLine.visible = activeStyle === 'plain_line' && !thick
-    plainLineThick.visible = activeStyle === 'plain_line' && thick
+    plainLineThickGroup.visible = activeStyle === 'plain_line' && thick
     illumLine.visible = activeStyle === 'illuminated_line' && !thick
-    illumLineThick.visible = activeStyle === 'illuminated_line' && thick
+    illumThickGroup.visible = activeStyle === 'illuminated_line' && thick
+    illumThickSolid.visible = !useIllumDashedReplacement
+    illumThickDashedGroup.visible = useIllumDashedReplacement
+
     // The dashed collision style fully replaces the plain-tube glyph (real
     // gaps instead of an overlay), so hide the continuous base tube while
     // it's active.
-    cylinder.visible = isPlainTube && !useDashedReplacement
+    cylinder.visible = activeStyle === 'plain_tube' && !useTubeDashedReplacement
+    dashedTubeGroup.visible = useTubeDashedReplacement
     ringedTube.visible = activeStyle === 'ringed_tube'
 
-    dashedTubeGroup.visible = useDashedReplacement
+    // Same "dashed fully replaces the continuous glyph" treatment as
+    // plain_tube -- ringed_tube no longer has individual ring meshes to
+    // hide, just its own (now texture-based) dashedTubeGroup analogue.
+    const useRingedTubeDashedReplacement = isDashed && activeStyle === 'ringed_tube'
+    baseTube.visible = !useRingedTubeDashedReplacement
+    ringedTubeDashedGroup.visible = useRingedTubeDashedReplacement
+
+    rebuildSharedAccents(activeStyle, thick)
+    // ringed_tube's "ringed" collision style now goes through this same
+    // shared overlay too (no more special-casing) -- it's just a pink-
+    // textured band sitting a hair outside the base tube's own radius,
+    // same as every other style.
     collisionAccentRinged.visible = hasAccent && collisionStyle === 'ringed'
     collisionAccentDarkTexture.visible = hasAccent && collisionStyle === 'dark_texture'
   }
@@ -522,7 +871,7 @@ export function initVector3Block() {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
 
-    const vecPos = valueToCode('POS') || 'new window.THREE.Vector3()'
+    const vecPos = valueToCode('POS') || 'new window.THREE.Vector3(0,0,0)'
     const vecDir = valueToCode('DIR') || 'new window.THREE.Vector3(1,0,0)'
 
     const scaleInput = block.getInput('SCALE')

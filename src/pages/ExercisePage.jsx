@@ -10,7 +10,9 @@ import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
 
 const POINT_P = new THREE.Vector3(3, 4, 5)
-const CORRECT_DISTANCE = 4
+const PLANE_POINT_A = new THREE.Vector3(1, 1, 2)
+const PLANE_NORMAL = new THREE.Vector3(0, 1, 0)
+const CORRECT_DISTANCE = 3
 const POINT_VECTOR_BLOCK_TYPES = ['linalg_vec3', 'linalg_point']
 
 function closeNumber(a, b, tolerance = 1e-6) {
@@ -26,11 +28,81 @@ function blockMatchesVec3(block, target) {
   )
 }
 
+function vectorMatches(a, b, tolerance = 1e-6) {
+  return (
+    a?.isVector3 &&
+    b?.isVector3 &&
+    closeNumber(a.x, b.x, tolerance) &&
+    closeNumber(a.y, b.y, tolerance) &&
+    closeNumber(a.z, b.z, tolerance)
+  )
+}
+
+function pointLiesOnExercisePlane(point, tolerance = 1e-5) {
+  if (!point?.isVector3) return false
+  return Math.abs(point.clone().sub(PLANE_POINT_A).dot(PLANE_NORMAL)) <= tolerance
+}
+
+function isExercisePlaneObject(object) {
+  const point = object?.userData?.point
+  const normal = object?.userData?.normalRaw
+  return (
+    object.userData?.geoType === 'point_normal_plane_group' &&
+    vectorMatches(point, PLANE_POINT_A) &&
+    vectorMatches(normal, PLANE_NORMAL)
+  )
+}
+
+function objectOrChildMatches(object, predicate) {
+  if (!object?.isObject3D) return false
+  let matched = false
+  object.traverse((child) => {
+    if (!matched && predicate(child)) matched = true
+  })
+  return matched
+}
+
 function workspaceHasPointPVector(workspace) {
   if (!workspace) return false
   return POINT_VECTOR_BLOCK_TYPES.some((type) => (
     workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P))
   ))
+}
+
+function getInputBlock(block, inputName) {
+  return block?.getInputTargetBlock?.(inputName) ?? null
+}
+
+function isExercisePlaneBlock(block) {
+  return (
+    block?.type === 'parametric_plane' &&
+    blockMatchesVec3(getInputBlock(block, 'point'), PLANE_POINT_A) &&
+    blockMatchesVec3(getInputBlock(block, 'norm'), PLANE_NORMAL)
+  )
+}
+
+function isExercisePointQBlock(block) {
+  return (
+    block?.type === 'geo_show_point_on_object' &&
+    isExercisePlaneBlock(getInputBlock(block, 'OBJECT'))
+  )
+}
+
+function isPointPBlock(block) {
+  return blockMatchesVec3(block, POINT_P)
+}
+
+function isNormalVectorBlock(block) {
+  return blockMatchesVec3(block, PLANE_NORMAL)
+}
+
+function isPointDifferenceBlock(block) {
+  return (
+    block?.type === 'vector_arithmetic' &&
+    block.getFieldValue('OP') === 'subtract' &&
+    isPointPBlock(getInputBlock(block, 'U')) &&
+    isExercisePointQBlock(getInputBlock(block, 'V'))
+  )
 }
 
 function objectIsAtPointP(object) {
@@ -67,6 +139,51 @@ function addExercisePointPIfNeeded(objects, workspace) {
   return [...objects, createPointPMarker()]
 }
 
+function hasExercisePlane(objects) {
+  return objects.some((object) => objectOrChildMatches(object, isExercisePlaneObject))
+}
+
+function hasPointQOnExercisePlane(objects) {
+  return objects.some((object) => (
+    object?.userData?.geoType === 'annotated_object' &&
+    pointLiesOnExercisePlane(object.userData.point) &&
+    objectOrChildMatches(object, isExercisePlaneObject)
+  ))
+}
+
+function hasPointDifferenceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('vector_arithmetic', false).some(isPointDifferenceBlock)
+}
+
+function hasProjectionDistanceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('vector_magnitude', false).some((block) => {
+    const projectBlock = getInputBlock(block, 'V')
+    return (
+      projectBlock?.type === 'vector_project' &&
+      isPointDifferenceBlock(getInputBlock(projectBlock, 'U')) &&
+      isNormalVectorBlock(getInputBlock(projectBlock, 'V'))
+    )
+  })
+}
+
+function hasDotProductDistanceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('vector_dot_product', false).some((block) => {
+    const left = getInputBlock(block, 'U')
+    const right = getInputBlock(block, 'V')
+    return (
+      (isPointDifferenceBlock(left) && isNormalVectorBlock(right)) ||
+      (isNormalVectorBlock(left) && isPointDifferenceBlock(right))
+    )
+  })
+}
+
+function hasValidDistanceComputation(workspace) {
+  return hasProjectionDistanceBlock(workspace) || hasDotProductDistanceBlock(workspace)
+}
+
 function getDistanceAnswer(objects) {
   const distanceObject = objects.find((object) => (
     object?.userData?.geoType === 'point_plane_distance_dot' ||
@@ -82,7 +199,21 @@ export default function ExercisePage() {
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const clearWorkspaceRef = useRef(() => {})
   const distanceAnswer = getDistanceAnswer(objects)
-  const exercisePassed = distanceAnswer !== null && closeNumber(distanceAnswer, CORRECT_DISTANCE, 0.01)
+  const hasDistanceComputation = hasValidDistanceComputation(workspace)
+  const distanceIsCorrect = distanceAnswer !== null && closeNumber(distanceAnswer, CORRECT_DISTANCE, 0.01)
+  const exercisePassed = distanceIsCorrect && hasDistanceComputation
+  const exerciseIncorrect = distanceAnswer !== null && !exercisePassed
+  const answerCardClass = `exercise-answer-card${exercisePassed ? ' is-correct' : ''}${exerciseIncorrect ? ' is-incorrect' : ''}`
+  const hasPlaneStep = hasExercisePlane(objects)
+  const hasPointPStep = workspaceHasPointPVector(workspace)
+  const hasPointQStep = hasPointQOnExercisePlane(objects)
+  const stepCompletion = {
+    plane: hasPlaneStep,
+    pointP: hasPointPStep,
+    pointQ: hasPointQStep,
+    difference: hasPointPStep && hasPointQStep && hasPointDifferenceBlock(workspace),
+    distance: exercisePassed,
+  }
 
   const handleObjectsChange = useCallback(
     (objs) => {
@@ -109,16 +240,15 @@ export default function ExercisePage() {
             <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
                 <div className="exercise-task-panel__meta-row">
-                  <span className="exercise-task-number">Exercise 1</span>
                   {exercisePassed && <span className="exercise-pass-badge">Passed</span>}
                 </div>
-                <h1>Calculate distance from point P to a plane</h1>
+                <h1>1. <strong>Calculate distance from point P to a plane</strong></h1>
               </div>
 
               <div className="exercise-given-values" aria-label="Given values">
                 <section>
                   <h3>Plane</h3>
-                  <p>Point A = (1, 0, 2)</p>
+                  <p>Point A = (1, 1, 2)</p>
                   <p>Normal n = (0, 1, 0)</p>
                 </section>
                 <section>
@@ -128,29 +258,26 @@ export default function ExercisePage() {
               </div>
 
               <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                <li className={exercisePassed ? 'is-complete' : ''}>
+                <li className={stepCompletion.plane ? 'is-complete' : ''}>
                   Create the plane
                 </li>
-                <li className={exercisePassed ? 'is-complete' : ''}>
+                <li className={stepCompletion.pointP ? 'is-complete' : ''}>
                   Create Point P
                 </li>
-                <li className={exercisePassed ? 'is-complete' : ''}>
+                <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
                   Choose any point Q on the plane.
                 </li>
-                <li className={exercisePassed ? 'is-complete' : ''}>
+                <li className={stepCompletion.difference ? 'is-complete' : ''}>
                   Find the vector from Q to P, which is the same as finding P - Q.
                 </li>
-                <li className={exercisePassed ? 'is-complete' : ''}>
+                <li className={stepCompletion.distance ? 'is-complete' : ''}>
                   Project P - Q onto n and take Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
                 </li>
               </ol>
 
-              <div className={`exercise-answer-card${exercisePassed ? ' is-correct' : ''}`}>
-                <span>Correct answer should be:</span>
-                <strong>{CORRECT_DISTANCE}</strong>
-                {distanceAnswer !== null && (
-                  <p>Your answer: {Number(distanceAnswer.toFixed(3))}</p>
-                )}
+              <div className={answerCardClass}>
+                <span>Your answer:</span>
+                <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
               </div>
             </aside>
           )}
