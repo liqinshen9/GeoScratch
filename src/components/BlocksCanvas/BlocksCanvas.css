@@ -109,6 +109,10 @@
   color: #a78bfa;
 }
 
+.category-card--pink {
+  color: #fb7185;
+}
+
 .category-card strong {
   font-size: 0.72rem;
   line-height: 1.05;
@@ -217,6 +221,230 @@
   color: var(--geo-text-muted-on-light);
   border-top: 1px solid var(--geo-border-light);
   background: var(--geo-surface);
+}
+
+.my-box-palette .block-palette-scroll {
+  padding: 10px;
+}
+
+.make-block-button {
+  width: 100%;
+  min-height: 2.75rem;
+  margin: 0 0 14px;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 6px;
+  background: var(--geo-surface);
+  color: var(--geo-text-on-light);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.make-block-button:hover {
+  border-color: var(--geo-highlight);
+  background: rgba(0, 46, 166, 0.08);
+}
+
+.my-block-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  align-items: stretch;
+  min-height: 3.25rem;
+  margin-bottom: 10px;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 8px;
+  background: var(--geo-block-card);
+  overflow: hidden;
+  cursor: grab;
+}
+
+.my-block-card:active {
+  cursor: grabbing;
+}
+
+.my-block-card__main,
+.my-block-card__delete {
+  border: 0;
+  background: transparent;
+  color: var(--geo-text-on-light);
+  cursor: pointer;
+}
+
+.my-block-card__main {
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.my-block-card__main strong,
+.my-block-card__main span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-block-card__main strong {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.my-block-card__main span,
+.my-box-empty {
+  font-size: 11px;
+  color: var(--geo-text-muted-on-light);
+}
+
+.my-block-card__delete {
+  border-left: 1px solid var(--geo-border-light);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.my-block-card__main:hover,
+.my-block-card__delete:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.my-box-empty {
+  margin: 0;
+  padding: 0 4px;
+  line-height: 1.35;
+}
+
+.my-block-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(51, 139, 245, 0.78);
+}
+
+.my-block-dialog {
+  width: min(34rem, 100%);
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(0, 46, 166, 0.28);
+}
+
+.my-block-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 3.9rem;
+  padding: 0 4rem;
+  background: var(--geo-highlight);
+  color: #ffffff;
+}
+
+.my-block-dialog__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.my-block-dialog__close {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  width: 2.5rem;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 231, 111, 0.22);
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.my-block-dialog__close:hover {
+  background: rgba(255, 231, 111, 0.36);
+}
+
+.my-block-dialog__body {
+  min-height: 8rem;
+  padding: 2rem 2.4rem;
+  background: #ffffff;
+  color: #4d5872;
+}
+
+.my-block-dialog__body p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.my-block-dialog__field {
+  display: grid;
+  gap: 0.55rem;
+  max-width: 21rem;
+  margin: 0 auto;
+}
+
+.my-block-dialog__field span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #536079;
+}
+
+.my-block-dialog__field input {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 2px solid #c8d4e6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #344056;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 0 0.8rem;
+  outline: none;
+}
+
+.my-block-dialog__field input:focus {
+  border-color: var(--brand-yellow-deep);
+  box-shadow: 0 0 0 3px rgba(255, 231, 111, 0.42);
+}
+
+.my-block-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  padding: 1.2rem 2.6rem 1.4rem;
+  background: #ffffff;
+}
+
+.my-block-dialog__button {
+  min-width: 6rem;
+  min-height: 3rem;
+  border: 1px solid #d8dde8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #4d5872;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.my-block-dialog__button--primary {
+  border-color: var(--brand-yellow-deep);
+  background: var(--brand-yellow);
+  color: var(--geo-highlight);
+}
+
+.my-block-dialog__button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Workspace */

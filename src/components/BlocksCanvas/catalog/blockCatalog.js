@@ -1,4 +1,4 @@
-/** @typedef {'create' | 'transform' | 'compute'} BlockCategoryId */
+/** @typedef {'create' | 'transform' | 'compute' | 'mybox'} BlockCategoryId */
 
 /** Demo objects placed at the bottom of the transform pipeline workspace layout. */
 export const PIPELINE_DEMO_OBJECT_TYPES = ['geo_cube', 'geo_sphere']
@@ -14,7 +14,7 @@ export const TRANSFORM_STEP_BLOCK_TYPES = ['rot_matrix', 'trans_matrix', 'scale_
  *   label: string,
  *   subtitle: string,
  *   description: string,
- *   accent: 'blue' | 'green' | 'purple',
+ *   accent: 'blue' | 'green' | 'purple' | 'pink',
  *   groups: BlockCatalogGroup[],
  * }} BlockCategory
  */
@@ -93,6 +93,14 @@ export const BLOCK_CATEGORIES = {
         ],
       },
     ],
+  },
+  mybox: {
+    id: 'mybox',
+    label: 'My Blocks',
+    subtitle: 'Save and reuse your own composite blocks.',
+    description: 'Custom blocks',
+    accent: 'pink',
+    groups: [],
   },
 }
 

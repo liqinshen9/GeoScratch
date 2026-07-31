@@ -1,5 +1,27 @@
 import { create } from 'zustand'
 
+const USER_BLOCKS_STORAGE_KEY = 'geoscratch:userBlocks'
+
+function loadUserBlocks() {
+  if (typeof window === 'undefined') return []
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(USER_BLOCKS_STORAGE_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed : []
+  } catch (err) {
+    console.error('[GeoScratch] Failed to load user blocks:', err)
+    return []
+  }
+}
+
+function persistUserBlocks(userBlocks) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(USER_BLOCKS_STORAGE_KEY, JSON.stringify(userBlocks))
+  } catch (err) {
+    console.error('[GeoScratch] Failed to save user blocks:', err)
+  }
+}
+
 const useWorkspaceStore = create((set) => ({
   // Blockly workspace instance (current active one)
   workspace: null,
@@ -12,6 +34,7 @@ const useWorkspaceStore = create((set) => ({
 
   // NEW: Memory bank for serialized workspace data
   savedXml: {},
+  userBlocks: loadUserBlocks(),
 
   setWorkspace: (ws) => set({ workspace: ws }),
   setDialogOpen: (open) => set({ dialogOpen: open }),
@@ -22,6 +45,32 @@ const useWorkspaceStore = create((set) => ({
   // NEW: Save the XML string for a specific page ID
   saveWorkspaceXml: (id, xmlText) =>
     set((state) => ({ savedXml: { ...state.savedXml, [id]: xmlText } })),
+  addUserBlock: ({ name, xmlText, source = 'workspace' }) => {
+    const trimmedName = String(name || '').trim()
+    if (!trimmedName || !xmlText) return null
+
+    const block = {
+      id: `my-block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: trimmedName,
+      xmlText,
+      source,
+      createdAt: new Date().toISOString(),
+    }
+
+    set((state) => {
+      const userBlocks = [block, ...state.userBlocks]
+      persistUserBlocks(userBlocks)
+      return { userBlocks }
+    })
+
+    return block
+  },
+  deleteUserBlock: (blockId) =>
+    set((state) => {
+      const userBlocks = state.userBlocks.filter((block) => block.id !== blockId)
+      persistUserBlocks(userBlocks)
+      return { userBlocks }
+    }),
 }))
 
 export default useWorkspaceStore

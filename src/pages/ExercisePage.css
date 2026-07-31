@@ -407,8 +407,7 @@
   padding: 0.55rem 0.65rem;
 }
 
-.exercise-page--editor #blocks-canvas .blocklyZoom,
-.exercise-page--editor #blocks-canvas .blocklyTrash {
+.exercise-page--editor #blocks-canvas .blocklyZoom {
   display: none !important;
 }
 
