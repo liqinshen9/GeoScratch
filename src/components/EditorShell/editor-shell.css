@@ -20,7 +20,7 @@
 .editor-shell {
   display: grid;
   grid-template-rows: auto 1fr;
-  grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 67px minmax(0, 1fr) minmax(0, 1fr);
   column-gap: 1px;
   flex: 1 1 auto;
   min-height: 0;
@@ -28,7 +28,7 @@
 }
 
 .editor-shell--with-leading {
-  grid-template-columns: var(--exercise-task-width, 20rem) 96px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: var(--exercise-task-width, 20rem) 67px minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .editor-header-row,

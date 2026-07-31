@@ -41,7 +41,7 @@
   left: 100%;
   z-index: 15;
   height: 100%;
-  width: min(18rem, calc(100vw - 14rem));
+  width: min(24rem, calc(100vw - 14rem));
   border: 1px solid var(--geo-border-light);
   border-radius: 0 8px 8px 0;
   background: var(--geo-panel-muted);
