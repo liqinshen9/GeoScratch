@@ -1,29 +1,23 @@
-import { getCategory } from '@/components/BlocksCanvas/catalog/blockCatalog'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { FullScreenOne, OffScreenOne } from '@icon-park/react'
 
 export default function EditorColumnHeaders({
-  categoryId,
+  leadingHeader,
   workspace,
   workspaceMaximized,
   onWorkspaceMaximizedChange,
   onClearWorkspace,
 }) {
-  const category = getCategory(categoryId)
-
   return (
     <div className="editor-header-row">
-      {!workspaceMaximized && (
-        <header className="panel-column-header editor-head">
-          <h2>Toolbox</h2>
-        </header>
+      {!workspaceMaximized && leadingHeader && (
+        <header className="panel-column-header editor-head">{leadingHeader}</header>
       )}
 
       {!workspaceMaximized && (
         <header className="panel-column-header editor-head">
-          <h2>{category?.label ?? 'Create'}</h2>
-          {category?.subtitle && <p>{category.subtitle}</p>}
+          <h2>Toolbox</h2>
         </header>
       )}
 

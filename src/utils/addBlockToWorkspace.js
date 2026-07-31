@@ -108,13 +108,10 @@ function getPipelineAnchor(workspace, block) {
 }
 
 function clientToWorkspaceXY(workspace, clientX, clientY, block) {
-  const metrics = workspace.getMetrics()
-  const scale = workspace.scale || 1
   const { width, height } = block.getHeightWidth()
-
-  const x = metrics.viewLeft + (clientX - metrics.absoluteLeft) / scale - width / 2
-  const y = metrics.viewTop + (clientY - metrics.absoluteTop) / scale - height / 2
-  return { x, y }
+  const screenCoord = new Blockly.utils.Coordinate(clientX, clientY)
+  const wsCoord = Blockly.utils.svgMath.screenToWsCoordinates(workspace, screenCoord)
+  return { x: wsCoord.x - width / 2, y: wsCoord.y - height / 2 }
 }
 
 export function addBlockToWorkspace(workspace, type, options = {}) {

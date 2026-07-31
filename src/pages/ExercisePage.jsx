@@ -1,16 +1,12 @@
 import { useCallback, useRef, useState } from 'react'
-import { Trash2 } from 'lucide-react'
-import { FullScreenOne, OffScreenOne } from '@icon-park/react'
 import * as THREE from 'three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
-import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
-import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
 import Scene3D from '@/components/Scene3D/Scene3D'
-import { Button } from '@/components/ui/button'
-import addBlockToWorkspace from '@/utils/addBlockToWorkspace'
+import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 
+import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
 
 const POINT_P = new THREE.Vector3(3, 4, 5)
@@ -200,9 +196,7 @@ function getDistanceAnswer(objects) {
 export default function ExercisePage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
-  const [categoryId, setCategoryId] = useState('create')
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
-  const [paletteOpen, setPaletteOpen] = useState(false)
   const clearWorkspaceRef = useRef(() => {})
   const distanceAnswer = getDistanceAnswer(objects)
   const hasDistanceComputation = hasValidDistanceComputation(workspace)
@@ -230,137 +224,67 @@ export default function ExercisePage() {
     [autoRender, setPendingObjects, setObjects, workspace],
   )
 
-  function selectCategory(nextCategoryId) {
-    setPaletteOpen(nextCategoryId === categoryId ? !paletteOpen : true)
-    setCategoryId(nextCategoryId)
-  }
-
-  const handleBlockSelect = useCallback(
-    (type) => {
-      if (!workspace) return
-      addBlockToWorkspace(workspace, type)
-    },
-    [workspace],
-  )
-
   return (
-    <div className={`exercise-page exercise-page--editor${workspaceMaximized ? ' exercise-page--workspace-maximized' : ''}${paletteOpen ? '' : ' exercise-page--toolbox-collapsed'}`}>
-      <main className="exercise-editor-shell">
-        <div className="exercise-editor-header-row">
+    <div className="exercise-page exercise-page--editor">
+      <main className={`editor-shell editor-shell--with-leading exercise-editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}>
+        <EditorColumnHeaders
+          leadingHeader={<h2>Exercise</h2>}
+          workspace={workspace}
+          workspaceMaximized={workspaceMaximized}
+          onWorkspaceMaximizedChange={setWorkspaceMaximized}
+          onClearWorkspace={() => clearWorkspaceRef.current()}
+        />
+
+        <div className="editor-body-row">
           {!workspaceMaximized && (
-            <header className="panel-column-header exercise-head exercise-head--task">
-              <h2>Exercise</h2>
-            </header>
-          )}
-
-          {!workspaceMaximized && (
-            <header className="panel-column-header exercise-head exercise-tools-head">
-              <h2>Toolbox</h2>
-            </header>
-          )}
-
-          <header className="panel-column-header exercise-head exercise-workspace-head">
-            <div>
-              <h2>Workspace</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="exercise-workspace-toggle"
-                onClick={() => setWorkspaceMaximized((maximized) => !maximized)}
-                disabled={!workspace}
-                title={workspaceMaximized ? 'Restore panels' : 'Maximize workspace'}
-                aria-label={workspaceMaximized ? 'Restore panels' : 'Maximize workspace'}
-                aria-pressed={workspaceMaximized}
-              >
-                {workspaceMaximized ? (
-                  <OffScreenOne theme="outline" size="20" fill="#333" />
-                ) : (
-                  <FullScreenOne theme="outline" size="20" fill="#333" />
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => clearWorkspaceRef.current()}
-                disabled={!workspace}
-              >
-                <Trash2 aria-hidden="true" size={16} />
-                Clear
-              </Button>
-            </div>
-          </header>
-
-          <header className="panel-column-header exercise-head exercise-head--last">
-            <h2>3D View</h2>
-          </header>
-        </div>
-
-        <div className="exercise-editor-body-row">
-          <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
-            <div className="exercise-task-panel__top">
-              <div className="exercise-task-panel__meta-row">
-                {exercisePassed && <span className="exercise-pass-badge">Passed</span>}
+            <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
+              <div className="exercise-task-panel__top">
+                <div className="exercise-task-panel__meta-row">
+                  {exercisePassed && <span className="exercise-pass-badge">Passed</span>}
+                </div>
+                <h1>1. <strong>Calculate distance from point P to a plane</strong></h1>
               </div>
-              <h1>1. <strong>Calculate distance from point P to a plane</strong></h1>
-            </div>
 
-            <div className="exercise-given-values" aria-label="Given values">
-              <section>
-                <h3>Plane</h3>
-                <p>Point A = (1, 1, 2)</p>
-                <p>Normal n = (0, 1, 0)</p>
-              </section>
-              <section>
-                <h3>Point</h3>
-                <p>P = (3, 4, 5)</p>
-              </section>
-            </div>
+              <div className="exercise-given-values" aria-label="Given values">
+                <section>
+                  <h3>Plane</h3>
+                  <p>Point A = (1, 1, 2)</p>
+                  <p>Normal n = (0, 1, 0)</p>
+                </section>
+                <section>
+                  <h3>Point</h3>
+                  <p>P = (3, 4, 5)</p>
+                </section>
+              </div>
 
-            <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-              <li className={stepCompletion.plane ? 'is-complete' : ''}>
-                Create the plane
-              </li>
-              <li className={stepCompletion.pointP ? 'is-complete' : ''}>
-                Create Point P
-              </li>
-              <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
-                Choose any point Q on the plane.
-              </li>
-              <li className={stepCompletion.difference ? 'is-complete' : ''}>
-                Find the vector from Q to P, which is the same as finding P - Q.
-              </li>
-              <li className={stepCompletion.distance ? 'is-complete' : ''}>
-                Project P - Q onto n and take Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
-              </li>
-            </ol>
+              <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
+                <li className={stepCompletion.plane ? 'is-complete' : ''}>
+                  Create the plane
+                </li>
+                <li className={stepCompletion.pointP ? 'is-complete' : ''}>
+                  Create Point P
+                </li>
+                <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
+                  Choose any point Q on the plane.
+                </li>
+                <li className={stepCompletion.difference ? 'is-complete' : ''}>
+                  Find the vector from Q to P, which is the same as finding P - Q.
+                </li>
+                <li className={stepCompletion.distance ? 'is-complete' : ''}>
+                  Project P - Q onto n and take Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
+                </li>
+              </ol>
 
-
-            <div className={answerCardClass}>
-              <span>Your answer:</span>
-              <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
-            </div>
-          </aside>
-
-          <aside className="exercise-category-panel">
-            <CategoryToolbox selected={categoryId} onSelect={selectCategory} />
-          </aside>
-
-          {!workspaceMaximized && paletteOpen && (
-            <div className="exercise-blocks-panel">
-              <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
-            </div>
+              <div className={answerCardClass}>
+                <span>Your answer:</span>
+                <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
+              </div>
+            </aside>
           )}
 
           <BlocksCanvas
             id="exercise"
-            categoryId={categoryId}
             workspaceMaximized={workspaceMaximized}
-            hideInlineControls
-            onCategoryChange={setCategoryId}
             onObjectsChange={handleObjectsChange}
             onRegisterClear={(fn) => {
               clearWorkspaceRef.current = fn

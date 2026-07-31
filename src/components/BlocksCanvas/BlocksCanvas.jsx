@@ -11,19 +11,15 @@ import './BlocksCanvas.css'
 export default function BlocksCanvas({
   id,
   onObjectsChange,
-  categoryId,
   workspaceMaximized,
-  floatingControls = false,
-  paletteOpen = false,
-  hideInlineControls = false,
-  onCategoryChange,
   onRegisterClear,
 }) {
   const workspaceHostRef = useRef(null)
   const onObjectsChangeRef = useRef(onObjectsChange)
-  const [toolboxPosition, setToolboxPosition] = useState(null)
+  const [categoryId, setCategoryId] = useState('create')
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
-  // FIX 1: Only subscribe to the save function. 
+  // FIX 1: Only subscribe to the save function.
   // Do NOT extract savedXml here, otherwise your entire canvas re-renders every time a block moves!
   const saveWorkspaceXml = useWorkspaceStore((state) => state.saveWorkspaceXml)
   const isFirstLoad = useRef(true)
@@ -128,80 +124,54 @@ export default function BlocksCanvas({
     [workspace],
   )
 
-  const handleToolboxDragStart = useCallback(
-    (event) => {
-      if (!floatingControls || event.button !== 0) return
-      const panel = event.currentTarget.closest('.blocks-floating-toolbox')
-      const parent = panel?.offsetParent
-      if (!panel || !parent) return
-      event.preventDefault()
+  const handleCategorySelect = (nextCategoryId) => {
+    setCategoryId(nextCategoryId)
+    setPaletteOpen((isOpen) => (nextCategoryId === categoryId ? !isOpen : true))
+  }
 
-      const panelRect = panel.getBoundingClientRect()
-      const parentRect = parent.getBoundingClientRect()
-      const origin = toolboxPosition ?? {
-        x: panelRect.left - parentRect.left,
-        y: panelRect.top - parentRect.top,
+  // A maximized workspace hides the toolbox entirely, so don't leave the
+  // palette "open" behind it -- it would otherwise pop back up already open
+  // the moment the workspace is restored.
+  useEffect(() => {
+    if (workspaceMaximized) setPaletteOpen(false)
+  }, [workspaceMaximized])
+
+  // Clicking the workspace background closes the flyout too. Blockly's own
+  // gesture handling swallows the raw DOM mousedown before it ever bubbles
+  // out to a document-level listener, so we go through Blockly's own click
+  // event instead of fighting that.
+  useEffect(() => {
+    if (!workspace) return
+
+    function handleWorkspaceClick(event) {
+      if (event.type === Blockly.Events.CLICK && event.targetType === 'workspace') {
+        setPaletteOpen(false)
       }
+    }
 
-      setToolboxPosition(origin)
-
-      function moveToolbox(moveEvent) {
-        const currentPanelRect = panel.getBoundingClientRect()
-        const currentParentRect = parent.getBoundingClientRect()
-        const maxX = Math.max(8, currentParentRect.width - currentPanelRect.width - 8)
-        const maxY = Math.max(8, currentParentRect.height - currentPanelRect.height - 8)
-        const nextX = Math.min(Math.max(8, origin.x + moveEvent.clientX - event.clientX), maxX)
-        const nextY = Math.min(Math.max(8, origin.y + moveEvent.clientY - event.clientY), maxY)
-        setToolboxPosition({ x: nextX, y: nextY })
-      }
-
-      function stopToolbox() {
-        window.removeEventListener('mousemove', moveToolbox)
-        window.removeEventListener('mouseup', stopToolbox)
-      }
-
-      window.addEventListener('mousemove', moveToolbox)
-      window.addEventListener('mouseup', stopToolbox)
-    },
-    [floatingControls, toolboxPosition],
-  )
-
-  const toolbox = (
-    <aside className="blocks-col blocks-col--toolbox">
-      <CategoryToolbox selected={categoryId} onSelect={onCategoryChange} />
-    </aside>
-  )
-
-  const palette = (
-    <aside className="blocks-col blocks-col--palette">
-      <BlockPalette categoryId={categoryId} onBlockSelect={handleBlockSelect} />
-    </aside>
-  )
+    workspace.addChangeListener(handleWorkspaceClick)
+    return () => workspace.removeChangeListener(handleWorkspaceClick)
+  }, [workspace])
 
   return (
-    <div
-      id="blocks-canvas"
-      className={`blocks-shell${floatingControls ? ' blocks-shell--floating-controls' : ''}`}
-    >
-      {floatingControls && (
-        <div
-          className="blocks-floating-toolbox"
-          style={toolboxPosition ? { left: toolboxPosition.x, top: toolboxPosition.y } : undefined}
-        >
-          <div className="blocks-floating-toolbox__handle" onMouseDown={handleToolboxDragStart}>
-            <span aria-hidden="true">::</span>
-            <strong>Toolbox</strong>
-          </div>
-          <div className="blocks-floating-toolbox__body">
-            {toolbox}
-            {paletteOpen && palette}
-          </div>
+    <div id="blocks-canvas" className="blocks-shell">
+      {!workspaceMaximized && (
+        <div className="blocks-toolbox-slot">
+          <aside className="blocks-col blocks-col--toolbox">
+            <CategoryToolbox selected={categoryId} onSelect={handleCategorySelect} />
+          </aside>
+
+          {paletteOpen && (
+            <aside className="blocks-col blocks-col--palette blocks-col--palette-flyout">
+              <BlockPalette
+                categoryId={categoryId}
+                onBlockSelect={handleBlockSelect}
+                onBlockDragStart={() => setPaletteOpen(true)}
+              />
+            </aside>
+          )}
         </div>
       )}
-
-      {!floatingControls && !hideInlineControls && !workspaceMaximized && toolbox}
-
-      {!floatingControls && !hideInlineControls && !workspaceMaximized && palette}
 
       <section className="blocks-col blocks-col--workspace">
         <div

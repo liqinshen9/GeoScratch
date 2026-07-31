@@ -29,19 +29,13 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
     const scale = PALETTE_WS_OPTIONS.zoom.startScale
     host.style.height = `${Math.ceil(hw.height * scale + 18)}px`
 
-    const svg = block.getSvgRoot()
-    if (svg) svg.style.cursor = 'pointer'
-
-    const onClick = () => onSelect(type)
-    host.addEventListener('click', onClick)
     Blockly.svgResize(ws)
 
     return () => {
-      host.removeEventListener('click', onClick)
       ws.dispose()
       host.innerHTML = ''
     }
-  }, [type, onSelect])
+  }, [type])
 
   const handleDragStart = (event) => {
     if (!event.dataTransfer) return
@@ -51,15 +45,17 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
   }
 
   return (
-    <div
-      className="palette-block-preview"
-      ref={hostRef}
-      role="button"
-      tabIndex={0}
-      draggable
-      onDragStart={handleDragStart}
-      title="Click to add or drag into workspace"
-    />
+    <div className="palette-block-preview" title="Click to add or drag into workspace">
+      <div className="palette-block-preview__blockly-host" ref={hostRef} />
+      <div
+        className="palette-block-preview__drag-surface"
+        role="button"
+        tabIndex={0}
+        draggable
+        onDragStart={handleDragStart}
+        onClick={() => onSelect(type)}
+      />
+    </div>
   )
 }
 
