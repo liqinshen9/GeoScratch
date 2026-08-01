@@ -62,6 +62,7 @@ function HeadLight({ controlsRef }) {
   // Offset scales with camera-to-target distance (#57) so it stays a
   // small, consistent angle at any zoom instead of a fixed world vector.
   const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), []);
+  const worldOffset = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera }) => {
     if (!lightRef.current) return;
@@ -75,7 +76,7 @@ function HeadLight({ controlsRef }) {
       HEADLIGHT_OFFSET_MIN_SCALE,
       HEADLIGHT_OFFSET_MAX_SCALE
     );
-    const worldOffset = offset.clone().multiplyScalar(scale).applyQuaternion(camera.quaternion);
+    worldOffset.copy(offset).multiplyScalar(scale).applyQuaternion(camera.quaternion);
     lightRef.current.position.copy(camera.position).add(worldOffset);
 
     const shadowCam = lightRef.current.shadow.camera;
@@ -406,6 +407,7 @@ function resolveAnchor(object3D, anchorName) {
 // mounts children into their own separate ReactDOM root, so context from
 // above <Html> isn't visible inside it.
 const labelRegistry = new Map();
+let labelRegistryRevision = 0;
 
 // Labels scale gently with camera distance so they still feel "attached" to
 // their object when you zoom, but the range is clamped tightly so they never
@@ -477,6 +479,11 @@ const SLEEP_VELOCITY = 3; // px/s; velocity below this is snapped to 0 so near-e
                            // to a true, exact rest instead of perpetually creeping by sub-pixel amounts
                            // (that creep was invisible in the settle-time numbers but visible on screen
                            // once labels update every frame instead of every ~50ms).
+// Dense or contradictory layouts (for example many labels sharing one exact
+// anchor) may have no fully static solution inside MAX_OFFSET. Bound each
+// settling burst so an impossible layout cannot keep the tab rendering
+// forever. Camera or label-data changes reset this budget.
+const MAX_LABEL_SETTLE_FRAMES = 180;
 
 // A label's spring rests at a small, fixed *screen-space* offset from its raw
 // anchor projection -- never (0,0). A label's world-space authoring offset
@@ -516,8 +523,12 @@ function LabelAnchor({ id, className, color, worldPos, emphasis, children }) {
       mass: emphasis ? EMPHASIS_MASS : 1,
     };
     labelRegistry.set(id, entry);
+    labelRegistryRevision += 1;
     applyLabelTransform(entry, 0, 0, 1);
-    return () => { labelRegistry.delete(id); };
+    return () => {
+      labelRegistry.delete(id);
+      labelRegistryRevision += 1;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -525,6 +536,7 @@ function LabelAnchor({ id, className, color, worldPos, emphasis, children }) {
     if (!entry) return;
     entry.worldPos = worldPos;
     entry.mass = emphasis ? EMPHASIS_MASS : 1;
+    labelRegistryRevision += 1;
     // Anchor jumped (scene rebuild) -- kill velocity to avoid a flick, but
     // keep offsetX/offsetY as a warm start since the relative clutter
     // situation is usually similar across rebuilds.
@@ -560,8 +572,15 @@ function applyLabelTransform(entry, x, y, scale) {
 
 function LabelDeclutter() {
   const scratchVec = useRef(new THREE.Vector3());
+  const settleFrameRef = useRef(0);
+  const seenRegistryRevisionRef = useRef(-1);
+  const cameraStateRef = useRef({
+    px: NaN, py: NaN, pz: NaN,
+    qx: NaN, qy: NaN, qz: NaN, qw: NaN,
+    zoom: NaN,
+  });
 
-  useFrame(({ camera }, delta) => {
+  useFrame(({ camera, invalidate }, delta) => {
     // Runs every rendered frame (not throttled to a fixed tick rate) so label
     // motion matches the rest of the scene -- updating position on a coarser
     // cadence than the render loop looked stepped/jittery next to everything
@@ -572,13 +591,43 @@ function LabelDeclutter() {
     const entries = Array.from(labelRegistry.values())
       .filter((e) => e.bodyRef.current);
 
+    const previousCamera = cameraStateRef.current;
+    const cameraChanged =
+      previousCamera.px !== camera.position.x ||
+      previousCamera.py !== camera.position.y ||
+      previousCamera.pz !== camera.position.z ||
+      previousCamera.qx !== camera.quaternion.x ||
+      previousCamera.qy !== camera.quaternion.y ||
+      previousCamera.qz !== camera.quaternion.z ||
+      previousCamera.qw !== camera.quaternion.w ||
+      previousCamera.zoom !== camera.zoom;
+    const registryChanged = seenRegistryRevisionRef.current !== labelRegistryRevision;
+
+    if (cameraChanged || registryChanged) settleFrameRef.current = 0;
+    previousCamera.px = camera.position.x;
+    previousCamera.py = camera.position.y;
+    previousCamera.pz = camera.position.z;
+    previousCamera.qx = camera.quaternion.x;
+    previousCamera.qy = camera.quaternion.y;
+    previousCamera.qz = camera.quaternion.z;
+    previousCamera.qw = camera.quaternion.w;
+    previousCamera.zoom = camera.zoom;
+    seenRegistryRevisionRef.current = labelRegistryRevision;
+
     // Pass 1: camera-distance scale (unchanged logic, independent of position)
+    let labelsStillMoving = false;
     entries.forEach((e) => {
       if (!e.worldPos) return;
       const dist = scratchVec.current.set(e.worldPos[0], e.worldPos[1], e.worldPos[2]).distanceTo(camera.position);
       const rawScale = LABEL_SCALE_REF_DISTANCE / Math.max(dist, 1e-3);
       const targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale));
-      e.appliedScale += (targetScale - e.appliedScale) * 0.25;
+      const scaleDelta = targetScale - e.appliedScale;
+      if (Math.abs(scaleDelta) < 0.001) {
+        e.appliedScale = targetScale;
+      } else {
+        e.appliedScale += scaleDelta * 0.25;
+        labelsStillMoving = true;
+      }
     });
 
     // Pass 2: read (batch all DOM reads before any writes, avoid layout thrash).
@@ -703,6 +752,7 @@ function LabelDeclutter() {
         e.velX = (e.velX + (e._fx / e.mass) * subDt) * velDecay;
         e.velY = (e.velY + (e._fy / e.mass) * subDt) * velDecay;
         if (Math.hypot(e.velX, e.velY) < SLEEP_VELOCITY) { e.velX = 0; e.velY = 0; }
+        else labelsStillMoving = true;
         e.offsetX += e.velX * subDt;
         e.offsetY += e.velY * subDt;
 
@@ -716,6 +766,16 @@ function LabelDeclutter() {
     }
 
     entries.forEach((e) => applyLabelTransform(e, e.offsetX, e.offsetY, e.appliedScale));
+
+    // The canvas renders on demand. Keep ticking only while the label
+    // simulation is visibly settling; camera controls and React updates
+    // invalidate the canvas themselves when something else changes.
+    if (labelsStillMoving && settleFrameRef.current < MAX_LABEL_SETTLE_FRAMES) {
+      settleFrameRef.current += 1;
+      invalidate();
+    } else if (!labelsStillMoving) {
+      settleFrameRef.current = 0;
+    }
   });
 
   return null;
@@ -1108,6 +1168,18 @@ export default function Scene3D({ objects = [] }) {
   // waiting on the next unrelated block edit.
   const [refsReadyTick, setRefsReadyTick] = useState(0);
 
+  const handleControlsReady = useCallback((instance) => {
+    if (controlsRef.current === instance) return;
+    controlsRef.current = instance;
+    if (instance) setRefsReadyTick((tick) => tick + 1);
+  }, []);
+
+  const handleCameraReady = useCallback((camera) => {
+    if (cameraRef.current === camera) return;
+    cameraRef.current = camera;
+    if (camera) setRefsReadyTick((tick) => tick + 1);
+  }, []);
+
   useLayoutEffect(() => {
     window.THREE = THREE
     window.threeObjStore = globalThreeObjStore
@@ -1175,6 +1247,7 @@ export default function Scene3D({ objects = [] }) {
       <div className="relative flex-1 min-h-0">
         <Canvas
           shadows
+          frameloop="demand"
           camera={{ position: DEFAULT_CAMERA_POSITION, fov: 45, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
@@ -1183,17 +1256,9 @@ export default function Scene3D({ objects = [] }) {
             makeDefault
             minDistance={MIN_CAMERA_DISTANCE}
             maxDistance={MAX_CAMERA_DISTANCE}
-            ref={(instance) => {
-              controlsRef.current = instance;
-              if (instance) setRefsReadyTick((tick) => tick + 1);
-            }}
+            ref={handleControlsReady}
           />
-          <CameraHandle
-            onReady={(cam) => {
-              cameraRef.current = cam;
-              setRefsReadyTick((tick) => tick + 1);
-            }}
-          />
+          <CameraHandle onReady={handleCameraReady} />
           <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
