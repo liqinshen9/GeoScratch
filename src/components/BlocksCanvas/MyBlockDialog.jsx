@@ -5,10 +5,12 @@ export default function MyBlockDialog({
   title,
   description,
   defaultName = '',
+  error = '',
   confirmLabel = 'OK',
   showNameInput = true,
   onCancel,
   onConfirm,
+  onNameChange,
 }) {
   const [name, setName] = useState(defaultName)
 
@@ -41,9 +43,19 @@ export default function MyBlockDialog({
               <input
                 autoFocus
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value)
+                  onNameChange?.(event.target.value)
+                }}
                 placeholder="Name your block"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? 'my-block-dialog-error' : undefined}
               />
+              {error && (
+                <span id="my-block-dialog-error" className="my-block-dialog__error">
+                  {error}
+                </span>
+              )}
             </label>
           )}
         </div>

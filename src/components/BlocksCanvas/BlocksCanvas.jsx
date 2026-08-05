@@ -15,6 +15,39 @@ const BUILT_IN_BLOCK_TYPES = new Set(
   Object.values(BLOCK_CATEGORIES).flatMap((category) => flattenCategoryBlocks(category).map((block) => block.type)),
 )
 
+const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
+
+function canonicalizeNode(node) {
+  const tagName = node.tagName?.toLowerCase()
+  if (!tagName) return ''
+
+  const attributes = Array.from(node.attributes || [])
+    .filter((attribute) => !IGNORED_DUPLICATE_ATTRIBUTES.has(attribute.name.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((attribute) => `${attribute.name}=${JSON.stringify(attribute.value)}`)
+    .join(',')
+
+  const children = Array.from(node.children || []).map(canonicalizeNode)
+  if (tagName === 'xml') children.sort()
+
+  const text = Array.from(node.childNodes || [])
+    .filter((child) => child.nodeType === Node.TEXT_NODE)
+    .map((child) => child.textContent.trim())
+    .filter(Boolean)
+    .join(' ')
+
+  return `${tagName}(${attributes}){${JSON.stringify(text)}}[${children.join('')}]`
+}
+
+function canonicalizeWorkspaceXml(xmlText) {
+  try {
+    return canonicalizeNode(Blockly.utils.xml.textToDom(xmlText))
+  } catch (err) {
+    console.error('[GeoScratch] Failed to compare My Block XML:', err)
+    return ''
+  }
+}
+
 export default function BlocksCanvas({
   id,
   onObjectsChange,
@@ -137,7 +170,22 @@ export default function BlocksCanvas({
     if (!workspace || !name?.trim()) return
     const dom = Blockly.Xml.workspaceToDom(workspace)
     const xmlText = Blockly.Xml.domToText(dom)
-    addUserBlock({ name, xmlText, source: id === 'exercise' ? 'exercise' : 'workspace' })
+    const trimmedName = name.trim()
+    const userBlocks = useWorkspaceStore.getState().userBlocks
+    const normalizedName = trimmedName.toLocaleLowerCase()
+
+    if (userBlocks.some((block) => block.name.trim().toLocaleLowerCase() === normalizedName)) {
+      setMyBlockDialog((dialog) => ({ ...dialog, error: 'Block name already exist.' }))
+      return
+    }
+
+    const canonicalXml = canonicalizeWorkspaceXml(xmlText)
+    if (canonicalXml && userBlocks.some((block) => canonicalizeWorkspaceXml(block.xmlText) === canonicalXml)) {
+      setMyBlockDialog({ type: 'duplicate' })
+      return
+    }
+
+    addUserBlock({ name: trimmedName, xmlText, source: id === 'exercise' ? 'exercise' : 'workspace' })
     setCategoryId('mybox')
     setPaletteOpen(true)
     setMyBlockDialog(null)
@@ -230,14 +278,16 @@ export default function BlocksCanvas({
         title="Make a Block"
         description="Save the current workspace as a reusable block in My Blocks."
         defaultName="My geometric block"
+        error={myBlockDialog?.error}
         confirmLabel="Save"
         onCancel={() => setMyBlockDialog(null)}
         onConfirm={handleConfirmMakeBlock}
+        onNameChange={() => setMyBlockDialog((dialog) => (dialog ? { ...dialog, error: '' } : dialog))}
       />
       <MyBlockDialog
         open={myBlockDialog?.type === 'duplicate'}
         title="Make a Block"
-        description="You already have this block in the toolbox, so there is no need to save another copy."
+        description="Blocks already exist."
         confirmLabel="OK"
         showNameInput={false}
         onCancel={() => setMyBlockDialog(null)}
