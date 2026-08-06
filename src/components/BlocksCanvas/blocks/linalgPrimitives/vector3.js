@@ -44,6 +44,9 @@ export function initVec3Block() {
     } else {
       appendCoordinateFields(block, label)
     }
+    if (options.origin) {
+      block.appendValueInput('ORIGIN').setCheck('vector3').appendField('from point:')
+    }
     block.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
     block.setTooltip(tooltip)
     block.setDeletable(true)
@@ -53,7 +56,7 @@ export function initVec3Block() {
 
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', { column: true })
+      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', { column: true, origin: true })
     },
   }
 
@@ -109,25 +112,34 @@ export function initVec3Block() {
       })()`, Order.FUNCTION_CALL]
     }
 
+    const originInput = block.getInput && block.getInput('ORIGIN')
+    const originConnected = !!originInput?.connection?.targetConnection
+    const originCode = originConnected
+      ? javascriptGenerator.valueToCode(block, 'ORIGIN', Order.FUNCTION_CALL)
+      : ''
+
     return [`(function(){
       const vec = new THREE.Vector3(${coords});
       ${isStandalone ? `
       const label = vectorNotation.assignVectorLabel(${blockId});
+      const origin = ${originCode || 'new THREE.Vector3(0, 0, 0)'};
+      const tip = origin.clone().add(vec);
       const len = vec.length();
       let visual;
       if (len > 1e-8) {
-        visual = new THREE.ArrowHelper(vec.clone().normalize(), new THREE.Vector3(), len, 0x15803d, 0.25, 0.1);
+        visual = new THREE.ArrowHelper(vec.clone().normalize(), origin, len, 0x15803d, 0.25, 0.1);
       } else {
         visual = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),
           new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.4, metalness: 0.1 })
         );
+        visual.position.copy(origin);
         visual.userData.zoomInvariantRadius = 0.04;
         visual.userData.zoomInvariantUniform = true;
       }
       visual.userData.geoType = 'geo_vector';
       visual.userData.srcBlockId = ${blockId};
-      visual.userData.labelAnchors = { tip: { type: 'world', position: [vec.x, vec.y, vec.z] } };
+      visual.userData.labelAnchors = { tip: { type: 'world', position: [tip.x, tip.y, tip.z] } };
       visual.userData.labels = [
         { anchor: 'tip', text: label + ' = ' + vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#15803d' },
       ];
