@@ -1,5 +1,6 @@
 export function createVectorNotationRuntime() {
   const anyPointLabelsByBlockId = {}
+  const lineLabelsByBlockId = {}
   const pointLabelsByBlockId = {}
   const vectorLabelsByBlockId = {}
 
@@ -27,6 +28,7 @@ export function createVectorNotationRuntime() {
 
   return {
     assignAnyPointLabel: (blockId) => labelFromRun(anyPointLabelsByBlockId, blockId, 'Q', true),
+    assignLineLabel: (blockId) => labelFromRun(lineLabelsByBlockId, blockId, 'L', true),
     assignPointLabel: (blockId) => labelFromRun(pointLabelsByBlockId, blockId, 'P'),
     assignVectorLabel: (blockId) => labelFromRun(vectorLabelsByBlockId, blockId, 'v'),
     binaryLabel: (left, operator, right, leftFallback = 'a', rightFallback = 'b') => (

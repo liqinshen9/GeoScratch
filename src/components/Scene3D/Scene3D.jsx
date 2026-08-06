@@ -501,7 +501,7 @@ function minkowskiSafeDist(nx, ny, combinedHalfWidth, combinedHalfHeight) {
   return Math.min(tX, tY);
 }
 
-function LabelAnchor({ id, className, color, worldPos, emphasis, children }) {
+function LabelAnchor({ id, visibilityKey, className, color, worldPos, emphasis, onHide, children }) {
   const bodyRef = useRef(null);
 
   useEffect(() => {
@@ -536,7 +536,16 @@ function LabelAnchor({ id, className, color, worldPos, emphasis, children }) {
 
   return (
     <div className="label-anchor">
-      <div ref={bodyRef} className={className} style={background ? { backgroundColor: background } : undefined}>
+      <div
+        ref={bodyRef}
+        className={className}
+        style={background ? { backgroundColor: background } : undefined}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+          event.preventDefault();
+          onHide?.(visibilityKey);
+        }}
+      >
         {children}
       </div>
     </div>
@@ -725,15 +734,11 @@ function getLabelVisibilityKey(labelIdBase, lbl, index) {
   return `${labelIdBase}:${lbl.anchor ?? index}:${index}`;
 }
 
-function LabelLayer({ object3D, hiddenLabelKeys }) {
+function getLabelsForObject(object3D) {
   const ud = object3D.userData || {};
   const labels = Array.isArray(ud.labels) ? ud.labels : [];
-  // srcBlockId stays stable across scene regenerations (uuid doesn't), so
-  // labels keep their identity and settled position across edits.
-  const labelIdBase = ud.srcBlockId ?? object3D.uuid;
-
   const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line';
-  const derived = needsDefault
+  return needsDefault
     ? [
       { anchor: 'origin', text: `Pos ${fmtVec(ud.origin)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
       ...(ud.rPoint != null && Number.isFinite(ud.t)
@@ -741,11 +746,25 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
         : []),
     ]
     : labels;
+}
+
+function getLabelVisibilityKeysForObject(object3D) {
+  const labelIdBase = object3D.userData?.srcBlockId ?? object3D.uuid;
+  return getLabelsForObject(object3D).map((label, index) => getLabelVisibilityKey(labelIdBase, label, index));
+}
+
+function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel }) {
+  const ud = object3D.userData || {};
+  const derived = getLabelsForObject(object3D);
+  //srcBlockId stays stable across scene regenerations (uuid doesn't), so
+  //labels keep their identity and settled position across edits.
+  const labelIdBase = ud.srcBlockId ?? object3D.uuid;
 
   return (
     <>
       {derived.map((lbl, i) => {
-        if (hiddenLabelKeys?.has(getLabelVisibilityKey(labelIdBase, lbl, i))) return null;
+        const visibilityKey = getLabelVisibilityKey(labelIdBase, lbl, i);
+        if (hiddenLabelKeys?.has(visibilityKey)) return null;
 
         const pos = resolveAnchor(object3D, lbl.anchor);
         if (!pos) return null;
@@ -776,10 +795,12 @@ function LabelLayer({ object3D, hiddenLabelKeys }) {
             <Html>
               <LabelAnchor
                 id={`${labelIdBase}-${i}`}
+                visibilityKey={visibilityKey}
                 className={`label${lbl.emphasis ? ' label--emphasis' : ''}${lbl.className ? ` ${lbl.className}` : ''}`}
                 color={lbl.className ? undefined : lbl.color}
                 worldPos={worldPos}
                 emphasis={!!lbl.emphasis}
+                onHide={onHideLabel}
               >
                 {text}
               </LabelAnchor>
@@ -800,21 +821,25 @@ function findSelectablePointMarker(object) {
   return null;
 }
 
-function findToggleablePointLabelKey(marker) {
-  let target = marker;
+function findSelectableLine(object) {
+  let target = object;
   while (target) {
-    const labels = Array.isArray(target.userData?.labels) ? target.userData.labels : [];
-    const labelIndex = labels.findIndex((label) => label?.anchor === 'q');
-    if (labelIndex !== -1) {
-      const labelIdBase = target.userData?.srcBlockId ?? target.uuid;
-      return getLabelVisibilityKey(labelIdBase, labels[labelIndex], labelIndex);
-    }
+    if (target.userData?.geoType === 'geo_vector_line') return target;
     target = target.parent;
   }
   return null;
 }
 
-function SelectablePointPicker({ onTogglePointLabel }) {
+function findLabelOwner(object) {
+  let target = object;
+  while (target) {
+    if (getLabelsForObject(target).length > 0) return target;
+    target = target.parent;
+  }
+  return null;
+}
+
+function SelectableLabelPicker({ onShowObjectLabels }) {
   const { camera, gl, scene } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const pointer = useMemo(() => new THREE.Vector2(), []);
@@ -828,19 +853,25 @@ function SelectablePointPicker({ onTogglePointLabel }) {
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(pointer, camera);
+      raycaster.params.Line.threshold = 0.18;
       const hits = raycaster.intersectObjects(scene.children, true);
       const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean);
+      const line = marker ? null : hits.map((hit) => findSelectableLine(hit.object)).find(Boolean);
+      const labelOwner = marker
+        ? findLabelOwner(marker)
+        : line
+          ? line
+          : hits.map((hit) => findLabelOwner(hit.object)).find(Boolean);
 
-      if (!marker) return;
+      if (!labelOwner) return;
 
       event.stopPropagation();
-      const labelKey = findToggleablePointLabelKey(marker);
-      if (labelKey) onTogglePointLabel(labelKey);
+      onShowObjectLabels(getLabelVisibilityKeysForObject(labelOwner));
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown);
     return () => canvas.removeEventListener('pointerdown', handlePointerDown);
-  }, [camera, gl, onTogglePointLabel, pointer, raycaster, scene]);
+  }, [camera, gl, onShowObjectLabels, pointer, raycaster, scene]);
 
   return null;
 }
@@ -1004,7 +1035,7 @@ function FatLineSync({ objects, extraThick }) {
   return null;
 }
 
-function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
+function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
   const { settings } = useSettingsStore()
 
   useEffect(() => {
@@ -1083,7 +1114,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef }) {
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
-            {settings.showLabels && <LabelLayer object3D={o} hiddenLabelKeys={hiddenLabelKeys} />}
+            {settings.showLabels && <LabelLayer object3D={o} hiddenLabelKeys={hiddenLabelKeys} onHideLabel={onHideLabel} />}
           </group>
         );
       })}
@@ -1161,11 +1192,18 @@ export default function Scene3D({ objects = [] }) {
     controlsRef.current.update();
   };
 
-  const handleTogglePointLabel = useCallback((labelKey) => {
+  const handleHideLabel = useCallback((labelKey) => {
     setHiddenLabelKeys((current) => {
       const next = new Set(current);
-      if (next.has(labelKey)) next.delete(labelKey);
-      else next.add(labelKey);
+      next.add(labelKey);
+      return next;
+    });
+  }, []);
+
+  const handleShowObjectLabels = useCallback((labelKeys) => {
+    setHiddenLabelKeys((current) => {
+      const next = new Set(current);
+      labelKeys.forEach((labelKey) => next.delete(labelKey));
       return next;
     });
   }, []);
@@ -1194,8 +1232,8 @@ export default function Scene3D({ objects = [] }) {
               setRefsReadyTick((tick) => tick + 1);
             }}
           />
-          <SelectablePointPicker onTogglePointLabel={handleTogglePointLabel} />
-          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} />
+          <SelectableLabelPicker onShowObjectLabels={handleShowObjectLabels} />
+          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} onHideLabel={handleHideLabel} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be

@@ -11,11 +11,11 @@ export function initCrossProductBlock() {
   Blockly.Blocks['vector_cross_product'] = {
     init() {
       this.appendDummyInput().appendField('Cross Product')
-      this.appendValueInput('U').setCheck('vector3').appendField('p:')
-      this.appendValueInput('V').setCheck('vector3').appendField('x').appendField('q:')
+      this.appendValueInput('U').setCheck(['vector3', 'obj3D']).appendField('p:')
+      this.appendValueInput('V').setCheck(['vector3', 'obj3D']).appendField('x').appendField('q:')
       this.setInputsInline(true)
 
-      this.setOutput(true, 'obj3D')
+      this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip('Compute u × v and return a new geo_vector (registered to render).')
       this.setDeletable(true)
@@ -28,8 +28,21 @@ export function initCrossProductBlock() {
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
 
     const code = `(function(){
-    const uVal = ${u};
-    const vVal = ${v};
+    const vectorFromInput = (input, fallbackLabel) => {
+      if (input?.isVector3) return input.clone();
+      if (input?.isObject3D && input.userData?.geoType === 'geo_vector_line' && input.userData.direction?.isVector3) {
+        const direction = input.userData.direction.clone();
+        direction.userData = {
+          geoType: 'named_vector_expression',
+          label: vectorNotation.getLabel(input.userData.direction, fallbackLabel),
+        };
+        return direction;
+      }
+      return null;
+    };
+
+    const uVal = vectorFromInput(${u}, 'p');
+    const vVal = vectorFromInput(${v}, 'q');
 
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
@@ -91,14 +104,28 @@ export function initCrossProductBlock() {
       { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
     ];
 
-    if (typeof threeObjStore==='object' && threeObjStore){
+    const crossVisualKey = [
+      uLabel,
+      vLabel,
+      cross.x.toFixed(6),
+      cross.y.toFixed(6),
+      cross.z.toFixed(6),
+    ].join('|');
+    const crossVisualKeys = window.__geoScratchCrossVisualKeys || (window.__geoScratchCrossVisualKeys = new Set());
+    if (!crossVisualKeys.has(crossVisualKey) && typeof threeObjStore==='object' && threeObjStore){
+      crossVisualKeys.add(crossVisualKey);
       const base=${JSON.stringify(block.id)};
       threeObjStore[base+'_u']=arrowU;
       threeObjStore[base+'_v']=arrowV;
       threeObjStore[base+'_c']=crossObj;
       threeObjStore[base]=group;
     }
-    return group;
+    const resultVector = cross.clone();
+    vectorNotation.setVectorMetadata(resultVector, {
+      geoType: 'named_vector_expression',
+      label: crossLabel,
+    });
+    return resultVector;
   })()`;
 
     return [code, Order.FUNCTION_CALL];

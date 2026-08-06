@@ -83,7 +83,7 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
       anchor: 'point',
       text: hasIntersection
         ? `intersection ${fmtVec(midpoint)}; t1=${fmt(tA)}, t2=${fmt(tB)}`
-        : `closest midpoint ${fmtVec(midpoint)}; gap=${fmt(distance)}`,
+        : `gap=${fmt(distance)}`,
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
       color: hasIntersection ? '#22c55e' : '#f59e0b',

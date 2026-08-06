@@ -43,6 +43,7 @@ export function generateAndRun(workspace) {
     // Standardize runtime variables safely on the window scope
     window.THREE = THREE
     if (!window.threeObjStore) window.threeObjStore = {}
+    window.__geoScratchCrossVisualKeys = new Set()
     window.vectorNotation = createVectorNotationRuntime()
 
     const runWorkspace = new Function(

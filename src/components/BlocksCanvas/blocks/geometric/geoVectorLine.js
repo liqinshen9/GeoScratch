@@ -80,6 +80,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const distance = p1.distanceTo(p2)
   const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
+  const lineLabel = window.vectorNotation?.assignLineLabel?.(blockId) || 'L'
   // Local tube frame is centred on the segment's midpoint, not the vector
   // equation's origin -- the two only coincide when extentPos === extentNeg.
   const halfDist = distance / 2
@@ -841,6 +842,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   group.userData.geoType = 'geo_vector_line'
   group.userData.origin = origin.clone()
   group.userData.direction = direction.clone()
+  group.userData.direction.userData = {
+    geoType: 'named_vector_expression',
+    label: lineLabel,
+  }
+  group.userData.labelAnchors = {
+    line: { type: 'local', position: [midPoint.x, midPoint.y, midPoint.z] },
+  }
+  group.userData.labels = [
+    { anchor: 'line', text: lineLabel, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#374151' },
+  ]
   // Consumed by tubeCollision.js's worldSegment(), which needs the same
   // centre/half-length the tube's own local geometry is built around (the
   // segment midpoint), not the vector equation's origin -- see the
