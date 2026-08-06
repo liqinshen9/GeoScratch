@@ -35,6 +35,7 @@ const EXERCISES = [
   },
 ]
 const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
+const LINE_INTERSECTION_3D_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -373,8 +374,25 @@ function hasSkewDotProductDistanceBlock(workspace) {
   })
 }
 
+function isSkewReusableDistanceBlock(block) {
+  if (block?.type !== 'point_plane_distance') return false
+
+  const planeBlock = getInputBlock(block, 'PLANE')
+  const planeLine = getSkewPlaneLine(planeBlock)
+  return Boolean(planeLine && isPointOnOtherSkewLineBlock(getInputBlock(block, 'POINT'), planeLine))
+}
+
+function hasSkewReusableDistanceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('point_plane_distance', false).some(isSkewReusableDistanceBlock)
+}
+
 function hasValidSkewDistanceComputation(workspace) {
-  return hasSkewProjectionDistanceBlock(workspace) || hasSkewDotProductDistanceBlock(workspace)
+  return (
+    hasSkewProjectionDistanceBlock(workspace) ||
+    hasSkewDotProductDistanceBlock(workspace) ||
+    hasSkewReusableDistanceBlock(workspace)
+  )
 }
 
 function getDistanceAnswer(objects) {
@@ -419,16 +437,23 @@ export default function ExercisePage() {
     lines: hasSkewLineBlocks(workspace),
     normal: hasSkewCrossProductBlock(workspace),
     plane: hasSkewPlaneBlock(workspace),
-    point: hasSkewOtherLinePointBlock(workspace),
-    difference: hasSkewPointDifferenceBlock(workspace),
+    point: hasSkewOtherLinePointBlock(workspace) || hasSkewReusableDistanceBlock(workspace),
+    difference: hasSkewPointDifferenceBlock(workspace) || hasSkewReusableDistanceBlock(workspace),
     distance: exercisePassed,
   }
-  const reusableBlockTemplate = activeExerciseConfig.number === 1 && exercisePassed
-    ? {
+  const reusableBlockTemplate = exercisePassed
+    ? activeExerciseConfig.number === 1
+      ? {
       defaultName: 'Distance from point to plane',
       description: 'Save a reusable distance block with open inputs for any point and any plane.',
       source: 'exercise',
       xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
+    }
+      : {
+      defaultName: 'Intersect 3D lines',
+      description: 'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
+      source: 'exercise',
+      xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
     }
     : null
 
@@ -528,10 +553,10 @@ export default function ExercisePage() {
                       Choose any point on the other line.
                     </li>
                     <li className={skewStepCompletion.difference ? 'is-complete' : ''}>
-                      Choose any point Q on the plane, then calculate the vector between Q and the point on the other line.
+                      Use the point on the other line as the point input, and use the helper plane as the plane input.
                     </li>
                     <li className={skewStepCompletion.distance ? 'is-complete' : ''}>
-                      Project that vector onto n and take Vector Magnitude, or use the dot product with n.
+                      Calculate the distance from that point to that helper plane.
                     </li>
                   </ol>
                 </>
