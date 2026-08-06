@@ -72,7 +72,15 @@ export function initVectorArithmeticBlock() {
     // Compute result
     const res = uVal.clone()[${op === 'add' ? `'add'` : `'sub'`}](vVal);
     const lenR = res.length();
-    const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && vVal.userData?.geoType === 'point_on_object_vector';
+    // Point difference: P - Q where Q is any point on an object, or both
+    // operands are Point blocks (e.g. skew-lines P2 - P1 for plane distance).
+    const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && (
+      vVal.userData?.geoType === 'point_on_object_vector' ||
+      (
+        vVal.userData?.geoType === 'linalg_point_vector' &&
+        uVal.userData?.geoType === 'linalg_point_vector'
+      )
+    );
     const pointLabel = vVal.userData?.label || 'Q';
     const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
     const genericResultLabel = showOperandLabels
