@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
+import { ArrowLeft, ArrowRight } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 
@@ -23,6 +24,16 @@ const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW
 const SKEW_DISTANCE = Math.abs(
   SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL),
 ) / SKEW_NORMAL.length()
+const EXERCISES = [
+  {
+    number: 1,
+    title: 'Calculate distance from point P to a plane',
+  },
+  {
+    number: 2,
+    title: 'Calculate the shortest distance between two skew lines',
+  },
+]
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -381,7 +392,10 @@ export default function ExercisePage() {
   const [activeExercise, setActiveExercise] = useState(1)
   const clearWorkspaceRef = useRef(() => {})
   const distanceAnswer = getDistanceAnswer(objects)
-  const isSkewExercise = activeExercise === 2
+  const activeExerciseConfig = EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
+  const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExerciseConfig.number)
+  const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
+  const isSkewExercise = activeExerciseConfig.number === 2
   const expectedDistance = isSkewExercise ? SKEW_DISTANCE : CORRECT_DISTANCE
   const hasDistanceComputation = isSkewExercise
     ? hasValidSkewDistanceComputation(workspace)
@@ -429,7 +443,33 @@ export default function ExercisePage() {
     <div className="exercise-page exercise-page--editor">
       <main className={`editor-shell editor-shell--with-leading exercise-editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}>
         <EditorColumnHeaders
-          leadingHeader={<h2>Exercise</h2>}
+          leadingHeader={
+            <div className="exercise-column-heading">
+              <h2>Exercise</h2>
+              <div className="exercise-column-heading__actions" aria-label="Exercise navigation">
+                <button
+                  type="button"
+                  className="exercise-nav-button"
+                  onClick={() => previousExercise && handleSelectExercise(previousExercise.number)}
+                  disabled={!previousExercise}
+                  title="Previous exercise"
+                  aria-label="Previous exercise"
+                >
+                  <ArrowLeft theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="exercise-nav-button"
+                  onClick={() => nextExercise && handleSelectExercise(nextExercise.number)}
+                  disabled={!nextExercise}
+                  title="Next exercise"
+                  aria-label="Next exercise"
+                >
+                  <ArrowRight theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          }
           workspace={workspace}
           workspaceMaximized={workspaceMaximized}
           onWorkspaceMaximizedChange={setWorkspaceMaximized}
@@ -440,29 +480,13 @@ export default function ExercisePage() {
           {!workspaceMaximized && (
             <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                <div className="exercise-task-panel__meta-row">
-                  {exercisePassed && <span className="exercise-pass-badge">Passed</span>}
-                  <div className="exercise-selector" aria-label="Exercise navigation">
-                    <button
-                      type="button"
-                      className={`exercise-selector__button${activeExercise === 1 ? ' is-active' : ''}`}
-                      onClick={() => handleSelectExercise(1)}
-                    >
-                      1
-                    </button>
-                    <button
-                      type="button"
-                      className={`exercise-selector__button${activeExercise === 2 ? ' is-active' : ''}`}
-                      onClick={() => handleSelectExercise(2)}
-                    >
-                      2
-                    </button>
+                {exercisePassed && (
+                  <div className="exercise-task-panel__meta-row">
+                    <span className="exercise-pass-badge">Passed</span>
                   </div>
-                </div>
+                )}
                 <h1>
-                  {activeExercise}. <strong>{isSkewExercise
-                    ? 'Calculate the shortest distance between two skew lines'
-                    : 'Calculate distance from point P to a plane'}</strong>
+                  {activeExerciseConfig.number}: <strong>{activeExerciseConfig.title}</strong>
                 </h1>
               </div>
 
