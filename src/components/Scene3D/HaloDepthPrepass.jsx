@@ -13,13 +13,15 @@ import useSettingsStore from '@/store/useSettingsStore'
 // where a gap lands.
 const HALO_TARGET_SCALE = 0.5
 
-// Renders just the HALO_LAYER objects into an offscreen target every frame,
-// before the main pass (priority -1, so the target is populated before
-// anything downstream samples it in the same frame) -- see
-// docs/halos-epic-plan.md. Color attachment carries a per-object halo ID
-// (Phase B's self-occlusion guard); the attached DepthTexture carries real
-// hardware depth, in the same gl_FragCoord.z convention the main pass's
-// discard shader compares against, so no manual depth encoding is needed.
+// Renders just the HALO_LAYER objects into an offscreen "raw" target every
+// frame, before HaloDilatePass (priority -2, one step ahead of its -1, so
+// the dilate pass always reads a same-frame-fresh source rather than last
+// frame's) -- see docs/halos-epic-plan.md. Color attachment carries a
+// per-object halo ID (Phase B's self-occlusion guard); the attached
+// DepthTexture carries real hardware depth, in the same gl_FragCoord.z
+// convention the dilate/discard shaders compare against, so no manual depth
+// encoding is needed here. Nothing samples this target directly except
+// HaloDilatePass -- the discard shader only ever sees the dilated result.
 export default function HaloDepthPrepass({ onTargetReady }) {
   const { gl, scene, camera, size } = useThree()
   const haloEnabled = useSettingsStore((s) => s.settings.haloEnabled)
@@ -93,7 +95,7 @@ export default function HaloDepthPrepass({ onTargetReady }) {
     gl.setRenderTarget(prevRenderTarget)
     gl.setClearColor(prevClearColor, prevClearAlpha)
     camera.layers.mask = prevMask
-  }, -1)
+  }, -2)
 
   return null
 }

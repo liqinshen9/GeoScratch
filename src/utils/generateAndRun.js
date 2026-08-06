@@ -18,6 +18,7 @@ import { HALO_LAYER } from '@/utils/haloLayer'
 import { getHaloId } from '@/utils/haloIdRegistry'
 import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
 import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
+import { registerHaloLine, resetHaloIntersectionRegistry, MAX_IMMUNE_IDS } from '@/utils/haloIntersectionRegistry'
 
 function runConnectedTransformPipelines(workspace) {
   const pipelines = workspace.getBlocksByType('transform_pipeline', false)
@@ -54,6 +55,13 @@ export function generateAndRun(workspace, options = {}) {
     window.getHaloId = getHaloId
     window.applyHaloDiscardMaterial = applyHaloDiscardMaterial
     window.createHaloIdMaterial = createHaloIdMaterial
+    window.registerHaloLine = registerHaloLine
+    window.HALO_MAX_IMMUNE_IDS = MAX_IMMUNE_IDS
+    // Fresh per run -- a stale entry from a previous run is harmless (its
+    // blockId's id is never written by anything once that run's objects are
+    // gone), but there's no reason to let the registry grow unbounded across
+    // many runs either.
+    resetHaloIntersectionRegistry()
 
     const runWorkspace = new Function(
       'THREE',

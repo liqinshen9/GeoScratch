@@ -13,7 +13,13 @@ const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial,
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 import HaloDepthPrepass from './HaloDepthPrepass'
+import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
+import {
+  ZOOM_INVARIANT_REFERENCE_DISTANCE,
+  ZOOM_INVARIANT_MIN_SCALE,
+  ZOOM_INVARIANT_MAX_SCALE,
+} from '@/utils/zoomInvariantScale'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
@@ -22,12 +28,6 @@ const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
 // unreadable speck (or disappearing entirely) when zooming out.
 const MIN_CAMERA_DISTANCE = 2
 const MAX_CAMERA_DISTANCE = 300
-// Camera distance at which zoom-invariant meshes render at their authored
-// (base) radius; they scale from there to keep apparent on-screen size
-// constant, clamped by MIN/MAX_SCALE.
-const ZOOM_INVARIANT_REFERENCE_DISTANCE = DEFAULT_CAMERA_OFFSET.length()
-const ZOOM_INVARIANT_MIN_SCALE = 0.3
-const ZOOM_INVARIANT_MAX_SCALE = 5
 // "Extra Thick Lines" setting: flat multiplier on top of zoom-invariant
 // scaling, for line/tube glyphs only (not point markers).
 const EXTRA_THICK_LINE_MULTIPLIER = 2.7
@@ -1195,7 +1195,8 @@ export default function Scene3D({ objects = [] }) {
   const didInitialFocusRef = useRef(false);
   const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
-  const [haloTarget, setHaloTarget] = useState(null);
+  const [haloRawTarget, setHaloRawTarget] = useState(null);
+  const [haloDilatedTarget, setHaloDilatedTarget] = useState(null);
   // cameraRef/controlsRef populate async (R3F's own render loop), after the
   // first `objects` update can already have fired; bump this once they're
   // ready so the auto-frame effect below retries immediately instead of
@@ -1302,8 +1303,9 @@ export default function Scene3D({ objects = [] }) {
           <CameraHandle onReady={handleCameraReady} />
           <SelectableLabelPicker onShowObjectLabels={handleShowObjectLabels} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} onHideLabel={handleHideLabel} />
-          <HaloDepthPrepass onTargetReady={setHaloTarget} />
-          <HaloUniformSync objects={objects} target={haloTarget} />
+          <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
+          <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />
+          <HaloUniformSync objects={objects} target={haloDilatedTarget} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be

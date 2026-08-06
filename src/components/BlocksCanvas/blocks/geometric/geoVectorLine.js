@@ -378,15 +378,36 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // haloEnabled uniform is what makes on/off instant for already-built
   // lines that DO have the wiring.
   const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
-  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial
+  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial && window.registerHaloLine && window.HALO_MAX_IMMUNE_IDS != null
   // Shared across every plain_tube material that can end up as the visible
   // glyph (cylMat here, dashedTubeMat below once it exists) -- getHaloId is
   // stable per blockId, so reusing it isn't strictly required for
   // correctness, but keeping one id/one companion mesh is simpler to reason
   // about than re-deriving it twice.
   const haloId = haloAvailable ? window.getHaloId(blockId) : null
+  // Ids of other lines THIS line genuinely intersects in 3D (shared array
+  // reference, mutated in place by registerHaloLine below whenever a
+  // later-built line turns out to touch this one) -- see
+  // haloIntersectionRegistry.js. A real 3D touch is a depth-comparison
+  // false positive waiting to happen (the two surfaces are ~coincident
+  // right there), not a legitimate occlusion, so these ids are exempted
+  // from the discard check entirely rather than trying to tune a
+  // tolerance around it.
+  const haloImmuneIds = haloAvailable ? new Array(window.HALO_MAX_IMMUNE_IDS).fill(-1) : null
   if (haloAvailable) {
-    const HALO_RADIUS = 0.051 + 0.25
+    window.registerHaloLine(blockId, origin, normalised, (partnerId) => {
+      const slot = haloImmuneIds.indexOf(-1)
+      if (slot !== -1) haloImmuneIds[slot] = partnerId
+    })
+
+    // As small as practical (was 0.051+0.25, then 0.051+0.03) -- any extra
+    // 3D-geometry margin here still elongates at shallow crossing angles
+    // (scales with 1/sin(angle)), which is the exact sharp-point problem
+    // the screen-space dilate step (HaloDilatePass.jsx) exists to avoid.
+    // This margin's only job now is clearing self-occlusion/edge noise at
+    // the companion/real-surface boundary -- the visible gap shape should
+    // come almost entirely from dilation.
+    const HALO_RADIUS = 0.051 + 0.01
 
     const haloCompanion = new THREE.Mesh(
       new THREE.CylinderGeometry(HALO_RADIUS, HALO_RADIUS, distance, 12),
@@ -398,7 +419,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     haloCompanion.layers.set(window.HALO_LAYER)
     group.add(haloCompanion)
 
-    window.applyHaloDiscardMaterial(cylMat, haloId)
+    window.applyHaloDiscardMaterial(cylMat, haloId, haloImmuneIds)
   }
 
   // 3b. "dashed" collision-style replacement for the plain tube: REPLACES
@@ -423,7 +444,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // real surface never discards) even though other lines still gap
   // correctly around IT, since its inflated companion is unaffected by
   // collision state -- exactly the asymmetric bug reported.
-  if (haloAvailable) window.applyHaloDiscardMaterial(dashedTubeMat, haloId)
+  if (haloAvailable) window.applyHaloDiscardMaterial(dashedTubeMat, haloId, haloImmuneIds)
 
   // Tuned bigger than the shared DASHED_SEGMENT_LENGTH/DASHED_GAP_LENGTH --
   // "fewer, larger dashes" reads better on a real solid tube than the small
