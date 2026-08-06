@@ -3,8 +3,21 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 
 function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId, THREE, threeObjStore) {
-  const point = pointInput?.isVector3 ? pointInput.clone() : new THREE.Vector3()
-  let normalRaw = normInput?.isVector3 ? normInput.clone() : new THREE.Vector3(0, 1, 0)
+  const coerceVector3 = (input, fallback) => {
+    if (input?.isVector3) return input.clone()
+    if (input?.isObject3D) {
+      if (input.userData?.direction?.isVector3) return input.userData.direction.clone()
+      if (input.userData?.normalRaw?.isVector3) return input.userData.normalRaw.clone()
+      if (input.userData?.normalUnit?.isVector3) return input.userData.normalUnit.clone()
+      if (input.userData?.origin?.isVector3) return input.userData.origin.clone()
+      if (input.userData?.point?.isVector3) return input.userData.point.clone()
+      if (input.position) return input.position.clone()
+    }
+    return fallback.clone()
+  }
+
+  const point = coerceVector3(pointInput, new THREE.Vector3())
+  let normalRaw = coerceVector3(normInput, new THREE.Vector3(0, 1, 0))
   let normalLength = normalRaw.length()
 
   if (!Number.isFinite(normalLength) || normalLength === 0) {
@@ -15,6 +28,11 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   const normalUnit = normalRaw.clone().normalize()
   const planeSize = 12
   const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
+  // depthWrite:true so an opaque line/tube that lies in the plane is cut by the
+  // sheet instead of painting entirely in front of it (which reads as the line
+  // floating above the plane). polygonOffset pushes the plane slightly back in
+  // the depth buffer so the line's centreline wins coplanar depth tests and
+  // stays visibly embedded in the surface.
   const planeMat = new THREE.MeshStandardMaterial({
     color: 0xbfdbfe,
     transparent: true,
@@ -22,7 +40,10 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
     roughness: 0.55,
     metalness: 0.02,
     side: THREE.DoubleSide,
-    depthWrite: false,
+    depthWrite: true,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
   })
   const plane = new THREE.Mesh(planeGeom, planeMat)
   const planeEdges = new THREE.LineSegments(

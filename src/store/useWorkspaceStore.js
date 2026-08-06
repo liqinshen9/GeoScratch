@@ -73,4 +73,8 @@ const useWorkspaceStore = create((set) => ({
     }),
 }))
 
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
+  window.__geoScratchWorkspaceStore = useWorkspaceStore
+}
+
 export default useWorkspaceStore

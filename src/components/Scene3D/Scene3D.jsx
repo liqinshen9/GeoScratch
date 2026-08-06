@@ -851,6 +851,29 @@ const globalThreeObjStore = {}
 // per-frame distance-sort order flickers with camera jitter. Derive a
 // stable renderOrder from bounding-box containment instead: an object
 // always renders after whatever encloses it.
+// Lines extend to the room walls, so their AABBs often "contain" smaller
+// objects (planes, markers) without those objects actually being nested
+// inside a solid. Only volume-like transparent solids should act as nest
+// containers — otherwise a line incorrectly paints after a coplanar plane
+// and reads as floating above it.
+function canActAsNestContainer(object) {
+  const geoType = object?.userData?.geoType
+  if (!geoType) return true
+  if (
+    geoType === 'geo_vector_line' ||
+    geoType === 'point_normal_plane_group' ||
+    geoType === 'geo_vector' ||
+    geoType === 'geo_vector_group' ||
+    geoType === 'geo_line_intersection' ||
+    geoType === 'linalg_point_marker' ||
+    geoType === 'exercise_point_p' ||
+    geoType === 'annotated_object'
+  ) {
+    return false
+  }
+  return true
+}
+
 function computeNestingRenderOrders(objects) {
   const boxes = objects.map((o) => {
     if (!o?.isObject3D) return null;
@@ -864,6 +887,7 @@ function computeNestingRenderOrders(objects) {
     let containedByCount = 0;
     boxes.forEach((box, j) => {
       if (j === i || !box) return;
+      if (!canActAsNestContainer(objects[j])) return;
       if (box.containsBox(boxes[i]) && !boxes[i].containsBox(box)) {
         containedByCount += 1;
       }

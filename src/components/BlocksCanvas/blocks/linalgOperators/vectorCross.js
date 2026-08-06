@@ -15,17 +15,19 @@ export function initCrossProductBlock() {
       this.appendValueInput('V').setCheck('vector3').appendField('x').appendField('q:')
       this.setInputsInline(true)
 
-      this.setOutput(true, 'obj3D')
+      // Return the result vector so it can feed Plane Normal, Normalize, etc.
+      // (Visuals are still registered on threeObjStore, same as Vector Arithmetic.)
+      this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Compute u × v and return a new geo_vector (registered to render).')
+      this.setTooltip('Compute u × v, show the arrows, and return the result vector.')
       this.setDeletable(true)
       this.setMovable(true)
     },
   }
 
   javascriptGenerator.forBlock['vector_cross_product'] = function (block, g) {
-    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null';
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
     const uVal = ${u};
@@ -98,9 +100,22 @@ export function initCrossProductBlock() {
       threeObjStore[base+'_c']=crossObj;
       threeObjStore[base]=group;
     }
-    return group;
-  })()`;
 
-    return [code, Order.FUNCTION_CALL];
-  };
+    const resultVector = cross.clone();
+    if (!showOperandLabels) {
+      vectorNotation.setVectorMetadata(resultVector, {
+        geoType: 'named_vector_expression',
+        label: crossLabel,
+      });
+    } else {
+      resultVector.userData = {
+        geoType: 'cross_product_vector',
+        label: crossLabel,
+      };
+    }
+    return resultVector;
+  })()`
+
+    return [code, Order.FUNCTION_CALL]
+  }
 }
