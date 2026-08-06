@@ -361,6 +361,46 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(cylinder)
 
+  // Haloed-line GPU depth-trick (docs/halos-epic-plan.md), plain_tube style
+  // only for now. A second, invisible-in-the-main-pass "inflated" companion
+  // -- same shape, bigger radius -- tagged with the SAME zoomInvariantRadius
+  // mechanism the real cylinder uses, so it inflates/deflates in lockstep
+  // with it at every zoom level via the existing, already-correct
+  // ZoomInvariantScaler, rather than a bespoke per-frame gap-width
+  // calculation. HALO_LAYER keeps it out of the normal color pass entirely
+  // (see HaloDepthPrepass.jsx); applyHaloDiscardMaterial wires the REAL
+  // cylinder's material to discard fragments a DIFFERENT haloable object's
+  // inflated footprint occludes.
+  // Settings > Halos toggle: gates whether a NEW line gets the companion
+  // mesh/discard wiring at all. Toggling the setting back on doesn't
+  // retroactively add it to lines already built while it was off (would
+  // need a scene regeneration to pick it up) -- HaloUniformSync's
+  // haloEnabled uniform is what makes on/off instant for already-built
+  // lines that DO have the wiring.
+  const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
+  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial
+  // Shared across every plain_tube material that can end up as the visible
+  // glyph (cylMat here, dashedTubeMat below once it exists) -- getHaloId is
+  // stable per blockId, so reusing it isn't strictly required for
+  // correctness, but keeping one id/one companion mesh is simpler to reason
+  // about than re-deriving it twice.
+  const haloId = haloAvailable ? window.getHaloId(blockId) : null
+  if (haloAvailable) {
+    const HALO_RADIUS = 0.051 + 0.25
+
+    const haloCompanion = new THREE.Mesh(
+      new THREE.CylinderGeometry(HALO_RADIUS, HALO_RADIUS, distance, 12),
+      window.createHaloIdMaterial(haloId)
+    )
+    haloCompanion.userData.zoomInvariantRadius = HALO_RADIUS
+    haloCompanion.position.copy(midPoint)
+    haloCompanion.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+    haloCompanion.layers.set(window.HALO_LAYER)
+    group.add(haloCompanion)
+
+    window.applyHaloDiscardMaterial(cylMat, haloId)
+  }
+
   // 3b. "dashed" collision-style replacement for the plain tube: REPLACES
   // the base cylinder (rather than overlaying it) with alternating
   // solid/gap segments across collision zones, so the solid actually shows
@@ -376,6 +416,14 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // dashed segments are that same glyph, just chopped up, so they shouldn't
   // suddenly look flat/unlit when the dashed collision style is active.
   const dashedTubeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
+  // A SEPARATE material from cylMat -- when this line is ALSO the dashed
+  // replacement (collision zones, or its own crossing gap), this is what's
+  // actually visible, not cylMat. Without wiring it through the discard
+  // shader too, a colliding line's own gap silently stops working (its
+  // real surface never discards) even though other lines still gap
+  // correctly around IT, since its inflated companion is unaffected by
+  // collision state -- exactly the asymmetric bug reported.
+  if (haloAvailable) window.applyHaloDiscardMaterial(dashedTubeMat, haloId)
 
   // Tuned bigger than the shared DASHED_SEGMENT_LENGTH/DASHED_GAP_LENGTH --
   // "fewer, larger dashes" reads better on a real solid tube than the small

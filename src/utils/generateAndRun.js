@@ -14,6 +14,10 @@ import {
   matrix4FromTransformStepBlock,
 } from '@/utils/sceneHelpers'
 import { createVectorNotationRuntime } from '@/utils/vectorNotation'
+import { HALO_LAYER } from '@/utils/haloLayer'
+import { getHaloId } from '@/utils/haloIdRegistry'
+import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
+import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
 
 function runConnectedTransformPipelines(workspace) {
   const pipelines = workspace.getBlocksByType('transform_pipeline', false)
@@ -46,6 +50,10 @@ export function generateAndRun(workspace, options = {}) {
     window.__geoScratchCrossVisualKeys = new Set()
     window.__geoScratchRuntimeMode = options.runtimeMode || 'sandbox'
     window.vectorNotation = createVectorNotationRuntime()
+    window.HALO_LAYER = HALO_LAYER
+    window.getHaloId = getHaloId
+    window.applyHaloDiscardMaterial = applyHaloDiscardMaterial
+    window.createHaloIdMaterial = createHaloIdMaterial
 
     const runWorkspace = new Function(
       'THREE',

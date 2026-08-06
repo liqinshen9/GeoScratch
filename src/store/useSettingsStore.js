@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   extraThickLines: false,
   extraLargePoints: false,
   mattePoints: false,
+  haloEnabled: true,
 }
 
 const useSettingsStore = create((set) => ({

@@ -158,6 +158,15 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
+          <SettingsSection title="Halos">
+            <ToggleRow
+              label="Enable Halos"
+              description="When a line passes in front of another line (or vector), cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. Plain Tube style only for now."
+              checked={settings.haloEnabled}
+              onChange={(v) => updateSetting('haloEnabled', v)}
+            />
+          </SettingsSection>
+
           <SettingsSection title="Vector Line">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-900">Line Style</label>

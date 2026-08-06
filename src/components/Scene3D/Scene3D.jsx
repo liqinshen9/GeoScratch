@@ -12,6 +12,8 @@ const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial,
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
+import HaloDepthPrepass from './HaloDepthPrepass'
+import HaloUniformSync from './HaloUniformSync'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
@@ -1193,6 +1195,7 @@ export default function Scene3D({ objects = [] }) {
   const didInitialFocusRef = useRef(false);
   const prevObjectCountRef = useRef(0);
   const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
+  const [haloTarget, setHaloTarget] = useState(null);
   // cameraRef/controlsRef populate async (R3F's own render loop), after the
   // first `objects` update can already have fired; bump this once they're
   // ready so the auto-frame effect below retries immediately instead of
@@ -1299,6 +1302,8 @@ export default function Scene3D({ objects = [] }) {
           <CameraHandle onReady={handleCameraReady} />
           <SelectableLabelPicker onShowObjectLabels={handleShowObjectLabels} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} onHideLabel={handleHideLabel} />
+          <HaloDepthPrepass onTargetReady={setHaloTarget} />
+          <HaloUniformSync objects={objects} target={haloTarget} />
           <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
