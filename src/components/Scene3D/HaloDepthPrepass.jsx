@@ -4,14 +4,17 @@ import * as THREE from 'three'
 import { HALO_LAYER } from '@/utils/haloLayer'
 import useSettingsStore from '@/store/useSettingsStore'
 
-// Linear downsample factor for the offscreen target -- quarter the total
-// pixels (fill-rate cost), which is the actual per-frame expense of this
-// extra scene render. The discard test only needs "is something else's
-// inflated footprint nearer here," not pixel-perfect edges -- the halo
-// margin (0.25 world units, geoVectorLine.js) is comfortably larger than
-// what half-resolution sampling can blur, so this doesn't visibly change
-// where a gap lands.
-const HALO_TARGET_SCALE = 0.5
+// Linear downsample factor for the offscreen target. Was 0.5 (quarter the
+// total pixels) until #realtalk: at that resolution, NearestFilter (required
+// -- see the target's own comment below) upsamples each texel to a 2x2
+// canvas-pixel block, which reads as visible staircasing along the dilated
+// margin's boundary on anything wide enough on screen to make a texel-sized
+// step noticeable -- an extra-thick tube being the clearest case. 1.0 (full
+// canvas resolution, texel:pixel exactly 1:1) removes that upsample step
+// entirely; HaloDilateShader's KERNEL_RADIUS is doubled alongside this so the
+// actual on-screen margin size (KERNEL_RADIUS / HALO_TARGET_SCALE) stays the
+// same as before, not just sharper-edged.
+const HALO_TARGET_SCALE = 1.0
 
 // Renders just the HALO_LAYER objects into an offscreen "raw" target every
 // frame, before HaloDilatePass (priority -2, one step ahead of its -1, so

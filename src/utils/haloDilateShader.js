@@ -3,12 +3,14 @@ import * as THREE from 'three'
 // Kernel radius in texels of the (downsampled) raw prepass target -- the
 // actual on-screen margin this produces is roughly
 // KERNEL_RADIUS / HALO_TARGET_SCALE (HaloDepthPrepass.jsx) canvas pixels,
-// e.g. 4 texels / 0.5 scale = ~8 canvas pixels of radius. A constant PIXEL
-// radius, unlike the old 3D-geometry-based margin, is isotropic: it doesn't
-// elongate at shallow line-crossing angles, and dominates the (now
-// deliberately tiny) residual 3D margin's own shape. See
+// e.g. 8 texels / 1.0 scale = ~8 canvas pixels of radius -- doubled from 4
+// alongside HALO_TARGET_SCALE going 0.5 -> 1.0, so the margin size on screen
+// is unchanged, only its resolution (and so how blocky its edge looks) is. A
+// constant PIXEL radius, unlike the old 3D-geometry-based margin, is
+// isotropic: it doesn't elongate at shallow line-crossing angles, and
+// dominates the (now deliberately tiny) residual 3D margin's own shape. See
 // docs/halos-epic-plan.md.
-const KERNEL_RADIUS = 4
+const KERNEL_RADIUS = 8
 
 // Fullscreen "dilate" pass: for each output texel, looks at a small
 // neighborhood of the raw ID+depth target and keeps whichever sample is

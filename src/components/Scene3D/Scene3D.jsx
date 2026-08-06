@@ -28,6 +28,15 @@ const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
 // unreadable speck (or disappearing entirely) when zooming out.
 const MIN_CAMERA_DISTANCE = 2
 const MAX_CAMERA_DISTANCE = 300
+// Fixed world-space radius of an axis shaft (see AxisArrow below) -- axes
+// are deliberately NOT zoom-invariant-scaled, so this is their radius at
+// any zoom. Every line glyph's own base radius is bigger than this by
+// design, but the zoom-invariant MIN_SCALE clamp (below) can shrink a line
+// well under its base radius at close zoom -- MIN_LINE_WORLD_RADIUS (used by
+// ZoomInvariantScaler) is what keeps a line glyph visually thicker than the
+// axis at any zoom instead of just at scale 1.
+const AXIS_SHAFT_RADIUS = 0.022
+const MIN_LINE_WORLD_RADIUS = AXIS_SHAFT_RADIUS * 1.25
 // "Extra Thick Lines" setting: flat multiplier on top of zoom-invariant
 // scaling, for line/tube glyphs only (not point markers).
 const EXTRA_THICK_LINE_MULTIPLIER = 2.7
@@ -195,7 +204,7 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     // Kept under 0.0272 (the thinnest cylinder-based line glyph radius, see
     // geoVectorLine.js) so a coincident axis-aligned line still wins the
     // depth test against this shaft (#43).
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, shaftLength, 12), material)
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(AXIS_SHAFT_RADIUS, AXIS_SHAFT_RADIUS, shaftLength, 12), material)
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
@@ -1025,6 +1034,9 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
         let finalScale = zoomScale * thickMultiplier;
         if (isUniform && extraLargePoints) {
           finalScale = Math.min(finalScale, EXTRA_LARGE_POINT_MAX_SCALE);
+        }
+        if (!isUniform) {
+          finalScale = Math.max(finalScale, MIN_LINE_WORLD_RADIUS / baseRadius);
         }
 
         if (isUniform) {
