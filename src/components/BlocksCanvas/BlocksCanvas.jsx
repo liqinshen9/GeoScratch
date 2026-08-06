@@ -53,6 +53,7 @@ export default function BlocksCanvas({
   onObjectsChange,
   workspaceMaximized,
   onRegisterClear,
+  reusableBlockTemplate,
 }) {
   const workspaceHostRef = useRef(null)
   const onObjectsChangeRef = useRef(onObjectsChange)
@@ -75,6 +76,7 @@ export default function BlocksCanvas({
     workspaceHostRef,
     onObjectsChangeRef,
     workspaceMaximized,
+    runtimeMode: id,
   })
 
   // Auto-Save and Auto-Load Logic
@@ -168,8 +170,7 @@ export default function BlocksCanvas({
 
   const handleConfirmMakeBlock = useCallback((name) => {
     if (!workspace || !name?.trim()) return
-    const dom = Blockly.Xml.workspaceToDom(workspace)
-    const xmlText = Blockly.Xml.domToText(dom)
+    const xmlText = reusableBlockTemplate?.xmlText || Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace))
     const trimmedName = name.trim()
     const userBlocks = useWorkspaceStore.getState().userBlocks
     const normalizedName = trimmedName.toLocaleLowerCase()
@@ -185,11 +186,15 @@ export default function BlocksCanvas({
       return
     }
 
-    addUserBlock({ name: trimmedName, xmlText, source: id === 'exercise' ? 'exercise' : 'workspace' })
+    addUserBlock({
+      name: trimmedName,
+      xmlText,
+      source: reusableBlockTemplate?.source || (id?.startsWith('exercise') ? 'exercise' : 'workspace'),
+    })
     setCategoryId('mybox')
     setPaletteOpen(true)
     setMyBlockDialog(null)
-  }, [workspace, addUserBlock, id])
+  }, [workspace, reusableBlockTemplate, addUserBlock, id])
 
   const handleUserBlockSelect = useCallback(
     (blockId, options = {}) => {
@@ -276,8 +281,8 @@ export default function BlocksCanvas({
       <MyBlockDialog
         open={myBlockDialog?.type === 'make'}
         title="Make a Block"
-        description="Save the current workspace as a reusable block in My Blocks."
-        defaultName="My geometric block"
+        description={reusableBlockTemplate?.description || 'Save the current workspace as a reusable block in My Blocks.'}
+        defaultName={reusableBlockTemplate?.defaultName || 'My geometric block'}
         error={myBlockDialog?.error}
         confirmLabel="Save"
         onCancel={() => setMyBlockDialog(null)}

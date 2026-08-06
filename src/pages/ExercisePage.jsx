@@ -34,6 +34,7 @@ const EXERCISES = [
     title: 'Calculate the shortest distance between two skew lines',
   },
 ]
+const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -422,6 +423,14 @@ export default function ExercisePage() {
     difference: hasSkewPointDifferenceBlock(workspace),
     distance: exercisePassed,
   }
+  const reusableBlockTemplate = activeExerciseConfig.number === 1 && exercisePassed
+    ? {
+      defaultName: 'Distance from point to plane',
+      description: 'Save a reusable distance block with open inputs for any point and any plane.',
+      source: 'exercise',
+      xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
+    }
+    : null
 
   const handleSelectExercise = useCallback((exerciseNumber) => {
     setActiveExercise(exerciseNumber)
@@ -513,7 +522,7 @@ export default function ExercisePage() {
                       Calculate n = d1 x d2. This normal is perpendicular to both line directions.
                     </li>
                     <li className={skewStepCompletion.plane ? 'is-complete' : ''}>
-                      Make a plane through a point on one line: use P1 with normal n for L1, or P2 with normal n for L2. The chosen line should lie in the plane.
+                      Choose any point on one of the lines (either L1 or L2) and use that point with n to create a plane.The chosen line should lie in the plane.
                     </li>
                     <li className={skewStepCompletion.point ? 'is-complete' : ''}>
                       Choose any point on the other line.
@@ -571,6 +580,7 @@ export default function ExercisePage() {
             key={`exercise-${activeExercise}`}
             id={`exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
+            reusableBlockTemplate={reusableBlockTemplate}
             onObjectsChange={handleObjectsChange}
             onRegisterClear={(fn) => {
               clearWorkspaceRef.current = fn

@@ -13,7 +13,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   }
 
   const normalUnit = normalRaw.clone().normalize()
-  const planeSize = 12
+  const planeSize = window.__geoScratchRuntimeMode === 'exercise-2' ? 28 : 12
   const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
   const planeMat = new THREE.MeshStandardMaterial({
     color: 0xbfdbfe,

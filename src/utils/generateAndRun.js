@@ -35,7 +35,7 @@ function runConnectedTransformPipelines(workspace) {
   }
 }
 
-export function generateAndRun(workspace) {
+export function generateAndRun(workspace, options = {}) {
   javascriptGenerator.addReservedWords('generatedUserCode')
   const generatedUserCode = javascriptGenerator.workspaceToCode(workspace)
 
@@ -44,6 +44,7 @@ export function generateAndRun(workspace) {
     window.THREE = THREE
     if (!window.threeObjStore) window.threeObjStore = {}
     window.__geoScratchCrossVisualKeys = new Set()
+    window.__geoScratchRuntimeMode = options.runtimeMode || 'sandbox'
     window.vectorNotation = createVectorNotationRuntime()
 
     const runWorkspace = new Function(

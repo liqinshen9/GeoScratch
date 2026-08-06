@@ -15,6 +15,7 @@ export function useBlocksWorkspace({
   workspaceHostRef,
   onObjectsChangeRef,
   workspaceMaximized,
+  runtimeMode,
 }) {
   const registryRef = useRef(null)
   const {
@@ -28,9 +29,9 @@ export function useBlocksWorkspace({
 
   const syncScene = useCallback(
     (ws) => {
-      runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current)
+      runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current, { runtimeMode })
     },
-    [onObjectsChangeRef],
+    [onObjectsChangeRef, runtimeMode],
   )
 
   const registerToolboxCallbacks = useCallback(

@@ -28,21 +28,34 @@ export function initCrossProductBlock() {
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
 
     const code = `(function(){
-    const vectorFromInput = (input, fallbackLabel) => {
-      if (input?.isVector3) return input.clone();
+    const vectorInfoFromInput = (input, fallbackLabel) => {
+      if (input?.isVector3) {
+        return {
+          vector: input.clone(),
+          label: vectorNotation.getLabel(input, fallbackLabel),
+        };
+      }
       if (input?.isObject3D && input.userData?.geoType === 'geo_vector_line' && input.userData.direction?.isVector3) {
         const direction = input.userData.direction.clone();
+        const label = vectorNotation.getLabel(input.userData.direction, fallbackLabel);
         direction.userData = {
           geoType: 'named_vector_expression',
-          label: vectorNotation.getLabel(input.userData.direction, fallbackLabel),
+          label,
         };
-        return direction;
+        return {
+          vector: direction,
+          label,
+          sourceType: 'line',
+          anchor: input.userData.origin?.isVector3 ? input.userData.origin.clone() : new THREE.Vector3(),
+        };
       }
       return null;
     };
 
-    const uVal = vectorFromInput(${u}, 'p');
-    const vVal = vectorFromInput(${v}, 'q');
+    const uInfo = vectorInfoFromInput(${u}, 'p');
+    const vInfo = vectorInfoFromInput(${v}, 'q');
+    const uVal = uInfo?.vector;
+    const vVal = vInfo?.vector;
 
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
@@ -51,10 +64,11 @@ export function initCrossProductBlock() {
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
-    const uLabel = vectorNotation.getLabel(uVal, 'p');
-    const vLabel = vectorNotation.getLabel(vVal, 'q');
+    const uLabel = uInfo?.label || vectorNotation.getLabel(uVal, 'p');
+    const vLabel = vInfo?.label || vectorNotation.getLabel(vVal, 'q');
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const crossLabel = uLabel + ' x ' + vLabel;
+    const exerciseMode = String(window.__geoScratchRuntimeMode || '').startsWith('exercise');
 
     const arrowU = new THREE.ArrowHelper(
       (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
@@ -84,17 +98,27 @@ export function initCrossProductBlock() {
     tag(arrowU,lenU); tag(arrowV,lenV); tag(crossObj,lenC);
 
     const group=new THREE.Group();
-    group.add(arrowU,arrowV,crossObj);
+    if (exerciseMode) {
+      group.add(crossObj);
+    } else {
+      group.add(arrowU,arrowV,crossObj);
+    }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
     // Labels at tips
-    group.userData.labelAnchors = {
+    group.userData.labelAnchors = exerciseMode ? {
+      cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
+    } : {
       uTip:{type:'world', position:[uVal.x,uVal.y,uVal.z]},
       vTip:{type:'world', position:[vVal.x,vVal.y,vVal.z]},
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
-    group.userData.labels = showOperandLabels
+    group.userData.labels = exerciseMode
+      ? [
+      { anchor:'cTip', text:'n = ' + crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+    ]
+      : (showOperandLabels
       ? [
       { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
       { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
@@ -102,7 +126,7 @@ export function initCrossProductBlock() {
     ]
       : [
       { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
-    ];
+    ]);
 
     const crossVisualKey = [
       uLabel,
@@ -115,9 +139,11 @@ export function initCrossProductBlock() {
     if (!crossVisualKeys.has(crossVisualKey) && typeof threeObjStore==='object' && threeObjStore){
       crossVisualKeys.add(crossVisualKey);
       const base=${JSON.stringify(block.id)};
-      threeObjStore[base+'_u']=arrowU;
-      threeObjStore[base+'_v']=arrowV;
-      threeObjStore[base+'_c']=crossObj;
+      if (!exerciseMode) {
+        threeObjStore[base+'_u']=arrowU;
+        threeObjStore[base+'_v']=arrowV;
+        threeObjStore[base+'_c']=crossObj;
+      }
       threeObjStore[base]=group;
     }
     const resultVector = cross.clone();
