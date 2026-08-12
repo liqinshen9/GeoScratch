@@ -11,6 +11,30 @@ import setupChangeListener from '@/utils/setupChangeListener'
 import initWorkSpace from '@/components/BlocksCanvas/core/Workspace'
 import applyExampleXml from '@/utils/applyExampleXml'
 
+const XLINK_NS = 'http://www.w3.org/1999/xlink'
+const BLOCKLY_CONTROL_IMAGE_SELECTOR = '.blocklyZoom image, .blocklyTrash image'
+const CONTROL_IMAGE_REFRESH_PARAM = 'geoscratchIconRefresh'
+
+function refreshBlocklyControlImages(workspace) {
+  const svg = workspace?.getParentSvg?.()
+  if (!svg?.isConnected) return
+
+  const stamp = String(Date.now())
+  svg.querySelectorAll(BLOCKLY_CONTROL_IMAGE_SELECTOR).forEach((image) => {
+    const href = image.getAttribute('href') || image.getAttributeNS(XLINK_NS, 'href')
+    if (!href) return
+
+    const [baseHref, hash = ''] = href.split('#')
+    const [baseUrl, query = ''] = baseHref.split('?')
+    const params = new URLSearchParams(query)
+    params.set(CONTROL_IMAGE_REFRESH_PARAM, stamp)
+    const refreshedHref = `${baseUrl}?${params.toString()}${hash ? `#${hash}` : ''}`
+
+    image.setAttribute('href', refreshedHref)
+    image.setAttributeNS(XLINK_NS, 'xlink:href', refreshedHref)
+  })
+}
+
 export function useBlocksWorkspace({
   workspaceHostRef,
   onObjectsChangeRef,
@@ -63,8 +87,23 @@ export function useBlocksWorkspace({
     Blockly.svgResize(ws)
 
     const cleanupResize = attachResizeObserver(workspaceHostRef.current, ws)
+    const refreshControlImages = () => refreshBlocklyControlImages(ws)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshControlImages()
+    }
+    const refreshInterval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') refreshControlImages()
+    }, 120000)
+
+    window.addEventListener('focus', refreshControlImages)
+    window.addEventListener('pageshow', refreshControlImages)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
+      window.clearInterval(refreshInterval)
+      window.removeEventListener('focus', refreshControlImages)
+      window.removeEventListener('pageshow', refreshControlImages)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       cleanupListener()
       cleanupResize()
       ws.dispose()
