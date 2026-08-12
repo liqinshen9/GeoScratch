@@ -426,10 +426,6 @@
   padding: 0.55rem 0.65rem;
 }
 
-.exercise-page--editor #blocks-canvas .blocklyZoom {
-  display: none !important;
-}
-
 @media (max-width: 1180px) {
   .exercise-page--editor {
     --exercise-task-width: 14rem;
