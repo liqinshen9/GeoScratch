@@ -209,6 +209,30 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
+          <SettingsSection title="Vector">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Vector Style</label>
+              <select
+                value={settings.vectorStyle}
+                onChange={(e) => updateSetting('vectorStyle', e.target.value)}
+                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+              >
+                {Object.entries(LINE_STYLES).map(([key, value]) => (
+                  <option key={key} value={value}>
+                    {key.replace(/_/g, ' ').toLowerCase()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <ToggleRow
+              label="Extra Thick Vectors"
+              description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
+              checked={settings.extraThickVectors}
+              onChange={(v) => updateSetting('extraThickVectors', v)}
+            />
+          </SettingsSection>
+
           <div className="pt-8 border-t border-slate-100 flex items-center gap-4">
             <Button
               onClick={handleSave}

@@ -127,7 +127,7 @@ export function initVec3Block() {
       const len = vec.length();
       let visual;
       if (len > 1e-8) {
-        visual = new THREE.ArrowHelper(vec.clone().normalize(), origin, len, 0x15803d, 0.25, 0.1);
+        visual = window.buildVectorShaftGlyph(THREE, ${blockId}, origin, vec.clone().normalize(), len);
       } else {
         visual = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),

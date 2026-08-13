@@ -13,6 +13,8 @@ describe('useSettingsStore', () => {
     expect(settings.lineCollisionStyle).toBe(LINE_COLLISION_STYLES.DASHED)
     expect(settings.showLabels).toBe(true)
     expect(settings.haloEnabled).toBe(true)
+    expect(settings.vectorStyle).toBe(LINE_STYLES.PLAIN_TUBE)
+    expect(settings.extraThickVectors).toBe(false)
   })
 
   it('updateSetting changes only the targeted key', () => {

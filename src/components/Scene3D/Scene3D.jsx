@@ -984,11 +984,13 @@ function traverseVisible(object3D, callback) {
 }
 
 // Applies zoom-invariant scaling and/or a size multiplier to meshes tagged
-// with userData.zoomInvariantRadius. Both multipliers apply regardless of
-// whether zoom-invariant sizing is on, and are mutually exclusive by glyph
-// kind: extraThick for line/tube glyphs, extraLargePoints for point markers
-// (userData.zoomInvariantUniform).
-function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoints }) {
+// with userData.zoomInvariantRadius. The multiplier applies regardless of
+// whether zoom-invariant sizing is on, and is picked by glyph kind: a child
+// tagged userData.thickenGroup = 'vector' (a vector's shaft OR its
+// arrowhead cone) always uses extraThickVectors, whichever way it scales;
+// otherwise extraThick for line/tube glyphs (cross-section-only scaling) or
+// extraLargePoints for point markers (uniform scaling).
+function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraThickVectors, extraLargePoints }) {
   const worldPos = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ camera }) => {
@@ -1027,12 +1029,18 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraLargePoint
         const baseRadius = child.userData?.zoomInvariantRadius;
         if (!baseRadius) return;
         const isUniform = !!child.userData.zoomInvariantUniform;
+        const isVector = child.userData.thickenGroup === 'vector';
 
-        const thickMultiplier = isUniform
-          ? (extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1)
-          : (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
+        let thickMultiplier = 1;
+        if (isVector) {
+          thickMultiplier = extraThickVectors ? EXTRA_THICK_LINE_MULTIPLIER : 1;
+        } else if (isUniform) {
+          thickMultiplier = extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1;
+        } else {
+          thickMultiplier = extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1;
+        }
         let finalScale = zoomScale * thickMultiplier;
-        if (isUniform && extraLargePoints) {
+        if (isUniform && !isVector && extraLargePoints) {
           finalScale = Math.min(finalScale, EXTRA_LARGE_POINT_MAX_SCALE);
         }
         if (!isUniform) {
@@ -1090,8 +1098,11 @@ function DashZoomSync({ objects, zoomEnabled }) {
 
 // Syncs Line2/LineMaterial glyphs with canvas resolution (for correct pixel
 // linewidth) and the extra-thick multiplier -- neither is available to
-// geoVectorLine.js at construction time.
-function FatLineSync({ objects, extraThick }) {
+// geoVectorLine.js/vectorShaftGlyph.js at construction time. A child tagged
+// userData.thickenGroup = 'vector' (vectorShaftGlyph.js's fat-line shaft)
+// keys off extraThickVectors instead of extraThick, so the two toggles stay
+// independent.
+function FatLineSync({ objects, extraThick, extraThickVectors }) {
   const { size } = useThree();
 
   useEffect(() => {
@@ -1101,10 +1112,11 @@ function FatLineSync({ objects, extraThick }) {
         if (!child.userData?.isFatLine || !child.material) return;
         child.material.resolution.set(size.width, size.height);
         const baseWidth = child.userData.fatLineBaseWidth || 1;
-        child.material.linewidth = baseWidth * (extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
+        const isThick = child.userData.thickenGroup === 'vector' ? extraThickVectors : extraThick;
+        child.material.linewidth = baseWidth * (isThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
       });
     });
-  }, [objects, size.width, size.height, extraThick]);
+  }, [objects, size.width, size.height, extraThick, extraThickVectors]);
 
   return null;
 }
@@ -1140,9 +1152,10 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
         objects={objects}
         zoomEnabled={settings.zoomInvariantSizing}
         extraThick={settings.extraThickLines}
+        extraThickVectors={settings.extraThickVectors}
         extraLargePoints={settings.extraLargePoints}
       />
-      <FatLineSync objects={objects} extraThick={settings.extraThickLines} />
+      <FatLineSync objects={objects} extraThick={settings.extraThickLines} extraThickVectors={settings.extraThickVectors} />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />

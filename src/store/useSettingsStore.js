@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS = {
   extraLargePoints: false,
   mattePoints: false,
   haloEnabled: true,
+  vectorStyle: LINE_STYLES.PLAIN_TUBE,
+  extraThickVectors: false,
 }
 
 const useSettingsStore = create((set) => ({
