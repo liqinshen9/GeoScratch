@@ -11,9 +11,10 @@ const DEPTH_BIAS_WORLD_UNITS = 0.01
 // Injects the haloed-line discard check into a real (non-inflated) material
 // via onBeforeCompile -- see docs/halos-epic-plan.md. Sampling happens at
 // the earliest available point in the fragment shader (right after
-// #include <clipping_planes_fragment>, present in MeshStandardMaterial's
-// shader as the first line of main()) so an occluded fragment discards
-// before any lighting/shading work runs on it.
+// #include <clipping_planes_fragment>, present as the first line of main()
+// in every material this gets applied to -- MeshStandardMaterial for
+// plain_tube/ringed_tube, LineMaterial for plain_line-thick) so an occluded
+// fragment discards before any lighting/shading work runs on it.
 //
 // Reads HaloDilatePass's single combined target (R: winning object's id,
 // G: that object's raw depth) -- NOT HaloDepthPrepass's raw target directly.
@@ -29,13 +30,14 @@ const DEPTH_BIAS_WORLD_UNITS = 0.01
 // own real surface at silhouette/grazing-angle pixels, which a depth-only
 // check can't tell apart from a genuinely different, nearer object.
 //
-// Depth comparison uses LINEAR view-space Z (three.js's own
-// perspectiveDepthToViewZ, from the <packing> chunk MeshStandardMaterial
-// already includes), not the raw nonlinear depth value directly -- the
-// scene's camera uses near=0.1/far=5000 (a 50000:1 ratio), and standard
-// perspective depth concentrates nearly all its precision within the first
-// few units of the camera, so a raw-depth comparison reads as noise past
-// that. Linear view-space Z has uniform precision at any distance.
+// Depth comparison uses LINEAR view-space Z (haloPerspectiveDepthToViewZ,
+// a local copy of three's own <packing>-chunk function below -- not every
+// material this gets applied to already includes that chunk), not the raw
+// nonlinear depth value directly -- the scene's camera uses near=0.1/
+// far=5000 (a 50000:1 ratio), and standard perspective depth concentrates
+// nearly all its precision within the first few units of the camera, so a
+// raw-depth comparison reads as noise past that. Linear view-space Z has
+// uniform precision at any distance.
 //
 // `immuneIds` is a plain array (length MAX_IMMUNE_IDS, unused slots -1),
 // shared by reference with haloIntersectionRegistry.js -- when a later line
@@ -73,6 +75,15 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
       uniform float haloCameraFar;
       uniform float haloEnabled;
       uniform float haloImmuneIds[${MAX_IMMUNE_IDS}];
+      // A locally-scoped copy of three's own perspectiveDepthToViewZ
+      // (<packing> chunk) rather than relying on the chunk already being
+      // present -- true for MeshStandardMaterial (ringed_tube/plain_tube),
+      // but LineMaterial's (plain_line-thick) shader never includes
+      // <packing> at all, so calling the chunk's version directly would be
+      // an undefined-function compile error on that material.
+      float haloPerspectiveDepthToViewZ(const in float depth, const in float near, const in float far) {
+        return (near * far) / ((far - near) * depth - far);
+      }
     ` + shader.fragmentShader
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -83,12 +94,13 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
         vec4 haloSample = texture2D(haloTex, haloUv);
         float otherId = floor(haloSample.r * 255.0 + 0.5);
         float otherDepth = haloSample.g;
-        // perspectiveDepthToViewZ returns a negative view-space Z; closer
-        // to zero means nearer the camera. otherViewZ > selfViewZ (i.e.
-        // less negative, by more than the bias) means the OTHER surface is
-        // genuinely nearer -- linear, so this holds at any distance.
-        float otherViewZ = perspectiveDepthToViewZ(otherDepth, haloCameraNear, haloCameraFar);
-        float selfViewZ = perspectiveDepthToViewZ(gl_FragCoord.z, haloCameraNear, haloCameraFar);
+        // haloPerspectiveDepthToViewZ returns a negative view-space Z;
+        // closer to zero means nearer the camera. otherViewZ > selfViewZ
+        // (i.e. less negative, by more than the bias) means the OTHER
+        // surface is genuinely nearer -- linear, so this holds at any
+        // distance.
+        float otherViewZ = haloPerspectiveDepthToViewZ(otherDepth, haloCameraNear, haloCameraFar);
+        float selfViewZ = haloPerspectiveDepthToViewZ(gl_FragCoord.z, haloCameraNear, haloCameraFar);
         bool haloImmune = false;
         for (int i = 0; i < ${MAX_IMMUNE_IDS}; i++) {
           if (haloImmuneIds[i] >= 0.0 && abs(otherId - haloImmuneIds[i]) < 0.5) haloImmune = true;
