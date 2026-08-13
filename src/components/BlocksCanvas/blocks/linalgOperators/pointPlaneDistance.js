@@ -176,8 +176,6 @@ export function initPointPlaneDistanceBlock() {
     group.userData.labelAnchors = {
       distanceMid: { type: 'world', position: [midpoint.x, midpoint.y, midpoint.z] },
       normal: { type: 'world', position: [normalTip.x, normalTip.y, normalTip.z] },
-      point: { type: 'world', position: [point.x, point.y, point.z] },
-      planePoint: { type: 'world', position: [planePoint.x, planePoint.y, planePoint.z] },
       differenceMid: { type: 'world', position: [
         planePoint.clone().add(point).multiplyScalar(0.5).x,
         planePoint.clone().add(point).multiplyScalar(0.5).y,
@@ -185,20 +183,6 @@ export function initPointPlaneDistanceBlock() {
       ] },
     };
     group.userData.labels = [
-      {
-        anchor: 'point',
-        text: 'P = ' + fmt(point),
-        distanceFactor: 8,
-        offset: [0.12, 0.12, 0],
-        color: '#2563eb',
-      },
-      {
-        anchor: 'planePoint',
-        text: 'Q1 = ' + fmt(planePoint),
-        distanceFactor: 8,
-        offset: [0.12, 0.12, 0],
-        color: '#2563eb',
-      },
       {
         anchor: 'differenceMid',
         text: 'P - Q1 = ' + fmt(difference),

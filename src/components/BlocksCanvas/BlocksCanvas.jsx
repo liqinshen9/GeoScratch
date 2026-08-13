@@ -19,7 +19,7 @@ const BUILT_IN_BLOCK_TYPES = new Set(
 const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
 const TRASH_BLOCK_XML_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-xml'
 const TRASH_BLOCK_ID_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-id'
-const TRASH_HIT_PADDING = 6
+const WORKSPACE_CONTROL_ICON_COLOR = '#777'
 
 function canonicalizeNode(node) {
   const tagName = node.tagName?.toLowerCase()
@@ -52,12 +52,22 @@ function canonicalizeWorkspaceXml(xmlText) {
   }
 }
 
-function rectContainsPoint(rect, x, y, padding = 0) {
-  return !!rect &&
-    x >= rect.left - padding &&
-    x <= rect.right + padding &&
-    y >= rect.top - padding &&
-    y <= rect.bottom + padding
+function getRectIntersectionArea(rectA, rectB) {
+  if (!rectA || !rectB) return 0
+
+  const width = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left)
+  const height = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top)
+  return Math.max(0, width) * Math.max(0, height)
+}
+
+function getPrimaryBlockRect(block) {
+  const root = block?.getSvgRoot?.()
+  const primaryPath =
+    block?.pathObject?.svgPath ||
+    block?.pathObject?.svgPath_ ||
+    root?.querySelector?.('.blocklyPath')
+
+  return primaryPath?.getBoundingClientRect?.() || root?.getBoundingClientRect?.()
 }
 
 function getDeletedBlockLabel(block) {
@@ -116,7 +126,7 @@ function WorkspaceControls({
         title="Zoom in"
         onClick={() => zoom(1)}
       >
-        <ZoomIn theme="outline" size="36" fill="#333" />
+        <ZoomIn theme="outline" size="36" fill={WORKSPACE_CONTROL_ICON_COLOR} />
       </button>
       <button
         type="button"
@@ -125,7 +135,7 @@ function WorkspaceControls({
         title="Zoom out"
         onClick={() => zoom(-1)}
       >
-        <ZoomOut theme="outline" size="36" fill="#333" />
+        <ZoomOut theme="outline" size="36" fill={WORKSPACE_CONTROL_ICON_COLOR} />
       </button>
       <button
         ref={trashTargetRef}
@@ -136,7 +146,7 @@ function WorkspaceControls({
         onClick={onTrashClick}
       >
         <span ref={trashIconRef} className="workspace-trash-icon">
-          <Delete theme="outline" size="36" fill="#333" />
+          <Delete theme="outline" size="48" fill={WORKSPACE_CONTROL_ICON_COLOR} />
         </span>
       </button>
       {trashPanelOpen && (
@@ -241,18 +251,30 @@ export default function BlocksCanvas({
 
     // 2. Listen to all workspace events and save to store silently
     let saveFrame = 0
+    let isDraggingBlock = false
+    const saveWorkspace = () => {
+      saveFrame = 0
+      if (!workspace.rendered) return
+      const dom = Blockly.Xml.workspaceToDom(workspace)
+      const xmlText = Blockly.Xml.domToText(dom)
+      saveWorkspaceXml(id, xmlText)
+    }
     const handleWorkspaceChange = (event) => {
+      if (event?.type === Blockly.Events.BLOCK_DRAG) {
+        isDraggingBlock = !!event.isStart
+        if (!isDraggingBlock) {
+          cancelAnimationFrame(saveFrame)
+          saveFrame = requestAnimationFrame(saveWorkspace)
+        }
+        return
+      }
+
+      if (isDraggingBlock) return
       // Ignore purely visual events and prevent saving if the workspace is in the process of being destroyed
       if (!workspace.rendered || shouldIgnoreWorkspaceChange(event)) return
 
       cancelAnimationFrame(saveFrame)
-      saveFrame = requestAnimationFrame(() => {
-        saveFrame = 0
-        if (!workspace.rendered) return
-        const dom = Blockly.Xml.workspaceToDom(workspace)
-        const xmlText = Blockly.Xml.domToText(dom)
-        saveWorkspaceXml(id, xmlText)
-      })
+      saveFrame = requestAnimationFrame(saveWorkspace)
     }
 
     workspace.addChangeListener(handleWorkspaceChange)
@@ -281,19 +303,15 @@ export default function BlocksCanvas({
     trashIconRef.current?.classList.toggle('is-open', open)
   }, [])
 
-  const isBlockOverTrash = useCallback((blockId) => {
+  const isDraggedBlockTouchingTrash = useCallback((blockId) => {
     if (!workspace || !blockId) return false
-    const block = workspace.getBlockById(blockId)
-    const blockRect = block?.getSvgRoot?.()?.getBoundingClientRect?.()
-    const trashRect = trashTargetRef.current?.getBoundingClientRect()
-    if (!blockRect || !trashRect) return false
+    const trashRect = trashIconRef.current?.getBoundingClientRect()
+    if (!trashRect) return false
 
-    return rectContainsPoint(
-      trashRect,
-      blockRect.left + blockRect.width / 2,
-      blockRect.top + blockRect.height / 2,
-      TRASH_HIT_PADDING,
-    )
+    const block = workspace.getBlockById(blockId)
+    const blockRect = getPrimaryBlockRect(block)
+
+    return getRectIntersectionArea(blockRect, trashRect) > 0
   }, [workspace])
 
   const deleteBlockById = useCallback((blockId) => {
@@ -380,7 +398,7 @@ export default function BlocksCanvas({
   useEffect(() => {
     function handlePointerMove() {
       if (!draggingBlockIdRef.current) return
-      const overTrash = isBlockOverTrash(draggingBlockIdRef.current)
+      const overTrash = isDraggedBlockTouchingTrash(draggingBlockIdRef.current)
       dragOverTrashRef.current = overTrash
       setTrashOpenVisual(overTrash)
     }
@@ -390,7 +408,7 @@ export default function BlocksCanvas({
     return () => {
       window.removeEventListener('pointermove', handlePointerMove, true)
     }
-  }, [isBlockOverTrash, setTrashOpenVisual])
+  }, [isDraggedBlockTouchingTrash, setTrashOpenVisual])
 
   const handleBlockSelect = useCallback(
     (type) => {
@@ -540,12 +558,13 @@ export default function BlocksCanvas({
           draggingBlockIdRef.current = event.blockId || null
           dragOverTrashRef.current = false
           setTrashPanelOpen((open) => (open ? false : open))
+          setTrashOpenVisual(false)
           return
         }
 
         const blockId = draggingBlockIdRef.current || event.blockId
         draggingBlockIdRef.current = null
-        const shouldDelete = dragOverTrashRef.current || isBlockOverTrash(blockId)
+        const shouldDelete = dragOverTrashRef.current || isDraggedBlockTouchingTrash(blockId)
         dragOverTrashRef.current = false
         if (blockId && shouldDelete) {
           scheduleTrashDelete(blockId)
@@ -562,7 +581,7 @@ export default function BlocksCanvas({
 
     workspace.addChangeListener(handleSelectedBlock)
     return () => workspace.removeChangeListener(handleSelectedBlock)
-  }, [isBlockOverTrash, scheduleTrashDelete, setTrashOpenVisual, workspace])
+  }, [isDraggedBlockTouchingTrash, scheduleTrashDelete, setTrashOpenVisual, workspace])
 
   return (
     <div id="blocks-canvas" className="blocks-shell">

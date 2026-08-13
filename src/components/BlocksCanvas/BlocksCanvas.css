@@ -523,6 +523,12 @@
   display: flex;
 }
 
+.workspace-control-button--trash {
+  width: 64px;
+  height: 64px;
+  margin: -5px;
+}
+
 .workspace-trash-icon,
 .workspace-trash-icon .i-icon,
 .workspace-trash-icon svg {

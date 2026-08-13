@@ -7,8 +7,19 @@ import { shouldIgnoreWorkspaceChange } from '@/utils/blocklyEventFilters'
  */
 const setupChangeListener = (ws, onRun) => {
   let raf = 0
+  let isDraggingBlock = false
 
   const listener = (e) => {
+    if (e?.type === Blockly.Events.BLOCK_DRAG) {
+      isDraggingBlock = !!e.isStart
+      if (!isDraggingBlock) {
+        cancelAnimationFrame(raf)
+        raf = requestAnimationFrame(() => onRun(ws))
+      }
+      return
+    }
+
+    if (isDraggingBlock) return
     if (shouldIgnoreWorkspaceChange(e)) return
 
     cancelAnimationFrame(raf)
