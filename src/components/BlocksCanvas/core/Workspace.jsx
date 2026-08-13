@@ -25,7 +25,15 @@ const Workspace = (hostElement) => {
     zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
     trashcan: false,
     theme: GEO_SCRATCH_BLOCK_THEME,
-    move: { scrollbars: false, drag: true, wheel: true },
+    // Blockly ties drag-to-pan to `scrollbars` internally -- if scrollbars is
+    // false, drag silently collapses to false too, no matter what it's set to
+    // here. Scrollbars must stay "on" for panning to work; the scrollbar DOM
+    // elements themselves are hidden via CSS instead (see
+    // .blocklyScrollbarVertical/.blocklyScrollbarHorizontal).
+    // move.wheel stays false so plain wheel doesn't also pan the workspace --
+    // that would fight with zoom.wheel below, which we want plain wheel to
+    // drive instead. Drag-panning (above) is unaffected by this.
+    move: { scrollbars: true, drag: true, wheel: false },
   })
 }
 
