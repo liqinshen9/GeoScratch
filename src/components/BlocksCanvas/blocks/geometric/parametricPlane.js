@@ -35,8 +35,45 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   )
   plane.position.copy(point)
 
+  // Point + normal glyph: the two pieces of data that actually define this
+  // plane, shown alongside the plane mesh whenever the "Show Point &
+  // Normal" setting is on. Visibility is toggled in place (not rebuilt) so
+  // flipping the setting doesn't touch the plane mesh itself.
+  const pointMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.24, 16, 12),
+    new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.35, metalness: 0.05 })
+  )
+  pointMarker.position.copy(point)
+  pointMarker.userData.zoomInvariantRadius = 0.24
+  pointMarker.userData.zoomInvariantUniform = true
+  pointMarker.userData.geoType = 'parametric_plane_point_marker'
+  pointMarker.userData.srcBlockId = blockId
+
+  const normalArrow = new THREE.ArrowHelper(normalUnit, point, normalLength, 0x3b82f6, 0.25, 0.1)
+  normalArrow.userData.geoType = 'parametric_plane_normal_arrow'
+  normalArrow.userData.srcBlockId = blockId
+
+  const pointNormalGroup = new THREE.Group()
+  pointNormalGroup.add(pointMarker, normalArrow)
+  pointNormalGroup.userData.geoType = 'parametric_plane_point_normal_group'
+
   const group = new THREE.Group()
-  group.add(plane)
+  group.add(plane, pointNormalGroup)
+
+  const applyPointNormalVisibility = (settings) => {
+    pointNormalGroup.visible = settings?.showPlanePointNormal !== false
+  }
+  applyPointNormalVisibility(window.useSettingsStore?.getState().settings)
+  if (window.useSettingsStore) {
+    const unsubscribe = window.useSettingsStore.subscribe((state) => {
+      if (window.threeObjStore?.[blockId] !== group) {
+        unsubscribe()
+        return
+      }
+      applyPointNormalVisibility(state.settings)
+    })
+  }
+
   group.userData.geoType = 'point_normal_plane_group'
   group.userData.srcBlockId = blockId
   group.userData.point = point.clone()

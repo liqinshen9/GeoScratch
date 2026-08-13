@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   extraLargePoints: false,
   mattePoints: false,
   haloEnabled: true,
+  showPlanePointNormal: true,
 }
 
 const useSettingsStore = create((set) => ({
