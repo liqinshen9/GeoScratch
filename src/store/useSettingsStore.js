@@ -25,6 +25,7 @@ const DEFAULT_SETTINGS = {
   haloEnabled: true,
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
+  showPlanePointNormal: true,
 }
 
 const useSettingsStore = create((set) => ({

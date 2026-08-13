@@ -158,6 +158,15 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
+          <SettingsSection title="Plane">
+            <ToggleRow
+              label="Show Point & Normal"
+              description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
+              checked={settings.showPlanePointNormal}
+              onChange={(v) => updateSetting('showPlanePointNormal', v)}
+            />
+          </SettingsSection>
+
           <SettingsSection title="Halos">
             <ToggleRow
               label="Enable Halos"
