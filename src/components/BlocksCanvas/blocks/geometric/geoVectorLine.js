@@ -753,12 +753,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  const sphereGeom = new THREE.SphereGeometry(0.04, 16, 12)
+  // Matches the standalone Point block's own marker radius (linalg_point in
+  // vector3.js) -- these are also "points" in the same visual language, so
+  // they should read as the same size, not a smaller, easy-to-miss dot.
+  const POINT_MARKER_RADIUS = 0.24
+  const sphereGeom = new THREE.SphereGeometry(POINT_MARKER_RADIUS, 16, 12)
   const originSphere = new THREE.Mesh(
     sphereGeom,
     new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.4, metalness: 0.1 })
   )
-  originSphere.userData.zoomInvariantRadius = 0.04
+  originSphere.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
   originSphere.userData.zoomInvariantUniform = true
   originSphere.position.copy(origin)
   group.add(originSphere)
@@ -770,7 +774,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       sphereGeom,
       new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
     )
-    tSphere.userData.zoomInvariantRadius = 0.04
+    tSphere.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
     tSphere.userData.zoomInvariantUniform = true
     tSphere.position.copy(rPoint)
     group.add(tSphere)
