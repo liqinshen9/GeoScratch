@@ -153,17 +153,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     }
   }
 
-  // 1. TECHNIQUE STYLE: Plain Line. Built with THREE.LineSegments (disjoint
-  // vertex pairs) rather than THREE.Line (a continuous polyline), even
-  // though outside a collision zone it's just one unbroken pair -- that way
-  // the SAME primitive type can represent a literal dash/gap pattern once
-  // the "dashed" collision style is active, without swapping classes.
-  const plainLineGeom = new THREE.BufferGeometry()
-  const plainLineMat = new THREE.LineBasicMaterial({ color: 0x374151 })
-  const plainLine = new THREE.LineSegments(plainLineGeom, plainLineMat)
-  group.add(plainLine)
-
-  // 1b. TECHNIQUE STYLE: Plain Line (thick). WebGL clamps LineBasicMaterial's
+  // 1. TECHNIQUE STYLE: Plain Line. WebGL clamps LineBasicMaterial's
   // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
   // real solid-mesh line is the only way to make this style visibly
   // thicker. Built with three's "fat lines" (LineSegments2/
@@ -197,100 +187,11 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const plainLineThickGroup = new THREE.Group()
   group.add(plainLineThickGroup)
 
-  // 2. TECHNIQUE STYLE: True Illuminated Line (Zöckler et al. Implementation).
-  // LineSegments (disjoint pairs), not Line, for the same reason as 1. above.
-  const lineGeometry = new THREE.BufferGeometry();
-
-  const illumMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-      lightPosition: { value: new THREE.Vector3(5, 10, 7).normalize() },
-      ambientColor: { value: new THREE.Color(0x222222) },
-      diffuseColor: { value: new THREE.Color(0x4b5563) },
-      specularColor: { value: new THREE.Color(0xffffff) },
-      shininess: { value: 32.0 }
-    },
-    vertexShader: `
-      attribute vec3 lineDir;
-      varying vec3 vLineDir;
-      varying vec3 vViewPosition;
-
-      void main() {
-        vLineDir = normalize(normalMatrix * lineDir);
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        vViewPosition = -mvPosition.xyz;
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 lightPosition;
-      uniform vec3 ambientColor;
-      uniform vec3 diffuseColor;
-      uniform vec3 specularColor;
-      uniform float shininess;
-
-      varying vec3 vLineDir;
-      varying vec3 vViewPosition;
-
-      void main() {
-        vec3 T = normalize(vLineDir);
-        vec3 L = normalize(lightPosition);
-        vec3 V = normalize(vViewPosition);
-
-        float dotTL = dot(T, L);
-        float diffuseIntensity = sqrt(max(0.0, 1.0 - dotTL * dotTL));
-
-        float dotTV = dot(T, V);
-        float specularIntensity = 0.0;
-        if (diffuseIntensity > 0.0) {
-          float specTerm = dotTL * dotTV + diffuseIntensity * sqrt(max(0.0, 1.0 - dotTV * dotTV));
-          specularIntensity = pow(max(0.0, specTerm), shininess);
-        }
-
-        vec3 finalColor = ambientColor + (diffuseColor * diffuseIntensity) + (specularColor * specularIntensity);
-        gl_FragColor = vec4(finalColor, 1.0);
-      }
-    `
-  });
-
-  const illumLine = new THREE.LineSegments(lineGeometry, illumMaterial)
-  group.add(illumLine)
-
-  const pairsToFlatArrays = (pairs) => {
-    const flat = new Float32Array(pairs.length * 6)
-    const dirs = new Float32Array(pairs.length * 6)
-    pairs.forEach((pair, i) => {
-      const a = worldAt(pair.start)
-      const b = worldAt(pair.end)
-      const o = i * 6
-      flat[o] = a.x; flat[o + 1] = a.y; flat[o + 2] = a.z
-      flat[o + 3] = b.x; flat[o + 4] = b.y; flat[o + 5] = b.z
-      dirs[o] = normalised.x; dirs[o + 1] = normalised.y; dirs[o + 2] = normalised.z
-      dirs[o + 3] = normalised.x; dirs[o + 4] = normalised.y; dirs[o + 5] = normalised.z
-    })
-    return { flat, dirs }
-  }
-
-  // The hairline plain-line and illuminated-line share one world-space
-  // vertex layout (they're both "0 radius" glyphs whose only difference is
-  // material) -- built/rebuilt together, on the original small dash/gap
-  // sizing (unaffected by the "thick" size fix below).
-  const setThinLineSegmentPairs = (pairs) => {
-    const { flat, dirs } = pairsToFlatArrays(pairs)
-    plainLineGeom.setAttribute('position', new THREE.BufferAttribute(flat, 3))
-    plainLineGeom.computeBoundingSphere()
-
-    lineGeometry.setAttribute('position', new THREE.BufferAttribute(flat.slice(), 3))
-    lineGeometry.setAttribute('lineDir', new THREE.BufferAttribute(dirs, 3))
-    lineGeometry.computeBoundingSphere()
-  }
-  setThinLineSegmentPairs([{ start: -halfDist, end: halfDist, isDash: false }])
-
-  // Plain Line (thick) is its own "0 radius" glyph too, but shares the
-  // bigger, zoom-responsive THICK_DASHED_* sizing with plain_tube and
-  // illuminated_line-thick (see rebuildThickDashedGlyphs) instead of the
-  // thin lines' small fixed pattern -- so the dashed look is consistent
-  // across every "thick" line style, not just plain_tube. One LineSegments2
-  // child per pair (see plainLineThickGroup's comment above for why).
+  // Plain Line (thick) is a "0 radius" glyph, sharing the bigger,
+  // zoom-responsive THICK_DASHED_* sizing with plain_tube (see
+  // rebuildThickDashedGlyphs) so the dashed look is consistent across every
+  // "thick" line style, not just plain_tube. One LineSegments2 child per
+  // pair (see plainLineThickGroup's comment above for why).
   const setThickLineSegmentPairs = (pairs) => {
     clearGroupChildren(plainLineThickGroup, false) // shares plainLineThickMat
     pairs.forEach((pair) => {
@@ -306,50 +207,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   }
   setThickLineSegmentPairs([{ start: -halfDist, end: halfDist, isDash: false }])
 
-  // 2b. TECHNIQUE STYLE: Illuminated Line (thick). A real MeshStandardMaterial
-  // cylinder here would depend on actual scene lights hitting it -- at this
-  // radius, with only ambient + a couple of point lights, most of its
-  // surface reads as dim/subtle instead of the bright, consistently-lit look
-  // the hairline version guarantees. So this reuses the SAME shader/material
-  // as the hairline illumLine (its lighting is synthetic, based only on the
-  // tangent direction, never scene lights or real surface normals) applied
-  // to cylinder geometry instead of a flat line, rather than trying to get
-  // real lighting to behave the same way. Wrapped in a group (rather than a
-  // single mesh, as before) so the "dashed" collision style can swap in a
-  // gapped set of segments the same way plain_tube's cylinder does.
-  const ILLUM_THICK_RADIUS = 0.0272
-  const illumThickGroup = new THREE.Group()
-  illumThickGroup.position.copy(midPoint)
-  illumThickGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
-  group.add(illumThickGroup)
-
-  // Expressed in the cylinder's own local frame, where its canonical up-axis
-  // (0,1,0) *is* the tangent direction -- the quaternion applied to
-  // illumThickGroup then carries that (already-correct) local tangent out to
-  // world space along with everything else, the same way cylinder/
-  // ringedTube orient themselves. Using `normalised` (a group-frame vector)
-  // here instead would be wrong: the shader's normalMatrix already applies
-  // this mesh's own rotation, so a group-frame vector would get rotated a
-  // second time.
-  const makeIllumSegmentMesh = (radius, height) => {
-    const geom = new THREE.CylinderGeometry(radius, radius, height, 12)
-    const vertexCount = geom.attributes.position.count
-    const dirs = new Float32Array(vertexCount * 3)
-    for (let i = 0; i < vertexCount; i += 1) dirs[i * 3 + 1] = 1
-    geom.setAttribute('lineDir', new THREE.BufferAttribute(dirs, 3))
-    const mesh = new THREE.Mesh(geom, illumMaterial)
-    mesh.userData.zoomInvariantRadius = radius
-    return mesh
-  }
-
-  const illumThickSolid = makeIllumSegmentMesh(ILLUM_THICK_RADIUS, distance)
-  illumThickGroup.add(illumThickSolid)
-
-  const illumThickDashedGroup = new THREE.Group()
-  illumThickDashedGroup.visible = false
-  illumThickGroup.add(illumThickDashedGroup)
-
-  // 3. TECHNIQUE STYLE: Plain Tube (Cylinder). MeshStandardMaterial (not
+  // 2. TECHNIQUE STYLE: Plain Tube (Cylinder). MeshStandardMaterial (not
   // MeshBasicMaterial) so it actually picks up the scene's lights and shows
   // a real shaded gradient across its curved surface, same as every other
   // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
@@ -449,8 +307,8 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Tuned bigger than the shared DASHED_SEGMENT_LENGTH/DASHED_GAP_LENGTH --
   // "fewer, larger dashes" reads better on a real solid tube than the small
   // default pattern. Shared by every "thick" dashed glyph (plain_tube,
-  // illuminated_line-thick, plain_line-thick) so they all look consistent,
-  // not just plain_tube. Deliberately NOT zoom-invariant-scaled per-segment
+  // plain_line-thick) so they all look consistent, not just plain_tube.
+  // Deliberately NOT zoom-invariant-scaled per-segment
   // (see addTubeSegment's `uniform` param, passed false for these): a dash
   // is a literal piece of the glyph's own length, not a separate small
   // accent glyph like a ring, so it should get bigger/smaller with normal
@@ -537,7 +395,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     texture.repeat.set(1, length / (period * scale))
   }
 
-  // 4. TECHNIQUE STYLE: Ringed Tube
+  // 3. TECHNIQUE STYLE: Ringed Tube
   const ringedTube = new THREE.Group()
 
   // Fixed at build time and never touched again as the camera moves --
@@ -652,20 +510,19 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
 
-  // 5. COLLISION ACCENTS: how a line indicates the exact stretch(es) where
+  // 4. COLLISION ACCENTS: how a line indicates the exact stretch(es) where
   // it passes into a solid object. Two of the three interchangeable looks
   // (picked via settings.lineCollisionStyle) are pure overlay geometry --
   // small rings, or a darker band -- anchored to the same local frame as
   // cylinder/ringedTube (Y axis along the line, origin at midPoint) but with
   // NO dependency on the currently-active glyph having a real radius, so a
   // single shared pair of groups works for every line style (plain_line,
-  // illuminated_line, plain_tube, ringed_tube) rather than needing its own
-  // copy per style. The third style, "dashed", instead punches a literal
-  // gap in whichever glyph is actually visible right now -- there's no
-  // "overlay" that can remove material from something else, so that one is
-  // handled per-glyph (dashedTubeGroup / illumThickDashedGroup /
-  // ringedTubeDashedGroup / setThinLineSegmentPairs /
-  // setThickLineSegmentPairs visibility, above and below).
+  // plain_tube, ringed_tube) rather than needing its own copy per style.
+  // The third style, "dashed", instead punches a literal gap in whichever
+  // glyph is actually visible right now -- there's no "overlay" that can
+  // remove material from something else, so that one is handled per-glyph
+  // (dashedTubeGroup / ringedTubeDashedGroup / setThickLineSegmentPairs
+  // visibility, above and below).
   const collisionAccentRinged = new THREE.Group()
   collisionAccentRinged.position.copy(midPoint)
   collisionAccentRinged.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
@@ -691,14 +548,13 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // hair so it sits just outside a coincident surface instead of z-fighting
   // it), so the ring reads as a texture ON the line rather than a bump
   // bulging off it -- picked per refresh (below), not fixed at build time.
-  const getAccentRadius = (activeStyle, thick) => {
+  const getAccentRadius = (activeStyle) => {
     if (activeStyle === 'ringed_tube') return 0.085 // == baseTube's own radius
     if (activeStyle === 'plain_tube') return 0.051 // == cylinder's own radius
-    if (activeStyle === 'illuminated_line' && thick) return ILLUM_THICK_RADIUS
-    return 0.035 // no true radius (hairline / fat-line) -- a thin nominal size
+    return 0.035 // no true radius (fat-line) -- a thin nominal size
   }
 
-  const rebuildSharedAccents = (activeStyle, thick) => {
+  const rebuildSharedAccents = (activeStyle) => {
     clearGroupChildren(collisionAccentRinged, true) // each segment gets its own cloned texture + material
     clearGroupChildren(collisionAccentDarkTexture, false) // shares darkTextureMat
 
@@ -711,7 +567,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     // faint flicker; for collisionAccentDarkTexture (a fully opaque overlay
     // meant to completely replace what's underneath) it meant the base
     // tube's own ring texture kept showing through instead of being hidden.
-    const radius = getAccentRadius(activeStyle, thick) + 0.006
+    const radius = getAccentRadius(activeStyle) + 0.006
 
     currentZones.forEach(({ start, end }) => {
       const height = end - start
@@ -738,22 +594,21 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  // Rebuilds plain_tube's dashedTubeGroup and illuminated_line-thick's
-  // illumThickDashedGroup (the two separate, hidden-unless-active
-  // "replacement" objects) at the given zoom scale -- called once at scale
-  // 1 below, then kept in sync with the camera by Scene3D's DashZoomSync
-  // (group.userData.updateZoomRatio), which is the only thing that can see
-  // the camera each frame. Scaling the dash/gap LENGTH (not just
-  // cross-section radius) by camera distance is what makes the actual dash
-  // COUNT respond to zoom: fewer, bigger dashes fit across the same
+  // Rebuilds plain_tube's dashedTubeGroup (the separate, hidden-unless-
+  // active "replacement" object) at the given zoom scale -- called once at
+  // scale 1 below, then kept in sync with the camera by Scene3D's
+  // DashZoomSync (group.userData.updateZoomRatio), which is the only thing
+  // that can see the camera each frame. Scaling the dash/gap LENGTH (not
+  // just cross-section radius) by camera distance is what makes the actual
+  // dash COUNT respond to zoom: fewer, bigger dashes fit across the same
   // fixed-width collision zone as the camera pulls back, and more, smaller
   // (but still legible) ones as it moves in -- unlike a flat apparent-size-
   // constant scale (see zoomInvariantUniform elsewhere in this file), which
   // only changes how big each already-fixed-count dash looks. Built
   // unconditionally "as if" dashed is active (matching the pre-existing
-  // precedent for these two groups) since actual visibility is gated
-  // separately below; plain_line-thick has no such separate object to hide
-  // behind -- its own geometry IS the toggle -- so it's handled inside
+  // precedent for this group) since actual visibility is gated separately
+  // below; plain_line-thick has no such separate object to hide behind --
+  // its own geometry IS the toggle -- so it's handled inside
   // applyGlyphVisibility instead, using the same lastDashZoomScale.
   //
   // Only the dash length/count responds to zoom -- ring band frequency
@@ -771,15 +626,6 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     clearGroupChildren(dashedTubeGroup, false) // shares dashedTubeMat
     pairs.forEach(({ start, end }) => {
       addTubeSegment(dashedTubeGroup, dashedTubeMat, 0.051, start, end, false)
-    })
-
-    clearGroupChildren(illumThickDashedGroup, false) // shares illumMaterial
-    pairs.forEach(({ start, end }) => {
-      const height = end - start
-      if (height <= 1e-6) return
-      const seg = makeIllumSegmentMesh(ILLUM_THICK_RADIUS, height)
-      seg.position.set(0, (start + end) / 2, 0)
-      illumThickDashedGroup.add(seg)
     })
 
     clearGroupChildren(ringedTubeDashedGroup, true) // each segment gets its own cloned texture + material
@@ -806,19 +652,16 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const applyGlyphVisibility = (settings) => {
     const activeStyle = settings.lineStyle || 'plain_line'
     const collisionStyle = settings.lineCollisionStyle || 'dashed'
-    const thick = !!settings.thickLinePrimitives
     const hasAccent = currentZones.length > 0
     const isDashed = hasAccent && collisionStyle === 'dashed'
 
-    // plain_line/illuminated_line have no tube radius for a ring/band accent
-    // to sit on, so "dashed" is the only collision style that reads on them
-    // at all -- it punches real gaps straight into their own geometry.
-    const linesNeedDashing = isDashed && (activeStyle === 'plain_line' || activeStyle === 'illuminated_line')
-    setThinLineSegmentPairs(computeSegmentPairs(currentZones, linesNeedDashing))
+    // plain_line has no tube radius for a ring/band accent to sit on, so
+    // "dashed" is the only collision style that reads on it at all -- it
+    // punches real gaps straight into its own geometry.
+    const linesNeedDashing = isDashed && activeStyle === 'plain_line'
     // plain_line-thick shares the bigger THICK_DASHED_* sizing (and its
-    // current zoom scale) with plain_tube/illuminated_line-thick instead of
-    // the thin lines' small fixed pattern, so "thick" reads consistently
-    // across every line style.
+    // current zoom scale) with plain_tube instead of a small fixed pattern,
+    // so "thick" reads consistently across every line style.
     setThickLineSegmentPairs(
       linesNeedDashing
         ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
@@ -826,14 +669,8 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     )
 
     const useTubeDashedReplacement = isDashed && activeStyle === 'plain_tube'
-    const useIllumDashedReplacement = isDashed && activeStyle === 'illuminated_line' && thick
 
-    plainLine.visible = activeStyle === 'plain_line' && !thick
-    plainLineThickGroup.visible = activeStyle === 'plain_line' && thick
-    illumLine.visible = activeStyle === 'illuminated_line' && !thick
-    illumThickGroup.visible = activeStyle === 'illuminated_line' && thick
-    illumThickSolid.visible = !useIllumDashedReplacement
-    illumThickDashedGroup.visible = useIllumDashedReplacement
+    plainLineThickGroup.visible = activeStyle === 'plain_line'
 
     // The dashed collision style fully replaces the plain-tube glyph (real
     // gaps instead of an overlay), so hide the continuous base tube while
@@ -849,7 +686,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     baseTube.visible = !useRingedTubeDashedReplacement
     ringedTubeDashedGroup.visible = useRingedTubeDashedReplacement
 
-    rebuildSharedAccents(activeStyle, thick)
+    rebuildSharedAccents(activeStyle)
     // ringed_tube's "ringed" collision style now goes through this same
     // shared overlay too (no more special-casing) -- it's just a pink-
     // textured band sitting a hair outside the base tube's own radius,

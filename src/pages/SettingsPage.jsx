@@ -167,7 +167,7 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title="Vector Line">
+          <SettingsSection title="Line">
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-900">Line Style</label>
               <select
@@ -202,14 +202,8 @@ export default function SettingsPage() {
             </div>
 
             <ToggleRow
-              label="Thick Line Primitives"
-              description="Render Plain Line and Illuminated Line as thin solid tubes instead of hairline GL lines"
-              checked={settings.thickLinePrimitives}
-              onChange={(v) => updateSetting('thickLinePrimitives', v)}
-            />
-            <ToggleRow
               label="Extra Thick Lines"
-              description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain/Illuminated Line, collision accents) at 2.7x their normal thickness"
+              description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
               checked={settings.extraThickLines}
               onChange={(v) => updateSetting('extraThickLines', v)}
             />

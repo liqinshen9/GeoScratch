@@ -5,7 +5,6 @@ import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
-  thickLinePrimitives: true,
   showLabels: true,
   showGrid: true,
   showBox: true,
