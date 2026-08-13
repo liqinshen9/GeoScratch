@@ -161,7 +161,7 @@ export default function SettingsPage() {
           <SettingsSection title="Halos">
             <ToggleRow
               label="Enable Halos"
-              description="When a line passes in front of another line (or vector), cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. Plain Tube style only for now."
+              description="When a line passes in front of another line, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line styles; vectors not yet supported."
               checked={settings.haloEnabled}
               onChange={(v) => updateSetting('haloEnabled', v)}
             />

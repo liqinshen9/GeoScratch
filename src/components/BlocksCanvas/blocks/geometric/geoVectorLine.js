@@ -153,6 +153,76 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     }
   }
 
+  // Haloed-line GPU depth-trick (docs/halos-epic-plan.md). A second,
+  // invisible-in-the-main-pass "inflated" companion mesh per line style --
+  // same shape as whichever glyph is actually visible, bigger radius --
+  // tagged with the SAME zoomInvariantRadius mechanism the real glyph uses,
+  // so it inflates/deflates in lockstep with it at every zoom level via the
+  // existing, already-correct ZoomInvariantScaler, rather than a bespoke
+  // per-frame gap-width calculation. HALO_LAYER keeps it out of the normal
+  // color pass entirely (see HaloDepthPrepass.jsx); applyHaloDiscardMaterial
+  // wires a REAL glyph's material to discard fragments a DIFFERENT haloable
+  // object's inflated footprint occludes.
+  // Settings > Halos toggle: gates whether a NEW line gets the companion
+  // mesh/discard wiring at all. Toggling the setting back on doesn't
+  // retroactively add it to lines already built while it was off (would
+  // need a scene regeneration to pick it up) -- HaloUniformSync's
+  // haloEnabled uniform is what makes on/off instant for already-built
+  // lines that DO have the wiring.
+  const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
+  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial && window.registerHaloLine && window.HALO_MAX_IMMUNE_IDS != null
+  // Shared across every material that can end up as the visible glyph, for
+  // any line style (cylMat/dashedTubeMat, ringedTubeMat and its dash
+  // segments, plainLineThickMat) -- getHaloId is stable per blockId, so
+  // reusing it isn't strictly required for correctness, but keeping one id
+  // per line is simpler to reason about than re-deriving it per style.
+  const haloId = haloAvailable ? window.getHaloId(blockId) : null
+  // Ids of other lines THIS line genuinely intersects in 3D (shared array
+  // reference, mutated in place by registerHaloLine below whenever a
+  // later-built line turns out to touch this one) -- see
+  // haloIntersectionRegistry.js. A real 3D touch is a depth-comparison
+  // false positive waiting to happen (the two surfaces are ~coincident
+  // right there), not a legitimate occlusion, so these ids are exempted
+  // from the discard check entirely rather than trying to tune a
+  // tolerance around it.
+  const haloImmuneIds = haloAvailable ? new Array(window.HALO_MAX_IMMUNE_IDS).fill(-1) : null
+  if (haloAvailable) {
+    window.registerHaloLine(blockId, origin, normalised, (partnerId) => {
+      const slot = haloImmuneIds.indexOf(-1)
+      if (slot !== -1) haloImmuneIds[slot] = partnerId
+    })
+  }
+
+  // Builds one inflated companion mesh sized for a given style's real glyph
+  // radius. Every style gets its OWN companion (rather than one shared,
+  // roughly-averaged size) so the dilated footprint actually matches what's
+  // on screen -- a thin plain_line shouldn't punch as wide a gap as a fat
+  // ringed_tube. Only the currently-active style's companion is ever
+  // visible at once (see applyGlyphVisibility's haloCompanion*.visible
+  // lines below), so the depth prepass never sees two different-sized
+  // footprints fighting each other for the same line. Margin kept as small
+  // as practical (was 0.051+0.25, then 0.051+0.03, now +0.01) -- any extra
+  // 3D-geometry margin here still elongates at shallow crossing angles
+  // (scales with 1/sin(angle)), which is the exact sharp-point problem the
+  // screen-space dilate step (HaloDilatePass.jsx) exists to avoid. This
+  // margin's only job now is clearing self-occlusion/edge noise at the
+  // companion/real-surface boundary -- the visible gap shape should come
+  // almost entirely from dilation.
+  const buildHaloCompanion = (baseRadius) => {
+    const radius = baseRadius + 0.01
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, distance, 12),
+      window.createHaloIdMaterial(haloId)
+    )
+    mesh.userData.zoomInvariantRadius = radius
+    mesh.position.copy(midPoint)
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
+    mesh.layers.set(window.HALO_LAYER)
+    mesh.visible = false
+    group.add(mesh)
+    return mesh
+  }
+
   // 1. TECHNIQUE STYLE: Plain Line. WebGL clamps LineBasicMaterial's
   // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
   // real solid-mesh line is the only way to make this style visibly
@@ -187,6 +257,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const plainLineThickGroup = new THREE.Group()
   group.add(plainLineThickGroup)
 
+  // No true 3D radius (it's a screen-space fat line, not a solid), so its
+  // companion uses the same thin nominal size the collision-accent ring
+  // overlay falls back to for this style (see getAccentRadius below).
+  const haloCompanionPlainLine = haloAvailable ? buildHaloCompanion(0.035) : null
+  if (haloAvailable) window.applyHaloDiscardMaterial(plainLineThickMat, haloId, haloImmuneIds)
+
   // Plain Line (thick) is a "0 radius" glyph, sharing the bigger,
   // zoom-responsive THICK_DASHED_* sizing with plain_tube (see
   // rebuildThickDashedGlyphs) so the dashed look is consistent across every
@@ -219,66 +295,8 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   cylinder.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(cylinder)
 
-  // Haloed-line GPU depth-trick (docs/halos-epic-plan.md), plain_tube style
-  // only for now. A second, invisible-in-the-main-pass "inflated" companion
-  // -- same shape, bigger radius -- tagged with the SAME zoomInvariantRadius
-  // mechanism the real cylinder uses, so it inflates/deflates in lockstep
-  // with it at every zoom level via the existing, already-correct
-  // ZoomInvariantScaler, rather than a bespoke per-frame gap-width
-  // calculation. HALO_LAYER keeps it out of the normal color pass entirely
-  // (see HaloDepthPrepass.jsx); applyHaloDiscardMaterial wires the REAL
-  // cylinder's material to discard fragments a DIFFERENT haloable object's
-  // inflated footprint occludes.
-  // Settings > Halos toggle: gates whether a NEW line gets the companion
-  // mesh/discard wiring at all. Toggling the setting back on doesn't
-  // retroactively add it to lines already built while it was off (would
-  // need a scene regeneration to pick it up) -- HaloUniformSync's
-  // haloEnabled uniform is what makes on/off instant for already-built
-  // lines that DO have the wiring.
-  const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
-  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial && window.registerHaloLine && window.HALO_MAX_IMMUNE_IDS != null
-  // Shared across every plain_tube material that can end up as the visible
-  // glyph (cylMat here, dashedTubeMat below once it exists) -- getHaloId is
-  // stable per blockId, so reusing it isn't strictly required for
-  // correctness, but keeping one id/one companion mesh is simpler to reason
-  // about than re-deriving it twice.
-  const haloId = haloAvailable ? window.getHaloId(blockId) : null
-  // Ids of other lines THIS line genuinely intersects in 3D (shared array
-  // reference, mutated in place by registerHaloLine below whenever a
-  // later-built line turns out to touch this one) -- see
-  // haloIntersectionRegistry.js. A real 3D touch is a depth-comparison
-  // false positive waiting to happen (the two surfaces are ~coincident
-  // right there), not a legitimate occlusion, so these ids are exempted
-  // from the discard check entirely rather than trying to tune a
-  // tolerance around it.
-  const haloImmuneIds = haloAvailable ? new Array(window.HALO_MAX_IMMUNE_IDS).fill(-1) : null
-  if (haloAvailable) {
-    window.registerHaloLine(blockId, origin, normalised, (partnerId) => {
-      const slot = haloImmuneIds.indexOf(-1)
-      if (slot !== -1) haloImmuneIds[slot] = partnerId
-    })
-
-    // As small as practical (was 0.051+0.25, then 0.051+0.03) -- any extra
-    // 3D-geometry margin here still elongates at shallow crossing angles
-    // (scales with 1/sin(angle)), which is the exact sharp-point problem
-    // the screen-space dilate step (HaloDilatePass.jsx) exists to avoid.
-    // This margin's only job now is clearing self-occlusion/edge noise at
-    // the companion/real-surface boundary -- the visible gap shape should
-    // come almost entirely from dilation.
-    const HALO_RADIUS = 0.051 + 0.01
-
-    const haloCompanion = new THREE.Mesh(
-      new THREE.CylinderGeometry(HALO_RADIUS, HALO_RADIUS, distance, 12),
-      window.createHaloIdMaterial(haloId)
-    )
-    haloCompanion.userData.zoomInvariantRadius = HALO_RADIUS
-    haloCompanion.position.copy(midPoint)
-    haloCompanion.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
-    haloCompanion.layers.set(window.HALO_LAYER)
-    group.add(haloCompanion)
-
-    window.applyHaloDiscardMaterial(cylMat, haloId, haloImmuneIds)
-  }
+  const haloCompanionPlainTube = haloAvailable ? buildHaloCompanion(0.051) : null
+  if (haloAvailable) window.applyHaloDiscardMaterial(cylMat, haloId, haloImmuneIds)
 
   // 3b. "dashed" collision-style replacement for the plain tube: REPLACES
   // the base cylinder (rather than overlaying it) with alternating
@@ -463,6 +481,9 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   baseTube.userData.zoomInvariantRadius = 0.085
   ringedTube.add(baseTube)
 
+  const haloCompanionRingedTube = haloAvailable ? buildHaloCompanion(0.085) : null
+  if (haloAvailable) window.applyHaloDiscardMaterial(ringedTubeMat, haloId, haloImmuneIds)
+
   // "dashed" collision style REPLACES the base tube (rather than overlaying
   // it) with alternating solid/gap segments across collision zones, exactly
   // like plain_tube's dashedTubeGroup -- reuses the same ring texture
@@ -485,6 +506,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       roughness: RINGED_TUBE_ROUGHNESS,
       metalness: RINGED_TUBE_METALNESS,
     })
+    // A fresh material every call (see the comment above), so a colliding
+    // ringed_tube's own gap needs the same per-segment discard wiring
+    // dashedTubeMat gets for plain_tube -- otherwise its dashed replacement
+    // never discards its own occluded fragments even though other lines
+    // still gap correctly around it.
+    if (haloAvailable) window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds)
     const segment = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, height, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(height)), mat)
     segment.userData.zoomInvariantRadius = 0.085
     segment.position.set(0, (start + end) / 2, 0)
@@ -693,6 +720,15 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     // same as every other style.
     collisionAccentRinged.visible = hasAccent && collisionStyle === 'ringed'
     collisionAccentDarkTexture.visible = hasAccent && collisionStyle === 'dark_texture'
+
+    // Only the active style's own companion should ever be on HALO_LAYER at
+    // once -- three differently-sized footprints for the same line would
+    // fight each other in the depth prepass (see buildHaloCompanion above).
+    if (haloAvailable) {
+      haloCompanionPlainLine.visible = activeStyle === 'plain_line'
+      haloCompanionPlainTube.visible = activeStyle === 'plain_tube'
+      haloCompanionRingedTube.visible = activeStyle === 'ringed_tube'
+    }
   }
 
   // Lets an external pass (tubeCollision.js) re-apply visibility after
