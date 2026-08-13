@@ -17,6 +17,9 @@ const BUILT_IN_BLOCK_TYPES = new Set(
 )
 
 const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
+const TRASH_BLOCK_XML_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-xml'
+const TRASH_BLOCK_ID_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-id'
+const TRASH_HIT_PADDING = 6
 
 function canonicalizeNode(node) {
   const tagName = node.tagName?.toLowerCase()
@@ -49,21 +52,49 @@ function canonicalizeWorkspaceXml(xmlText) {
   }
 }
 
-function rectsIntersect(a, b) {
-  return !!a && !!b && a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top
+function rectContainsPoint(rect, x, y, padding = 0) {
+  return !!rect &&
+    x >= rect.left - padding &&
+    x <= rect.right + padding &&
+    y >= rect.top - padding &&
+    y <= rect.bottom + padding
 }
 
 function getDeletedBlockLabel(block) {
   return block.toString?.(48) || block.type || 'Deleted block'
 }
 
+function getBlockPreviewSvg(block) {
+  const root = block.getSvgRoot?.()
+  const bounds = root?.getBBox?.()
+  if (!root || !bounds?.width || !bounds?.height) return ''
+
+  const clone = root.cloneNode(true)
+  clone.removeAttribute('transform')
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="${Math.floor(bounds.x)} ${Math.floor(bounds.y)} ${Math.ceil(bounds.width)} ${Math.ceil(bounds.height)}">
+      ${clone.outerHTML}
+    </svg>
+  `
+}
+
+function toWorkspaceXmlText(xmlText) {
+  const dom = Blockly.utils.xml.textToDom(xmlText)
+  if (dom.tagName?.toLowerCase() === 'xml') return xmlText
+
+  const xml = Blockly.utils.xml.createElement('xml')
+  xml.appendChild(dom)
+  return Blockly.Xml.domToText(xml)
+}
+
 function WorkspaceControls({
   workspace,
-  trashOpen,
   trashTargetRef,
+  trashIconRef,
   trashPanelOpen,
   recentDeletedBlocks,
   onTrashClick,
+  onDeletedDragStart,
   onRestoreDeleted,
 }) {
   const stopWorkspaceGesture = (event) => {
@@ -104,7 +135,7 @@ function WorkspaceControls({
         title="Drag a block here to delete it"
         onClick={onTrashClick}
       >
-        <span className={`workspace-trash-icon${trashOpen ? ' is-open' : ''}`}>
+        <span ref={trashIconRef} className="workspace-trash-icon">
           <Delete theme="outline" size="36" fill="#333" />
         </span>
       </button>
@@ -116,9 +147,18 @@ function WorkspaceControls({
                 key={block.id}
                 type="button"
                 className="workspace-trash-item"
+                draggable
+                onDragStart={(event) => onDeletedDragStart(event, block)}
                 onClick={() => onRestoreDeleted(block.id)}
               >
-                {block.label}
+                {block.previewSvg ? (
+                  <span
+                    className="workspace-trash-item-preview"
+                    dangerouslySetInnerHTML={{ __html: block.previewSvg }}
+                  />
+                ) : (
+                  block.label
+                )}
               </button>
             ))
           ) : (
@@ -140,17 +180,16 @@ export default function BlocksCanvas({
   const workspaceHostRef = useRef(null)
   const onObjectsChangeRef = useRef(onObjectsChange)
   const trashTargetRef = useRef(null)
+  const trashIconRef = useRef(null)
   const draggingBlockIdRef = useRef(null)
   const dragOverTrashRef = useRef(false)
   const lastSelectedBlockIdRef = useRef(null)
   const trashAnimationTimeoutRef = useRef(0)
   const trashDeleteFrameRef = useRef(0)
   const pendingTrashDeleteRef = useRef(null)
-  const lastPointerRef = useRef({ clientX: 0, clientY: 0 })
   const [categoryId, setCategoryId] = useState('create')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [myBlockDialog, setMyBlockDialog] = useState(null)
-  const [trashOpen, setTrashOpen] = useState(false)
   const [trashPanelOpen, setTrashPanelOpen] = useState(false)
   const [recentDeletedBlocks, setRecentDeletedBlocks] = useState([])
 
@@ -233,12 +272,13 @@ export default function BlocksCanvas({
 
   const closeTrashSoon = useCallback(() => {
     window.clearTimeout(trashAnimationTimeoutRef.current)
-    trashAnimationTimeoutRef.current = window.setTimeout(() => setTrashOpen(false), 180)
+    trashAnimationTimeoutRef.current = window.setTimeout(() => {
+      trashIconRef.current?.classList.remove('is-open')
+    }, 180)
   }, [])
 
-  const isPointerOverTrash = useCallback((clientX, clientY) => {
-    const rect = trashTargetRef.current?.getBoundingClientRect()
-    return !!rect && clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  const setTrashOpenVisual = useCallback((open) => {
+    trashIconRef.current?.classList.toggle('is-open', open)
   }, [])
 
   const isBlockOverTrash = useCallback((blockId) => {
@@ -246,7 +286,14 @@ export default function BlocksCanvas({
     const block = workspace.getBlockById(blockId)
     const blockRect = block?.getSvgRoot?.()?.getBoundingClientRect?.()
     const trashRect = trashTargetRef.current?.getBoundingClientRect()
-    return rectsIntersect(blockRect, trashRect)
+    if (!blockRect || !trashRect) return false
+
+    return rectContainsPoint(
+      trashRect,
+      blockRect.left + blockRect.width / 2,
+      blockRect.top + blockRect.height / 2,
+      TRASH_HIT_PADDING,
+    )
   }, [workspace])
 
   const deleteBlockById = useCallback((blockId) => {
@@ -257,6 +304,7 @@ export default function BlocksCanvas({
     const deletedBlock = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       label: getDeletedBlockLabel(block),
+      previewSvg: getBlockPreviewSvg(block),
       xmlText: Blockly.Xml.domToText(Blockly.Xml.blockToDomWithXY(block, false)),
     }
 
@@ -277,7 +325,7 @@ export default function BlocksCanvas({
     window.cancelAnimationFrame(trashDeleteFrameRef.current)
     pendingTrashDeleteRef.current = blockId
     setTrashPanelOpen(false)
-    setTrashOpen(true)
+    setTrashOpenVisual(true)
 
     trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
       trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
@@ -289,28 +337,36 @@ export default function BlocksCanvas({
         closeTrashSoon()
       })
     })
-  }, [closeTrashSoon, deleteBlockById])
+  }, [closeTrashSoon, deleteBlockById, setTrashOpenVisual])
 
   const handleTrashClick = useCallback(() => {
     if (draggingBlockIdRef.current || pendingTrashDeleteRef.current) return
     setTrashPanelOpen((open) => !open)
   }, [])
 
-  const handleRestoreDeletedBlock = useCallback((deletedBlockId) => {
-    if (!workspace) return
-    const deletedBlock = recentDeletedBlocks.find((block) => block.id === deletedBlockId)
-    if (!deletedBlock) return
+  const restoreDeletedBlock = useCallback((deletedBlock, options = {}) => {
+    if (!workspace || !deletedBlock) return false
 
-    try {
-      const dom = Blockly.utils.xml.textToDom(deletedBlock.xmlText)
-      Blockly.Xml.appendDomToWorkspace(dom, workspace)
-      setRecentDeletedBlocks((blocks) => blocks.filter((block) => block.id !== deletedBlockId))
+    if (addCompositeBlockToWorkspace(workspace, toWorkspaceXmlText(deletedBlock.xmlText), options)) {
+      setRecentDeletedBlocks((blocks) => blocks.filter((block) => block.id !== deletedBlock.id))
       setTrashPanelOpen(false)
       syncScene(workspace)
-    } catch (err) {
-      console.error('[GeoScratch] Failed to restore deleted block:', err)
+      return true
     }
-  }, [recentDeletedBlocks, syncScene, workspace])
+
+    return false
+  }, [syncScene, workspace])
+
+  const handleRestoreDeletedBlock = useCallback((deletedBlockId) => {
+    const deletedBlock = recentDeletedBlocks.find((block) => block.id === deletedBlockId)
+    restoreDeletedBlock(deletedBlock)
+  }, [recentDeletedBlocks, restoreDeletedBlock])
+
+  const handleDeletedBlockDragStart = useCallback((event, deletedBlock) => {
+    event.dataTransfer.setData(TRASH_BLOCK_XML_TRANSFER_TYPE, deletedBlock.xmlText)
+    event.dataTransfer.setData(TRASH_BLOCK_ID_TRANSFER_TYPE, deletedBlock.id)
+    event.dataTransfer.effectAllowed = 'move'
+  }, [])
 
   useEffect(() => {
     onRegisterClear?.(handleClearWorkspace)
@@ -322,29 +378,19 @@ export default function BlocksCanvas({
   }, [])
 
   useEffect(() => {
-    function handlePointerMove(event) {
-      lastPointerRef.current = { clientX: event.clientX, clientY: event.clientY }
+    function handlePointerMove() {
       if (!draggingBlockIdRef.current) return
-      const overTrash = (
-        isPointerOverTrash(event.clientX, event.clientY) ||
-        isBlockOverTrash(draggingBlockIdRef.current)
-      )
+      const overTrash = isBlockOverTrash(draggingBlockIdRef.current)
       dragOverTrashRef.current = overTrash
-      setTrashOpen(overTrash)
-    }
-
-    function handlePointerUp(event) {
-      lastPointerRef.current = { clientX: event.clientX, clientY: event.clientY }
+      setTrashOpenVisual(overTrash)
     }
 
     window.addEventListener('pointermove', handlePointerMove, true)
-    window.addEventListener('pointerup', handlePointerUp, true)
 
     return () => {
       window.removeEventListener('pointermove', handlePointerMove, true)
-      window.removeEventListener('pointerup', handlePointerUp, true)
     }
-  }, [isBlockOverTrash, isPointerOverTrash])
+  }, [isBlockOverTrash, setTrashOpenVisual])
 
   const handleBlockSelect = useCallback(
     (type) => {
@@ -423,6 +469,20 @@ export default function BlocksCanvas({
       if (!workspace) return
       const type = event.dataTransfer?.getData('application/x-geoscratch-block-type')
       const userBlockId = event.dataTransfer?.getData('application/x-geoscratch-my-block-id')
+      const trashBlockXml = event.dataTransfer?.getData(TRASH_BLOCK_XML_TRANSFER_TYPE)
+      const trashBlockId = event.dataTransfer?.getData(TRASH_BLOCK_ID_TRANSFER_TYPE)
+
+      if (trashBlockXml) {
+        const deletedBlock = recentDeletedBlocks.find((block) => block.id === trashBlockId) || {
+          id: trashBlockId,
+          xmlText: trashBlockXml,
+        }
+        restoreDeletedBlock(deletedBlock, {
+          clientX: event.clientX,
+          clientY: event.clientY,
+        })
+        return
+      }
 
       if (type) {
         addBlockToWorkspace(workspace, type, {
@@ -439,7 +499,7 @@ export default function BlocksCanvas({
         })
       }
     },
-    [workspace, handleUserBlockSelect],
+    [recentDeletedBlocks, restoreDeletedBlock, workspace, handleUserBlockSelect],
   )
 
   const handleCategorySelect = (nextCategoryId) => {
@@ -479,19 +539,18 @@ export default function BlocksCanvas({
         if (event.isStart) {
           draggingBlockIdRef.current = event.blockId || null
           dragOverTrashRef.current = false
-          setTrashPanelOpen(false)
+          setTrashPanelOpen((open) => (open ? false : open))
           return
         }
 
         const blockId = draggingBlockIdRef.current || event.blockId
         draggingBlockIdRef.current = null
-        const { clientX, clientY } = lastPointerRef.current
-        const shouldDelete = dragOverTrashRef.current || isPointerOverTrash(clientX, clientY) || isBlockOverTrash(blockId)
+        const shouldDelete = dragOverTrashRef.current || isBlockOverTrash(blockId)
         dragOverTrashRef.current = false
         if (blockId && shouldDelete) {
           scheduleTrashDelete(blockId)
         } else {
-          setTrashOpen(false)
+          setTrashOpenVisual(false)
         }
         return
       }
@@ -503,7 +562,7 @@ export default function BlocksCanvas({
 
     workspace.addChangeListener(handleSelectedBlock)
     return () => workspace.removeChangeListener(handleSelectedBlock)
-  }, [isBlockOverTrash, isPointerOverTrash, scheduleTrashDelete, workspace])
+  }, [isBlockOverTrash, scheduleTrashDelete, setTrashOpenVisual, workspace])
 
   return (
     <div id="blocks-canvas" className="blocks-shell">
@@ -568,11 +627,12 @@ export default function BlocksCanvas({
         />
         <WorkspaceControls
           workspace={workspace}
-          trashOpen={trashOpen}
           trashTargetRef={trashTargetRef}
+          trashIconRef={trashIconRef}
           trashPanelOpen={trashPanelOpen}
           recentDeletedBlocks={recentDeletedBlocks}
           onTrashClick={handleTrashClick}
+          onDeletedDragStart={handleDeletedBlockDragStart}
           onRestoreDeleted={handleRestoreDeletedBlock}
         />
       </section>
