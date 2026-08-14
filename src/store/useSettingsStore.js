@@ -1,10 +1,12 @@
 import { create } from 'zustand'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
+import { DEFAULT_COLOR_PRESET } from './colorPresets'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
+  colorPreset: DEFAULT_COLOR_PRESET,
   showLabels: true,
   showGrid: true,
   showBox: true,
@@ -14,7 +16,8 @@ const DEFAULT_SETTINGS = {
   showOriginLabel: false,
   showAxisScaleLabels: true,
   showAxisGizmo: true,
-  objectsReceiveShadows: true,
+  objectsReceiveShadows: false,
+  cameraShadowsEnabled: true,
   autoFocusOnNewObject: false,
   sphereShowGridlines: false,
   teapotShowGridlines: false,

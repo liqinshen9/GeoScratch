@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 // ===================
 // 1. RUNTIME THREE.JS
@@ -13,6 +14,18 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   if (!THREE) return null
 
+  // This instance's colors, from the shared object-color framework
+  // (colorSystem.js) -- the "Line" family, shared by every glyph style
+  // below, plus a lighter/darker variant for the ringed-tube's two-band
+  // texture and the "Point" family for the t-parameter marker (which is,
+  // visually, a point -- see POINT_MARKER_RADIUS below).
+  const colorInt = (hex) => parseInt(hex.slice(1), 16)
+  const lineColor = window.GeoScratchColors.forInstance('line', blockId)
+  const lineColorLight = window.GeoScratchColors.forInstanceVariant('line', blockId, 28)
+  const lineColorDark = window.GeoScratchColors.forInstanceVariant('line', blockId, -14)
+  const pointColor = window.GeoScratchColors.forInstanceVariant('point', blockId, 24)
+  let tSphereRef = null
+
   const getRawVector = (input) => {
     if (!input) return new THREE.Vector3()
     if (input.isVector3) return input.clone()
@@ -24,7 +37,12 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const origin = getRawVector(posInput)
   let direction = getRawVector(dirInput)
   if (!Number.isFinite(direction.length()) || direction.length() === 0) {
-    direction = new THREE.Vector3(1, 0, 0)
+    // Not axis-aligned -- an axis-aligned default (e.g. (1,0,0)) makes an
+    // unconfigured line sit exactly on top of that axis, visually
+    // indistinguishable from the axis itself (its tick-mark collars are
+    // wider than the axis shaft and poke through whatever's coincident
+    // with it).
+    direction = new THREE.Vector3(1, 1, 1)
   }
 
   const normalised = direction.clone().normalize()
@@ -250,7 +268,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // sharing one material.
   const PLAIN_LINE_THICK_BASE_PX = 2.2
   const plainLineThickMat = new THREE.LineMaterial({
-    color: 0x374151,
+    color: lineColor,
     linewidth: PLAIN_LINE_THICK_BASE_PX,
     worldUnits: false,
   })
@@ -288,7 +306,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // a real shaded gradient across its curved surface, same as every other
   // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
   const cylGeom = new THREE.CylinderGeometry(0.051, 0.051, distance, 12)
-  const cylMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
+  const cylMat = new THREE.MeshStandardMaterial({ color: lineColor, roughness: 0.5, metalness: 0.1 })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
   cylinder.userData.zoomInvariantRadius = 0.051
   cylinder.position.copy(midPoint)
@@ -312,7 +330,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Same shaded material as the continuous plain tube (cylMat) -- the
   // dashed segments are that same glyph, just chopped up, so they shouldn't
   // suddenly look flat/unlit when the dashed collision style is active.
-  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.5, metalness: 0.1 })
+  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: lineColor, roughness: 0.5, metalness: 0.1 })
   // A SEPARATE material from cylMat -- when this line is ALSO the dashed
   // replacement (collision zones, or its own crossing gap), this is what's
   // actually visible, not cylMat. Without wiring it through the discard
@@ -354,10 +372,10 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Single named color for the shared "ring accent" collision overlay
   // (collisionRingTexture, below) -- pulled from HERE so retuning the whole
   // project's ring accent color later is a one-line change instead of a
-  // hunt through several materials.
-  // TODO: replace with a shared color/theme module once colors are
-  // designed project-wide; pink is a placeholder for now.
-  const RING_ACCENT_COLOR = 0xec4899
+  // hunt through several materials. Sourced from the shared object-color
+  // framework's "accent" role (colorPresets.js), which is also what a
+  // preset switch (Settings > Colors) recolors it to.
+  const RING_ACCENT_COLOR = colorInt(window.GeoScratchColors.forRole('accent'))
 
   // Builds a small repeating 2-color striped texture (alternating bands
   // along its V axis) instead of many separate ring meshes. This is what
@@ -464,7 +482,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
   const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
   const RINGED_TUBE_METALNESS = 0.15
-  const ringedTubeTexture = makeRingTexture(0xa1a1aa, 0x3f3f46)
+  const ringedTubeTexture = makeRingTexture(colorInt(lineColorLight), colorInt(lineColorDark))
   setRingTextureRepeat(ringedTubeTexture, distance, RINGED_TUBE_RING_PERIOD, 1)
   const ringedTubeMat = new THREE.MeshStandardMaterial({
     map: ringedTubeTexture,
@@ -750,6 +768,15 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         return
       }
       applyGlyphVisibility(state.settings)
+      // Re-derive the flat-color glyphs from the active color preset. The
+      // ringed-tube texture bands and collision-accent overlays are left
+      // as-is here (regenerating their canvas textures live is out of
+      // scope) -- they pick up a new preset next time this line is rebuilt.
+      const newLineColor = window.GeoScratchColors.forInstance('line', blockId)
+      plainLineThickMat.color.set(newLineColor)
+      cylMat.color.set(newLineColor)
+      dashedTubeMat.color.set(newLineColor)
+      if (tSphereRef) tSphereRef.material.color.set(window.GeoScratchColors.forInstanceVariant('point', blockId, 24))
     })
   }
 
@@ -761,12 +788,13 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const rPoint = origin.clone().addScaledVector(direction, tVal)
     const tSphere = new THREE.Mesh(
       sphereGeom,
-      new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.4, metalness: 0.1 })
     )
     tSphere.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
     tSphere.userData.zoomInvariantUniform = true
     tSphere.position.copy(rPoint)
     group.add(tSphere)
+    tSphereRef = tSphere
     group.userData.t = tVal
     group.userData.rPoint = rPoint.clone()
   } else {
@@ -785,7 +813,7 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     line: { type: 'local', position: [midPoint.x, midPoint.y, midPoint.z] },
   }
   group.userData.labels = [
-    { anchor: 'line', text: lineLabel, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#374151' },
+    { anchor: 'line', text: lineLabel, distanceFactor: 8, offset: [0.12, 0.12, 0], color: lineColor },
   ]
   // Consumed by tubeCollision.js's worldSegment(), which needs the same
   // centre/half-length the tube's own local geometry is built around (the
@@ -818,7 +846,8 @@ export function initVector3Block() {
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+      this.setStyle(BLOCK_STYLES.CREATE_LINE)
+      this.setColour(forInstance('line', this.id))
     },
   }
 
@@ -827,7 +856,7 @@ export function initVector3Block() {
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
 
     const vecPos = valueToCode('POS') || 'new window.THREE.Vector3(0,0,0)'
-    const vecDir = valueToCode('DIR') || 'new window.THREE.Vector3(1,0,0)'
+    const vecDir = valueToCode('DIR') || 'new window.THREE.Vector3(1,1,1)'
 
     const scaleInput = block.getInput('SCALE')
     const hasScaleInput = !!(scaleInput?.connection?.targetConnection)

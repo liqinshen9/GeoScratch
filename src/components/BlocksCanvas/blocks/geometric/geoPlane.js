@@ -19,7 +19,7 @@ const initGeoPlaneBlock = () => {
       this.appendDummyInput().appendField('Plane (Geometric)')
       this.appendValueInput('pos').appendField('pos:').setCheck('vector3')
       this.appendValueInput('side').appendField('side length:').setCheck('scalar')
-      this.setStyle(BLOCK_STYLES.CREATE_LINES_PLANES)
+      this.setStyle(BLOCK_STYLES.CREATE_PLANE)
       this.setTooltip('Plane at position p, with side length s.')
       this.setDeletable(true)
       this.setMovable(true)

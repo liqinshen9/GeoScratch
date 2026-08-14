@@ -1,6 +1,8 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forRole } from '@/store/colorSystem'
+import { COLOR_ROLES } from '@/store/colorPresets'
 
 let REGISTERED = false
 
@@ -15,7 +17,8 @@ export function initVec4Block() {
         .appendField(new Blockly.FieldNumber(1), 'X').appendField(',')
         .appendField(new Blockly.FieldNumber(1), 'Y').appendField(',')
         .appendField(new Blockly.FieldNumber(1), 'Z').appendField(')')
-      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+      this.setStyle(BLOCK_STYLES.VALUE_PRIMITIVES)
+      this.setColour(forRole(COLOR_ROLES.ACCENT))
       this.setTooltip('4D Vector')
       this.setDeletable(true)
       this.setMovable(true)

@@ -32,7 +32,7 @@ export function initVectorMagnitude() {
     const isPointPlaneProjection = vVal.userData?.geoType === 'point_plane_distance_projection_vector';
     const valueLabel = vectorNotation.getLabel(vVal, 'j');
     const safeLen = (x) => (Number.isFinite(x) && x > 0 ? x : 1);
-    const headLenRatio = 0.25, headWidthRatio = 0.10;
+    const baseId = ${JSON.stringify(block.id)};
     const arrowOrigin = isPointPlaneProjection && vVal.userData.start?.isVector3
       ? vVal.userData.start.clone()
       : new THREE.Vector3(0,0,0);
@@ -40,21 +40,21 @@ export function initVectorMagnitude() {
       ? vVal.userData.end.clone()
       : vVal.clone();
 
+    const operandAColor = window.GeoScratchColors.forRole('operandA');
+    const distanceColor = window.GeoScratchColors.forRole('distance');
+    const warningColor = window.GeoScratchColors.forRole('warning');
+
     // Render vector as arrow, or sphere if zero-length
     let obj;
     if (len > 1e-8) {
-      obj = new THREE.ArrowHelper(
-        vVal.clone().normalize(),
-        arrowOrigin.clone(),
-        safeLen(len),
-        isPointPlaneProjection ? 0xca8a04 : 0x0369a1,
-        headLenRatio,
-        headWidthRatio
+      obj = window.buildVectorShaftGlyph(
+        THREE, baseId + '_v', arrowOrigin.clone(), vVal.clone().normalize(), safeLen(len),
+        isPointPlaneProjection ? distanceColor : operandAColor
       );
     } else {
       obj = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
       );
       obj.userData.zoomInvariantRadius = 0.04;
       obj.userData.zoomInvariantUniform = true;
@@ -94,12 +94,13 @@ export function initVectorMagnitude() {
         offset: isPointPlaneProjection ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection,
         className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
-        color: (!isPointPlaneProjection && len > 1e-8) ? '#0369a1' : undefined,
+        color: (!isPointPlaneProjection && len > 1e-8) ? operandAColor : undefined,
       },
     ];
 
     if (typeof threeObjStore === 'object' && threeObjStore) {
-      threeObjStore[${JSON.stringify(block.id)}] = group;
+      if (!isPointPlaneProjection) threeObjStore[baseId + '_v'] = obj;
+      threeObjStore[baseId] = group;
     }
     return group;
   })()`;

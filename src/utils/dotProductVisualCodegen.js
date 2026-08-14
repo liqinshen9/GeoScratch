@@ -61,13 +61,14 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
         .add(distanceEnd)
         .multiplyScalar(0.5);
 
+      const distanceColor = window.GeoScratchColors.forRole('distance');
       let distanceVector;
       if (distance > 1e-8) {
-        distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), 0xfacc15);
+        distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), distanceColor);
       } else {
         distanceVector = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.1 })
+          new THREE.MeshStandardMaterial({ color: distanceColor, roughness: 0.4, metalness: 0.1 })
         );
         distanceVector.position.copy(distanceStart);
       }
@@ -162,13 +163,17 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       return distance;
     }
 
-    const arrowP = new THREE.ArrowHelper(
-      (lenP > 0 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
-      origin, safeLen(lenP), 0xca8a04, headLenRatio, headWidthRatio
+    const operandAColor = window.GeoScratchColors.forRole('operandA');
+    const operandBColor = window.GeoScratchColors.forRole('operandB');
+    const resultColor = window.GeoScratchColors.forRole('result');
+
+    const arrowP = window.buildVectorShaftGlyph(
+      THREE, ${id} + '_p', origin,
+      (lenP > 0 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0)), safeLen(lenP), operandAColor
     );
-    const arrowQ = new THREE.ArrowHelper(
-      (lenQ > 0 ? vVal.clone().normalize() : new THREE.Vector3(1, 0, 0)),
-      origin, safeLen(lenQ), 0xbe185d, headLenRatio, headWidthRatio
+    const arrowQ = window.buildVectorShaftGlyph(
+      THREE, ${id} + '_q', origin,
+      (lenQ > 0 ? vVal.clone().normalize() : new THREE.Vector3(1, 0, 0)), safeLen(lenQ), operandBColor
     );
 
     const projQ = new THREE.Vector3();
@@ -179,20 +184,19 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       projQ.copy(uVal).multiplyScalar(vVal.dot(uVal) / denom);
       projLen = projQ.length();
       if (projLen > 1e-8) {
-        projObj = new THREE.ArrowHelper(
-          projQ.clone().normalize(), origin, safeLen(projLen),
-          0xbe185d, headLenRatio, headWidthRatio
+        projObj = window.buildVectorShaftGlyph(
+          THREE, ${id} + '_proj', origin, projQ.clone().normalize(), safeLen(projLen), resultColor
         );
       } else {
         projObj = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0xbe185d, roughness: 0.4, metalness: 0.1 })
+          new THREE.MeshStandardMaterial({ color: resultColor, roughness: 0.4, metalness: 0.1 })
         );
       }
     } else {
       projObj = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xbe185d, roughness: 0.4, metalness: 0.1 })
+        new THREE.MeshStandardMaterial({ color: resultColor, roughness: 0.4, metalness: 0.1 })
       );
     }
 
@@ -214,17 +218,14 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     );
     dropLine.computeLineDistances();
 
-    const tag = (o, l) => {
+    const tag = (o) => {
       o.userData.geoType = 'geo_vector';
-      o.userData.length = safeLen(l);
-      o.userData.headLenRatio = headLenRatio;
-      o.userData.headWidthRatio = headWidthRatio;
       o.userData.srcBlockId = ${id};
       return o;
     };
-    tag(arrowP, lenP);
-    tag(arrowQ, lenQ);
-    tag(projObj, projLen);
+    tag(arrowP);
+    tag(arrowQ);
+    tag(projObj);
     axisLine.userData.geoType = 'geo_helper';
     axisLine.userData.srcBlockId = ${id};
     dropLine.userData.geoType = 'geo_helper';
@@ -250,8 +251,8 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     };
     group.userData.labels = [
       ...(showOperandLabels ? [
-        { anchor: 'pTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ca8a04' },
-        { anchor: 'qTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#be185d' },
+        { anchor: 'pTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: operandAColor },
+        { anchor: 'qTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor: 8, offset: [0.12, 0.12, 0], color: operandBColor },
       ] : []),
       {
         anchor: 'formula',

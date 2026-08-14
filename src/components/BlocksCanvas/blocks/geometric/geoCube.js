@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   // Pull context strictly from the window where Three has been cleanly mounted
@@ -13,7 +14,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   const sideLength = Math.max(0.0001, Number(sideLengthInput) || 1)
   const geometry = new THREE.BoxGeometry(sideLength, sideLength, sideLength)
   const material = new THREE.MeshStandardMaterial({
-    color: 0x8b5cf6,
+    color: window.GeoScratchColors.forInstance('cube', blockId),
     roughness: 0.5,
     metalness: 0.1,
     transparent: true,
@@ -41,6 +42,15 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   mesh.userData.srcBlockId = blockId
 
   if (threeObjStore) threeObjStore[blockId] = mesh
+
+  const unsubscribe = window.GeoScratchColors.subscribeToPreset(() => {
+    if (window.threeObjStore?.[blockId] !== mesh) {
+      unsubscribe()
+      return
+    }
+    material.color.set(window.GeoScratchColors.forInstance('cube', blockId))
+  })
+
   return mesh
 }
 
@@ -53,7 +63,8 @@ export default function initGeoCubeBlock() {
   Blockly.Blocks.geo_cube = {
     init() {
       this.appendDummyInput().appendField('Cube')
-      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
+      this.setStyle(BLOCK_STYLES.CREATE_CUBE)
+      this.setColour(forInstance('cube', this.id))
       this.setTooltip('Axis-aligned cube defined by centre and side length.')
       this.setDeletable(true)
       this.setMovable(true)

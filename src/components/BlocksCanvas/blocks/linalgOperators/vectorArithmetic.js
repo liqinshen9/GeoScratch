@@ -44,29 +44,30 @@ export function initVectorArithmeticBlock() {
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
     const origin = new THREE.Vector3();
-    const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'a');
     const vLabel = vectorNotation.getLabel(vVal, 'b');
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
+    const baseId = ${JSON.stringify(block.id)};
 
     // Build input arrows
     const lenU = uVal.length();
     const lenV = vVal.length();
 
-    const arrowU = new THREE.ArrowHelper(
+    const operandAColor = window.GeoScratchColors.forRole('operandA');
+    const operandBColor = window.GeoScratchColors.forRole('operandB');
+
+    const arrowU = window.buildVectorShaftGlyph(
+      THREE, baseId + '_u', origin.clone(),
       (lenU > 0 ? uVal.clone().normalize() : new THREE.Vector3(1,0,0)),
-      origin.clone(),
-      safeLen(lenU),
-      0x1e40af, headLenRatio, headWidthRatio
+      safeLen(lenU), operandAColor
     );
 
-    const arrowV = new THREE.ArrowHelper(
+    const arrowV = window.buildVectorShaftGlyph(
+      THREE, baseId + '_v', origin.clone(),
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
-      origin.clone(),
-      safeLen(lenV),
-      0xb91c1c, headLenRatio, headWidthRatio
+      safeLen(lenV), operandBColor
     );
 
     // Compute result
@@ -86,29 +87,26 @@ export function initVectorArithmeticBlock() {
 
     let resObj;
     if (lenR > 1e-8) {
-      resObj = new THREE.ArrowHelper(
-        res.clone().normalize(), resultOrigin.clone(), safeLen(lenR),
-        0x5b21b6, headLenRatio, headWidthRatio
+      resObj = window.buildVectorShaftGlyph(
+        THREE, baseId + '_r', resultOrigin.clone(), res.clone().normalize(), safeLen(lenR),
+        isPointDifference ? window.GeoScratchColors.forInstance('vector', baseId) : window.GeoScratchColors.forRole('result')
       );
     } else {
       resObj = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+        new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forRole('warning'), roughness: 0.4, metalness: 0.1 })
       );
       resObj.userData.zoomInvariantRadius = 0.04;
       resObj.userData.zoomInvariantUniform = true;
     }
 
     // Tag metadata on part objects
-    const tag = (obj, len) => {
+    const tag = (obj) => {
       obj.userData.geoType='geo_vector';
-      obj.userData.length=safeLen(len);
-      obj.userData.headLenRatio=headLenRatio;
-      obj.userData.headWidthRatio=headWidthRatio;
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    tag(arrowU, lenU); tag(arrowV, lenV); tag(resObj, lenR);
+    tag(arrowU); tag(arrowV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
@@ -127,16 +125,16 @@ export function initVectorArithmeticBlock() {
       rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
     };
     const resultColor = isPointDifference
-      ? '#15803d'
-      : (lenR > 1e-8 ? '#5b21b6' : '#ffff00');
+      ? window.GeoScratchColors.forInstance('vector', baseId)
+      : (lenR > 1e-8 ? window.GeoScratchColors.forRole('result') : window.GeoScratchColors.forRole('warning'));
     group.userData.labels = isPointDifference
       ? [
         { anchor:'rTip', text: pointDifferenceLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
+        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
         { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
         : [

@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId, THREE, threeObjStore) {
   const point = pointInput?.isVector3 ? pointInput.clone() : new THREE.Vector3()
@@ -14,9 +15,15 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
 
   const normalUnit = normalRaw.clone().normalize()
   const planeSize = window.__geoScratchRuntimeMode === 'exercise-2' ? 28 : 12
+  // This instance's colors, from the shared object-color framework
+  // (colorSystem.js) -- the "Plane" family for the plane's own fill/edges/
+  // normal arrow, and "Point" for the defining point marker.
+  const planeColor = window.GeoScratchColors.forInstance('plane', blockId)
+  const planeFillColor = window.GeoScratchColors.forInstanceVariant('plane', blockId, 35)
+  const pointColor = window.GeoScratchColors.forInstance('point', blockId)
   const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
   const planeMat = new THREE.MeshStandardMaterial({
-    color: 0xbfdbfe,
+    color: planeFillColor,
     transparent: true,
     opacity: 0.42,
     roughness: 0.55,
@@ -27,7 +34,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   const plane = new THREE.Mesh(planeGeom, planeMat)
   const planeEdges = new THREE.LineSegments(
     new THREE.EdgesGeometry(planeGeom),
-    new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.9 })
+    new THREE.LineBasicMaterial({ color: planeColor, transparent: true, opacity: 0.9 })
   )
   plane.add(planeEdges)
   plane.setRotationFromQuaternion(
@@ -41,7 +48,7 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   // flipping the setting doesn't touch the plane mesh itself.
   const pointMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.24, 16, 12),
-    new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.35, metalness: 0.05 })
+    new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 })
   )
   pointMarker.position.copy(point)
   pointMarker.userData.zoomInvariantRadius = 0.24
@@ -49,9 +56,15 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   pointMarker.userData.geoType = 'parametric_plane_point_marker'
   pointMarker.userData.srcBlockId = blockId
 
-  const normalArrow = new THREE.ArrowHelper(normalUnit, point, normalLength, 0x3b82f6, 0.25, 0.1)
+  // buildVectorShaftGlyph self-unsubscribes from settings once
+  // threeObjStore no longer holds it under the id it was given -- so it
+  // needs its own key distinct from the plane's own blockId (which
+  // threeObjStore maps to the outer group, not this arrow).
+  const normalArrowId = blockId + '_normal'
+  const normalArrow = window.buildVectorShaftGlyph(THREE, normalArrowId, point.clone(), normalUnit.clone(), normalLength, planeColor)
   normalArrow.userData.geoType = 'parametric_plane_normal_arrow'
   normalArrow.userData.srcBlockId = blockId
+  if (threeObjStore) threeObjStore[normalArrowId] = normalArrow
 
   const pointNormalGroup = new THREE.Group()
   pointNormalGroup.add(pointMarker, normalArrow)
@@ -100,7 +113,8 @@ export function initParametricPlaneBlock() {
       this.appendDummyInput().appendField('Plane (Point-Normal)')
       this.appendValueInput('point').appendField('Point:').setCheck('vector3')
       this.appendValueInput('norm').appendField('Normal:').setCheck('vector3')
-      this.setStyle(BLOCK_STYLES.CREATE_LINES_PLANES)
+      this.setStyle(BLOCK_STYLES.CREATE_PLANE)
+      this.setColour(forInstance('plane', this.id))
       this.setTooltip('Plane defined by a point p and a normal n (normalized internally).')
       this.setDeletable(true)
       this.setMovable(true)

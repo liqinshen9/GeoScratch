@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import * as Blockly from 'blockly/core'
 import defineBlocks from '@/components/BlocksCanvas/blocks/index'
 import { BlockRegistry } from '@/components/BlocksCanvas/state/BlockRegistry'
+import { BLOCK_TYPE_OBJECT_TYPES, BLOCK_TYPE_ROLES } from '@/components/BlocksCanvas/blocks/blockColours'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useThreeStore from '@/store/useThreeStore'
+import { forInstance, forRole, subscribeToPreset } from '@/store/colorSystem'
 import { obj3DFlyoutCallback } from '@/utils/callbacks'
 import runAndSync from '@/utils/runAndSync'
 import attachResizeObserver from '@/utils/attachResizeOberver'
@@ -85,6 +87,27 @@ export function useBlocksWorkspace({
     const frameId = requestAnimationFrame(() => Blockly.svgResize(workspace))
     return () => cancelAnimationFrame(frameId)
   }, [workspaceMaximized, workspace])
+
+  // Recolors every existing block of the 7 primary creation types, plus any
+  // non-renderable value-primitive blocks (Scalar, Vector4, ...), when the
+  // color preset (Settings > Colors) changes, so blocks already sitting in
+  // the workspace stay in sync with the object-color framework's colorSystem
+  // -- the rendered 3D objects' own live-recolor is handled separately, per
+  // object type, where each mesh is built.
+  useEffect(() => {
+    if (!workspace) return
+    return subscribeToPreset(() => {
+      workspace.getAllBlocks(false).forEach((block) => {
+        const objectType = BLOCK_TYPE_OBJECT_TYPES[block.type]
+        if (objectType) {
+          block.setColour(forInstance(objectType, block.id))
+          return
+        }
+        const role = BLOCK_TYPE_ROLES[block.type]
+        if (role) block.setColour(forRole(role))
+      })
+    })
+  }, [workspace])
 
   return { workspace, registryRef, syncScene, clearObjects }
 }

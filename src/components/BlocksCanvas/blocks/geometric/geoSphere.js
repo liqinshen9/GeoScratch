@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 function geoSphereDefinition(centreInput, radiusInput, blockId) {
   const THREE = window.THREE
@@ -11,7 +12,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   const radius = Math.max(0.01, Number(radiusInput) || 1)
   const geometry = new THREE.SphereGeometry(radius, 32, 16)
   const material = new THREE.MeshStandardMaterial({
-    color: 0x3b82f6,
+    color: window.GeoScratchColors.forInstance('sphere', blockId),
     roughness: 0.5,
     metalness: 0.1,
     opacity: 0.8,
@@ -36,6 +37,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
         return
       }
       edges.visible = !!state.settings.sphereShowGridlines
+      material.color.set(window.GeoScratchColors.forInstance('sphere', blockId))
     })
   }
 
@@ -53,7 +55,8 @@ export function initGeoSphereBlock() {
   Blockly.Blocks.geo_sphere = {
     init() {
       this.appendDummyInput().appendField('Sphere')
-      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
+      this.setStyle(BLOCK_STYLES.CREATE_SPHERE)
+      this.setColour(forInstance('sphere', this.id))
       this.setTooltip('Geometric Sphere Object')
       this.setDeletable(true)
       this.setMovable(true)

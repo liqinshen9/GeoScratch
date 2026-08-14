@@ -58,11 +58,12 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
   const { pointA, pointB, midpoint, gap: distance, t1: tA, t2: tB } = result
   const hasIntersection = distance <= 1e-4
 
-  group.add(marker(midpoint, hasIntersection ? 0x22c55e : 0xf59e0b))
+  const warningColor = window.GeoScratchColors.forRole('warning')
+  group.add(marker(midpoint, hasIntersection ? 0x22c55e : warningColor))
 
   if (!hasIntersection) {
     const segmentGeometry = new THREE.BufferGeometry().setFromPoints([pointA, pointB])
-    group.add(new THREE.Line(segmentGeometry, new THREE.LineBasicMaterial({ color: 0xf59e0b })))
+    group.add(new THREE.Line(segmentGeometry, new THREE.LineBasicMaterial({ color: warningColor })))
     group.add(marker(pointA, 0x60a5fa))
     group.add(marker(pointB, 0xfb7185))
   }
@@ -86,7 +87,7 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
         : `gap=${fmt(distance)}`,
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
-      color: hasIntersection ? '#22c55e' : '#f59e0b',
+      color: hasIntersection ? '#22c55e' : warningColor,
     },
   ]
 

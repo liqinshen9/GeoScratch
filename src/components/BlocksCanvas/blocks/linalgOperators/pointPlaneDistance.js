@@ -101,7 +101,7 @@ export function initPointPlaneDistanceBlock() {
 
       const footDot = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
+        new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forRole('distance'), roughness: 0.35, metalness: 0.05 })
       );
       footDot.userData.zoomInvariantRadius = 0.04;
       footDot.userData.zoomInvariantUniform = true;
@@ -113,10 +113,14 @@ export function initPointPlaneDistanceBlock() {
       return { illustration, normalTip };
     };
 
+    const pointColor = window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)});
+    const differenceVectorColor = window.GeoScratchColors.forInstance('vector', ${JSON.stringify(block.id)});
+    const distanceColor = window.GeoScratchColors.forRole('distance');
+
     const group = new THREE.Group();
     const pointDot = new THREE.Mesh(
       new THREE.SphereGeometry(0.045, 16, 12),
-      new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
+      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 })
     );
     pointDot.userData.zoomInvariantRadius = 0.045;
     pointDot.userData.zoomInvariantUniform = true;
@@ -124,7 +128,7 @@ export function initPointPlaneDistanceBlock() {
 
     const planePointDot = new THREE.Mesh(
       new THREE.SphereGeometry(0.045, 16, 12),
-      new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 })
+      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 })
     );
     planePointDot.userData.zoomInvariantRadius = 0.045;
     planePointDot.userData.zoomInvariantUniform = true;
@@ -132,13 +136,9 @@ export function initPointPlaneDistanceBlock() {
 
     let differenceArrow = null;
     if (difference.lengthSq() > 1e-12) {
-      differenceArrow = new THREE.ArrowHelper(
-        difference.clone().normalize(),
-        planePoint.clone(),
-        difference.length(),
-        0x7c3aed,
-        0.25,
-        0.1
+      differenceArrow = window.buildVectorShaftGlyph(
+        THREE, ${JSON.stringify(block.id)} + '_diff', planePoint.clone(),
+        difference.clone().normalize(), difference.length(), differenceVectorColor
       );
       differenceArrow.userData.geoType = 'geo_vector';
       differenceArrow.userData.srcBlockId = ${JSON.stringify(block.id)};
@@ -148,14 +148,14 @@ export function initPointPlaneDistanceBlock() {
     if (distance > 1e-8) {
       segment = new THREE.Mesh(
         new THREE.CylinderGeometry(0.035, 0.035, safeLength, 18),
-        new THREE.MeshBasicMaterial({ color: 0xca8a04, transparent: true, opacity: 0.92, depthWrite: false })
+        new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.92, depthWrite: false })
       );
       segment.position.copy(midpoint);
       segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceEnd.clone().sub(distanceStart).normalize());
     } else {
       segment = new THREE.Mesh(
         new THREE.SphereGeometry(0.05, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xca8a04, roughness: 0.35, metalness: 0.05 })
+        new THREE.MeshStandardMaterial({ color: distanceColor, roughness: 0.35, metalness: 0.05 })
       );
       segment.userData.zoomInvariantRadius = 0.05;
       segment.userData.zoomInvariantUniform = true;
@@ -188,7 +188,7 @@ export function initPointPlaneDistanceBlock() {
         text: 'P - Q1 = ' + fmt(difference),
         distanceFactor: 8,
         offset: [0.12, 0.12, 0],
-        color: '#15803d',
+        color: differenceVectorColor,
       },
       {
         anchor: 'distanceMid',
@@ -208,6 +208,7 @@ export function initPointPlaneDistanceBlock() {
     ];
 
     if (typeof threeObjStore === 'object' && threeObjStore) {
+      if (differenceArrow) threeObjStore[${JSON.stringify(block.id)} + '_diff'] = differenceArrow;
       threeObjStore[${JSON.stringify(block.id)}] = group;
     }
     return group;

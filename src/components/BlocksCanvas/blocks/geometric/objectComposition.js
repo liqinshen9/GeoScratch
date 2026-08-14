@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { BLOCK_STYLES } from '../blockColours'
+import { forInstance } from '@/store/colorSystem'
 
 let REGISTERED = false
 
@@ -12,7 +13,8 @@ export default function initObjectCompositionBlocks() {
     init() {
       this.appendDummyInput().appendField('Show any point on object')
       this.appendValueInput('OBJECT').appendField('object:').setCheck('obj3D')
-      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+      this.setStyle(BLOCK_STYLES.CREATE_POINT)
+      this.setColour(forInstance('point', this.id))
       this.setTooltip('Adds a visible point marker on the connected object and returns its R3 coordinate vector.')
       this.setOutput(true, 'vector3')
     },
@@ -270,7 +272,7 @@ export default function initObjectCompositionBlocks() {
       const markerPoint = resolvePointFromParams(object, pointParams);
       const pointLabel = vectorNotation.assignAnyPointLabel(${JSON.stringify(block.id)});
 
-      const markerMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+      const markerMat = new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)}) });
       const applyPointFinish = (mat, s) => {
         mat.roughness = s.mattePoints ? 1 : 0.35;
         mat.metalness = s.mattePoints ? 0 : 0.05;
@@ -292,7 +294,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: pointLabel + ' = ' + vectorNotation.formatVector(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+        { anchor: 'q', text: pointLabel + ' = ' + vectorNotation.formatVector(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)}) },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {

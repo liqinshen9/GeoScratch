@@ -26,9 +26,12 @@ const RINGED_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED
 // Never let a very short vector produce a negative/zero shaft length.
 const MIN_SHAFT_LENGTH = 0.001
 
+// Ultimate fallback only -- reached if a caller omits `color` AND
+// window.GeoScratchColors (colorSystem.js) isn't loaded yet. Every current
+// call site passes an explicit color or relies on the GeoScratchColors
+// lookup below, so in practice this is a defensive default, not the normal
+// path.
 const VECTOR_COLOR = 0x15803d
-const RINGED_BAND_A = 0x22a355
-const RINGED_BAND_B = 0x14532d
 
 // headLength is the active style's own cone length (LINE/TUBE/RINGED_HEAD_LENGTH)
 // -- the shaft stops exactly that far short of the true tip, so the cone
@@ -72,24 +75,51 @@ function orient(object, from, to, THREE) {
   object.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to)
 }
 
+// Derives the ringed-tube's 2-tone band colors from the shaft's base color
+// -- a lighter and a darker lightness step at the same hue/saturation -- so
+// any colored vector (the default green, or an operand/result glyph reusing
+// this builder with its own color) gets a consistent ring look.
+function deriveRingBandColors(THREE, baseColor) {
+  const hsl = {}
+  new THREE.Color(baseColor).getHSL(hsl)
+  const bandA = new THREE.Color().setHSL(hsl.h, hsl.s, Math.min(1, hsl.l + 0.12)).getHex()
+  const bandB = new THREE.Color().setHSL(hsl.h, hsl.s, Math.max(0, hsl.l - 0.12)).getHex()
+  return { bandA, bandB }
+}
+
+// `color` omitted -> this instance's color from the shared object-color
+// framework (colorSystem.js), same as every other object type's glyph gets.
+// `blockId` doubles as the color seed here, so a suffixed id (an
+// operand/result glyph's own threeObjStore key, e.g. "<id>_u") still gets a
+// stable, distinct color -- callers that care about a *specific* color
+// (operand roles, a plane's normal matching its plane color, ...) just pass
+// `color` explicitly and this lookup is skipped.
+function resolveVectorColor(blockId, color) {
+  if (color != null) return color
+  const colors = typeof window !== 'undefined' ? window.GeoScratchColors : null
+  return colors ? colors.forInstance('vector', blockId) : VECTOR_COLOR
+}
+
 // Builds a vector's shaft (in all 3 styles, toggled by settings.vectorStyle)
 // plus each style's own arrowhead cone, and live-reacts to Settings changes.
 // Not shared with geoVectorLine.js -- a vector shaft is one finite,
 // already-known segment (no collision zones, no halo, no dash-zoom-sync),
 // so it's much simpler than that file's machinery.
-export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length) {
+export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length, color) {
   const group = new THREE.Group()
+  const shaftColor = resolveVectorColor(blockId, color)
+  const { bandA, bandB } = deriveRingBandColors(THREE, shaftColor)
 
   // Each style's shaft ends exactly its OWN cone's length short of the true
   // tip (origin + direction*length -- the same point the object's label is
   // anchored to), so every cone (fixed length, never zoom-scaled -- see
   // makeArrowhead) reaches exactly to the true tip, at any zoom/thickness.
-  const lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
-  const tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
-  const ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
+  let lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
+  let tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
+  let ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
 
   // Plain Line shaft
-  const fatLineMat = new THREE.LineMaterial({ color: VECTOR_COLOR, linewidth: LINE_SHAFT_PX, worldUnits: false })
+  const fatLineMat = new THREE.LineMaterial({ color: shaftColor, linewidth: LINE_SHAFT_PX, worldUnits: false })
   const fatLineGeom = new THREE.LineSegmentsGeometry()
   fatLineGeom.setPositions([origin.x, origin.y, origin.z, lineLayout.shaftEnd.x, lineLayout.shaftEnd.y, lineLayout.shaftEnd.z])
   const fatLine = new THREE.LineSegments2(fatLineGeom, fatLineMat)
@@ -99,7 +129,7 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length)
   group.add(fatLine)
 
   // Plain Tube shaft
-  const tubeMat = new THREE.MeshStandardMaterial({ color: VECTOR_COLOR, roughness: 0.5, metalness: 0.1 })
+  const tubeMat = new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.5, metalness: 0.1 })
   const tube = new THREE.Mesh(new THREE.CylinderGeometry(TUBE_SHAFT_RADIUS, TUBE_SHAFT_RADIUS, tubeLayout.shaftLength, 12), tubeMat)
   orient(tube, tubeLayout.shaftMid, direction, THREE)
   tube.userData.zoomInvariantRadius = TUBE_SHAFT_RADIUS
@@ -107,11 +137,11 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length)
   group.add(tube)
 
   // Ringed Tube shaft
-  const ringedTexture = makeRingTexture(THREE, RINGED_BAND_A, RINGED_BAND_B)
+  const ringedTexture = makeRingTexture(THREE, bandA, bandB)
   setRingTextureRepeat(ringedTexture, ringedLayout.shaftLength, RINGED_RING_PERIOD)
   const ringedMat = new THREE.MeshStandardMaterial({
     map: ringedTexture,
-    emissive: RINGED_BAND_A,
+    emissive: bandA,
     emissiveIntensity: 0.15,
     roughness: 0.75,
     metalness: 0.15,
@@ -150,9 +180,9 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length)
     return mesh
   }
   // Plain Line's cone is unlit to match its own flat, unshaded shaft.
-  const coneLine = makeArrowhead(LINE_HEAD_RADIUS, LINE_HEAD_LENGTH, lineLayout.shaftEnd, new THREE.MeshLambertMaterial({ color: VECTOR_COLOR }))
-  const coneTube = makeArrowhead(TUBE_HEAD_RADIUS, TUBE_HEAD_LENGTH, tubeLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: VECTOR_COLOR, roughness: 0.4, metalness: 0.1 }))
-  const coneRinged = makeArrowhead(RINGED_HEAD_RADIUS, RINGED_HEAD_LENGTH, ringedLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: VECTOR_COLOR, roughness: 0.4, metalness: 0.1 }))
+  const coneLine = makeArrowhead(LINE_HEAD_RADIUS, LINE_HEAD_LENGTH, lineLayout.shaftEnd, new THREE.MeshLambertMaterial({ color: shaftColor }))
+  const coneTube = makeArrowhead(TUBE_HEAD_RADIUS, TUBE_HEAD_LENGTH, tubeLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }))
+  const coneRinged = makeArrowhead(RINGED_HEAD_RADIUS, RINGED_HEAD_LENGTH, ringedLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }))
 
   const applyVectorStyle = (settings) => {
     const activeStyle = settings.vectorStyle || LINE_STYLES.PLAIN_LINE
@@ -172,6 +202,45 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length)
       applyVectorStyle(state.settings)
     })
   }
+
+  // Rescales the glyph to a new length in place, e.g. Vector Transform's
+  // scalar-scale step -- rebuilds each style's shaft geometry (its length
+  // changed) and repositions its cone (fixed length/radius, just moves to
+  // the new shaftEnd). Kept as a userData method rather than callers
+  // re-invoking buildVectorShaftGlyph so a rescale doesn't have to also
+  // re-wire the settings subscription or replace the group in threeObjStore.
+  group.userData.setVectorLength = (newLength) => {
+    length = Math.max(0, newLength)
+    lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
+    tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
+    ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
+
+    fatLineGeom.setPositions([origin.x, origin.y, origin.z, lineLayout.shaftEnd.x, lineLayout.shaftEnd.y, lineLayout.shaftEnd.z])
+
+    tube.geometry.dispose()
+    tube.geometry = new THREE.CylinderGeometry(TUBE_SHAFT_RADIUS, TUBE_SHAFT_RADIUS, tubeLayout.shaftLength, 12)
+    orient(tube, tubeLayout.shaftMid, direction, THREE)
+
+    ringedTube.geometry.dispose()
+    ringedTube.geometry = new THREE.CylinderGeometry(
+      RINGED_SHAFT_RADIUS,
+      RINGED_SHAFT_RADIUS,
+      ringedLayout.shaftLength,
+      RINGED_RADIAL_SEGMENTS,
+      RINGED_HEIGHT_SEGMENTS(ringedLayout.shaftLength)
+    )
+    orient(ringedTube, ringedLayout.shaftMid, direction, THREE)
+    setRingTextureRepeat(ringedTexture, ringedLayout.shaftLength, RINGED_RING_PERIOD)
+
+    orient(coneLine, lineLayout.shaftEnd, direction, THREE)
+    orient(coneTube, tubeLayout.shaftEnd, direction, THREE)
+    orient(coneRinged, ringedLayout.shaftEnd, direction, THREE)
+
+    group.userData.vectorLength = length
+  }
+  group.userData.vectorOrigin = origin
+  group.userData.vectorDirection = direction
+  group.userData.vectorLength = length
 
   return group
 }

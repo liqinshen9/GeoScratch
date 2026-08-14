@@ -44,9 +44,9 @@ export function initVectorTransformBlock() {
       const obj = ${tgt};
       if (!obj || !obj.isObject3D) return obj;
 
-      // Allow obj to be the ArrowHelper itself or a group containing it
-      const arrow = obj.isArrowHelper ? obj
-                   : (obj.children || []).find(c => c.isArrowHelper);
+      // Allow obj to be the vector shaft glyph itself or a group containing it
+      const arrow = typeof obj.userData?.setVectorLength === 'function' ? obj
+                   : (obj.children || []).find(c => typeof c.userData?.setVectorLength === 'function');
 
       const R = ${rot};
       if (R && R.isMatrix4) {
@@ -62,13 +62,10 @@ export function initVectorTransformBlock() {
 
       const s = ${scale};
       if (typeof s === 'number' && isFinite(s)) {
-        if (arrow && arrow.isArrowHelper) {
-          const currLen = arrow.userData.length ?? arrow.length ?? 1;
+        if (arrow) {
+          const currLen = arrow.userData.vectorLength ?? 1;
           const newLen = Math.max(0, currLen * s);
-          arrow.userData.length = newLen;
-          const hlr = arrow.userData.headLenRatio ?? 0.25;
-          const hwr = arrow.userData.headWidthRatio ?? 0.10;
-          arrow.setLength(newLen, hlr * newLen, hwr * newLen);
+          arrow.userData.setVectorLength(newLen);
         } else {
           obj.scale.multiplyScalar(s);
         }

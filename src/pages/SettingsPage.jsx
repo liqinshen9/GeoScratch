@@ -1,6 +1,7 @@
 import React, { useState } from 'react' // Import useState for feedback
 import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
+import { COLOR_PRESETS } from '../store/colorPresets'
 import { Button } from '@/components/ui/button'
 
 function ToggleRow({ label, description, checked, onChange }) {
@@ -76,17 +77,47 @@ export default function SettingsPage() {
               onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
             />
             <ToggleRow
+              label="Zoom-Invariant Line & Point Sizing"
+              description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
+              checked={settings.zoomInvariantSizing}
+              onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+            />
+          </SettingsSection>
+
+          <SettingsSection title="Shadows">
+            <ToggleRow
               label="Object Shadows"
               description="Let objects receive shadows cast by other objects"
               checked={settings.objectsReceiveShadows}
               onChange={(v) => updateSetting('objectsReceiveShadows', v)}
             />
             <ToggleRow
-              label="Zoom-Invariant Line & Point Sizing"
-              description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
-              checked={settings.zoomInvariantSizing}
-              onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+              label="Camera Shadows"
+              description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
+              checked={settings.cameraShadowsEnabled}
+              onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
             />
+          </SettingsSection>
+
+          <SettingsSection title="Colors">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Color Preset</label>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its
+                own color family, and every block matches the color of the object it renders.
+              </p>
+              <select
+                value={settings.colorPreset}
+                onChange={(e) => updateSetting('colorPreset', e.target.value)}
+                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+              >
+                {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </SettingsSection>
 
           <SettingsSection title="Points">

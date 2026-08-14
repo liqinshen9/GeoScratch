@@ -9,6 +9,17 @@ const PLAIN_TUBE_RADIUS = 0.051
 // where its centerline does. Exactly the tube's radius, no extra buffer.
 const SOLID_INFLATE = PLAIN_TUBE_RADIUS
 
+// A plane has no inside -- a line crossing through it does so at a single
+// point, which isn't a meaningful "passing through solid geometry" collision
+// the way a sphere/cube/teapot crossing is. Only a line that actually runs
+// ALONG the plane's surface (parallel to it, and close enough to lie in it)
+// gets a collision zone at all; see findLinePlaneCollisionZone. Expressed as
+// |direction . normal| (both unit vectors), so 0 is exactly parallel --
+// small enough to exclude any real crossing angle, generous enough to
+// tolerate a user-typed direction that isn't exactly perpendicular to the
+// normal by floating-point rounding.
+const PLANE_PARALLEL_DOT_TOLERANCE = 0.02
+
 // srcBlockId-tagged top-level geoTypes that represent solid/blocking geometry
 // a line's tube can visibly collide with. Line-vs-line collisions are
 // intentionally not handled here -- those will get a halo treatment instead
@@ -41,6 +52,30 @@ function worldSegment(group) {
   const worldDirection = unitDirection.clone().transformDirection(group.matrixWorld).normalize()
 
   return { origin: worldOrigin, direction: worldDirection, halfExtent: segmentHalfLength ?? 20 }
+}
+
+// Mirrors worldSegment() above, for a point_normal_plane_group -- the
+// plane's own defining point/normal/size are stored in local space at build
+// time (see parametricPlane.js), so they need matrixWorld applied to compare
+// against a line's already-world-space segment. basisU/basisV reconstruct
+// the exact same local rotation parametricPlane.js uses to orient its mesh
+// from its default +Z facing to the normal, so they line up with the
+// rendered square's own edges, not just some arbitrary perpendicular pair.
+function worldPlaneFrame(obj) {
+  const { point, normalUnit, planeSize } = obj.userData
+  if (!point?.isVector3 || !normalUnit?.isVector3 || !Number.isFinite(planeSize)) return null
+
+  obj.updateMatrixWorld(true)
+  const worldPoint = point.clone().applyMatrix4(obj.matrixWorld)
+  const worldNormal = normalUnit.clone().transformDirection(obj.matrixWorld).normalize()
+  const worldScale = obj.getWorldScale(new THREE.Vector3())
+  const halfSize = (planeSize / 2) * ((worldScale.x + worldScale.y + worldScale.z) / 3)
+
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalUnit)
+  const basisU = new THREE.Vector3(1, 0, 0).applyQuaternion(quat).transformDirection(obj.matrixWorld).normalize()
+  const basisV = new THREE.Vector3(0, 1, 0).applyQuaternion(quat).transformDirection(obj.matrixWorld).normalize()
+
+  return { point: worldPoint, normal: worldNormal, halfSize, basisU, basisV }
 }
 
 // Analytic ray/segment vs sphere intersection, clamped to [tMin, tMax].
@@ -121,6 +156,49 @@ function findBoxTubeCollisionZone(origin, direction, tMin, tMax, box, radius) {
   return { tEntry: findBoundary(-1), tExit: findBoundary(1) }
 }
 
+// A plane has no inside, so a line crossing through it at an angle only
+// ever touches it at a single point -- not the kind of "passing through
+// solid geometry" a collision zone is meant to flag. Only a line that's
+// both parallel to the plane AND close enough to lie in its surface gets a
+// zone at all, clipped to the plane's own finite square (via basisU/basisV,
+// see worldPlaneFrame) rather than an unbounded plane.
+function findLinePlaneCollisionZone(origin, direction, tMin, tMax, planeCollider, radius) {
+  const { point, normal, halfSize, basisU, basisV } = planeCollider
+
+  if (Math.abs(direction.dot(normal)) > PLANE_PARALLEL_DOT_TOLERANCE) return null
+
+  const toPoint = origin.clone().sub(point)
+  if (Math.abs(toPoint.dot(normal)) > radius) return null
+
+  const u0 = toPoint.dot(basisU)
+  const v0 = toPoint.dot(basisV)
+  const du = direction.dot(basisU)
+  const dv = direction.dot(basisV)
+
+  // Liang-Barsky-style clip of the [tMin, tMax] interval against
+  // |offset + t*delta| <= half, one axis (U, then V) at a time.
+  const clipAxis = (interval, offset, delta, half) => {
+    if (!interval) return null
+    if (Math.abs(delta) < 1e-9) {
+      return Math.abs(offset) <= half ? interval : null
+    }
+    const a = (-half - offset) / delta
+    const b = (half - offset) / delta
+    const lo = Math.min(a, b)
+    const hi = Math.max(a, b)
+    const start = Math.max(interval[0], lo)
+    const end = Math.min(interval[1], hi)
+    return start <= end ? [start, end] : null
+  }
+
+  let interval = [tMin, tMax]
+  interval = clipAxis(interval, u0, du, halfSize + radius)
+  interval = clipAxis(interval, v0, dv, halfSize + radius)
+  if (!interval) return null
+
+  return { tEntry: interval[0], tExit: interval[1] }
+}
+
 function mergeZones(zones) {
   if (zones.length === 0) return []
   const sorted = [...zones].sort((a, b) => a.start - b.start)
@@ -153,9 +231,12 @@ export function applyTubeCollisions(threeObjStore) {
     .filter((entry) => entry.segment)
 
   // Spheres get an exact analytic test (radius padding baked straight in);
-  // everything else falls back to its world AABB, tested via the numerical
-  // distance search above (exact for a cube, an approximation of the true
-  // shape for less box-like solids like the teapot or a composed object).
+  // a point-normal plane gets its own parallel-and-coincident test (see
+  // findLinePlaneCollisionZone -- a plane has no inside, so an ordinary
+  // crossing angle isn't a collision at all); everything else falls back to
+  // its world AABB, tested via the numerical distance search above (exact
+  // for a cube, an approximation of the true shape for less box-like solids
+  // like the teapot or a composed object).
   const colliders = solids
     .map((obj) => {
       obj.updateMatrixWorld(true)
@@ -170,6 +251,10 @@ export function applyTubeCollisions(threeObjStore) {
         const worldRadius = obj.userData.radius * (worldScale.x + worldScale.y + worldScale.z) / 3
         return { type: 'sphere', center: worldCenter, radius: worldRadius }
       }
+      if (obj.userData?.geoType === 'point_normal_plane_group') {
+        const frame = worldPlaneFrame(obj)
+        return frame ? { type: 'plane', ...frame } : null
+      }
       const box = new THREE.Box3().setFromObject(obj)
       return box.isEmpty() ? null : { type: 'box', box }
     })
@@ -181,7 +266,9 @@ export function applyTubeCollisions(threeObjStore) {
     for (const collider of colliders) {
       const hit = collider.type === 'sphere'
         ? raySegmentSphereIntersection(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider.center, collider.radius + SOLID_INFLATE)
-        : findBoxTubeCollisionZone(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider.box, SOLID_INFLATE)
+        : collider.type === 'plane'
+          ? findLinePlaneCollisionZone(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider, SOLID_INFLATE)
+          : findBoxTubeCollisionZone(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider.box, SOLID_INFLATE)
       if (hit) {
         zonesByLine.get(group).push({
           start: Math.max(-segment.halfExtent, hit.tEntry),

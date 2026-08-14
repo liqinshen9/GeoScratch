@@ -32,13 +32,13 @@ export function initVectorProjectBlock() {
     const vVal = ${v};
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
-    const headLenRatio = 0.25, headWidthRatio = 0.10;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'u');
     const vLabel = vectorNotation.getLabel(vVal, 'v');
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const projectionLabel = 'proj ' + uLabel + ' on ' + vLabel;
+    const baseId = ${JSON.stringify(block.id)};
     const makeSegment = (start, end, color, radius = 0.035) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
@@ -130,15 +130,20 @@ export function initVectorProjectBlock() {
     // Inputs
     const lenU = uVal.length();
     const lenV = vVal.length();
+    const operandAColor = window.GeoScratchColors.forRole('operandA');
+    const operandBColor = window.GeoScratchColors.forRole('operandB');
+    const resultColor = window.GeoScratchColors.forRole('result');
+    const warningColor = window.GeoScratchColors.forRole('warning');
+    const distanceColor = window.GeoScratchColors.forRole('distance');
 
-    const arrowU = new THREE.ArrowHelper(
-      (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1e40af, headLenRatio, headWidthRatio
+    const arrowU = window.buildVectorShaftGlyph(
+      THREE, baseId + '_u', new THREE.Vector3(0,0,0),
+      (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)), safeLen(lenU), operandAColor
     );
 
-    const arrowV = new THREE.ArrowHelper(
-      (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenV), 0xb91c1c, headLenRatio, headWidthRatio
+    const arrowV = window.buildVectorShaftGlyph(
+      THREE, baseId + '_v', new THREE.Vector3(0,0,0),
+      (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)), safeLen(lenV), operandBColor
     );
 
     // Projection u onto v
@@ -158,17 +163,16 @@ export function initVectorProjectBlock() {
         : (pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0));
       if (projLen>1e-8) {
         projObj = isPointPlaneDistanceProjection
-          ? makeSegment(projOrigin.clone(), projOrigin.clone().add(projVec), 0xfacc15)
-          : new THREE.ArrowHelper(
-            projVec.clone().normalize(), projOrigin.clone(),
-            safeLen(projLen), 0x5b21b6, headLenRatio, headWidthRatio
+          ? makeSegment(projOrigin.clone(), projOrigin.clone().add(projVec), distanceColor)
+          : window.buildVectorShaftGlyph(
+            THREE, baseId + '_proj', projOrigin.clone(), projVec.clone().normalize(), safeLen(projLen), resultColor
           );
       } else {
         projVec.set(0,0,0);
         projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
         projObj = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+          new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
         );
         projObj.userData.zoomInvariantRadius = 0.04;
         projObj.userData.zoomInvariantUniform = true;
@@ -178,14 +182,14 @@ export function initVectorProjectBlock() {
       projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
       projObj = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
       );
       projObj.userData.zoomInvariantRadius = 0.04;
       projObj.userData.zoomInvariantUniform = true;
     }
 
-    const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};
-    tag(arrowU,lenU); tag(arrowV,lenV); tag(projObj,projLen);
+    const tag=(o)=>{o.userData.geoType='geo_vector';o.userData.srcBlockId=baseId;return o;};
+    tag(arrowU); tag(arrowV); tag(projObj);
     if (isPointPlaneDistanceProjection) projObj.userData.geoType = 'distance_segment';
 
     // Guide: tip(u) -> tip(proj). Hide it for point-plane distance so it is not mistaken for the distance.
@@ -196,7 +200,7 @@ export function initVectorProjectBlock() {
     let distanceIllustration = null;
     if (!isPointPlaneDistanceProjection) {
       const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
-      const guideMat  = new THREE.LineBasicMaterial({ color: 0xffff00, transparent:true, opacity:1 });
+      const guideMat  = new THREE.LineBasicMaterial({ color: warningColor, transparent:true, opacity:1 });
       guideLine = new THREE.Line(guideGeom, guideMat);
       guideLine.userData.geoType='geo_helper';
       guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
@@ -237,12 +241,12 @@ export function initVectorProjectBlock() {
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
-        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
+        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
       ]
         : [
-        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? '#5b21b6' : '#ffff00' },
+        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
       ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

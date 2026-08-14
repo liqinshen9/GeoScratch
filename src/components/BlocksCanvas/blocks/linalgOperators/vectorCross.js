@@ -62,40 +62,44 @@ export function initCrossProductBlock() {
     const cross = new THREE.Vector3().crossVectors(uVal, vVal);
     const lenU = uVal.length(), lenV = vVal.length(), lenC = cross.length();
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
-    const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
     const uLabel = uInfo?.label || vectorNotation.getLabel(uVal, 'p');
     const vLabel = vInfo?.label || vectorNotation.getLabel(vVal, 'q');
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const crossLabel = uLabel + ' x ' + vLabel;
     const exerciseMode = String(window.__geoScratchRuntimeMode || '').startsWith('exercise');
+    const baseId = ${JSON.stringify(block.id)};
 
-    const arrowU = new THREE.ArrowHelper(
-      (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenU), 0x1e40af, headLenRatio, headWidthRatio
+    const operandAColor = window.GeoScratchColors.forRole('operandA');
+    const operandBColor = window.GeoScratchColors.forRole('operandB');
+    const crossVectorColor = window.GeoScratchColors.forInstance('vector', baseId);
+    const warningColor = window.GeoScratchColors.forRole('warning');
+
+    const arrowU = window.buildVectorShaftGlyph(
+      THREE, baseId + '_u', new THREE.Vector3(0,0,0),
+      (lenU>0?uVal.clone().normalize():new THREE.Vector3(1,0,0)), safeLen(lenU), operandAColor
     );
-    const arrowV = new THREE.ArrowHelper(
-      (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)),
-      new THREE.Vector3(0,0,0), safeLen(lenV), 0xb91c1c, headLenRatio, headWidthRatio
+    const arrowV = window.buildVectorShaftGlyph(
+      THREE, baseId + '_v', new THREE.Vector3(0,0,0),
+      (lenV>0?vVal.clone().normalize():new THREE.Vector3(1,0,0)), safeLen(lenV), operandBColor
     );
 
     let crossObj;
     if (lenC>1e-8) {
-      crossObj = new THREE.ArrowHelper(
-        cross.clone().normalize(), new THREE.Vector3(0,0,0),
-        safeLen(lenC), 0x15803d, headLenRatio, headWidthRatio
+      crossObj = window.buildVectorShaftGlyph(
+        THREE, baseId + '_c', new THREE.Vector3(0,0,0), cross.clone().normalize(), safeLen(lenC), crossVectorColor
       );
     } else {
       crossObj = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xffff00, roughness: 0.4, metalness: 0.1 })
+        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
       );
       crossObj.userData.zoomInvariantRadius = 0.04;
       crossObj.userData.zoomInvariantUniform = true;
     }
 
-    const tag=(o,l)=>{o.userData.geoType='geo_vector';o.userData.length=safeLen(l);o.userData.headLenRatio=headLenRatio;o.userData.headWidthRatio=headWidthRatio;o.userData.srcBlockId=${JSON.stringify(block.id)};return o;};
-    tag(arrowU,lenU); tag(arrowV,lenV); tag(crossObj,lenC);
+    const tag=(o)=>{o.userData.geoType='geo_vector';o.userData.srcBlockId=baseId;return o;};
+    tag(arrowU); tag(arrowV); tag(crossObj);
 
     const group=new THREE.Group();
     if (exerciseMode) {
@@ -114,18 +118,19 @@ export function initCrossProductBlock() {
       vTip:{type:'world', position:[vVal.x,vVal.y,vVal.z]},
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
+    const crossLabelColor = lenC > 1e-8 ? crossVectorColor : warningColor;
     group.userData.labels = exerciseMode
       ? [
-      { anchor:'cTip', text:'n = ' + crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+      { anchor:'cTip', text:'n = ' + crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]
       : (showOperandLabels
       ? [
-      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#1e40af' },
-      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: '#b91c1c' },
-      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]
       : [
-      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: lenC > 1e-8 ? '#15803d' : '#ffff00' },
+      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]);
 
     const crossVisualKey = [

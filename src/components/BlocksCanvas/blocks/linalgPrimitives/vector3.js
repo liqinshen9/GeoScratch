@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 let REGISTERED = false
 
@@ -38,7 +39,7 @@ export function initVec3Block() {
       .appendField(new Blockly.FieldNumber(1), 'Z')
   }
 
-  function initVector3LikeBlock(block, label, tooltip, options = {}) {
+  function initVector3LikeBlock(block, label, tooltip, objectType, options = {}) {
     if (options.column) {
       appendColumnVectorFields(block, label)
     } else {
@@ -47,7 +48,8 @@ export function initVec3Block() {
     if (options.origin) {
       block.appendValueInput('ORIGIN').setCheck('vector3').appendField('from point:')
     }
-    block.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+    block.setStyle(objectType === 'point' ? BLOCK_STYLES.CREATE_POINT : BLOCK_STYLES.CREATE_VECTOR)
+    block.setColour(forInstance(objectType, block.id))
     block.setTooltip(tooltip)
     block.setDeletable(true)
     block.setMovable(true)
@@ -56,13 +58,13 @@ export function initVec3Block() {
 
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', { column: true, origin: true })
+      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', 'vector', { column: true, origin: true })
     },
   }
 
   Blockly.Blocks['linalg_point'] = {
     init() {
-      initVector3LikeBlock(this, 'Point: (', '3D point coordinate')
+      initVector3LikeBlock(this, 'Point: (', '3D point coordinate', 'point')
     },
   }
 
@@ -84,7 +86,8 @@ export function initVec3Block() {
           point: point.clone(),
         };
         ${isStandalone ? `
-        const markerMat = new THREE.MeshStandardMaterial({ color: 0x2563eb });
+        const pointColor = window.GeoScratchColors.forInstance('point', ${blockId});
+        const markerMat = new THREE.MeshStandardMaterial({ color: pointColor });
         const applyPointFinish = (mat, s) => {
           mat.roughness = s.mattePoints ? 1 : 0.35;
           mat.metalness = s.mattePoints ? 0 : 0.05;
@@ -98,7 +101,7 @@ export function initVec3Block() {
         marker.userData.srcBlockId = ${blockId};
         marker.userData.labelAnchors = { p: { type: 'world', position: [point.x, point.y, point.z] } };
         marker.userData.labels = [
-          { anchor: 'p', text: label + ' = ' + vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+          { anchor: 'p', text: label + ' = ' + vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: pointColor },
         ];
         if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = marker;
         if (window.useSettingsStore) {
@@ -125,13 +128,14 @@ export function initVec3Block() {
       const origin = ${originCode || 'new THREE.Vector3(0, 0, 0)'};
       const tip = origin.clone().add(vec);
       const len = vec.length();
+      const vectorColor = window.GeoScratchColors.forInstance('vector', ${blockId});
       let visual;
       if (len > 1e-8) {
-        visual = window.buildVectorShaftGlyph(THREE, ${blockId}, origin, vec.clone().normalize(), len);
+        visual = window.buildVectorShaftGlyph(THREE, ${blockId}, origin, vec.clone().normalize(), len, vectorColor);
       } else {
         visual = new THREE.Mesh(
           new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.4, metalness: 0.1 })
+          new THREE.MeshStandardMaterial({ color: vectorColor, roughness: 0.4, metalness: 0.1 })
         );
         visual.position.copy(origin);
         visual.userData.zoomInvariantRadius = 0.04;
@@ -141,8 +145,41 @@ export function initVec3Block() {
       visual.userData.srcBlockId = ${blockId};
       visual.userData.labelAnchors = { tip: { type: 'world', position: [tip.x, tip.y, tip.z] } };
       visual.userData.labels = [
-        { anchor: 'tip', text: label + ' = ' + vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#15803d' },
+        { anchor: 'tip', text: label + ' = ' + vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: vectorColor },
       ];
+      ${originConnected ? `
+      // "from point:" gives this vector a specific tail -- without this it
+      // rendered only the shaft, so the vector appeared to start from
+      // nowhere. Same marker look a standalone Point block gets.
+      const originPointColor = window.GeoScratchColors.forInstance('point', ${blockId});
+      const originMarkerMat = new THREE.MeshStandardMaterial({ color: originPointColor });
+      const applyOriginPointFinish = (mat, s) => {
+        mat.roughness = s.mattePoints ? 1 : 0.35;
+        mat.metalness = s.mattePoints ? 0 : 0.05;
+      };
+      applyOriginPointFinish(originMarkerMat, window.useSettingsStore?.getState().settings || {});
+      const originMarker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), originMarkerMat);
+      originMarker.position.copy(origin);
+      originMarker.userData.zoomInvariantRadius = 0.24;
+      originMarker.userData.zoomInvariantUniform = true;
+      originMarker.userData.geoType = 'linalg_vector_origin_marker';
+      originMarker.userData.srcBlockId = ${blockId};
+
+      const vectorGroup = new THREE.Group();
+      vectorGroup.add(visual, originMarker);
+      vectorGroup.userData.geoType = 'geo_vector';
+      vectorGroup.userData.srcBlockId = ${blockId};
+      vectorGroup.userData.labelAnchors = visual.userData.labelAnchors;
+      vectorGroup.userData.labels = visual.userData.labels;
+      visual = vectorGroup;
+
+      if (window.useSettingsStore) {
+        const unsubscribe = window.useSettingsStore.subscribe((state) => {
+          if (window.threeObjStore?.[${blockId}] !== visual) { unsubscribe(); return; }
+          applyOriginPointFinish(originMarkerMat, state.settings);
+        });
+      }
+      ` : ''}
       if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = visual;
       ` : ''}
       return vec;

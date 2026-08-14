@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forInstance } from '@/store/colorSystem'
 
 function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZInput, segmentsInput, blockId) {
   const THREE = window.THREE
@@ -22,7 +23,7 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
   // (size, segments, lid, body, fitLid, blinnScale)
   const geometry = new THREE.TeapotGeometry(size, segments, true, true, true, true)
   const material = new THREE.MeshStandardMaterial({
-    color: 0x3b82f6,
+    color: window.GeoScratchColors.forInstance('teapot', blockId),
     roughness: 0.5,
     metalness: 0.1,
     opacity: 0.8,
@@ -49,6 +50,7 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
         return
       }
       edges.visible = !!state.settings.teapotShowGridlines
+      material.color.set(window.GeoScratchColors.forInstance('teapot', blockId))
     })
   }
 
@@ -69,7 +71,8 @@ export function initGeoTeapotBlock() {
   Blockly.Blocks.geo_teapot = {
     init() {
       this.appendDummyInput().appendField('Teapot')
-      this.setStyle(BLOCK_STYLES.CREATE_SOLIDS)
+      this.setStyle(BLOCK_STYLES.CREATE_TEAPOT)
+      this.setColour(forInstance('teapot', this.id))
       this.setTooltip('Utah Teapot Object')
       this.setDeletable(true)
       this.setMovable(true)

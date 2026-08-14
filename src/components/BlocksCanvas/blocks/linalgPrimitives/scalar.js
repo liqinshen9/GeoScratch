@@ -1,6 +1,8 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { forRole } from '@/store/colorSystem'
+import { COLOR_ROLES } from '@/store/colorPresets'
 
 let REGISTERED = false
 
@@ -13,7 +15,8 @@ export function initScalarBlock() {
       this.appendDummyInput()
         .appendField('Scalar')
         .appendField(new Blockly.FieldNumber(1), 'scalar')
-      this.setStyle(BLOCK_STYLES.CREATE_POINTS_VECTORS)
+      this.setStyle(BLOCK_STYLES.VALUE_PRIMITIVES)
+      this.setColour(forRole(COLOR_ROLES.ACCENT))
       this.setTooltip('Vector Scalar')
       this.setDeletable(true)
       this.setMovable(true)

@@ -68,7 +68,7 @@ function CameraHandle({ onReady }) {
 const HEADLIGHT_SHADOW_MIN_FAR = 280
 const HEADLIGHT_SHADOW_FAR_MARGIN = 1.5
 
-function HeadLight({ controlsRef }) {
+function HeadLight({ controlsRef, castShadow = true }) {
   const lightRef = useRef();
   // Offset scales with camera-to-target distance (#57) so it stays a
   // small, consistent angle at any zoom instead of a fixed world vector.
@@ -102,7 +102,7 @@ function HeadLight({ controlsRef }) {
       intensity={2.5}
       decay={0}
       distance={0}
-      castShadow
+      castShadow={castShadow}
       shadow-mapSize-width={2048}
       shadow-mapSize-height={2048}
       shadow-bias={-0.001}
@@ -1161,7 +1161,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       <ambientLight intensity={0.4} />
 
       {/* 1. The Headlight (Camera Light) */}
-      <HeadLight controlsRef={controlsRef} />
+      <HeadLight controlsRef={controlsRef} castShadow={settings.cameraShadowsEnabled} />
 
       {/* 2. The Point Light */}
       <pointLight
