@@ -18,7 +18,7 @@ const POINT_VECTOR_BLOCK_TYPES = ['linalg_vec3', 'linalg_point']
 
 const SKEW_LINE_1_POINT = new THREE.Vector3(1, 2, 0)
 const SKEW_LINE_1_DIRECTION = new THREE.Vector3(1, 2, 3)
-const SKEW_LINE_2_POINT = new THREE.Vector3(4, -1, 2)
+const SKEW_LINE_2_POINT = new THREE.Vector3(5, 5, -3)
 const SKEW_LINE_2_DIRECTION = new THREE.Vector3(2, -1, 1)
 const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW_LINE_2_DIRECTION)
 const SKEW_DISTANCE = Math.abs(
@@ -534,7 +534,7 @@ export default function ExercisePage() {
                     </section>
                     <section>
                       <h3>Line L2</h3>
-                      <p>P2 = (4, -1, 2)</p>
+                      <p>P2 = (5, 5, -3)</p>
                       <p>d2 = (2, -1, 1)</p>
                     </section>
                   </div>
