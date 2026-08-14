@@ -24,6 +24,14 @@ const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW
 const SKEW_DISTANCE = Math.abs(
   SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL),
 ) / SKEW_NORMAL.length()
+const SPHERE_A_CENTRE = new THREE.Vector3(-4, 2, 1)
+const SPHERE_B_CENTRE = new THREE.Vector3(3, -1, 6)
+const SPHERE_A_RADIUS = 1.3
+const SPHERE_B_RADIUS = 0.9
+const SPHERE_DISTANCE = Math.max(
+  0,
+  SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
+)
 const EXERCISES = [
   {
     number: 1,
@@ -33,9 +41,14 @@ const EXERCISES = [
     number: 2,
     title: 'Calculate the shortest distance between two skew lines',
   },
+  {
+    number: 3,
+    title: 'Calculate the distance between two spheres',
+  },
 ]
 const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
 const LINE_INTERSECTION_3D_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
+const SCALAR_ARITHMETIC_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="scalar_arithmetic" x="0" y="0"></block></xml>'
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -150,6 +163,22 @@ function isSkewLine1Block(block) {
 
 function isSkewLine2Block(block) {
   return isLineBlock(block, SKEW_LINE_2_POINT, SKEW_LINE_2_DIRECTION)
+}
+
+function isSphereBlock(block, centre, radius) {
+  return (
+    block?.type === 'geo_sphere' &&
+    blockMatchesVec3(getInputBlock(block, 'CENTRE'), centre) &&
+    closeNumber(block.getFieldValue('RADIUS'), radius)
+  )
+}
+
+function isSphereABlock(block) {
+  return isSphereBlock(block, SPHERE_A_CENTRE, SPHERE_A_RADIUS)
+}
+
+function isSphereBBlock(block) {
+  return isSphereBlock(block, SPHERE_B_CENTRE, SPHERE_B_RADIUS)
 }
 
 function isSkewCrossProductBlock(block) {
@@ -395,12 +424,102 @@ function hasValidSkewDistanceComputation(workspace) {
   )
 }
 
-function getDistanceAnswer(objects) {
+function hasSphereBlocks(workspace) {
+  if (!workspace) return false
+  const spheres = workspace.getBlocksByType('geo_sphere', false)
+  return spheres.some(isSphereABlock) && spheres.some(isSphereBBlock)
+}
+
+function isSphereCenterDifferenceBlock(block) {
+  if (block?.type !== 'vector_arithmetic' || block.getFieldValue('OP') !== 'subtract') return false
+  const left = getInputBlock(block, 'U')
+  const right = getInputBlock(block, 'V')
+  return (
+    (blockMatchesVec3(left, SPHERE_B_CENTRE) && blockMatchesVec3(right, SPHERE_A_CENTRE)) ||
+    (blockMatchesVec3(left, SPHERE_A_CENTRE) && blockMatchesVec3(right, SPHERE_B_CENTRE))
+  )
+}
+
+function hasSphereCenterDifferenceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('vector_arithmetic', false).some(isSphereCenterDifferenceBlock)
+}
+
+function hasSphereCenterMagnitudeBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('vector_magnitude', false).some((block) => (
+    isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
+  ))
+}
+
+function isSphereCenterMagnitudeBlock(block) {
+  return block?.type === 'vector_magnitude' && isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
+}
+
+function getSphereRadiusScalar(block) {
+  if (block?.type !== 'scalar') return null
+  if (closeNumber(block.getFieldValue('scalar'), SPHERE_A_RADIUS)) return 'a'
+  if (closeNumber(block.getFieldValue('scalar'), SPHERE_B_RADIUS)) return 'b'
+  return null
+}
+
+function isSphereRadiusSumBlock(block) {
+  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'add') return false
+  const leftRadius = getSphereRadiusScalar(getInputBlock(block, 'A'))
+  const rightRadius = getSphereRadiusScalar(getInputBlock(block, 'B'))
+  return new Set([leftRadius, rightRadius]).size === 2 && leftRadius !== null && rightRadius !== null
+}
+
+function getCenterMinusOneRadius(block) {
+  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'subtract') return null
+  if (!isSphereCenterMagnitudeBlock(getInputBlock(block, 'A'))) return null
+  return getSphereRadiusScalar(getInputBlock(block, 'B'))
+}
+
+function isSphereScalarDistanceBlock(block) {
+  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'subtract') return false
+
+  if (
+    isSphereCenterMagnitudeBlock(getInputBlock(block, 'A')) &&
+    isSphereRadiusSumBlock(getInputBlock(block, 'B'))
+  ) {
+    return true
+  }
+
+  const firstSubtractedRadius = getCenterMinusOneRadius(getInputBlock(block, 'A'))
+  const secondSubtractedRadius = getSphereRadiusScalar(getInputBlock(block, 'B'))
+  return Boolean(
+    firstSubtractedRadius &&
+    secondSubtractedRadius &&
+    firstSubtractedRadius !== secondSubtractedRadius,
+  )
+}
+
+function hasSphereScalarDistanceBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('scalar_arithmetic', false).some(isSphereScalarDistanceBlock)
+}
+
+function hasValidSphereDistanceComputation(workspace) {
+  return (
+    hasSphereBlocks(workspace) &&
+    hasSphereCenterDifferenceBlock(workspace) &&
+    hasSphereCenterMagnitudeBlock(workspace) &&
+    hasSphereScalarDistanceBlock(workspace)
+  )
+}
+
+function getDistanceAnswer(objects, expectedDistance = null) {
   const distanceObject = objects.find((object) => (
     object?.userData?.geoType === 'point_plane_distance_dot' ||
-    object?.userData?.geoType === 'point_plane_distance_projection_magnitude'
+    object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
+    object?.userData?.geoType === 'sphere_sphere_distance'
   ))
-  const distance = Number(distanceObject?.userData?.distance)
+  const scalarObjects = objects.filter((object) => object?.userData?.geoType === 'scalar_arithmetic_result')
+  const scalarAnswer = Number.isFinite(expectedDistance)
+    ? scalarObjects.find((object) => closeNumber(object.userData?.value, expectedDistance, 0.01))
+    : scalarObjects[0]
+  const distance = Number(distanceObject?.userData?.distance ?? scalarAnswer?.userData?.value)
   return Number.isFinite(distance) ? distance : null
 }
 
@@ -410,15 +529,18 @@ export default function ExercisePage() {
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [activeExercise, setActiveExercise] = useState(1)
   const clearWorkspaceRef = useRef(() => {})
-  const distanceAnswer = getDistanceAnswer(objects)
   const activeExerciseConfig = EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
   const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExerciseConfig.number)
   const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
   const isSkewExercise = activeExerciseConfig.number === 2
-  const expectedDistance = isSkewExercise ? SKEW_DISTANCE : CORRECT_DISTANCE
+  const isSphereExercise = activeExerciseConfig.number === 3
+  const expectedDistance = isSkewExercise ? SKEW_DISTANCE : isSphereExercise ? SPHERE_DISTANCE : CORRECT_DISTANCE
+  const distanceAnswer = getDistanceAnswer(objects, expectedDistance)
   const hasDistanceComputation = isSkewExercise
     ? hasValidSkewDistanceComputation(workspace)
-    : hasValidDistanceComputation(workspace)
+    : isSphereExercise
+      ? hasValidSphereDistanceComputation(workspace)
+      : hasValidDistanceComputation(workspace)
   const distanceIsCorrect = distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
   const exercisePassed = distanceIsCorrect && hasDistanceComputation
   const exerciseIncorrect = distanceAnswer !== null && !exercisePassed
@@ -441,6 +563,12 @@ export default function ExercisePage() {
     difference: hasSkewPointDifferenceBlock(workspace) || hasSkewReusableDistanceBlock(workspace),
     distance: exercisePassed,
   }
+  const sphereStepCompletion = {
+    spheres: hasSphereBlocks(workspace),
+    difference: hasSphereCenterDifferenceBlock(workspace),
+    magnitude: hasSphereCenterMagnitudeBlock(workspace),
+    distance: hasSphereScalarDistanceBlock(workspace) && exercisePassed,
+  }
   const reusableBlockTemplate = exercisePassed
     ? activeExerciseConfig.number === 1
       ? {
@@ -449,11 +577,18 @@ export default function ExercisePage() {
       source: 'exercise',
       xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
     }
-      : {
+      : activeExerciseConfig.number === 2
+        ? {
       defaultName: 'Intersect 3D lines',
       description: 'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
       source: 'exercise',
       xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
+    }
+        : {
+      defaultName: 'Scalar arithmetic',
+      description: 'Save a reusable scalar arithmetic block with open inputs for two scalar values.',
+      source: 'exercise',
+      xmlText: SCALAR_ARITHMETIC_BLOCK_XML,
     }
     : null
 
@@ -557,6 +692,36 @@ export default function ExercisePage() {
                     </li>
                     <li className={skewStepCompletion.distance ? 'is-complete' : ''}>
                       Calculate the distance from that point to that helper plane.
+                    </li>
+                  </ol>
+                </>
+              ) : isSphereExercise ? (
+                <>
+                  <div className="exercise-given-values" aria-label="Given values">
+                    <section>
+                      <h3>Sphere A</h3>
+                      <p>Center A = (-4, 2, 1)</p>
+                      <p>Radius rA = 1.3</p>
+                    </section>
+                    <section>
+                      <h3>Sphere B</h3>
+                      <p>Center B = (3, -1, 6)</p>
+                      <p>Radius rB = 0.9</p>
+                    </section>
+                  </div>
+
+                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
+                    <li className={sphereStepCompletion.spheres ? 'is-complete' : ''}>
+                      Create Sphere A and Sphere B. Use Point blocks for the centers so the center-to-center vector draws in the right place.
+                    </li>
+                    <li className={sphereStepCompletion.difference ? 'is-complete' : ''}>
+                      Subtract the center points with Vector Arithmetic: B - A or A - B. This vector should run from one sphere center to the other.
+                    </li>
+                    <li className={sphereStepCompletion.magnitude ? 'is-complete' : ''}>
+                      Take Vector Magnitude of the center difference. This gives the center distance |B - A|.
+                    </li>
+                    <li className={sphereStepCompletion.distance ? 'is-complete' : ''}>
+                      Use Scalar Arithmetic blocks to calculate center distance - rA - rB.
                     </li>
                   </ol>
                 </>

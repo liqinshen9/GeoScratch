@@ -73,7 +73,14 @@ export function initVectorArithmeticBlock() {
     // Compute result
     const res = uVal.clone()[${op === 'add' ? `'add'` : `'sub'`}](vVal);
     const lenR = res.length();
-    const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && vVal.userData?.geoType === 'point_on_object_vector';
+    const isPointLike = (value) => (
+      value?.userData?.geoType === 'point_on_object_vector' ||
+      value?.userData?.geoType === 'linalg_point_vector'
+    );
+    const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && (
+      vVal.userData?.geoType === 'point_on_object_vector' ||
+      (isPointLike(uVal) && isPointLike(vVal))
+    );
     const pointLabel = vVal.userData?.label || 'Q';
     const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
     const genericResultLabel = showOperandLabels
@@ -158,6 +165,7 @@ export function initVectorArithmeticBlock() {
         start: resultOrigin.clone(),
         end: resultTip.clone(),
         label: pointDifferenceLabel,
+        pointToPoint: isPointLike(uVal) && isPointLike(vVal),
       };
     } else if (!showOperandLabels) {
       vectorNotation.setVectorMetadata(resultVector, {

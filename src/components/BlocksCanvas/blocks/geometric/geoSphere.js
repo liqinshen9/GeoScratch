@@ -10,6 +10,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   if (!THREE) return null
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const radius = Math.max(0.01, Number(radiusInput) || 1)
+  const formatCenterPoint = (point) => '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']'
   const geometry = new THREE.SphereGeometry(radius, 32, 16)
   const material = new THREE.MeshStandardMaterial({
     color: window.GeoScratchColors.forInstance('sphere', blockId),
@@ -28,6 +29,15 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
   )
   mesh.add(edges)
+  const centreMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.075, 18, 12),
+    new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.05 })
+  )
+  centreMarker.userData.geoType = 'sphere_center_marker'
+  centreMarker.userData.srcBlockId = blockId
+  centreMarker.userData.zoomInvariantRadius = 0.075
+  centreMarker.userData.zoomInvariantUniform = true
+  mesh.add(centreMarker)
 
   edges.visible = !!useSettingsStore?.getState().settings.sphereShowGridlines
   if (useSettingsStore) {
@@ -45,6 +55,18 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   mesh.userData.centre = centre.clone()
   mesh.userData.radius = radius
   mesh.userData.srcBlockId = blockId
+  mesh.userData.labelAnchors = {
+    centre: { type: 'world', position: [centre.x, centre.y, centre.z] },
+  }
+  mesh.userData.labels = [
+    {
+      anchor: 'centre',
+      text: 'center point = ' + formatCenterPoint(centre),
+      distanceFactor: 7,
+      offset: [0.12, 0.12, 0],
+      color: '#111827',
+    },
+  ]
   if (threeObjStore) threeObjStore[blockId] = mesh
   return mesh
 }

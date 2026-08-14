@@ -30,19 +30,22 @@ export function initVectorMagnitude() {
 
     const len = vVal.length();
     const isPointPlaneProjection = vVal.userData?.geoType === 'point_plane_distance_projection_vector';
+    const isPointDifference = vVal.userData?.geoType === 'point_difference_vector';
     const valueLabel = vectorNotation.getLabel(vVal, 'j');
     const safeLen = (x) => (Number.isFinite(x) && x > 0 ? x : 1);
     const baseId = ${JSON.stringify(block.id)};
-    const arrowOrigin = isPointPlaneProjection && vVal.userData.start?.isVector3
+    const usesPlacedVector = (isPointPlaneProjection || isPointDifference) && vVal.userData.start?.isVector3;
+    const arrowOrigin = usesPlacedVector
       ? vVal.userData.start.clone()
       : new THREE.Vector3(0,0,0);
-    const arrowTip = isPointPlaneProjection && vVal.userData.end?.isVector3
+    const arrowTip = (isPointPlaneProjection || isPointDifference) && vVal.userData.end?.isVector3
       ? vVal.userData.end.clone()
       : vVal.clone();
 
     const operandAColor = window.GeoScratchColors.forRole('operandA');
     const distanceColor = window.GeoScratchColors.forRole('distance');
     const warningColor = window.GeoScratchColors.forRole('warning');
+    const isPointToPointDistance = isPointDifference && vVal.userData?.pointToPoint;
 
     // Render vector as arrow, or sphere if zero-length
     let obj;
@@ -62,7 +65,21 @@ export function initVectorMagnitude() {
 
     // Group wrapper
     const group = new THREE.Group();
-    if (!isPointPlaneProjection) group.add(obj);
+    if (!isPointPlaneProjection && !isPointToPointDistance) group.add(obj);
+    if (isPointToPointDistance && len > 1e-8) {
+      const distanceVector = arrowTip.clone().sub(arrowOrigin);
+      const highlight = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.055, len, 24),
+        new THREE.MeshBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.9, depthWrite: false })
+      );
+      highlight.position.copy(arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5));
+      highlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());
+      highlight.userData.geoType = 'sphere_distance_candidate_highlight';
+      highlight.userData.srcBlockId = ${JSON.stringify(block.id)};
+      highlight.userData.start = arrowOrigin.clone();
+      highlight.userData.end = arrowTip.clone();
+      group.add(highlight);
+    }
 
     // Metadata
     group.userData.geoType = isPointPlaneProjection
@@ -71,6 +88,10 @@ export function initVectorMagnitude() {
     group.userData.srcBlockId = ${JSON.stringify(block.id)};
     group.userData.input = vVal.clone();
     group.userData.length = len;
+    if (isPointDifference) {
+      group.userData.start = arrowOrigin.clone();
+      group.userData.end = arrowTip.clone();
+    }
     if (isPointPlaneProjection) group.userData.distance = len;
 
     // Label: only one line -> "length of <name> = <len>"
@@ -86,20 +107,24 @@ export function initVectorMagnitude() {
     };
     group.userData.labels = [
       {
-        anchor: isPointPlaneProjection ? 'distanceMid' : 'tip',
+        anchor: isPointPlaneProjection || isPointToPointDistance ? 'distanceMid' : 'tip',
         text: isPointPlaneProjection
           ? 'd = ' + fmtLen
+          : isPointToPointDistance
+            ? 'center distance = ' + fmtLen
           : '|' + valueLabel + '| = ' + fmtLen,
-        distanceFactor: isPointPlaneProjection ? 6 : 8,
-        offset: isPointPlaneProjection ? [0, 0, 0] : [0.12, 0.12, 0],
-        emphasis: isPointPlaneProjection,
-        className: isPointPlaneProjection ? 'distance-highlight-label' : undefined,
-        color: (!isPointPlaneProjection && len > 1e-8) ? operandAColor : undefined,
+        distanceFactor: isPointPlaneProjection || isPointToPointDistance ? 6 : 8,
+        offset: isPointPlaneProjection || isPointToPointDistance ? [0, 0, 0] : [0.12, 0.12, 0],
+        emphasis: isPointPlaneProjection || isPointToPointDistance,
+        className: isPointPlaneProjection || isPointToPointDistance ? 'distance-highlight-label' : undefined,
+        color: isPointToPointDistance
+          ? '#facc15'
+          : (!isPointPlaneProjection && len > 1e-8) ? operandAColor : undefined,
       },
     ];
 
     if (typeof threeObjStore === 'object' && threeObjStore) {
-      if (!isPointPlaneProjection) threeObjStore[baseId + '_v'] = obj;
+      if (!isPointPlaneProjection && !isPointToPointDistance) threeObjStore[baseId + '_v'] = obj;
       threeObjStore[baseId] = group;
     }
     return group;

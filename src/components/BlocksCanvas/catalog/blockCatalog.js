@@ -84,11 +84,13 @@ export const BLOCK_CATEGORIES = {
         label: 'Vector operations',
         blocks: [
           { type: 'vector_arithmetic', label: 'Vector arithmetic' },
+          { type: 'scalar_arithmetic', label: 'Scalar arithmetic' },
           { type: 'vector_cross_product', label: 'Cross product' },
           { type: 'vector_dot_product', label: 'Dot product' },
           { type: 'vector_normalise', label: 'Normalise' },
           { type: 'vector_project', label: 'Project' },
           { type: 'vector_magnitude', label: 'Magnitude' },
+          { type: 'sphere_distance', label: 'Sphere surface distance' },
         ],
       },
     ],
