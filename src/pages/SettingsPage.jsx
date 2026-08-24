@@ -3,32 +3,52 @@ import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
 import { COLOR_PRESETS } from '../store/colorPresets'
 import { Button } from '@/components/ui/button'
+import './SettingsPage.css'
 
 function ToggleRow({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <label className="text-sm font-medium text-slate-900">{label}</label>
-        {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+    <div className="settings-row">
+      <div className="settings-row__copy">
+        <label className="settings-label">{label}</label>
+        {description && <p className="settings-description">{description}</p>}
       </div>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-5 h-5 accent-indigo-600 cursor-pointer"
+        className="settings-switch"
       />
     </div>
   )
 }
 
-function SettingsSection({ title, children }) {
+function SettingsSection({ title, children, className = '' }) {
   return (
-    <section>
-      <h2 className="text-lg font-bold text-slate-800 mb-6 border-b border-slate-100 pb-2">
-        {title}
-      </h2>
-      <div className="space-y-8">{children}</div>
+    <section className={`settings-card ${className}`}>
+      <h2 className="settings-card__title">{title}</h2>
+      <div className="settings-card__body">{children}</div>
     </section>
+  )
+}
+
+function GeometryTile({ title, children }) {
+  return (
+    <section className="settings-geometry-tile">
+      <h3 className="settings-geometry-tile__title">{title}</h3>
+      <div className="settings-geometry-tile__body">{children}</div>
+    </section>
+  )
+}
+
+function SelectField({ label, description, value, onChange, children }) {
+  return (
+    <div className="settings-field">
+      <label className="settings-label">{label}</label>
+      {description && <p className="settings-description">{description}</p>}
+      <select value={value} onChange={onChange} className="settings-select">
+        {children}
+      </select>
+    </div>
   )
 }
 
@@ -44,13 +64,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="bg-white h-[calc(100dvh-var(--app-nav-height))] overflow-y-auto">
-      <div className="max-w-2xl mx-auto px-8 py-10 h-full">
-        <header className="mb-10">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Settings</h1>
+    <div className="settings-page">
+      <div className="settings-page__inner">
+        <header className="settings-page__header">
+          <h1 className="settings-page__title">Settings</h1>
         </header>
 
-        <main className="space-y-10">
+        <main className="settings-layout">
           <SettingsSection title="Scene">
             <ToggleRow
               label="Show 3D Labels"
@@ -84,58 +104,155 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title="Shadows">
-            <ToggleRow
-              label="Object Shadows"
-              description="Let objects receive shadows cast by other objects"
-              checked={settings.objectsReceiveShadows}
-              onChange={(v) => updateSetting('objectsReceiveShadows', v)}
-            />
-            <ToggleRow
-              label="Camera Shadows"
-              description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
-              checked={settings.cameraShadowsEnabled}
-              onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
-            />
-          </SettingsSection>
+          <div className="settings-compact-group">
+            <SettingsSection title="Shadows">
+              <ToggleRow
+                label="Object Shadows"
+                description="Let objects receive shadows cast by other objects"
+                checked={settings.objectsReceiveShadows}
+                onChange={(v) => updateSetting('objectsReceiveShadows', v)}
+              />
+              <ToggleRow
+                label="Camera Shadows"
+                description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
+                checked={settings.cameraShadowsEnabled}
+                onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
+              />
+            </SettingsSection>
 
-          <SettingsSection title="Colors">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Color Preset</label>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its
-                own color family, and every block matches the color of the object it renders.
-              </p>
-              <select
+            <SettingsSection title="Colors">
+              <SelectField
+                label="Color Preset"
+                description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
                 value={settings.colorPreset}
                 onChange={(e) => updateSetting('colorPreset', e.target.value)}
-                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
               >
                 {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
                   <option key={key} value={key}>
                     {preset.label}
                   </option>
                 ))}
-              </select>
+              </SelectField>
+            </SettingsSection>
+
+            <SettingsSection title="Camera">
+              <ToggleRow
+                label="Auto-Frame Camera"
+                description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
+                checked={settings.autoFocusOnNewObject}
+                onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
+              />
+            </SettingsSection>
+
+            <SettingsSection title="Halos">
+              <ToggleRow
+                label="Enable Halos"
+                description="When a line passes in front of another line, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line styles; vectors not yet supported."
+                checked={settings.haloEnabled}
+                onChange={(v) => updateSetting('haloEnabled', v)}
+              />
+            </SettingsSection>
+          </div>
+
+          <SettingsSection title="Objects & Geometry" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Point">
+                <ToggleRow
+                  label="Extra Large Points"
+                  description={'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'}
+                  checked={settings.extraLargePoints}
+                  onChange={(v) => updateSetting('extraLargePoints', v)}
+                />
+                <ToggleRow
+                  label="Matte Points"
+                  description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
+                  checked={settings.mattePoints}
+                  onChange={(v) => updateSetting('mattePoints', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Vector">
+                <SelectField
+                  label="Vector Style"
+                  value={settings.vectorStyle}
+                  onChange={(e) => updateSetting('vectorStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Extra Thick Vectors"
+                  description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
+                  checked={settings.extraThickVectors}
+                  onChange={(v) => updateSetting('extraThickVectors', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Line">
+                <SelectField
+                  label="Line Style"
+                  value={settings.lineStyle}
+                  onChange={(e) => updateSetting('lineStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  label="Collision Style"
+                  description="How a line visually indicates passing through a solid object"
+                  value={settings.lineCollisionStyle}
+                  onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Extra Thick Lines"
+                  description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
+                  checked={settings.extraThickLines}
+                  onChange={(v) => updateSetting('extraThickLines', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Plane">
+                <ToggleRow
+                  label="Show Point & Normal"
+                  description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
+                  checked={settings.showPlanePointNormal}
+                  onChange={(v) => updateSetting('showPlanePointNormal', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Teapot">
+                <ToggleRow
+                  label="Show Gridlines"
+                  description="Display mesh edge lines on teapot objects"
+                  checked={settings.teapotShowGridlines}
+                  onChange={(v) => updateSetting('teapotShowGridlines', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Sphere">
+                <ToggleRow
+                  label="Show Gridlines"
+                  description="Display latitude/longitude edge lines on sphere objects"
+                  checked={settings.sphereShowGridlines}
+                  onChange={(v) => updateSetting('sphereShowGridlines', v)}
+                />
+              </GeometryTile>
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Points">
-            <ToggleRow
-              label="Extra Large Points"
-              description={'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'}
-              checked={settings.extraLargePoints}
-              onChange={(v) => updateSetting('extraLargePoints', v)}
-            />
-            <ToggleRow
-              label="Matte Points"
-              description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
-              checked={settings.mattePoints}
-              onChange={(v) => updateSetting('mattePoints', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Axis">
+          <SettingsSection title="Axis" className="settings-card--wide">
             <ToggleRow
               label="Show Axis Toggle in Scene"
               description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
@@ -162,130 +279,12 @@ export default function SettingsPage() {
             />
           </SettingsSection>
 
-          <SettingsSection title="Camera">
-            <ToggleRow
-              label="Auto-Frame Camera"
-              description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
-              checked={settings.autoFocusOnNewObject}
-              onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Sphere">
-            <ToggleRow
-              label="Show Gridlines"
-              description="Display latitude/longitude edge lines on sphere objects"
-              checked={settings.sphereShowGridlines}
-              onChange={(v) => updateSetting('sphereShowGridlines', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Teapot">
-            <ToggleRow
-              label="Show Gridlines"
-              description="Display mesh edge lines on teapot objects"
-              checked={settings.teapotShowGridlines}
-              onChange={(v) => updateSetting('teapotShowGridlines', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Plane">
-            <ToggleRow
-              label="Show Point & Normal"
-              description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
-              checked={settings.showPlanePointNormal}
-              onChange={(v) => updateSetting('showPlanePointNormal', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Halos">
-            <ToggleRow
-              label="Enable Halos"
-              description="When a line passes in front of another line, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line styles; vectors not yet supported."
-              checked={settings.haloEnabled}
-              onChange={(v) => updateSetting('haloEnabled', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Line">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Line Style</label>
-              <select
-                value={settings.lineStyle}
-                onChange={(e) => updateSetting('lineStyle', e.target.value)}
-                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
-              >
-                {Object.entries(LINE_STYLES).map(([key, value]) => (
-                  <option key={key} value={value}>
-                    {key.replace(/_/g, ' ').toLowerCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Collision Style</label>
-              <p className="text-xs text-slate-500 mt-0.5">
-                How a line visually indicates passing through a solid object
-              </p>
-              <select
-                value={settings.lineCollisionStyle}
-                onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
-                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
-              >
-                {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
-                  <option key={key} value={value}>
-                    {key.replace(/_/g, ' ').toLowerCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <ToggleRow
-              label="Extra Thick Lines"
-              description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
-              checked={settings.extraThickLines}
-              onChange={(v) => updateSetting('extraThickLines', v)}
-            />
-          </SettingsSection>
-
-          <SettingsSection title="Vector">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Vector Style</label>
-              <select
-                value={settings.vectorStyle}
-                onChange={(e) => updateSetting('vectorStyle', e.target.value)}
-                className="w-full p-2.5 rounded border border-slate-300 text-sm focus:border-indigo-500 outline-none"
-              >
-                {Object.entries(LINE_STYLES).map(([key, value]) => (
-                  <option key={key} value={value}>
-                    {key.replace(/_/g, ' ').toLowerCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <ToggleRow
-              label="Extra Thick Vectors"
-              description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
-              checked={settings.extraThickVectors}
-              onChange={(v) => updateSetting('extraThickVectors', v)}
-            />
-          </SettingsSection>
-
-          <div className="pt-8 border-t border-slate-100 flex items-center gap-4">
-            <Button
-              onClick={handleSave}
-              className="bg-indigo-600 hover:bg-indigo-700 h-9 px-6 text-sm font-medium"
-            >
+          <div className="settings-actions">
+            <Button onClick={handleSave} className="settings-save-button">
               {isSaving ? 'Saved!' : 'Save Changes'}
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={resetSettings}
-              className="h-9 px-4 text-sm font-medium border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-            >
+            <Button variant="outline" onClick={resetSettings} className="settings-reset-button">
               Reset Defaults
             </Button>
           </div>
