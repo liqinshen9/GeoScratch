@@ -500,6 +500,23 @@ function hasSphereScalarDistanceBlock(workspace) {
   return workspace.getBlocksByType('scalar_arithmetic', false).some(isSphereScalarDistanceBlock)
 }
 
+function blockTreeContains(block, predicate, visited = new Set()) {
+  if (!block || visited.has(block.id)) return false
+  visited.add(block.id)
+  if (predicate(block)) return true
+  return (block.inputList || []).some((input) => (
+    blockTreeContains(input.connection?.targetBlock?.(), predicate, visited)
+  ))
+}
+
+function isSphereScalarDistanceCandidateBlock(block) {
+  if (block?.type !== 'scalar_arithmetic') return false
+  return (
+    blockTreeContains(getInputBlock(block, 'A'), isSphereCenterMagnitudeBlock) ||
+    blockTreeContains(getInputBlock(block, 'B'), isSphereCenterMagnitudeBlock)
+  )
+}
+
 function hasValidSphereDistanceComputation(workspace) {
   return (
     hasSphereBlocks(workspace) &&
@@ -509,7 +526,27 @@ function hasValidSphereDistanceComputation(workspace) {
   )
 }
 
-function getDistanceAnswer(objects, expectedDistance = null) {
+function getScalarAnswerFromWorkspace(objects, workspace, blockPredicate) {
+  if (!workspace) return null
+  const scalarObject = objects.find((object) => {
+    if (object?.userData?.geoType !== 'scalar_arithmetic_result') return false
+    const sourceBlock = workspace.getBlockById?.(object.userData?.srcBlockId)
+    return blockPredicate(sourceBlock)
+  })
+  const value = Number(scalarObject?.userData?.value)
+  return Number.isFinite(value) ? value : null
+}
+
+function getDistanceAnswer(objects, expectedDistance = null, workspace = null, options = {}) {
+  if (options.isSphereExercise) {
+    const sphereScalarAnswer = getScalarAnswerFromWorkspace(
+      objects,
+      workspace,
+      isSphereScalarDistanceCandidateBlock,
+    )
+    if (sphereScalarAnswer !== null) return sphereScalarAnswer
+  }
+
   const distanceObject = objects.find((object) => (
     object?.userData?.geoType === 'point_plane_distance_dot' ||
     object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
@@ -535,7 +572,7 @@ export default function ExercisePage() {
   const isSkewExercise = activeExerciseConfig.number === 2
   const isSphereExercise = activeExerciseConfig.number === 3
   const expectedDistance = isSkewExercise ? SKEW_DISTANCE : isSphereExercise ? SPHERE_DISTANCE : CORRECT_DISTANCE
-  const distanceAnswer = getDistanceAnswer(objects, expectedDistance)
+  const distanceAnswer = getDistanceAnswer(objects, expectedDistance, workspace, { isSphereExercise })
   const hasDistanceComputation = isSkewExercise
     ? hasValidSkewDistanceComputation(workspace)
     : isSphereExercise
