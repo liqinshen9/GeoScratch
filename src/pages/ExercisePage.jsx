@@ -48,7 +48,7 @@ const EXERCISES = [
 ]
 const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
 const LINE_INTERSECTION_3D_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
-const SCALAR_ARITHMETIC_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="scalar_arithmetic" x="0" y="0"></block></xml>'
+const SPHERE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -547,6 +547,14 @@ function getDistanceAnswer(objects, expectedDistance = null, workspace = null, o
     if (sphereScalarAnswer !== null) return sphereScalarAnswer
   }
 
+  if (options.isSkewExercise) {
+    const lineIntersectionAnswer = objects.find((object) => (
+      object?.userData?.geoType === 'geo_line_intersection'
+    ))
+    const distance = Number(lineIntersectionAnswer?.userData?.distance)
+    if (Number.isFinite(distance)) return distance
+  }
+
   const distanceObject = objects.find((object) => (
     object?.userData?.geoType === 'point_plane_distance_dot' ||
     object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
@@ -572,7 +580,7 @@ export default function ExercisePage() {
   const isSkewExercise = activeExerciseConfig.number === 2
   const isSphereExercise = activeExerciseConfig.number === 3
   const expectedDistance = isSkewExercise ? SKEW_DISTANCE : isSphereExercise ? SPHERE_DISTANCE : CORRECT_DISTANCE
-  const distanceAnswer = getDistanceAnswer(objects, expectedDistance, workspace, { isSphereExercise })
+  const distanceAnswer = getDistanceAnswer(objects, expectedDistance, workspace, { isSkewExercise, isSphereExercise })
   const hasDistanceComputation = isSkewExercise
     ? hasValidSkewDistanceComputation(workspace)
     : isSphereExercise
@@ -580,8 +588,8 @@ export default function ExercisePage() {
       : hasValidDistanceComputation(workspace)
   const distanceIsCorrect = distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
   const exercisePassed = distanceIsCorrect && hasDistanceComputation
-  const exerciseIncorrect = distanceAnswer !== null && !exercisePassed
-  const answerCardClass = `exercise-answer-card${exercisePassed ? ' is-correct' : ''}${exerciseIncorrect ? ' is-incorrect' : ''}`
+  const answerIncorrect = distanceAnswer !== null && !distanceIsCorrect
+  const answerCardClass = `exercise-answer-card${distanceIsCorrect ? ' is-correct' : ''}${answerIncorrect ? ' is-incorrect' : ''}`
   const hasPlaneStep = hasExercisePlane(objects)
   const hasPointPStep = workspaceHasPointPVector(workspace)
   const hasPointQStep = hasPointQOnExercisePlane(objects)
@@ -622,10 +630,10 @@ export default function ExercisePage() {
       xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
     }
         : {
-      defaultName: 'Scalar arithmetic',
-      description: 'Save a reusable scalar arithmetic block with open inputs for two scalar values.',
+      defaultName: 'Distance between spheres',
+      description: 'Save a reusable sphere distance block with open inputs for any two spheres.',
       source: 'exercise',
-      xmlText: SCALAR_ARITHMETIC_BLOCK_XML,
+      xmlText: SPHERE_DISTANCE_BLOCK_XML,
     }
     : null
 

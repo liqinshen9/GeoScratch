@@ -8,6 +8,7 @@ import {
 } from '@/components/BlocksCanvas/catalog/blockCatalog'
 
 const GAP = 20
+const CLICK_CASCADE_OFFSET = 28
 const PIPELINE_OBJECT_TYPES = new Set(PIPELINE_DEMO_OBJECT_TYPES)
 const PIPELINE_TRANSFORM_TYPES = new Set(TRANSFORM_STEP_BLOCK_TYPES)
 
@@ -34,14 +35,48 @@ function overlaps(a, b) {
   )
 }
 
-//spiral outward from the center until we find a free rectangle.
-function findOpenSpot(workspace, newBlock) {
-  const center = getViewCenter(workspace)
-  const hw = newBlock.getHeightWidth()
-  const occupied = workspace
+function getOccupiedRects(workspace, newBlock) {
+  return workspace
     .getTopBlocks(true)
     .filter((b) => b.id !== newBlock.id)
     .map(blockRect)
+}
+
+function isOpenSpot(candidate, occupied) {
+  return !occupied.some((r) => overlaps(candidate, r))
+}
+
+function rectAt(x, y, blockSize) {
+  return { x, y, width: blockSize.width, height: blockSize.height }
+}
+
+function findCascadedOpenSpot(workspace, newBlock, preferredSpot) {
+  const hw = newBlock.getHeightWidth()
+  const occupied = getOccupiedRects(workspace, newBlock)
+
+  for (let step = 0; step < 16; step += 1) {
+    const x = preferredSpot.x + step * CLICK_CASCADE_OFFSET
+    const y = preferredSpot.y + step * CLICK_CASCADE_OFFSET
+    const candidate = rectAt(x, y, hw)
+
+    if (isOpenSpot(candidate, occupied)) {
+      return { x, y }
+    }
+  }
+
+  return findOpenSpot(workspace, newBlock, preferredSpot)
+}
+
+// Spiral outward from the center or a preferred point until we find a free rectangle.
+function findOpenSpot(workspace, newBlock, preferredSpot = null) {
+  const center = preferredSpot
+    ? {
+      x: preferredSpot.x + newBlock.getHeightWidth().width / 2,
+      y: preferredSpot.y + newBlock.getHeightWidth().height / 2,
+    }
+    : getViewCenter(workspace)
+  const hw = newBlock.getHeightWidth()
+  const occupied = getOccupiedRects(workspace, newBlock)
 
   const cellW = hw.width + GAP
   const cellH = hw.height + GAP
@@ -53,9 +88,9 @@ function findOpenSpot(workspace, newBlock) {
 
         const x = center.x - hw.width / 2 + col * cellW
         const y = center.y - hw.height / 2 + row * cellH
-        const candidate = { x, y, width: hw.width, height: hw.height }
+        const candidate = rectAt(x, y, hw)
 
-        if (!occupied.some((r) => overlaps(candidate, r))) {
+        if (isOpenSpot(candidate, occupied)) {
           return { x, y }
         }
       }
@@ -131,7 +166,11 @@ export function addBlockToWorkspace(workspace, type, options = {}) {
     const dropPoint = hasDropPoint
       ? clientToWorkspaceXY(workspace, options.clientX, options.clientY, block)
       : null
-    const { x, y } = dropPoint || pipelineAnchor || findOpenSpot(workspace, block)
+    const { x, y } = dropPoint || (
+      pipelineAnchor
+        ? findCascadedOpenSpot(workspace, block, pipelineAnchor)
+        : findOpenSpot(workspace, block)
+    )
     const xy = block.getRelativeToSurfaceXY()
     block.moveBy(x - xy.x, y - xy.y)
 
