@@ -838,7 +838,7 @@ export function initVector3Block() {
 
   Blockly.Blocks.geo_vector = {
     init() {
-      this.appendDummyInput().appendField('Vector Equation of Line')
+      this.appendDummyInput().appendField('Line')
       this.appendValueInput('POS').appendField('Position:').setCheck('vector3')
       this.appendValueInput('DIR').appendField('Direction:').setCheck('vector3')
       this.appendValueInput('SCALE').appendField('t:').setCheck('scalar')

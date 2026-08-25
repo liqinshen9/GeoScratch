@@ -110,7 +110,7 @@ export function initParametricPlaneBlock() {
 
   Blockly.Blocks.parametric_plane = {
     init() {
-      this.appendDummyInput().appendField('Plane (Point-Normal)')
+      this.appendDummyInput().appendField('Plane')
       this.appendValueInput('point').appendField('Point:').setCheck('vector3')
       this.appendValueInput('norm').appendField('Normal:').setCheck('vector3')
       this.setStyle(BLOCK_STYLES.CREATE_PLANE)

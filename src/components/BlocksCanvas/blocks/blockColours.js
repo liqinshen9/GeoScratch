@@ -39,7 +39,7 @@ export const BLOCK_TYPE_OBJECT_TYPES = Object.freeze({
   linalg_point: OBJECT_TYPES.POINT,
   geo_show_point_on_object: OBJECT_TYPES.POINT,
   linalg_vec3: OBJECT_TYPES.VECTOR,
-  geo_vector: OBJECT_TYPES.LINE, // "Vector Equation of Line" block, see geoVectorLine.js
+  geo_vector: OBJECT_TYPES.LINE, // "Line" block, see geoVectorLine.js
   parametric_plane: OBJECT_TYPES.PLANE,
   geo_plane: OBJECT_TYPES.PLANE,
   geo_sphere: OBJECT_TYPES.SPHERE,

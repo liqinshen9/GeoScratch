@@ -721,7 +721,7 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={skewStepCompletion.lines ? 'is-complete' : ''}>
-                      Create: L1, L2 with Vector Equation of Line blocks.
+                      Create: L1, L2 with Line blocks.
                     </li>
                     <li className={skewStepCompletion.normal ? 'is-complete' : ''}>
                       Compute: n = d1 x d2. This normal is perpendicular to both line directions.

@@ -2,12 +2,14 @@ import InitLocale from "./Locale"
 import * as en from 'blockly/msg/en'
 import * as Blockly from 'blockly/core'
 import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
+import { flattenCollapsedReferenceEdges, installBlockReferenceLabels } from '@/utils/blockReferenceLabels'
 
 let CONTEXT_MENU_CONFIGURED = false
 
 function configureContextMenu() {
   if (CONTEXT_MENU_CONFIGURED) return
   CONTEXT_MENU_CONFIGURED = true
+  installBlockReferenceLabels()
 
   const registry = Blockly.ContextMenuRegistry.registry
   if (registry.getItem('blockInline')) {
@@ -19,7 +21,7 @@ const Workspace = (hostElement) => {
   InitLocale(en)
   configureContextMenu()
 
-  return Blockly.inject(hostElement, {
+  const workspace = Blockly.inject(hostElement, {
     renderer: 'geras',
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
     zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
@@ -35,6 +37,9 @@ const Workspace = (hostElement) => {
     // drive instead. Drag-panning (above) is unaffected by this.
     move: { scrollbars: true, drag: true, wheel: false },
   })
+
+  flattenCollapsedReferenceEdges(workspace)
+  return workspace
 }
 
 export default Workspace
