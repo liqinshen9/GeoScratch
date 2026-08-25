@@ -721,16 +721,16 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={skewStepCompletion.lines ? 'is-complete' : ''}>
-                      Create L1 and L2 with the Vector Equation of Line block.
+                      Create: L1, L2 with Vector Equation of Line blocks.
                     </li>
                     <li className={skewStepCompletion.normal ? 'is-complete' : ''}>
-                      Calculate n = d1 x d2. This normal is perpendicular to both line directions.
+                      Compute: n = d1 x d2. This normal is perpendicular to both line directions.
                     </li>
                     <li className={skewStepCompletion.plane ? 'is-complete' : ''}>
-                      Choose any point on one of the lines (either L1 or L2) and use that point with n to create a plane.The chosen line should lie in the plane.
+                      Create: helper plane from any point on L1 or L2 and normal n. The chosen line should lie in the plane.
                     </li>
                     <li className={skewStepCompletion.point ? 'is-complete' : ''}>
-                      Choose any point on the other line.
+                      Create: any point on the other line.
                     </li>
                     <li className={skewStepCompletion.difference ? 'is-complete' : ''}>
                       Use the point on the other line as the point input, and use the helper plane as the plane input.
@@ -757,16 +757,16 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={sphereStepCompletion.spheres ? 'is-complete' : ''}>
-                      Create Sphere A and Sphere B. Use Point blocks for the centers so the center-to-center vector draws in the right place.
+                      Create: Sphere A, Sphere B, Center A, Center B. Please use Point blocks for the centers so the center-to-center vector draws in the right place.
                     </li>
                     <li className={sphereStepCompletion.difference ? 'is-complete' : ''}>
-                      Subtract the center points with Vector Arithmetic: B - A or A - B. This vector should run from one sphere center to the other.
+                      Compute: center difference with the Vector Arithmetic block, B - A or A - B. This vector should run from one sphere center to the other.
                     </li>
                     <li className={sphereStepCompletion.magnitude ? 'is-complete' : ''}>
-                      Take Vector Magnitude of the center difference. This gives the center distance |B - A|.
+                      Compute: center distance with the Vector Magnitude block, |B - A|.
                     </li>
                     <li className={sphereStepCompletion.distance ? 'is-complete' : ''}>
-                      Use Scalar Arithmetic blocks to calculate center distance - rA - rB.
+                      Compute: sphere distance with the Scalar Arithmetic block, i.e., |B - A| - rA - rB.
                     </li>
                   </ol>
                 </>
@@ -786,19 +786,19 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={stepCompletion.plane ? 'is-complete' : ''}>
-                      Create the plane
+                      Create: plane
                     </li>
                     <li className={stepCompletion.pointP ? 'is-complete' : ''}>
-                      Create Point P
+                      Create: Point P
                     </li>
                     <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
-                      Choose any point Q on the plane.
+                      Create: any point Q on the plane
                     </li>
                     <li className={stepCompletion.difference ? 'is-complete' : ''}>
-                      Find the vector from Q to P, which is the same as finding P - Q.
+                      Compute: P - Q with the Vector Arithmetic block.
                     </li>
                     <li className={stepCompletion.distance ? 'is-complete' : ''}>
-                      Project P - Q onto n and take Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
+                      Compute: distance by projecting P - Q onto n and taking Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
                     </li>
                   </ol>
                 </>
