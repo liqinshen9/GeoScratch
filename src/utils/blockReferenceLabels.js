@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 
 const DATA_KEY = 'geoScratchReferenceAlias'
 const AUTO_DATA_KEY = 'geoScratchReferenceAliasAuto'
+const REF_ID_KEY = 'geoScratchReferenceId'
 const ALIAS_POOL = 'abcdefghijklmnopqrstuvwxyz'.split('')
 const COLLAPSIBLE_INPUT_PARENT_TYPES = new Set([
   'vector_arithmetic',
@@ -12,9 +13,17 @@ const COLLAPSIBLE_INPUT_PARENT_TYPES = new Set([
   'vector_magnitude',
   'scalar_arithmetic',
 ])
+const COLLAPSIBLE_CREATION_PARENT_INPUTS = Object.freeze({
+  geo_vector: new Set(['POS', 'DIR']),
+})
+const COLLAPSIBLE_WHOLE_BLOCK_TYPES = new Set([
+  'geo_vector',
+  'parametric_plane',
+])
 
 let INSTALLED = false
 let originalToString = null
+let originalSetCollapsed = null
 
 function parseData(block) {
   if (!block?.data) return {}
@@ -35,8 +44,14 @@ function getAlias(block) {
   return typeof alias === 'string' ? alias.trim() : ''
 }
 
-function isAutoAlias(block) {
-  return parseData(block)[AUTO_DATA_KEY] === true
+function getReferenceId(block) {
+  const refId = parseData(block)[REF_ID_KEY]
+  return typeof refId === 'string' ? refId.trim() : ''
+}
+
+function getCollapsedFieldAlias(block) {
+  const text = block?.getField?.(Blockly.Block.COLLAPSED_FIELD_NAME)?.getText?.()
+  return typeof text === 'string' ? text.trim() : ''
 }
 
 function setAlias(block, alias, { auto = false } = {}) {
@@ -52,24 +67,57 @@ function setAlias(block, alias, { auto = false } = {}) {
   writeData(block, data)
 }
 
-function nextAlias(workspace) {
-  const used = new Set(
+function ensureReferenceId(block) {
+  const existing = getReferenceId(block)
+  if (existing) return existing
+
+  const data = parseData(block)
+  const refId = `ref-${Blockly.utils.idGenerator.genUid()}`
+  data[REF_ID_KEY] = refId
+  writeData(block, data)
+  return refId
+}
+
+function usedAliases(workspace) {
+  return new Set(
     workspace
       .getAllBlocks(false)
-      .filter((block) => block.isCollapsed?.())
       .map(getAlias)
       .filter(Boolean)
   )
+}
+
+function nextNumberedAlias(used, prefix) {
+  for (let index = 1; index < 1000; index += 1) {
+    const alias = `${prefix}${index}`
+    if (!used.has(alias)) return alias
+  }
+
+  return prefix
+}
+
+function nextAlias(workspace, block = null) {
+  const used = usedAliases(workspace)
+
+  if (block?.type === 'geo_vector') return nextNumberedAlias(used, 'L')
+  if (block?.type === 'parametric_plane') return nextNumberedAlias(used, 'Plane')
 
   const pooled = ALIAS_POOL.find((alias) => !used.has(alias))
   if (pooled) return pooled
 
-  for (let index = 1; index < 1000; index += 1) {
-    const alias = `r${index}`
-    if (!used.has(alias)) return alias
-  }
+  return nextNumberedAlias(used, 'r')
+}
 
-  return 'r'
+function nextAliasForBlock(block) {
+  return nextAlias(block.workspace, block)
+}
+
+function preserveDurableAliasBeforeExpand(block) {
+  const alias = getAlias(block) || getCollapsedFieldAlias(block)
+  if (!alias) return
+
+  if (!getAlias(block)) setAlias(block, alias, { auto: true })
+  ensureReferenceId(block)
 }
 
 function refresh(block) {
@@ -78,19 +126,20 @@ function refresh(block) {
 }
 
 function collapseWithAlias(block) {
-  if (!getAlias(block)) setAlias(block, nextAlias(block.workspace), { auto: true })
+  const alias = getAlias(block) || nextAliasForBlock(block)
+  setAlias(block, alias, { auto: true })
+  ensureReferenceId(block)
   block.setCollapsed(true)
   refresh(block)
 }
 
 function expandReference(block) {
   block.setCollapsed(false)
-  if (isAutoAlias(block)) setAlias(block, '')
   refresh(block)
 }
 
 function renameReference(block) {
-  const current = getAlias(block) || nextAlias(block.workspace)
+  const current = getAlias(block) || nextAliasForBlock(block)
   const next = window.prompt('Reference name', current)
   if (next == null) return
 
@@ -98,6 +147,7 @@ function renameReference(block) {
   if (!trimmed) return
 
   setAlias(block, trimmed, { auto: false })
+  ensureReferenceId(block)
   if (block.isCollapsed()) refresh(block)
 }
 
@@ -107,14 +157,25 @@ function canCollapseInput(block) {
   const parent = block.getParent?.()
   if (!parent) return false
 
-  // Collapse whole inputs on compute blocks, even when the compute block is
-  // nested inside a larger expression. Creation blocks keep their defining
-  // point/vector/plane details visible.
-  return COLLAPSIBLE_INPUT_PARENT_TYPES.has(parent.type)
+  // Compute blocks accept collapsed references as operands. Creation blocks only
+  // expose selected nested inputs so the whole object can still collapse too.
+  if (COLLAPSIBLE_INPUT_PARENT_TYPES.has(parent.type)) return true
+
+  const parentInputName = block.outputConnection.targetConnection.getParentInput?.()?.name
+  const collapsibleInputs = COLLAPSIBLE_CREATION_PARENT_INPUTS[parent.type]
+  return Boolean(collapsibleInputs?.has(parentInputName))
+}
+
+function canCollapseWholeBlock(block) {
+  return Boolean(
+    block?.outputConnection &&
+    !block.isInFlyout &&
+    (COLLAPSIBLE_WHOLE_BLOCK_TYPES.has(block.type) || getAlias(block) || getCollapsedFieldAlias(block))
+  )
 }
 
 function canExpandReference(block) {
-  return Boolean(block?.outputConnection && !block.isInFlyout && getAlias(block))
+  return Boolean(block?.outputConnection && !block.isInFlyout && (getAlias(block) || getCollapsedFieldAlias(block)))
 }
 
 function registerMenuItem(id, item) {
@@ -134,6 +195,12 @@ export function installBlockReferenceLabels() {
     return originalToString.apply(this, args)
   }
 
+  originalSetCollapsed = Blockly.BlockSvg.prototype.setCollapsed
+  Blockly.BlockSvg.prototype.setCollapsed = function patchedReferenceSetCollapsed(collapsed) {
+    if (!collapsed && this.isCollapsed?.()) preserveDurableAliasBeforeExpand(this)
+    return originalSetCollapsed.call(this, collapsed)
+  }
+
   registerMenuItem('geoScratchCollapseToReference', {
     weight: 6,
     displayText: (scope) => {
@@ -141,7 +208,9 @@ export function installBlockReferenceLabels() {
       return alias ? `Collapse to reference (${alias})` : 'Collapse to reference'
     },
     preconditionFn: (scope) => (
-      canCollapseInput(scope.block) && !scope.block.isCollapsed() ? 'enabled' : 'hidden'
+      (canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block)) && !scope.block.isCollapsed()
+        ? 'enabled'
+        : 'hidden'
     ),
     callback: (scope) => collapseWithAlias(scope.block),
   })
@@ -158,7 +227,9 @@ export function installBlockReferenceLabels() {
   registerMenuItem('geoScratchRenameReference', {
     weight: 8,
     displayText: (scope) => (getAlias(scope.block) ? 'Rename reference' : 'Name reference'),
-    preconditionFn: (scope) => (canCollapseInput(scope.block) ? 'enabled' : 'hidden'),
+    preconditionFn: (scope) => (
+      canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block) ? 'enabled' : 'hidden'
+    ),
     callback: (scope) => renameReference(scope.block),
   })
 }
