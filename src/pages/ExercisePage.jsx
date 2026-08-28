@@ -340,11 +340,12 @@ function addExercisePointPIfNeeded(objects, workspace) {
 // into the student's own workspace (via Blockly.Xml.domToWorkspace) so they
 // appear as actual blocks the student can see and move, not just rendered
 // shapes with no block behind them. Fixed ids let the injection effect below
-// check whether they're already there (freshly restored from a previous
-// visit's saved workspace state) before adding another copy.
-const EXERCISE_BACKGROUND_BLOCK_ID = 'ex-bg-sphere-1'
+// find and remove any earlier copies before reseeding, so a layout change
+// here actually reaches workspaces that already have an older copy saved
+// from a previous visit, instead of silently keeping the stale positions.
+const EXERCISE_BACKGROUND_BLOCK_IDS = ['ex-bg-sphere-1', 'ex-bg-sphere-2', 'ex-bg-cube-1', 'ex-bg-line-1']
 const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="geo_sphere" id="ex-bg-sphere-1" x="20" y="-150">
+  <block type="geo_sphere" id="ex-bg-sphere-1" x="-350" y="-350">
     <field name="RADIUS">0.6</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
@@ -354,7 +355,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_sphere" id="ex-bg-sphere-2" x="20" y="100">
+  <block type="geo_sphere" id="ex-bg-sphere-2" x="50" y="-350">
     <field name="RADIUS">0.4</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
@@ -364,7 +365,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_cube" id="ex-bg-cube-1" x="20" y="350">
+  <block type="geo_cube" id="ex-bg-cube-1" x="-350" y="50">
     <field name="SIDE_LENGTH">1.1</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-cube-1-centre">
@@ -374,7 +375,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_vector" id="ex-bg-line-1" x="20" y="600">
+  <block type="geo_vector" id="ex-bg-line-1" x="50" y="50">
     <value name="POS">
       <block type="linalg_vec3" id="ex-bg-line-1-pos">
         <field name="X">-5</field>
@@ -934,17 +935,22 @@ export default function ExercisePage() {
   // Drop the background blocks straight into the workspace once it's ready,
   // rather than injecting rendered objects behind the scenes -- they need to
   // be actual blocks a student can see and move, not just shapes that appear
-  // in the 3D view. Guarded by id so re-entering the exercise (which
-  // restores the previously-saved workspace XML, including these blocks)
-  // doesn't add a second copy.
+  // in the 3D view. Re-entering the exercise restores the previously-saved
+  // workspace XML, which may include an older copy of these blocks at
+  // outdated positions -- remove those by id first, then reseed fresh, so
+  // a layout change here always reaches an already-saved workspace instead
+  // of silently keeping whatever position was saved on an earlier visit.
   useEffect(() => {
     if (!isTransformExercise || !workspace) return
     // React StrictMode double-mounts in dev, disposing the first workspace
     // instance almost immediately -- skip it silently rather than throwing;
     // the effect re-runs once the real, settled workspace comes through.
     if (!workspace.rendered) return
-    if (workspace.getBlockById(EXERCISE_BACKGROUND_BLOCK_ID)) return
     try {
+      EXERCISE_BACKGROUND_BLOCK_IDS
+        .map((id) => workspace.getBlockById(id))
+        .filter(Boolean)
+        .forEach((block) => block.dispose())
       Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(EXERCISE_BACKGROUND_XML), workspace)
     } catch (err) {
       console.error('[GeoScratch] Failed to seed exercise background blocks:', err)
