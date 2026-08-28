@@ -6,6 +6,7 @@ import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import { ArrowLeft, ArrowRight } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import { collectStatementChain } from '@/utils/sceneHelpers'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -32,17 +33,37 @@ const SPHERE_DISTANCE = Math.max(
   0,
   SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
 )
+const TRANSFORM_TEAPOT_CENTRE = new THREE.Vector3(0, 0, 0)
+const TRANSFORM_TEAPOT_SIZE = 1
+const SCALE_FACTOR = 3
+const ROTATE_AXIS = 'Z'
+const ROTATE_DEGREES = 90
+const COMBINED_SCALE_FACTOR = 2
+const COMBINED_ROTATE_AXIS = 'Y'
+const COMBINED_ROTATE_DEGREES = 45
 const EXERCISES = [
   {
     number: 1,
-    title: 'Calculate distance from point P to a plane',
+    title: 'Scale this object by 3',
   },
   {
     number: 2,
-    title: 'Calculate the shortest distance between two skew lines',
+    title: 'Rotate this object',
   },
   {
     number: 3,
+    title: 'Transform this object',
+  },
+  {
+    number: 4,
+    title: 'Calculate distance from point P to a plane',
+  },
+  {
+    number: 5,
+    title: 'Calculate the shortest distance between two skew lines',
+  },
+  {
+    number: 6,
     title: 'Calculate the distance between two spheres',
   },
 ]
@@ -526,6 +547,115 @@ function hasValidSphereDistanceComputation(workspace) {
   )
 }
 
+function isTargetTeapotBlock(block) {
+  return (
+    block?.type === 'geo_teapot' &&
+    blockMatchesVec3(getInputBlock(block, 'CENTRE'), TRANSFORM_TEAPOT_CENTRE) &&
+    closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE) &&
+    closeNumber(block.getFieldValue('ROT_X'), 0) &&
+    closeNumber(block.getFieldValue('ROT_Y'), 0) &&
+    closeNumber(block.getFieldValue('ROT_Z'), 0)
+  )
+}
+
+function isScaleStepBlock(block, factor) {
+  return (
+    block?.type === 'scale_matrix' &&
+    closeNumber(block.getFieldValue('SX'), factor) &&
+    closeNumber(block.getFieldValue('SY'), factor) &&
+    closeNumber(block.getFieldValue('SZ'), factor)
+  )
+}
+
+function isRotateStepBlock(block, axis, degrees) {
+  return (
+    block?.type === 'rot_matrix' &&
+    block.getFieldValue('AXIS') === axis &&
+    closeNumber(block.getFieldValue('DEGREES'), degrees)
+  )
+}
+
+function pipelineTargetsTeapot(pipelineBlock) {
+  return (
+    pipelineBlock?.type === 'transform_pipeline' &&
+    isTargetTeapotBlock(getInputBlock(pipelineBlock, 'INPUT'))
+  )
+}
+
+function pipelineStepChain(pipelineBlock) {
+  return collectStatementChain(pipelineBlock?.getInputTargetBlock?.('STEPS') ?? null)
+}
+
+function hasTargetTeapotBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('geo_teapot', false).some(isTargetTeapotBlock)
+}
+
+function hasPipelineConnectedToTeapot(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('transform_pipeline', false).some(pipelineTargetsTeapot)
+}
+
+function hasScaleStepForTeapot(workspace, factor) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('transform_pipeline', false).some((pipeline) => (
+    pipelineTargetsTeapot(pipeline) &&
+    pipelineStepChain(pipeline).some((step) => isScaleStepBlock(step, factor))
+  ))
+}
+
+function hasRotateStepForTeapot(workspace, axis, degrees) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('transform_pipeline', false).some((pipeline) => (
+    pipelineTargetsTeapot(pipeline) &&
+    pipelineStepChain(pipeline).some((step) => isRotateStepBlock(step, axis, degrees))
+  ))
+}
+
+function hasValidScaleComputation(workspace) {
+  return hasScaleStepForTeapot(workspace, SCALE_FACTOR)
+}
+
+function hasValidRotateComputation(workspace) {
+  return hasRotateStepForTeapot(workspace, ROTATE_AXIS, ROTATE_DEGREES)
+}
+
+function hasValidTransformComputation(workspace) {
+  return (
+    hasScaleStepForTeapot(workspace, COMBINED_SCALE_FACTOR) &&
+    hasRotateStepForTeapot(workspace, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES)
+  )
+}
+
+function getTransformTargetObject(objects) {
+  return objects.find((object) => (
+    object?.userData?.geoType === 'geo_teapot' &&
+    vectorMatches(object.userData.centre, TRANSFORM_TEAPOT_CENTRE) &&
+    closeNumber(object.userData.size, TRANSFORM_TEAPOT_SIZE)
+  )) ?? null
+}
+
+function quaternionAngleDegrees(qa, qb) {
+  const dot = Math.min(1, Math.max(-1, Math.abs(qa.dot(qb))))
+  return 2 * Math.acos(dot) * (180 / Math.PI)
+}
+
+function scaleMatches(object, factor, tolerance = 0.01) {
+  return (
+    Boolean(object) &&
+    closeNumber(object.scale.x, factor, tolerance) &&
+    closeNumber(object.scale.y, factor, tolerance) &&
+    closeNumber(object.scale.z, factor, tolerance)
+  )
+}
+
+function rotationMatches(object, axis, degrees, tolerance = 0.5) {
+  if (!object) return false
+  const axisVector = axis === 'X' ? new THREE.Vector3(1, 0, 0) : axis === 'Y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1)
+  const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(axisVector, THREE.MathUtils.degToRad(degrees))
+  return closeNumber(quaternionAngleDegrees(object.quaternion, expectedQuaternion), 0, tolerance)
+}
+
 function getScalarAnswerFromWorkspace(objects, workspace, blockPredicate) {
   if (!workspace) return null
   const scalarObject = objects.find((object) => {
@@ -577,19 +707,48 @@ export default function ExercisePage() {
   const activeExerciseConfig = EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
   const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExerciseConfig.number)
   const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
-  const isSkewExercise = activeExerciseConfig.number === 2
-  const isSphereExercise = activeExerciseConfig.number === 3
+  const isScaleExercise = activeExerciseConfig.number === 1
+  const isRotateExercise = activeExerciseConfig.number === 2
+  const isTransformExercise = activeExerciseConfig.number === 3
+  const isSkewExercise = activeExerciseConfig.number === 5
+  const isSphereExercise = activeExerciseConfig.number === 6
+  const isTransformTypeExercise = isScaleExercise || isRotateExercise || isTransformExercise
   const expectedDistance = isSkewExercise ? SKEW_DISTANCE : isSphereExercise ? SPHERE_DISTANCE : CORRECT_DISTANCE
-  const distanceAnswer = getDistanceAnswer(objects, expectedDistance, workspace, { isSkewExercise, isSphereExercise })
+  const distanceAnswer = isTransformTypeExercise
+    ? null
+    : getDistanceAnswer(objects, expectedDistance, workspace, { isSkewExercise, isSphereExercise })
   const hasDistanceComputation = isSkewExercise
     ? hasValidSkewDistanceComputation(workspace)
     : isSphereExercise
       ? hasValidSphereDistanceComputation(workspace)
       : hasValidDistanceComputation(workspace)
   const distanceIsCorrect = distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
-  const exercisePassed = distanceIsCorrect && hasDistanceComputation
-  const answerIncorrect = distanceAnswer !== null && !distanceIsCorrect
-  const answerCardClass = `exercise-answer-card${distanceIsCorrect ? ' is-correct' : ''}${answerIncorrect ? ' is-incorrect' : ''}`
+
+  const transformTargetObject = isTransformTypeExercise ? getTransformTargetObject(objects) : null
+  const transformIsCorrect = isScaleExercise
+    ? scaleMatches(transformTargetObject, SCALE_FACTOR)
+    : isRotateExercise
+      ? rotationMatches(transformTargetObject, ROTATE_AXIS, ROTATE_DEGREES)
+      : isTransformExercise
+        ? scaleMatches(transformTargetObject, COMBINED_SCALE_FACTOR) &&
+          rotationMatches(transformTargetObject, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES)
+        : false
+  const hasTransformComputation = isScaleExercise
+    ? hasValidScaleComputation(workspace)
+    : isRotateExercise
+      ? hasValidRotateComputation(workspace)
+      : isTransformExercise
+        ? hasValidTransformComputation(workspace)
+        : false
+
+  const answerIsCorrect = isTransformTypeExercise ? Boolean(transformTargetObject) && transformIsCorrect : distanceIsCorrect
+  const answerIncorrect = isTransformTypeExercise
+    ? Boolean(transformTargetObject) && !transformIsCorrect
+    : distanceAnswer !== null && !distanceIsCorrect
+  const exercisePassed = isTransformTypeExercise
+    ? answerIsCorrect && hasTransformComputation
+    : distanceIsCorrect && hasDistanceComputation
+  const answerCardClass = `exercise-answer-card${answerIsCorrect ? ' is-correct' : ''}${answerIncorrect ? ' is-incorrect' : ''}`
   const hasPlaneStep = hasExercisePlane(objects)
   const hasPointPStep = workspaceHasPointPVector(workspace)
   const hasPointQStep = hasPointQOnExercisePlane(objects)
@@ -614,15 +773,32 @@ export default function ExercisePage() {
     magnitude: hasSphereCenterMagnitudeBlock(workspace),
     distance: hasSphereScalarDistanceBlock(workspace) && exercisePassed,
   }
-  const reusableBlockTemplate = exercisePassed
-    ? activeExerciseConfig.number === 1
+  const scaleStepCompletion = {
+    teapot: hasTargetTeapotBlock(workspace),
+    pipeline: hasPipelineConnectedToTeapot(workspace),
+    scale: hasValidScaleComputation(workspace) && exercisePassed,
+  }
+  const rotateStepCompletion = {
+    teapot: hasTargetTeapotBlock(workspace),
+    pipeline: hasPipelineConnectedToTeapot(workspace),
+    rotate: hasValidRotateComputation(workspace) && exercisePassed,
+  }
+  const transformStepCompletion = {
+    teapot: hasTargetTeapotBlock(workspace),
+    pipeline: hasPipelineConnectedToTeapot(workspace),
+    scale: hasScaleStepForTeapot(workspace, COMBINED_SCALE_FACTOR),
+    rotate: hasRotateStepForTeapot(workspace, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES),
+    both: exercisePassed,
+  }
+  const reusableBlockTemplate = exercisePassed && !isTransformTypeExercise
+    ? activeExerciseConfig.number === 4
       ? {
       defaultName: 'Distance from point to plane',
       description: 'Save a reusable distance block with open inputs for any point and any plane.',
       source: 'exercise',
       xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
     }
-      : activeExerciseConfig.number === 2
+      : activeExerciseConfig.number === 5
         ? {
       defaultName: 'Intersect 3D lines',
       description: 'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
@@ -770,6 +946,88 @@ export default function ExercisePage() {
                     </li>
                   </ol>
                 </>
+              ) : isScaleExercise ? (
+                <>
+                  <div className="exercise-given-values" aria-label="Given values">
+                    <section>
+                      <h3>Teapot</h3>
+                      <p>Centre = (0, 0, 0)</p>
+                      <p>Size = 1</p>
+                    </section>
+                    <section>
+                      <h3>Target</h3>
+                      <p>Scale factor = 3 (all axes)</p>
+                    </section>
+                  </div>
+
+                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
+                    <li className={scaleStepCompletion.teapot ? 'is-complete' : ''}>
+                      Create: Teapot at (0, 0, 0) with size 1.
+                    </li>
+                    <li className={scaleStepCompletion.pipeline ? 'is-complete' : ''}>
+                      Build: a Transform Pipeline and connect its input to the Teapot.
+                    </li>
+                    <li className={scaleStepCompletion.scale ? 'is-complete' : ''}>
+                      Add: a Scale Matrix (sx=3, sy=3, sz=3) as a step in the pipeline.
+                    </li>
+                  </ol>
+                </>
+              ) : isRotateExercise ? (
+                <>
+                  <div className="exercise-given-values" aria-label="Given values">
+                    <section>
+                      <h3>Teapot</h3>
+                      <p>Centre = (0, 0, 0)</p>
+                      <p>Size = 1</p>
+                    </section>
+                    <section>
+                      <h3>Target</h3>
+                      <p>Rotate 90&deg; about the Z axis</p>
+                    </section>
+                  </div>
+
+                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
+                    <li className={rotateStepCompletion.teapot ? 'is-complete' : ''}>
+                      Create: Teapot at (0, 0, 0) with size 1.
+                    </li>
+                    <li className={rotateStepCompletion.pipeline ? 'is-complete' : ''}>
+                      Build: a Transform Pipeline and connect its input to the Teapot.
+                    </li>
+                    <li className={rotateStepCompletion.rotate ? 'is-complete' : ''}>
+                      Add: a Rotation Matrix (axis Z, 90 degrees) as a step in the pipeline.
+                    </li>
+                  </ol>
+                </>
+              ) : isTransformExercise ? (
+                <>
+                  <div className="exercise-given-values" aria-label="Given values">
+                    <section>
+                      <h3>Teapot</h3>
+                      <p>Centre = (0, 0, 0)</p>
+                      <p>Size = 1</p>
+                    </section>
+                    <section>
+                      <h3>Target</h3>
+                      <p>Scale factor = 2 (all axes)</p>
+                      <p>Rotate 45&deg; about the Y axis</p>
+                    </section>
+                  </div>
+
+                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
+                    <li className={transformStepCompletion.teapot ? 'is-complete' : ''}>
+                      Create: Teapot at (0, 0, 0) with size 1.
+                    </li>
+                    <li className={transformStepCompletion.pipeline ? 'is-complete' : ''}>
+                      Build: a Transform Pipeline and connect its input to the Teapot.
+                    </li>
+                    <li className={transformStepCompletion.scale ? 'is-complete' : ''}>
+                      Add: a Scale Matrix (sx=2, sy=2, sz=2) as a step in the pipeline.
+                    </li>
+                    <li className={transformStepCompletion.rotate ? 'is-complete' : ''}>
+                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline. Order does not matter.
+                    </li>
+                  </ol>
+                </>
               ) : (
                 <>
                   <div className="exercise-given-values" aria-label="Given values">
@@ -804,10 +1062,35 @@ export default function ExercisePage() {
                 </>
               )}
 
-              <div className={answerCardClass}>
-                <span>Your answer:</span>
-                <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
-              </div>
+              {isTransformTypeExercise ? (
+                <div className={answerCardClass}>
+                  <span>Current scale:</span>
+                  <strong>
+                    {transformTargetObject
+                      ? `(${transformTargetObject.scale.x.toFixed(2)}, ${transformTargetObject.scale.y.toFixed(2)}, ${transformTargetObject.scale.z.toFixed(2)})`
+                      : ''}
+                  </strong>
+                  {!isScaleExercise && (
+                    <>
+                      <span>Current rotation (X, Y, Z):</span>
+                      <strong>
+                        {transformTargetObject
+                          ? (() => {
+                            const euler = new THREE.Euler().setFromQuaternion(transformTargetObject.quaternion, 'XYZ')
+                            const toDeg = (radians) => THREE.MathUtils.radToDeg(radians).toFixed(1)
+                            return `(${toDeg(euler.x)}°, ${toDeg(euler.y)}°, ${toDeg(euler.z)}°)`
+                          })()
+                          : ''}
+                      </strong>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className={answerCardClass}>
+                  <span>Your answer:</span>
+                  <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
+                </div>
+              )}
             </aside>
           )}
 
