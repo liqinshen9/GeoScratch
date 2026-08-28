@@ -100,8 +100,8 @@ function nextNumberedAlias(used, prefix) {
 function nextAlias(workspace, block = null) {
   const used = usedAliases(workspace)
 
-  if (block?.type === 'geo_vector') return nextNumberedAlias(used, 'L')
-  if (block?.type === 'geo_sphere') return nextNumberedAlias(used, 'S')
+  if (block?.type === 'geo_vector') return nextNumberedAlias(used, 'Line')
+  if (block?.type === 'geo_sphere') return nextNumberedAlias(used, 'Sphere')
   if (block?.type === 'parametric_plane') return nextNumberedAlias(used, 'Plane')
 
   const pooled = ALIAS_POOL.find((alias) => !used.has(alias))
