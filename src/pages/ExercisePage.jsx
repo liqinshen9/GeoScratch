@@ -548,9 +548,17 @@ function hasValidSphereDistanceComputation(workspace) {
 }
 
 function isTargetTeapotBlock(block) {
+  if (block?.type !== 'geo_teapot') return false
+  // An unconnected CENTRE input isn't "missing" -- geoTeapotDefinition falls
+  // back to (0,0,0) at runtime, so a bare Teapot block already sits at the
+  // target centre without a student needing to wire up a redundant Vector
+  // block for it.
+  const centreBlock = getInputBlock(block, 'CENTRE')
+  const centreMatches = centreBlock
+    ? blockMatchesVec3(centreBlock, TRANSFORM_TEAPOT_CENTRE)
+    : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
   return (
-    block?.type === 'geo_teapot' &&
-    blockMatchesVec3(getInputBlock(block, 'CENTRE'), TRANSFORM_TEAPOT_CENTRE) &&
+    centreMatches &&
     closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE) &&
     closeNumber(block.getFieldValue('ROT_X'), 0) &&
     closeNumber(block.getFieldValue('ROT_Y'), 0) &&
