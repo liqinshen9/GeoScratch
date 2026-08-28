@@ -559,10 +559,7 @@ function isTargetTeapotBlock(block) {
     : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
   return (
     centreMatches &&
-    closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE) &&
-    closeNumber(block.getFieldValue('ROT_X'), 0) &&
-    closeNumber(block.getFieldValue('ROT_Y'), 0) &&
-    closeNumber(block.getFieldValue('ROT_Z'), 0)
+    closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE)
   )
 }
 
