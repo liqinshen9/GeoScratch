@@ -1,5 +1,6 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import * as Blockly from 'blockly/core'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
@@ -7,9 +8,6 @@ import { ArrowLeft, ArrowRight } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { collectStatementChain } from '@/utils/sceneHelpers'
-import { geoCubeDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoCube'
-import { geoSphereDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoSphere'
-import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -336,34 +334,63 @@ function addExercisePointPIfNeeded(objects, workspace) {
   return [...objects, createPointPMarker()]
 }
 
-// Purely decorative -- not part of the target teapot, not graded, just scene
-// dressing for the Transform exercise so it doesn't read as one lone object
-// floating in an empty room. Built with the SAME runtime constructors real
-// Sphere/Cube/Line blocks use (geoSphereDefinition etc.), so they look,
-// shade, and outline identically to the real thing instead of being
-// hand-rolled placeholder meshes. Each gets a unique fake block id purely so
-// the constructors' internal threeObjStore bookkeeping has a key to use --
-// they're never backed by, or reachable from, an actual Blockly block.
-// Placed well outside the teapot's own bounding box so they can't get caught
-// up in computeNestingRenderOrders' containment check (Scene3D.jsx), and
-// tagged userData.isBackgroundDecoration so getObjectFocus there excludes
-// them from the auto-frame bounds too.
-function createExerciseBackgroundDecorations() {
-  const decorations = [
-    geoSphereDefinition(new THREE.Vector3(-4, 0.6, -3), 0.6, 'exercise-bg-sphere-1'),
-    geoSphereDefinition(new THREE.Vector3(3.5, 0.4, -4), 0.4, 'exercise-bg-sphere-2'),
-    geoCubeDefinition(new THREE.Vector3(4, 0.55, 2.5), 1.1, 'exercise-bg-cube-1'),
-    geoVectorLineDefinition(new THREE.Vector3(-5, 0, 3), new THREE.Vector3(1, 0, -0.6), undefined, 'exercise-bg-line-1'),
-  ].filter(Boolean)
-
-  // Tag every descendant (edges, a sphere's centre marker, ...), not just
-  // the top-level mesh -- getObjectFocus's bounds walk doesn't stop
-  // descending into children just because a parent was excluded.
-  decorations.forEach((object) => {
-    object.traverse((child) => { child.userData.isBackgroundDecoration = true })
-  })
-  return decorations
-}
+// Purely decorative "given" blocks for the Transform exercise, so the
+// workspace/scene doesn't read as one lone teapot floating in an empty room.
+// These are real geo_sphere/geo_cube/geo_vector blocks, dropped straight
+// into the student's own workspace (via Blockly.Xml.domToWorkspace) so they
+// appear as actual blocks the student can see and move, not just rendered
+// shapes with no block behind them. Fixed ids let the injection effect below
+// check whether they're already there (freshly restored from a previous
+// visit's saved workspace state) before adding another copy.
+const EXERCISE_BACKGROUND_BLOCK_ID = 'ex-bg-sphere-1'
+const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="geo_sphere" id="ex-bg-sphere-1" x="20" y="20">
+    <field name="RADIUS">0.6</field>
+    <value name="CENTRE">
+      <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
+        <field name="X">-4</field>
+        <field name="Y">0.6</field>
+        <field name="Z">-3</field>
+      </block>
+    </value>
+  </block>
+  <block type="geo_sphere" id="ex-bg-sphere-2" x="20" y="190">
+    <field name="RADIUS">0.4</field>
+    <value name="CENTRE">
+      <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
+        <field name="X">3.5</field>
+        <field name="Y">0.4</field>
+        <field name="Z">-4</field>
+      </block>
+    </value>
+  </block>
+  <block type="geo_cube" id="ex-bg-cube-1" x="20" y="360">
+    <field name="SIDE_LENGTH">1.1</field>
+    <value name="CENTRE">
+      <block type="linalg_vec3" id="ex-bg-cube-1-centre">
+        <field name="X">4</field>
+        <field name="Y">0.55</field>
+        <field name="Z">2.5</field>
+      </block>
+    </value>
+  </block>
+  <block type="geo_vector" id="ex-bg-line-1" x="20" y="530">
+    <value name="POS">
+      <block type="linalg_vec3" id="ex-bg-line-1-pos">
+        <field name="X">-5</field>
+        <field name="Y">0</field>
+        <field name="Z">3</field>
+      </block>
+    </value>
+    <value name="DIR">
+      <block type="linalg_vec3" id="ex-bg-line-1-dir">
+        <field name="X">1</field>
+        <field name="Y">0</field>
+        <field name="Z">-0.6</field>
+      </block>
+    </value>
+  </block>
+</xml>`
 
 function hasExercisePlane(objects) {
   return objects.some((object) => objectOrChildMatches(object, isExercisePlaneObject))
@@ -904,27 +931,33 @@ export default function ExercisePage() {
     setObjects([])
   }, [setObjects, setPendingObjects])
 
-  // Lazily created (not useMemo) -- these constructors need window.THREE,
-  // which Scene3D only sets up in its own layout effect, not yet available
-  // during ExercisePage's first render. By the time handleObjectsChange
-  // actually runs (BlocksCanvas's own mount effect, which fires after every
-  // layout effect in the tree), it's guaranteed ready.
-  const backgroundDecorationsRef = useRef(null)
-  const getBackgroundDecorations = useCallback(() => {
-    if (!backgroundDecorationsRef.current) {
-      backgroundDecorationsRef.current = createExerciseBackgroundDecorations()
+  // Drop the background blocks straight into the workspace once it's ready,
+  // rather than injecting rendered objects behind the scenes -- they need to
+  // be actual blocks a student can see and move, not just shapes that appear
+  // in the 3D view. Guarded by id so re-entering the exercise (which
+  // restores the previously-saved workspace XML, including these blocks)
+  // doesn't add a second copy.
+  useEffect(() => {
+    if (!isTransformExercise || !workspace) return
+    // React StrictMode double-mounts in dev, disposing the first workspace
+    // instance almost immediately -- skip it silently rather than throwing;
+    // the effect re-runs once the real, settled workspace comes through.
+    if (!workspace.rendered) return
+    if (workspace.getBlockById(EXERCISE_BACKGROUND_BLOCK_ID)) return
+    try {
+      Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(EXERCISE_BACKGROUND_XML), workspace)
+    } catch (err) {
+      console.error('[GeoScratch] Failed to seed exercise background blocks:', err)
     }
-    return backgroundDecorationsRef.current
-  }, [])
+  }, [isTransformExercise, workspace])
 
   const handleObjectsChange = useCallback(
     (objs) => {
-      const withPointP = addExercisePointPIfNeeded(objs, workspace)
-      const exerciseObjects = isTransformExercise ? [...withPointP, ...getBackgroundDecorations()] : withPointP
+      const exerciseObjects = addExercisePointPIfNeeded(objs, workspace)
       setPendingObjects(exerciseObjects)
       if (autoRender) setObjects(exerciseObjects)
     },
-    [autoRender, setPendingObjects, setObjects, workspace, isTransformExercise, getBackgroundDecorations],
+    [autoRender, setPendingObjects, setObjects, workspace],
   )
 
   return (

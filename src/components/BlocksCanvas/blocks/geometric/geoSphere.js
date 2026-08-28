@@ -3,7 +3,7 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
 
-export function geoSphereDefinition(centreInput, radiusInput, blockId) {
+function geoSphereDefinition(centreInput, radiusInput, blockId) {
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
   const useSettingsStore = window.useSettingsStore

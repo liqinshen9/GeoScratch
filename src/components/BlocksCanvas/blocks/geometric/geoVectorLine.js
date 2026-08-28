@@ -6,7 +6,7 @@ import { forInstance } from '@/store/colorSystem'
 // ===================
 // 1. RUNTIME THREE.JS
 // ===================
-export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
+function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Pull variables securely from the active window runtime frame
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
