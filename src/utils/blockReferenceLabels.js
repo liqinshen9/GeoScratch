@@ -18,6 +18,7 @@ const COLLAPSIBLE_CREATION_PARENT_INPUTS = Object.freeze({
 })
 const COLLAPSIBLE_WHOLE_BLOCK_TYPES = new Set([
   'geo_vector',
+  'geo_sphere',
   'parametric_plane',
 ])
 
@@ -100,6 +101,7 @@ function nextAlias(workspace, block = null) {
   const used = usedAliases(workspace)
 
   if (block?.type === 'geo_vector') return nextNumberedAlias(used, 'L')
+  if (block?.type === 'geo_sphere') return nextNumberedAlias(used, 'S')
   if (block?.type === 'parametric_plane') return nextNumberedAlias(used, 'Plane')
 
   const pooled = ALIAS_POOL.find((alias) => !used.has(alias))
