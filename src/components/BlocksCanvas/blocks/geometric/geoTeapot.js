@@ -3,7 +3,7 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
 
-function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZInput, segmentsInput, blockId) {
+function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
   const useSettingsStore = window.useSettingsStore
@@ -16,9 +16,6 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const size = Math.max(0.01, Number(sizeInput) || 1)
   const segments = Math.max(2, Math.round(Number(segmentsInput) || 10))
-  const rotX = (Number(rotXInput) || 0) * (Math.PI / 180)
-  const rotY = (Number(rotYInput) || 0) * (Math.PI / 180)
-  const rotZ = (Number(rotZInput) || 0) * (Math.PI / 180)
 
   // (size, segments, lid, body, fitLid, blinnScale)
   const geometry = new THREE.TeapotGeometry(size, segments, true, true, true, true)
@@ -32,7 +29,6 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)
-  mesh.rotation.set(rotX, rotY, rotZ)
   mesh.castShadow = true
   mesh.receiveShadow = true
 
@@ -57,7 +53,6 @@ function geoTeapotDefinition(centreInput, sizeInput, rotXInput, rotYInput, rotZI
   mesh.userData.geoType = 'geo_teapot'
   mesh.userData.centre = centre.clone()
   mesh.userData.size = size
-  mesh.userData.rotation = { x: rotX, y: rotY, z: rotZ }
   mesh.userData.srcBlockId = blockId
   if (threeObjStore) threeObjStore[blockId] = mesh
   return mesh
@@ -85,14 +80,6 @@ export function initGeoTeapotBlock() {
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
 
       this.appendDummyInput()
-        .appendField('Rotation X:')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'ROT_X')
-        .appendField('Y:')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'ROT_Y')
-        .appendField('Z:')
-        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'ROT_Z')
-
-      this.appendDummyInput()
         .appendField('Segments:')
         .appendField(new Blockly.FieldNumber(10, 2, 30, 1), 'SEGMENTS')
     },
@@ -104,12 +91,9 @@ export function initGeoTeapotBlock() {
     // Fall back safely to window scope context inside the output execution block string
     const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
     const size = Number(block.getFieldValue('SIZE'))
-    const rotX = Number(block.getFieldValue('ROT_X'))
-    const rotY = Number(block.getFieldValue('ROT_Y'))
-    const rotZ = Number(block.getFieldValue('ROT_Z'))
     const segments = Number(block.getFieldValue('SEGMENTS'))
     const blockId = JSON.stringify(block.id)
-    const code = `(${geoTeapotDefinition.toString()})(${centre}, ${size}, ${rotX}, ${rotY}, ${rotZ}, ${segments}, ${blockId})`
+    const code = `(${geoTeapotDefinition.toString()})(${centre}, ${size}, ${segments}, ${blockId})`
     return [code, Order.FUNCTION_CALL]
   }
 }

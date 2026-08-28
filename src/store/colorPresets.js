@@ -49,7 +49,7 @@ export const COLOR_PRESETS = Object.freeze({
       [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [35, 50], toneRange: [45, 68] }, // ~#0996a0
       [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [45, 60], toneRange: [45, 68] }, // ~#d5665b
       [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [40, 55], toneRange: [45, 68] }, // ~#af70bc
-      [OBJECT_TYPES.TEAPOT]: { hue: 85, chromaRange: [35, 50], toneRange: [40, 62] }, // ~#9a730f
+      [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [35, 50], toneRange: [40, 62] }, // ~#5c76d0
     },
     roles: {
       [COLOR_ROLES.OPERAND_A]: '#1e40af',
@@ -96,7 +96,7 @@ export const COLOR_PRESETS = Object.freeze({
       [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [65, 85], toneRange: [40, 72] }, // ~#00959f
       [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [75, 95], toneRange: [40, 72] }, // ~#f4453c
       [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [70, 90], toneRange: [40, 72] }, // ~#ca4fe9
-      [OBJECT_TYPES.TEAPOT]: { hue: 85, chromaRange: [60, 80], toneRange: [35, 65] }, // ~#987100
+      [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [60, 80], toneRange: [35, 65] }, // ~#3a5fd9
     },
     roles: {
       [COLOR_ROLES.OPERAND_A]: '#1d4ed8',

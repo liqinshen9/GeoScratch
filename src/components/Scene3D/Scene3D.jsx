@@ -212,6 +212,21 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     head.position.copy(direction).multiplyScalar(length - headHeight / 2)
     head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
+    // transparent + depthWrite:false (above) puts this in the same sorted-
+    // by-distance transparent queue as every scene object. The axis passes
+    // right through most objects, so their bounding-sphere centers are
+    // nearly coincident -- same as the nested-transparent-object flicker
+    // fixed in computeNestingRenderOrders below, but this pair never goes
+    // through that (Axes isn't in the `objects` array), so it was still
+    // solved per-frame by distance, flipping paint order as the camera
+    // orbits: sometimes the object blends over the axis (correct), sometimes
+    // the axis gets drawn after and sits on top of it instead. A fixed,
+    // always-first renderOrder (same fix FadedGrid already uses below) pins
+    // the axis to always draw before any object, so objects consistently
+    // blend over it instead of the order flip-flopping.
+    shaft.renderOrder = -100
+    head.renderOrder = -100
+
     group.add(shaft, head)
     return group
   }, [dir, color, length, opacity])
@@ -354,6 +369,7 @@ function getObjectFocus(objects) {
     object.updateMatrixWorld(true);
     object.traverse((child) => {
       if (!child.isObject3D || child.userData?.geoType === 'plane_mesh') return;
+      if (child.userData?.geoType === 'exercise_background_decoration') return;
       if (!child.isMesh && !child.isLine && !child.isLineSegments) return;
 
       childBox.setFromObject(child);
