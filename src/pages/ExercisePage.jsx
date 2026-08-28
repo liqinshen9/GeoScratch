@@ -344,7 +344,7 @@ function addExercisePointPIfNeeded(objects, workspace) {
 // visit's saved workspace state) before adding another copy.
 const EXERCISE_BACKGROUND_BLOCK_ID = 'ex-bg-sphere-1'
 const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="geo_sphere" id="ex-bg-sphere-1" x="20" y="20">
+  <block type="geo_sphere" id="ex-bg-sphere-1" x="20" y="-150">
     <field name="RADIUS">0.6</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
@@ -354,7 +354,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_sphere" id="ex-bg-sphere-2" x="20" y="190">
+  <block type="geo_sphere" id="ex-bg-sphere-2" x="20" y="100">
     <field name="RADIUS">0.4</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
@@ -364,7 +364,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_cube" id="ex-bg-cube-1" x="20" y="360">
+  <block type="geo_cube" id="ex-bg-cube-1" x="20" y="350">
     <field name="SIDE_LENGTH">1.1</field>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-cube-1-centre">
@@ -374,7 +374,7 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
       </block>
     </value>
   </block>
-  <block type="geo_vector" id="ex-bg-line-1" x="20" y="530">
+  <block type="geo_vector" id="ex-bg-line-1" x="20" y="600">
     <value name="POS">
       <block type="linalg_vec3" id="ex-bg-line-1-pos">
         <field name="X">-5</field>
