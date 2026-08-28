@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import * as THREE from 'three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
@@ -7,6 +7,9 @@ import { ArrowLeft, ArrowRight } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { collectStatementChain } from '@/utils/sceneHelpers'
+import { geoCubeDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoCube'
+import { geoSphereDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoSphere'
+import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -335,46 +338,31 @@ function addExercisePointPIfNeeded(objects, workspace) {
 
 // Purely decorative -- not part of the target teapot, not graded, just scene
 // dressing for the Transform exercise so it doesn't read as one lone object
-// floating in an empty room. Placed well outside the teapot's own bounding
-// box so it can't get caught up in computeNestingRenderOrders' containment
-// check (Scene3D.jsx), and excluded from getObjectFocus's auto-frame bounds
-// there too (tagged 'exercise_background_decoration', same as 'plane_mesh').
+// floating in an empty room. Built with the SAME runtime constructors real
+// Sphere/Cube/Line blocks use (geoSphereDefinition etc.), so they look,
+// shade, and outline identically to the real thing instead of being
+// hand-rolled placeholder meshes. Each gets a unique fake block id purely so
+// the constructors' internal threeObjStore bookkeeping has a key to use --
+// they're never backed by, or reachable from, an actual Blockly block.
+// Placed well outside the teapot's own bounding box so they can't get caught
+// up in computeNestingRenderOrders' containment check (Scene3D.jsx), and
+// tagged userData.isBackgroundDecoration so getObjectFocus there excludes
+// them from the auto-frame bounds too.
 function createExerciseBackgroundDecorations() {
-  const group = new THREE.Group()
-  group.userData.geoType = 'exercise_background_decoration'
+  const decorations = [
+    geoSphereDefinition(new THREE.Vector3(-4, 0.6, -3), 0.6, 'exercise-bg-sphere-1'),
+    geoSphereDefinition(new THREE.Vector3(3.5, 0.4, -4), 0.4, 'exercise-bg-sphere-2'),
+    geoCubeDefinition(new THREE.Vector3(4, 0.55, 2.5), 1.1, 'exercise-bg-cube-1'),
+    geoVectorLineDefinition(new THREE.Vector3(-5, 0, 3), new THREE.Vector3(1, 0, -0.6), undefined, 'exercise-bg-line-1'),
+  ].filter(Boolean)
 
-  const tagDecoration = (mesh) => {
-    mesh.castShadow = true
-    mesh.receiveShadow = true
-    mesh.userData.geoType = 'exercise_background_decoration'
-    group.add(mesh)
-  }
-
-  const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x9fb4d4, roughness: 0.7, metalness: 0.05 })
-  const sphereA = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 14), sphereMaterial)
-  sphereA.position.set(-4, 0.5, -3)
-  tagDecoration(sphereA)
-
-  const sphereB = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 14), sphereMaterial)
-  sphereB.position.set(3.5, 0.3, -4)
-  tagDecoration(sphereB)
-
-  const cubeMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b8c4, roughness: 0.7, metalness: 0.05 })
-  const cube = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), cubeMaterial)
-  cube.position.set(4, 0.4, 2.5)
-  cube.rotation.y = Math.PI / 6
-  tagDecoration(cube)
-
-  const lineMaterial = new THREE.LineBasicMaterial({ color: 0xb8c2cc })
-  const lineGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-5, 0.01, 3),
-    new THREE.Vector3(5, 0.01, -3),
-  ])
-  const line = new THREE.Line(lineGeometry, lineMaterial)
-  line.userData.geoType = 'exercise_background_decoration'
-  group.add(line)
-
-  return group
+  // Tag every descendant (edges, a sphere's centre marker, ...), not just
+  // the top-level mesh -- getObjectFocus's bounds walk doesn't stop
+  // descending into children just because a parent was excluded.
+  decorations.forEach((object) => {
+    object.traverse((child) => { child.userData.isBackgroundDecoration = true })
+  })
+  return decorations
 }
 
 function hasExercisePlane(objects) {
@@ -916,16 +904,27 @@ export default function ExercisePage() {
     setObjects([])
   }, [setObjects, setPendingObjects])
 
-  const backgroundDecorations = useMemo(() => createExerciseBackgroundDecorations(), [])
+  // Lazily created (not useMemo) -- these constructors need window.THREE,
+  // which Scene3D only sets up in its own layout effect, not yet available
+  // during ExercisePage's first render. By the time handleObjectsChange
+  // actually runs (BlocksCanvas's own mount effect, which fires after every
+  // layout effect in the tree), it's guaranteed ready.
+  const backgroundDecorationsRef = useRef(null)
+  const getBackgroundDecorations = useCallback(() => {
+    if (!backgroundDecorationsRef.current) {
+      backgroundDecorationsRef.current = createExerciseBackgroundDecorations()
+    }
+    return backgroundDecorationsRef.current
+  }, [])
 
   const handleObjectsChange = useCallback(
     (objs) => {
       const withPointP = addExercisePointPIfNeeded(objs, workspace)
-      const exerciseObjects = isTransformExercise ? [...withPointP, backgroundDecorations] : withPointP
+      const exerciseObjects = isTransformExercise ? [...withPointP, ...getBackgroundDecorations()] : withPointP
       setPendingObjects(exerciseObjects)
       if (autoRender) setObjects(exerciseObjects)
     },
-    [autoRender, setPendingObjects, setObjects, workspace, isTransformExercise, backgroundDecorations],
+    [autoRender, setPendingObjects, setObjects, workspace, isTransformExercise, getBackgroundDecorations],
   )
 
   return (

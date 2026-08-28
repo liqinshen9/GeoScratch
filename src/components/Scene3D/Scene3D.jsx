@@ -369,7 +369,7 @@ function getObjectFocus(objects) {
     object.updateMatrixWorld(true);
     object.traverse((child) => {
       if (!child.isObject3D || child.userData?.geoType === 'plane_mesh') return;
-      if (child.userData?.geoType === 'exercise_background_decoration') return;
+      if (child.userData?.isBackgroundDecoration) return;
       if (!child.isMesh && !child.isLine && !child.isLineSegments) return;
 
       childBox.setFromObject(child);

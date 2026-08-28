@@ -3,7 +3,7 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
 
-function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
+export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   // Pull context strictly from the window where Three has been cleanly mounted
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
