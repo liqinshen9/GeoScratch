@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "composite": true,
+    "composite": false,
     "noEmit": true,
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
