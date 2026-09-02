@@ -194,6 +194,11 @@ export default function BlocksCanvas({
   const draggingBlockIdRef = useRef(null)
   const dragOverTrashRef = useRef(false)
   const lastSelectedBlockIdRef = useRef(null)
+  // Set for a short window after a BLOCK_DELETE so the SELECTED events Blockly's
+  // FocusManager fires for a neighbour block (focusout fallout) are not mirrored
+  // into our persistent selection -- see handleSelectedBlock (#102).
+  const selectionAfterDeleteRef = useRef(false)
+  const selectionAfterDeleteTimerRef = useRef(0)
   const trashAnimationTimeoutRef = useRef(0)
   const trashDeleteFrameRef = useRef(0)
   const pendingTrashDeleteRef = useRef(null)
@@ -582,15 +587,44 @@ export default function BlocksCanvas({
         return
       }
 
+      if (event.type === Blockly.Events.CLICK) {
+        // A pointer gesture -- the SELECTED it may be followed by is a genuine
+        // user selection, so lift any post-delete suppression (see below).
+        selectionAfterDeleteRef.current = false
+      }
+
       if (event.type === Blockly.Events.BLOCK_DELETE) {
         const deletedIds = event.ids || (event.blockId ? [event.blockId] : [])
         if (deletedIds.includes(useWorkspaceStore.getState().selectedBlockId)) {
           setSelectedBlockId(null)
         }
+        // Removing the selected block's element from the DOM makes Blockly's
+        // FocusManager (which tracks native focusout) transiently select then
+        // deselect a neighbour block a beat later, outside this event's group.
+        // Blockly itself ends with nothing selected; without this guard our
+        // SELECTED handler mirrors that neighbour into the store and the
+        // trailing SELECTED(null) re-applies its outline, leaving it stuck
+        // selected + 3D-highlighted (#102). Ignore SELECTED until the next
+        // pointer gesture, with a timeout backstop for keyboard-only flows.
+        selectionAfterDeleteRef.current = true
+        window.clearTimeout(selectionAfterDeleteTimerRef.current)
+        selectionAfterDeleteTimerRef.current = window.setTimeout(() => {
+          selectionAfterDeleteRef.current = false
+        }, 400)
         return
       }
 
       if (event.type !== Blockly.Events.SELECTED) return
+
+      if (selectionAfterDeleteRef.current) {
+        // Focus-manager fallout from a delete, not a user selection -- drop it
+        // and undo any outline Blockly's blur re-added to the neighbour.
+        if (event.newElementId) {
+          workspace.getBlockById(event.newElementId)?.removeSelect?.()
+        }
+        return
+      }
+
       const block = event.newElementId ? workspace.getBlockById(event.newElementId) : null
       lastSelectedBlockIdRef.current = block?.isDeletable?.() ? block.id : null
 
@@ -613,7 +647,10 @@ export default function BlocksCanvas({
     }
 
     workspace.addChangeListener(handleSelectedBlock)
-    return () => workspace.removeChangeListener(handleSelectedBlock)
+    return () => {
+      workspace.removeChangeListener(handleSelectedBlock)
+      window.clearTimeout(selectionAfterDeleteTimerRef.current)
+    }
   }, [isDraggedBlockTouchingTrash, scheduleTrashDelete, setSelectedBlockId, setTrashOpenVisual, workspace])
 
   // Store -> workspace: a 3D-scene click (or any other setter) drives the
