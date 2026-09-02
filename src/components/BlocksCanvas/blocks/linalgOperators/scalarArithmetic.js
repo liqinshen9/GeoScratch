@@ -117,7 +117,15 @@ export function initScalarArithmeticBlock() {
         const endRadius = Number(endSphere?.userData?.radius);
         const startSphereMatches = spheres.some((sphere) => samePoint(sphere.userData.centre, originalStart) && radiusMatches(sphere));
         const endSphereMatches = spheres.some((sphere) => samePoint(sphere.userData.centre, originalEnd) && radiusMatches(sphere));
-        const subtractedValues = Array.isArray(aMeta.subtractedValues) ? [...aMeta.subtractedValues, bVal] : [bVal];
+        // e.g. |B - A| - (rA + rB) in one step: bVal is the combined sum, not either single radius.
+        const combinedRadiusMatches = (
+          Number.isFinite(startRadius) &&
+          Number.isFinite(endRadius) &&
+          Math.abs(startRadius + endRadius - bVal) <= 1e-5
+        );
+        const subtractedValues = combinedRadiusMatches
+          ? (Array.isArray(aMeta.subtractedValues) ? [...aMeta.subtractedValues, startRadius, endRadius] : [startRadius, endRadius])
+          : (Array.isArray(aMeta.subtractedValues) ? [...aMeta.subtractedValues, bVal] : [bVal]);
         const hasSubtractedRadius = (radius) => (
           Number.isFinite(radius) &&
           subtractedValues.some((value) => Math.abs(Number(value) - radius) <= 1e-5)
@@ -127,6 +135,9 @@ export function initScalarArithmeticBlock() {
         if (hasSubtractedRadius(startRadius) && hasSubtractedRadius(endRadius)) {
           trimStart = startRadius;
           trimEnd = endRadius;
+        } else if (combinedRadiusMatches) {
+          trimStart += startRadius;
+          trimEnd += endRadius;
         } else if (startSphereMatches && !endSphereMatches) {
           trimStart += bVal;
         } else if (endSphereMatches && !startSphereMatches) {
@@ -180,6 +191,16 @@ export function initScalarArithmeticBlock() {
         });
         if (
           object.userData?.geoType === 'geo_vector_magnitude' &&
+          sameSegment(object.userData.start, object.userData.end, resultMeta.originalStart, resultMeta.originalEnd)
+        ) {
+          object.visible = false;
+          object.userData.labels = [];
+          object.userData.labelAnchors = {};
+        }
+        // the raw point-difference arrow (Vector Arithmetic) always renders, even when
+        // it only feeds a further computation -- hide it once its distance is finalized
+        if (
+          object.userData?.geoType === 'geo_vector_group' &&
           sameSegment(object.userData.start, object.userData.end, resultMeta.originalStart, resultMeta.originalEnd)
         ) {
           object.visible = false;

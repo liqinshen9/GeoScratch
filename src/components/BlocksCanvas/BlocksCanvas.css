@@ -564,6 +564,17 @@
 
 .workspace-trash-item {
   display: flex;
+  width: 100%;
+  border-radius: 6px;
+  cursor: grab;
+}
+
+.workspace-trash-item:active {
+  cursor: grabbing;
+}
+
+.workspace-trash-item__button {
+  display: flex;
   align-items: center;
   width: 100%;
   min-height: 42px;
@@ -596,8 +607,8 @@
   overflow: visible;
 }
 
-.workspace-trash-item:hover,
-.workspace-trash-item:focus-visible {
+.workspace-trash-item:hover .workspace-trash-item__button,
+.workspace-trash-item__button:focus-visible {
   background: var(--bg-soft);
 }
 

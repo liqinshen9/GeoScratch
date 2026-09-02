@@ -124,6 +124,10 @@ export function initVectorArithmeticBlock() {
     }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
+    if (isPointDifference) {
+      group.userData.start = resultOrigin.clone();
+      group.userData.end = resultTip.clone();
+    }
 
     // ---- Labels (tips) ----
     group.userData.labelAnchors = {
