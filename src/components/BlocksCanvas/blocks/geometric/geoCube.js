@@ -69,7 +69,7 @@ export default function initGeoCubeBlock() {
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.appendValueInput('SIDE_LENGTH').appendField('Side length:').setCheck('scalar')
+      this.appendValueInput('SIDE_LENGTH_INPUT').appendField('Side length:').setCheck('scalar')
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     },
   }
@@ -80,7 +80,7 @@ export default function initGeoCubeBlock() {
 
     // Fall back safely to window scope context inside the output execution block string
     const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
-    const sideLength = valueToCode('SIDE_LENGTH') || '1'
+    const sideLength = valueToCode('SIDE_LENGTH_INPUT') || '1'
     const blockId = JSON.stringify(block.id)
 
     const code = `(${geoCubeDefinition.toString()})(${centre}, ${sideLength}, ${blockId})`

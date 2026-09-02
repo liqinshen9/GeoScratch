@@ -66,8 +66,7 @@
     transform-origin: 0 0;
     user-select: none;
     -webkit-user-select: none;
-    pointer-events: auto;
-    cursor: pointer;
+    pointer-events: none;
 }
 
 .editor-body-3d .label--emphasis {
@@ -93,4 +92,3 @@
     box-shadow: none;
     text-shadow: none;
 }
-
