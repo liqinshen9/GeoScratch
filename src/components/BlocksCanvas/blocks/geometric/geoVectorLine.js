@@ -551,21 +551,6 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     ringedTubeDashedGroup.add(segment)
   }
 
-  const capGeom = new THREE.SphereGeometry(0.1088, 16, 16)
-  const capMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, roughness: 0.2 })
-
-  const topCap = new THREE.Mesh(capGeom, capMat)
-  topCap.userData.zoomInvariantRadius = 0.1088
-  topCap.userData.zoomInvariantUniform = true
-  topCap.position.set(0, halfDist, 0)
-  ringedTube.add(topCap)
-
-  const bottomCap = new THREE.Mesh(capGeom, capMat)
-  bottomCap.userData.zoomInvariantRadius = 0.1088
-  bottomCap.userData.zoomInvariantUniform = true
-  bottomCap.position.set(0, -halfDist, 0)
-  ringedTube.add(bottomCap)
-
   ringedTube.position.copy(midPoint)
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
