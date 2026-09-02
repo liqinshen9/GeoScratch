@@ -62,6 +62,36 @@ function matrix4FromAxisRotationDegrees(axis, degrees) {
   return new THREE.Matrix4().makeRotationX(angle)
 }
 
+export function scalarValueFromBlock(block, fallback = 0) {
+  if (!block) return fallback
+
+  if (block.type === 'scalar') {
+    const value = Number(block.getFieldValue('scalar'))
+    return Number.isFinite(value) ? value : fallback
+  }
+
+  if (block.type === 'scalar_arithmetic') {
+    const a = scalarValueFromBlock(block.getInputTargetBlock('A'), 0)
+    const b = scalarValueFromBlock(block.getInputTargetBlock('B'), 0)
+    const op = block.getFieldValue('OP') || 'add'
+    if (op === 'subtract') return a - b
+    if (op === 'multiply') return a * b
+    if (op === 'divide') return Math.abs(b) > 1e-12 ? a / b : 0
+    return a + b
+  }
+
+  return fallback
+}
+
+export function getScalarInputValue(block, inputName, fieldName, fallback) {
+  const connected = block?.getInputTargetBlock?.(inputName)
+  if (connected) return scalarValueFromBlock(connected, fallback)
+  if (!fieldName) return fallback
+
+  const fieldValue = Number(block?.getFieldValue?.(fieldName))
+  return Number.isFinite(fieldValue) ? fieldValue : fallback
+}
+
 /**
  * @param {import('blockly/core').Block | null} block
  * @param {{ fallbackToIdentity?: boolean }} [options]
@@ -71,21 +101,21 @@ export function matrix4FromTransformStepBlock(block, { fallbackToIdentity = fals
 
   if (block.type === 'rot_matrix') {
     const axis = block.getFieldValue('AXIS') || 'X'
-    const degrees = Number(block.getFieldValue('DEGREES')) || 0
+    const degrees = getScalarInputValue(block, 'DEGREES_INPUT', null, 0)
     return matrix4FromAxisRotationDegrees(axis, degrees)
   }
 
   if (block.type === 'trans_matrix') {
-    const tx = Number(block.getFieldValue('TX')) || 0
-    const ty = Number(block.getFieldValue('TY')) || 0
-    const tz = Number(block.getFieldValue('TZ')) || 0
+    const tx = getScalarInputValue(block, 'TX_INPUT', null, 0)
+    const ty = getScalarInputValue(block, 'TY_INPUT', null, 0)
+    const tz = getScalarInputValue(block, 'TZ_INPUT', null, 0)
     return new THREE.Matrix4().makeTranslation(tx, ty, tz)
   }
 
   if (block.type === 'scale_matrix') {
-    const sx = Number(block.getFieldValue('SX')) || 1
-    const sy = Number(block.getFieldValue('SY')) || 1
-    const sz = Number(block.getFieldValue('SZ')) || 1
+    const sx = getScalarInputValue(block, 'SX_INPUT', null, 1)
+    const sy = getScalarInputValue(block, 'SY_INPUT', null, 1)
+    const sz = getScalarInputValue(block, 'SZ_INPUT', null, 1)
     return new THREE.Matrix4().makeScale(sx, sy, sz)
   }
 

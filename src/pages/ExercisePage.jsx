@@ -7,7 +7,7 @@ import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import { ArrowLeft, ArrowRight } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
-import { collectStatementChain } from '@/utils/sceneHelpers'
+import { collectStatementChain, getScalarInputValue } from '@/utils/sceneHelpers'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -198,7 +198,14 @@ function isSphereBlock(block, centre, radius) {
   return (
     block?.type === 'geo_sphere' &&
     blockMatchesVec3(getInputBlock(block, 'CENTRE'), centre) &&
-    closeNumber(block.getFieldValue('RADIUS'), radius)
+    scalarInputMatches(block, 'RADIUS_INPUT', radius, 1)
+  )
+}
+
+function scalarInputMatches(block, inputName, target, fallback = 0) {
+  return Boolean(
+    block?.getInputTargetBlock?.(inputName) &&
+    closeNumber(getScalarInputValue(block, inputName, null, fallback), target)
   )
 }
 
@@ -346,7 +353,11 @@ function addExercisePointPIfNeeded(objects, workspace) {
 const EXERCISE_BACKGROUND_BLOCK_IDS = ['ex-bg-sphere-1', 'ex-bg-sphere-2', 'ex-bg-cube-1', 'ex-bg-line-1']
 const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
   <block type="geo_sphere" id="ex-bg-sphere-1" x="-350" y="-350">
-    <field name="RADIUS">0.6</field>
+    <value name="RADIUS_INPUT">
+      <block type="scalar" id="ex-bg-sphere-1-radius">
+        <field name="scalar">0.6</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
         <field name="X">-4</field>
@@ -356,7 +367,11 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
     </value>
   </block>
   <block type="geo_sphere" id="ex-bg-sphere-2" x="50" y="-350">
-    <field name="RADIUS">0.4</field>
+    <value name="RADIUS_INPUT">
+      <block type="scalar" id="ex-bg-sphere-2-radius">
+        <field name="scalar">0.4</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
         <field name="X">3.5</field>
@@ -366,7 +381,11 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
     </value>
   </block>
   <block type="geo_cube" id="ex-bg-cube-1" x="-350" y="50">
-    <field name="SIDE_LENGTH">1.1</field>
+    <value name="SIDE_LENGTH_INPUT">
+      <block type="scalar" id="ex-bg-cube-1-side-length">
+        <field name="scalar">1.1</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-cube-1-centre">
         <field name="X">4</field>
@@ -626,16 +645,16 @@ function isTargetTeapotBlock(block) {
     : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
   return (
     centreMatches &&
-    closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE)
+    scalarInputMatches(block, 'SIZE_INPUT', TRANSFORM_TEAPOT_SIZE, 1)
   )
 }
 
 function isScaleStepBlock(block, factor) {
   return (
     block?.type === 'scale_matrix' &&
-    closeNumber(block.getFieldValue('SX'), factor) &&
-    closeNumber(block.getFieldValue('SY'), factor) &&
-    closeNumber(block.getFieldValue('SZ'), factor)
+    scalarInputMatches(block, 'SX_INPUT', factor, 1) &&
+    scalarInputMatches(block, 'SY_INPUT', factor, 1) &&
+    scalarInputMatches(block, 'SZ_INPUT', factor, 1)
   )
 }
 
@@ -643,16 +662,16 @@ function isRotateStepBlock(block, axis, degrees) {
   return (
     block?.type === 'rot_matrix' &&
     block.getFieldValue('AXIS') === axis &&
-    closeNumber(block.getFieldValue('DEGREES'), degrees)
+    scalarInputMatches(block, 'DEGREES_INPUT', degrees, 0)
   )
 }
 
 function isTranslateStepBlock(block, tx, ty, tz) {
   return (
     block?.type === 'trans_matrix' &&
-    closeNumber(block.getFieldValue('TX'), tx) &&
-    closeNumber(block.getFieldValue('TY'), ty) &&
-    closeNumber(block.getFieldValue('TZ'), tz)
+    scalarInputMatches(block, 'TX_INPUT', tx, 0) &&
+    scalarInputMatches(block, 'TY_INPUT', ty, 0) &&
+    scalarInputMatches(block, 'TZ_INPUT', tz, 0)
   )
 }
 
@@ -1070,7 +1089,7 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={sphereStepCompletion.spheres ? 'is-complete' : ''}>
-                      Create: Sphere A, Sphere B, Center A, Center B. Please use Point blocks for the centers so the center-to-center vector draws in the right place.
+                      Create: Sphere A, Sphere B, Center A, Center B. Use Scalar blocks for each radius, and Point blocks for the centers so the center-to-center vector draws in the right place.
                     </li>
                     <li className={sphereStepCompletion.difference ? 'is-complete' : ''}>
                       Compute: center difference with the Vector Arithmetic block, B - A or A - B. This vector should run from one sphere center to the other.
@@ -1099,13 +1118,13 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={scaleStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size 1.
+                      Create: Teapot at (0, 0, 0) with size Scalar 1.
                     </li>
                     <li className={scaleStepCompletion.pipeline ? 'is-complete' : ''}>
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={scaleStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix (sx=3, sy=3, sz=3) as a step in the pipeline.
+                      Add: a Scale Matrix with Scalar blocks sx=3, sy=3, sz=3 as a step in the pipeline.
                     </li>
                   </ol>
                 </>
@@ -1125,13 +1144,13 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={rotateStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size 1.
+                      Create: Teapot at (0, 0, 0) with size Scalar 1.
                     </li>
                     <li className={rotateStepCompletion.pipeline ? 'is-complete' : ''}>
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={rotateStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix (axis Z, 90 degrees) as a step in the pipeline.
+                      Add: a Rotation Matrix with a Scalar 90 degrees value as a step in the pipeline.
                     </li>
                   </ol>
                 </>
@@ -1152,16 +1171,16 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={transformStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size 1.
+                      Create: Teapot at (0, 0, 0) with size Scalar 1.
                     </li>
                     <li className={transformStepCompletion.pipeline ? 'is-complete' : ''}>
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={transformStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix (sx=2, sy=2, sz=2) as a step in the pipeline.
+                      Add: a Scale Matrix with Scalar blocks sx=2, sy=2, sz=2 as a step in the pipeline.
                     </li>
                     <li className={transformStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline. Order does not matter.
+                      Add: a Rotation Matrix with a Scalar 45 degrees value as another step in the pipeline. Order does not matter.
                     </li>
                   </ol>
                 </>
@@ -1181,13 +1200,13 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={translateStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size 1.
+                      Create: Teapot at (0, 0, 0) with size Scalar 1.
                     </li>
                     <li className={translateStepCompletion.pipeline ? 'is-complete' : ''}>
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={translateStepCompletion.translate ? 'is-complete' : ''}>
-                      Add: a Translation Matrix (x=3, y=0, z=0) as a step in the pipeline.
+                      Add: a Translation Matrix with Scalar blocks x=3, y=0, z=0 as a step in the pipeline.
                     </li>
                   </ol>
                 </>
