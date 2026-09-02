@@ -17,6 +17,7 @@ import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
 import SelectionHighlight from './SelectionHighlight'
+import AnimationDriver from './AnimationDriver'
 import {
   classifyGesture,
   findLabelOwner,
@@ -1251,6 +1252,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       <FatLineSync objects={objects} extraThick={settings.extraThickLines} extraThickVectors={settings.extraThickVectors} />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
+      <AnimationDriver objects={objects} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />
 

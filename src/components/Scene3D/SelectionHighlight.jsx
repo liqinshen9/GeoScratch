@@ -163,6 +163,7 @@ function applyBlink(targets) {
     captured.forEach(({ m, lo, hi }) => {
       m.opacity = lo + (hi - lo) * k
     })
+    return true // always animating -> keep the frameloop going
   }
 
   const restore = () => {
@@ -177,6 +178,26 @@ function applyBlink(targets) {
 }
 
 // --- GLOW: an actual warm light + a soft radial haze ------------------------
+
+// Union world-space bbox centre of `targets`, written into `out`. Returns `out`
+// or null if nothing has bounds. Used both to place the bbox-path glow and, each
+// frame, to make it follow an object the AnimationDriver is moving.
+const GLOW_TICK_SCRATCH = new THREE.Vector3()
+function unionBoxCenter(targets, out) {
+  const box = new THREE.Box3()
+  let ok = false
+  targets.forEach((t) => {
+    t.updateMatrixWorld(true)
+    const b = new THREE.Box3().setFromObject(t)
+    if (!b.isEmpty()) {
+      box.union(b)
+      ok = true
+    }
+  })
+  if (!ok) return null
+  box.getCenter(out)
+  return out
+}
 
 // A camera-facing haze sprite at `center` (+ an optional warm point light).
 // `strength` (0..1) scales brightness; sprites are cheap, lights are not, so
@@ -303,6 +324,10 @@ function applyGlow(targets, scene, size) {
   const planeMeshes = collectPlaneMeshes(targets)
   const heads = planeMeshes.length ? [] : collectVectorHeads(targets)
 
+  // bbox-path only: lets tick() slide the free-floating light/sprite along with
+  // an object the AnimationDriver is translating. { anchor, items:[{obj,offset}] }
+  let follow = null
+
   if (planeMeshes.length) {
     // Plane: glow radiating from the border, ignoring the defining point +
     // normal glyphs. Hide the plane's own edge line first -- it's translucent
@@ -375,7 +400,12 @@ function applyGlow(targets, scene, size) {
       // Bigger object -> a touch fainter (a hard cut looks deliberately
       // greyed-out), so a 2x teapot doesn't read as twice as glowy.
       const strength = THREE.MathUtils.clamp(Math.sqrt(GLOW_RADIUS_REF / radius), 0.78, 1)
-      parts.push(addGlowAt(scene, accent, sphere.center, radius, strength))
+      const part = addGlowAt(scene, accent, sphere.center, radius, strength)
+      parts.push(part)
+      follow = { anchor: sphere.center.clone(), items: [] }
+      ;[part.light, part.sprite].forEach((obj) => {
+        if (obj) follow.items.push({ obj, offset: obj.position.clone().sub(sphere.center) })
+      })
     }
 
     // A touch of emissive so the surface itself reads as lit from within.
@@ -393,6 +423,17 @@ function applyGlow(targets, scene, size) {
   }
 
   return {
+    // Keep the free-floating glow on the object while the AnimationDriver moves
+    // it. Returns true only when it actually repositioned, so an idle selection
+    // doesn't force the frameloop (unlike blink, which always animates).
+    tick: () => {
+      if (!follow) return false
+      const c = unionBoxCenter(targets, GLOW_TICK_SCRATCH)
+      if (!c || c.equals(follow.anchor)) return false
+      follow.anchor.copy(c)
+      follow.items.forEach(({ obj, offset }) => obj.position.copy(c).add(offset))
+      return true
+    },
     restore: () => {
       parts.forEach(({ light, sprite, spriteMat }) => {
         if (light) {
@@ -459,12 +500,11 @@ export default function SelectionHighlight({ objects = [] }) {
     }
   }, [targets, enabled, style, scene, size, invalidate])
 
-  // BLINK is the only style that animates; frameloop="demand" -> keep ticking.
+  // frameloop="demand": tick returns whether it needs another frame -- blink
+  // always does (continuous pulse); glow only when it repositioned to follow a
+  // moving object.
   useFrame(({ clock }) => {
-    const tick = activeRef.current?.tick
-    if (!tick) return
-    tick(clock.elapsedTime)
-    invalidate()
+    if (activeRef.current?.tick?.(clock.elapsedTime)) invalidate()
   })
 
   return null

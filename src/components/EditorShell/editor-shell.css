@@ -51,6 +51,15 @@
   background: var(--geo-surface);
 }
 
+/* 3D View header carries the animation transport bar next to its title. */
+.editor-head--last {
+  gap: 10px;
+}
+
+.editor-head--last > h2 {
+  flex: 0 0 auto;
+}
+
 /* Counted from the end so the same rule covers both the 3-column base
    layout and the --with-leading 4-column layout: toolbox+workspace are
    always the two tracks before the last one, 3D view is always the last. */

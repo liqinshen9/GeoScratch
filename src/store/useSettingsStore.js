@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 import { DEFAULT_COLOR_PRESET } from './colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
+import { ANIMATION_EASINGS, DEFAULT_ANIMATION_DURATION_MS } from './animationConfig'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
@@ -33,6 +34,9 @@ const DEFAULT_SETTINGS = {
   showPlanePointNormal: true,
   objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
+  animationDurationMs: DEFAULT_ANIMATION_DURATION_MS,
+  animationEasing: ANIMATION_EASINGS.EASE_IN_OUT,
+  animationLoop: false,
 }
 
 const useSettingsStore = create((set) => ({

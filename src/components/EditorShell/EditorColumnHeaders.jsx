@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
 import { FullScreenOne, OffScreenOne } from '@icon-park/react'
+import AnimationTransport from './AnimationTransport'
 
 export default function EditorColumnHeaders({
   leadingHeader,
@@ -57,6 +58,7 @@ export default function EditorColumnHeaders({
 
       <header className="panel-column-header editor-head editor-head--last">
         <h2>3D View</h2>
+        <AnimationTransport />
       </header>
     </div>
   )

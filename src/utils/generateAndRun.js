@@ -113,11 +113,33 @@ function runConnectedTransformPipelines(workspace) {
       continue
     }
 
+    // Bake a start/end pose pair so AnimationDriver can interpolate this object
+    // between "untransformed" and "fully transformed" without re-running code
+    // generation every frame. Assumes `object` is top-level in the scene (its
+    // <primitive> wrapper group is identity) -- true for every current
+    // transform exercise. A second pipeline feeding the same object keeps the
+    // first-captured start and just records its own id as another entry point.
+    object.updateMatrix()
+    const priorAnim = object.userData.transformAnim
+    const startPos = priorAnim ? priorAnim.startPos : object.position.clone()
+    const startQuat = priorAnim ? priorAnim.startQuat : object.quaternion.clone()
+    const startScale = priorAnim ? priorAnim.startScale : object.scale.clone()
+
     for (const step of steps) {
       applyWorldMatrix4ToObject(object, matrix4FromTransformStepBlock(step))
     }
 
     object.updateMatrixWorld(true)
+
+    object.userData.transformAnim = {
+      startPos,
+      startQuat,
+      startScale,
+      endPos: object.position.clone(),
+      endQuat: object.quaternion.clone(),
+      endScale: object.scale.clone(),
+      pipelineBlockIds: [...(priorAnim?.pipelineBlockIds || []), pipeline.id],
+    }
   }
 }
 

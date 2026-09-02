@@ -3,6 +3,7 @@ import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
 import { COLOR_PRESETS } from '../store/colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
+import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
@@ -106,26 +107,6 @@ export default function SettingsPage() {
               />
             </SettingsSection>
 
-            <SettingsSection title="Pre-attentive processing">
-              <ToggleRow
-                label="Highlight the selected object"
-                description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
-                checked={settings.objectHighlightEnabled}
-                onChange={(v) => updateSetting('objectHighlightEnabled', v)}
-              />
-              <SelectField
-                label="Highlight style"
-                description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
-                value={settings.objectHighlightStyle}
-                onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
-              >
-                {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
-                  <option key={key} value={value}>
-                    {key.replace(/_/g, ' ').toLowerCase()}
-                  </option>
-                ))}
-              </SelectField>
-            </SettingsSection>
           </div>
 
           <div className="settings-compact-group">
@@ -177,6 +158,64 @@ export default function SettingsPage() {
               />
             </SettingsSection>
           </div>
+
+          <SettingsSection title="Animation & Highlighting" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Animation">
+                <SelectField
+                  label="Speed"
+                  description="How long a full play-through of a transform-pipeline animation takes. Also set by the transport bar above the 3D view."
+                  value={settings.animationDurationMs}
+                  onChange={(e) => updateSetting('animationDurationMs', Number(e.target.value))}
+                >
+                  {ANIMATION_SPEED_PRESETS.map((preset) => (
+                    <option key={preset.label} value={preset.ms}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  label="Easing"
+                  description="The acceleration curve the animation follows between its start and end pose."
+                  value={settings.animationEasing}
+                  onChange={(e) => updateSetting('animationEasing', e.target.value)}
+                >
+                  {Object.entries(ANIMATION_EASINGS).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Loop"
+                  description="Repeat the animation from the start instead of stopping once it reaches the end."
+                  checked={settings.animationLoop}
+                  onChange={(v) => updateSetting('animationLoop', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Highlighting">
+                <ToggleRow
+                  label="Highlight the selected object"
+                  description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
+                  checked={settings.objectHighlightEnabled}
+                  onChange={(v) => updateSetting('objectHighlightEnabled', v)}
+                />
+                <SelectField
+                  label="Highlight style"
+                  description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
+                  value={settings.objectHighlightStyle}
+                  onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
+                >
+                  {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+            </div>
+          </SettingsSection>
 
           <SettingsSection title="Objects & Geometry" className="settings-card--wide">
             <div className="settings-geometry-grid">
