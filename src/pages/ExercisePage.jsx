@@ -652,9 +652,9 @@ function isTargetTeapotBlock(block) {
 function isScaleStepBlock(block, factor) {
   return (
     block?.type === 'scale_matrix' &&
-    scalarInputMatches(block, 'SX_INPUT', factor, 1) &&
-    scalarInputMatches(block, 'SY_INPUT', factor, 1) &&
-    scalarInputMatches(block, 'SZ_INPUT', factor, 1)
+    closeNumber(block.getFieldValue('SX'), factor) &&
+    closeNumber(block.getFieldValue('SY'), factor) &&
+    closeNumber(block.getFieldValue('SZ'), factor)
   )
 }
 
@@ -662,16 +662,16 @@ function isRotateStepBlock(block, axis, degrees) {
   return (
     block?.type === 'rot_matrix' &&
     block.getFieldValue('AXIS') === axis &&
-    scalarInputMatches(block, 'DEGREES_INPUT', degrees, 0)
+    closeNumber(block.getFieldValue('DEGREES'), degrees)
   )
 }
 
 function isTranslateStepBlock(block, tx, ty, tz) {
   return (
     block?.type === 'trans_matrix' &&
-    scalarInputMatches(block, 'TX_INPUT', tx, 0) &&
-    scalarInputMatches(block, 'TY_INPUT', ty, 0) &&
-    scalarInputMatches(block, 'TZ_INPUT', tz, 0)
+    closeNumber(block.getFieldValue('TX'), tx) &&
+    closeNumber(block.getFieldValue('TY'), ty) &&
+    closeNumber(block.getFieldValue('TZ'), tz)
   )
 }
 
@@ -1124,7 +1124,7 @@ export default function ExercisePage() {
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={scaleStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix with Scalar blocks sx=3, sy=3, sz=3 as a step in the pipeline.
+                      Add: a Scale Matrix (sx=3, sy=3, sz=3) as a step in the pipeline.
                     </li>
                   </ol>
                 </>
@@ -1150,7 +1150,7 @@ export default function ExercisePage() {
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={rotateStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix with a Scalar 90 degrees value as a step in the pipeline.
+                      Add: a Rotation Matrix (axis Z, 90 degrees) as a step in the pipeline.
                     </li>
                   </ol>
                 </>
@@ -1177,10 +1177,10 @@ export default function ExercisePage() {
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={transformStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix with Scalar blocks sx=2, sy=2, sz=2 as a step in the pipeline.
+                      Add: a Scale Matrix (sx=2, sy=2, sz=2) as a step in the pipeline.
                     </li>
                     <li className={transformStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix with a Scalar 45 degrees value as another step in the pipeline. Order does not matter.
+                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline. Order does not matter.
                     </li>
                   </ol>
                 </>
@@ -1206,7 +1206,7 @@ export default function ExercisePage() {
                       Build: a Transform Pipeline and connect its input to the Teapot.
                     </li>
                     <li className={translateStepCompletion.translate ? 'is-complete' : ''}>
-                      Add: a Translation Matrix with Scalar blocks x=3, y=0, z=0 as a step in the pipeline.
+                      Add: a Translation Matrix (x=3, y=0, z=0) as a step in the pipeline.
                     </li>
                   </ol>
                 </>

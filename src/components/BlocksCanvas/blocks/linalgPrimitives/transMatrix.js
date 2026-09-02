@@ -4,7 +4,6 @@ import { javascriptGenerator } from 'blockly/javascript'
 import { translationMatrix, translationMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
-import { getScalarInputValue } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 
@@ -16,22 +15,26 @@ export function initTransMatrixBlock() {
     init() {
       this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
       this.appendDummyInput().appendField('Translate (x, y, z)')
-      this.appendValueInput('TX_INPUT').appendField('x').setCheck('scalar')
-      this.appendValueInput('TY_INPUT').appendField('y').setCheck('scalar')
-      this.appendValueInput('TZ_INPUT').appendField('z').setCheck('scalar')
+      this.appendDummyInput()
+        .appendField('x')
+        .appendField(new Blockly.FieldNumber(0), 'TX')
+        .appendField('y')
+        .appendField(new Blockly.FieldNumber(0), 'TY')
+        .appendField('z')
+        .appendField(new Blockly.FieldNumber(0), 'TZ')
       appendMatrixPreviewUI(
         this,
         (b) =>
           translationMatrix3x3(
-            getScalarInputValue(b, 'TX_INPUT', null, 0),
-            getScalarInputValue(b, 'TY_INPUT', null, 0),
-            getScalarInputValue(b, 'TZ_INPUT', null, 0)
+            Number(b.getFieldValue('TX')) || 0,
+            Number(b.getFieldValue('TY')) || 0,
+            Number(b.getFieldValue('TZ')) || 0
           ),
         (b) =>
           translationMatrix(
-            getScalarInputValue(b, 'TX_INPUT', null, 0),
-            getScalarInputValue(b, 'TY_INPUT', null, 0),
-            getScalarInputValue(b, 'TZ_INPUT', null, 0)
+            Number(b.getFieldValue('TX')) || 0,
+            Number(b.getFieldValue('TY')) || 0,
+            Number(b.getFieldValue('TZ')) || 0
           )
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)

@@ -7,7 +7,6 @@ import {
 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
-import { getScalarInputValue } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 const AXIS_OPTIONS = [
@@ -28,18 +27,21 @@ export function initRotMatrixBlock() {
         .appendField('Rotate around')
         .appendField(new Blockly.FieldDropdown(AXIS_OPTIONS), 'AXIS')
         .appendField('axis')
-      this.appendValueInput('DEGREES_INPUT').appendField('degrees').setCheck('scalar')
+      this.appendDummyInput()
+        .appendField('by')
+        .appendField(new Blockly.FieldNumber(0, -360, 360, 1), 'DEGREES')
+        .appendField('degrees')
       appendMatrixPreviewUI(
         this,
         (b) =>
           rotationMatrix3x3AroundAxisFromDegrees(
             b.getFieldValue('AXIS') || 'X',
-            getScalarInputValue(b, 'DEGREES_INPUT', null, 0)
+            Number(b.getFieldValue('DEGREES')) || 0
           ),
         (b) =>
           rotationMatrixAroundAxisFromDegrees(
             b.getFieldValue('AXIS') || 'X',
-            getScalarInputValue(b, 'DEGREES_INPUT', null, 0)
+            Number(b.getFieldValue('DEGREES')) || 0
           )
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)

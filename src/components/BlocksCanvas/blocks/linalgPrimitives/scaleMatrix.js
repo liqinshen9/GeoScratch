@@ -4,7 +4,6 @@ import { javascriptGenerator } from 'blockly/javascript'
 import { scaleMatrix, scaleMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
-import { getScalarInputValue } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 
@@ -16,22 +15,26 @@ export function initScaleMatrixBlock() {
     init() {
       this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
       this.appendDummyInput().appendField('Scale (sx, sy, sz)')
-      this.appendValueInput('SX_INPUT').appendField('sx').setCheck('scalar')
-      this.appendValueInput('SY_INPUT').appendField('sy').setCheck('scalar')
-      this.appendValueInput('SZ_INPUT').appendField('sz').setCheck('scalar')
+      this.appendDummyInput()
+        .appendField('sx')
+        .appendField(new Blockly.FieldNumber(1, -Infinity, Infinity, 0.1), 'SX')
+        .appendField('sy')
+        .appendField(new Blockly.FieldNumber(1, -Infinity, Infinity, 0.1), 'SY')
+        .appendField('sz')
+        .appendField(new Blockly.FieldNumber(1, -Infinity, Infinity, 0.1), 'SZ')
       appendMatrixPreviewUI(
         this,
         (b) =>
           scaleMatrix3x3(
-            getScalarInputValue(b, 'SX_INPUT', null, 1),
-            getScalarInputValue(b, 'SY_INPUT', null, 1),
-            getScalarInputValue(b, 'SZ_INPUT', null, 1)
+            Number(b.getFieldValue('SX')),
+            Number(b.getFieldValue('SY')),
+            Number(b.getFieldValue('SZ'))
           ),
         (b) =>
           scaleMatrix(
-            getScalarInputValue(b, 'SX_INPUT', null, 1),
-            getScalarInputValue(b, 'SY_INPUT', null, 1),
-            getScalarInputValue(b, 'SZ_INPUT', null, 1)
+            Number(b.getFieldValue('SX')),
+            Number(b.getFieldValue('SY')),
+            Number(b.getFieldValue('SZ'))
           )
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)

@@ -101,21 +101,21 @@ export function matrix4FromTransformStepBlock(block, { fallbackToIdentity = fals
 
   if (block.type === 'rot_matrix') {
     const axis = block.getFieldValue('AXIS') || 'X'
-    const degrees = getScalarInputValue(block, 'DEGREES_INPUT', null, 0)
+    const degrees = Number(block.getFieldValue('DEGREES')) || 0
     return matrix4FromAxisRotationDegrees(axis, degrees)
   }
 
   if (block.type === 'trans_matrix') {
-    const tx = getScalarInputValue(block, 'TX_INPUT', null, 0)
-    const ty = getScalarInputValue(block, 'TY_INPUT', null, 0)
-    const tz = getScalarInputValue(block, 'TZ_INPUT', null, 0)
+    const tx = Number(block.getFieldValue('TX')) || 0
+    const ty = Number(block.getFieldValue('TY')) || 0
+    const tz = Number(block.getFieldValue('TZ')) || 0
     return new THREE.Matrix4().makeTranslation(tx, ty, tz)
   }
 
   if (block.type === 'scale_matrix') {
-    const sx = getScalarInputValue(block, 'SX_INPUT', null, 1)
-    const sy = getScalarInputValue(block, 'SY_INPUT', null, 1)
-    const sz = getScalarInputValue(block, 'SZ_INPUT', null, 1)
+    const sx = Number(block.getFieldValue('SX')) || 1
+    const sy = Number(block.getFieldValue('SY')) || 1
+    const sz = Number(block.getFieldValue('SZ')) || 1
     return new THREE.Matrix4().makeScale(sx, sy, sz)
   }
 

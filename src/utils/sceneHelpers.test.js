@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  getScalarInputValue,
-  matrix4FromTransformStepBlock,
-  scalarValueFromBlock,
-} from './sceneHelpers'
+import { getScalarInputValue, scalarValueFromBlock } from './sceneHelpers'
 
 function scalarBlock(value) {
   return {
@@ -36,18 +32,5 @@ describe('scalar block helpers', () => {
 
     expect(scalarValueFromBlock(scalarBlock(4))).toBe(4)
     expect(getScalarInputValue(block, 'RADIUS_INPUT', null, 1)).toBe(6)
-  })
-
-  it('builds transform matrices from scalar input blocks', () => {
-    const scale = blockWithInputs('scale_matrix', {
-      SX_INPUT: scalarBlock(2),
-      SY_INPUT: scalarBlock(3),
-      SZ_INPUT: scalarBlock(4),
-    })
-    const matrix = matrix4FromTransformStepBlock(scale)
-
-    expect(matrix.elements[0]).toBe(2)
-    expect(matrix.elements[5]).toBe(3)
-    expect(matrix.elements[10]).toBe(4)
   })
 })
