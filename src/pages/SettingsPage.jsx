@@ -273,6 +273,15 @@ export default function SettingsPage() {
                   onChange={(v) => updateSetting('sphereShowGridlines', v)}
                 />
               </GeometryTile>
+
+              <GeometryTile title="Cube">
+                <ToggleRow
+                  label="Outline Edges"
+                  description="Draw the 12 edge lines around cube objects"
+                  checked={settings.cubeShowEdges}
+                  onChange={(v) => updateSetting('cubeShowEdges', v)}
+                />
+              </GeometryTile>
             </div>
           </SettingsSection>
 

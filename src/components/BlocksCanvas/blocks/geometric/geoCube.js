@@ -7,6 +7,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   // Pull context strictly from the window where Three has been cleanly mounted
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
+  const useSettingsStore = window.useSettingsStore
 
   if (!THREE) return null
 
@@ -33,6 +34,17 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
   )
   mesh.add(edges)
+
+  edges.visible = !!useSettingsStore?.getState().settings.cubeShowEdges
+  if (useSettingsStore) {
+    const unsubscribeEdges = useSettingsStore.subscribe((state) => {
+      if (window.threeObjStore?.[blockId] !== mesh) {
+        unsubscribeEdges()
+        return
+      }
+      edges.visible = !!state.settings.cubeShowEdges
+    })
+  }
 
   mesh.userData.geoType = 'geo_cube'
   mesh.userData.centre = centre.clone()

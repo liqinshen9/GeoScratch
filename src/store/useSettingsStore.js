@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   autoFocusOnNewObject: false,
   sphereShowGridlines: false,
   teapotShowGridlines: false,
+  cubeShowEdges: false,
   zoomInvariantSizing: true,
   extraThickLines: false,
   extraLargePoints: false,
