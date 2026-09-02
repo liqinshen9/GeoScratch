@@ -123,9 +123,14 @@ export function initVec3Block() {
 
     return [`(function(){
       const vec = new THREE.Vector3(${coords});
+      const __anchor = ${originConnected ? (originCode || 'new THREE.Vector3(0, 0, 0)') : 'new THREE.Vector3(0, 0, 0)'};
+      ${originConnected ? `// "from point:" tail -- consumed by operators (e.g. vector_arithmetic
+      // draws this operand from here instead of the origin) as well as the
+      // standalone glyph below.
+      vec.userData = { ...(vec.userData || {}), anchor: __anchor.clone() };` : ''}
       ${isStandalone ? `
       const label = vectorNotation.assignVectorLabel(${blockId});
-      const origin = ${originCode || 'new THREE.Vector3(0, 0, 0)'};
+      const origin = __anchor.clone();
       const tip = origin.clone().add(vec);
       const len = vec.length();
       const vectorColor = window.GeoScratchColors.forInstance('vector', ${blockId});

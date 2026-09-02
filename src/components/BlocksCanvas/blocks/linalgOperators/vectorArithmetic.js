@@ -58,14 +58,28 @@ export function initVectorArithmeticBlock() {
     const operandAColor = window.GeoScratchColors.forRole('operandA');
     const operandBColor = window.GeoScratchColors.forRole('operandB');
 
+    // Vector arithmetic is anchor-agnostic: each operand is drawn from the
+    // origin, so a + b and a - b read as free vectors. The exception is an
+    // operand that carries its own tail via a "from point:" vector -- that one
+    // is drawn from the supplied point. To see the head-to-tail picture a
+    // student sets the second operand's "from point:" to the first vector's
+    // tip themselves. (The point-difference path below keeps its own P -> Q
+    // geometry and never uses these two arrows.)
+    const anchorOf = (value) =>
+      (value.userData?.anchor && value.userData.anchor.isVector3)
+        ? value.userData.anchor.clone()
+        : origin.clone();
+    const uAnchor = anchorOf(uVal);
+    const vAnchor = anchorOf(vVal);
+
     const arrowU = window.buildVectorShaftGlyph(
-      THREE, baseId + '_u', origin.clone(),
+      THREE, baseId + '_u', uAnchor.clone(),
       (lenU > 0 ? uVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       safeLen(lenU), operandAColor
     );
 
     const arrowV = window.buildVectorShaftGlyph(
-      THREE, baseId + '_v', origin.clone(),
+      THREE, baseId + '_v', vAnchor.clone(),
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       safeLen(lenV), operandBColor
     );
@@ -131,8 +145,8 @@ export function initVectorArithmeticBlock() {
 
     // ---- Labels (tips) ----
     group.userData.labelAnchors = {
-      uTip:   { type:'world', position:[uVal.x, uVal.y, uVal.z] },
-      vTip:   { type:'world', position:[vVal.x, vVal.y, vVal.z] },
+      uTip:   { type:'world', position:[uAnchor.x + uVal.x, uAnchor.y + uVal.y, uAnchor.z + uVal.z] },
+      vTip:   { type:'world', position:[vAnchor.x + vVal.x, vAnchor.y + vVal.y, vAnchor.z + vVal.z] },
       rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
     };
     const resultColor = isPointDifference
