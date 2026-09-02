@@ -1,43 +1,50 @@
 # GEOSCRATCH
 ## ⭐Overview
-GeoScratch is a web-based visual programming environment that enables users to create 3D geometric visualizations through block-based coding. The application combines Blockly's drag-and-drop programming interface with Three.js 3D rendering to provide an interactive platform for exploring geometric concepts, linear algebra operations, and spatial transformations.
+GeoScratch is a block-based visual programming tool for learning 3D geometry and linear algebra. It pairs Blockly's drag-and-drop editor with Three.js rendering, so snapping together concept-blocks (vectors, transforms, distances, solids) builds a live 3D scene.
+
+## ⭐Pages
+- **Landing** (`/landing`) — entry page.
+- **Sandbox** (`/sandbox`) — free-form workspace for building any scene with blocks.
+- **Exercise** (`/exercise`) — guided, graded exercises (transforms, distances, spheres, etc.).
+- **Settings** (`/settings`) — display/theme preferences.
 
 ## ⭐Set up
+This project uses **pnpm** (enforced via a `preinstall` check — `npm install` will fail).
+
 1) Clone
 ```bash
- https://github.com/winola-whu/GeoScratch.git
+git clone https://github.com/liqinshen9/GeoScratch.git
 ```
 
-3) Install dependencies
+2) Install dependencies
 ```bash
-npm install
+pnpm install
 ```
 
-4) Run
+3) Run the dev server
 ```bash
-npm run dev
+pnpm dev
 ```
+
+Other available scripts:
+```bash
+pnpm build       # production build
+pnpm preview     # preview the production build
+pnpm lint        # eslint
+pnpm test        # run tests once (vitest)
+pnpm test:watch  # run tests in watch mode
+```
+
+## ⭐Tech Stack
+React 19 + Vite 7, Blockly 12 (block editor), Three.js (3D rendering), Zustand (state), React Router, Tailwind CSS 4.
 
 ## ⭐Architecture Overview
 ![image alt](https://github.com/winola-whu/GeoScratch/blob/df920a902a9297827534a3f5303a8a299529b9bf/Screenshot%202025-10-25%20164246.png)
-   
+
 We recommend using **Visual Studio Code (VS Code)** for development and debugging.
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
 ## ⭐Design 
 ![image alt](https://github.com/winola-whu/GeoScratch/blob/c15fb9d93a509c56216e73aff8c0aea6549cebe3/Block%20Design.png)  
 
-Blocks encode 373 topics—vector ops, line/plane forms—so each block maps 1-to-1 to a concept. This lets learners build scenes by snapping together concept-blocks instead of writing formulas.
-
-## ⭐Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-
-
+Blocks encode vector ops, line/plane forms, transforms, and solids—each block maps 1-to-1 to a concept. This lets learners build scenes by snapping together concept-blocks instead of writing formulas.
 
