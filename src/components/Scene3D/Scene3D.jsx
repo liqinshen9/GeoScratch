@@ -12,9 +12,19 @@ const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial,
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
+import useWorkspaceStore from '@/store/useWorkspaceStore'
 import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
+import SelectionHighlight from './SelectionHighlight'
+import {
+  classifyGesture,
+  findLabelOwner,
+  findSelectableLine,
+  findSelectablePointMarker,
+  resolveSelectedBlockId,
+  CLICK_MAX_DIST,
+} from '@/utils/scenePicking'
 import {
   ZOOM_INVARIANT_REFERENCE_DISTANCE,
   ZOOM_INVARIANT_MIN_SCALE,
@@ -45,6 +55,14 @@ const EXTRA_LARGE_POINT_MULTIPLIER = 1.6
 // 8x their base radius when zoomed far out -- capped closer to the normal
 // max (5x) instead, so the multiplier mainly reads at everyday zoom levels.
 const EXTRA_LARGE_POINT_MAX_SCALE = 5.5
+// Point markers scale up faster than they need to when zooming out -- past
+// this they just read as blobs -- so cap them below the general zoom-invariant
+// max (plain lines/tubes still use the full ZOOM_INVARIANT_MAX_SCALE).
+const POINT_ZOOM_MAX_SCALE = 3.3
+// Vector shafts/arrowheads look stubby and odd when zoomed all the way out;
+// cap their zoom scaling earlier too (the "Extra Thick Vectors" multiplier
+// still applies on top of this).
+const VECTOR_ZOOM_MAX_SCALE = 3.4
 // Clamp range for HeadLight's camera-relative offset scale (see below).
 const HEADLIGHT_OFFSET_MIN_SCALE = 0.2
 const HEADLIGHT_OFFSET_MAX_SCALE = 4
@@ -578,11 +596,7 @@ function LabelAnchor({ id, visibilityKey, className, color, worldPos, emphasis, 
         ref={bodyRef}
         className={className}
         style={background ? { backgroundColor: background } : undefined}
-        onPointerDown={(event) => {
-          event.stopPropagation();
-          event.preventDefault();
-          onHide?.(visibilityKey);
-        }}
+        onClick={() => onHide?.(visibilityKey)}
       >
         {children}
       </div>
@@ -898,66 +912,111 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel }) {
   );
 }
 
-function findSelectablePointMarker(object) {
-  let target = object;
-  while (target) {
-    if (target.userData?.geoType === 'selectable_point_marker') return target;
-    target = target.parent;
-  }
-  return null;
-}
-
-function findSelectableLine(object) {
-  let target = object;
-  while (target) {
-    if (target.userData?.geoType === 'geo_vector_line') return target;
-    target = target.parent;
-  }
-  return null;
-}
-
-function findLabelOwner(object) {
-  let target = object;
-  while (target) {
-    if (getLabelsForObject(target).length > 0) return target;
-    target = target.parent;
-  }
-  return null;
-}
-
-function SelectableLabelPicker({ onShowObjectLabels }) {
+// Owns all raw pointer routing on the canvas. It NEVER calls stopPropagation
+// or preventDefault on pointerdown -- OrbitControls listens on the same element
+// (the R3F wrapper div) and must always be free to start a drag. Whether a
+// gesture was a "click" is decided on pointerup from how far/long the pointer
+// moved (see classifyGesture), so a drag that begins over a large plane still
+// orbits the camera instead of being swallowed (issue #92).
+//
+//   left click  -> select the hit object's block (empty space clears)
+//   right click -> toggle that object's scene labels (issue #75)
+function ScenePicker({ onSelectBlock, onToggleLabels }) {
   const { camera, gl, scene } = useThree();
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const pointer = useMemo(() => new THREE.Vector2(), []);
+  const downRef = useRef(null);
 
   useEffect(() => {
     const canvas = gl.domElement;
 
-    const handlePointerDown = (event) => {
+    const raycastAt = (event) => {
       const rect = canvas.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
       raycaster.setFromCamera(pointer, camera);
       raycaster.params.Line.threshold = 0.18;
-      const hits = raycaster.intersectObjects(scene.children, true);
+      return raycaster
+        .intersectObjects(scene.children, true)
+        .filter((hit) => hit.object.visible);
+    };
+
+    // The active/most-recent press. Kept alive until the next pointerdown so
+    // contextmenu can consult it regardless of whether it fires before or
+    // after pointerup (that ordering is platform-dependent). `moved` is set
+    // during the drag, so a wander-and-return still counts as a drag.
+    const handlePointerDown = (event) => {
+      // Ignore secondary touch points (pinch-zoom).
+      if (event.pointerType === 'touch' && event.isPrimary === false) return;
+      downRef.current = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        time: performance.now(),
+        pointerId: event.pointerId,
+        button: event.button,
+        moved: false,
+      };
+    };
+
+    const handlePointerMove = (event) => {
+      const down = downRef.current;
+      if (!down || down.moved || event.pointerId !== down.pointerId) return;
+      if (Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY) > CLICK_MAX_DIST) {
+        down.moved = true;
+      }
+    };
+
+    // On window, not the canvas: OrbitControls sets pointer capture on the
+    // wrapper during a drag, so the canvas child would miss move/up.
+    const handlePointerUp = (event) => {
+      const down = downRef.current;
+      if (!down || down.button !== 0 || event.pointerId !== down.pointerId) return;
+      const up = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        time: performance.now(),
+        pointerId: event.pointerId,
+      };
+      if (down.moved || classifyGesture(down, up) !== 'click') return;
+      onSelectBlock(resolveSelectedBlockId(raycastAt(event)));
+    };
+
+    const handlePointerCancel = () => {
+      downRef.current = null;
+    };
+
+    const handleContextMenu = (event) => {
+      // A right-drag (OrbitControls pan) also ends with a contextmenu event --
+      // leave the native menu alone then, only act on an in-place right-click.
+      if (downRef.current?.moved) return;
+
+      const hits = raycastAt(event);
       const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean);
       const line = marker ? null : hits.map((hit) => findSelectableLine(hit.object)).find(Boolean);
-      const labelOwner = marker
-        ? findLabelOwner(marker)
+      const owner = marker
+        ? findLabelOwner(marker, getLabelsForObject)
         : line
           ? line
-          : hits.map((hit) => findLabelOwner(hit.object)).find(Boolean);
+          : hits.map((hit) => findLabelOwner(hit.object, getLabelsForObject)).find(Boolean);
 
-      if (!labelOwner) return;
-
-      event.stopPropagation();
-      onShowObjectLabels(getLabelVisibilityKeysForObject(labelOwner));
+      if (!owner) return;
+      event.preventDefault();
+      onToggleLabels(getLabelVisibilityKeysForObject(owner));
     };
 
     canvas.addEventListener('pointerdown', handlePointerDown);
-    return () => canvas.removeEventListener('pointerdown', handlePointerDown);
-  }, [camera, gl, onShowObjectLabels, pointer, raycaster, scene]);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerCancel);
+    canvas.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      canvas.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
+      canvas.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [camera, gl, scene, pointer, raycaster, onSelectBlock, onToggleLabels]);
 
   return null;
 }
@@ -1055,8 +1114,13 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraThickVecto
           thickMultiplier = extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1;
         }
         let finalScale = zoomScale * thickMultiplier;
-        if (isUniform && !isVector && extraLargePoints) {
-          finalScale = Math.min(finalScale, EXTRA_LARGE_POINT_MAX_SCALE);
+        if (isVector) {
+          finalScale = Math.min(finalScale, VECTOR_ZOOM_MAX_SCALE * thickMultiplier);
+        } else if (isUniform) {
+          finalScale = Math.min(
+            finalScale,
+            extraLargePoints ? EXTRA_LARGE_POINT_MAX_SCALE : POINT_ZOOM_MAX_SCALE
+          );
         }
         if (!isUniform) {
           finalScale = Math.max(finalScale, MIN_LINE_WORLD_RADIUS / baseRadius);
@@ -1172,6 +1236,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       />
       <FatLineSync objects={objects} extraThick={settings.extraThickLines} extraThickVectors={settings.extraThickVectors} />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
+      <SelectionHighlight objects={objects} />
       <LabelDeclutter />
       <ambientLight intensity={0.4} />
 
@@ -1229,6 +1294,7 @@ const SCENE_BACKGROUND_COLOR = '#ffffff'
 
 export default function Scene3D({ objects = [] }) {
   const { settings, updateSetting } = useSettingsStore()
+  const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId)
   const controlsRef = useRef(null);
   const cameraRef = useRef(null);
   const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
@@ -1316,13 +1382,21 @@ export default function Scene3D({ objects = [] }) {
     });
   }, []);
 
-  const handleShowObjectLabels = useCallback((labelKeys) => {
+  // Right-click on an object: hide all its labels if any are showing, else
+  // reveal all of them.
+  const handleToggleObjectLabels = useCallback((labelKeys) => {
     setHiddenLabelKeys((current) => {
+      const allHidden = labelKeys.every((labelKey) => current.has(labelKey));
       const next = new Set(current);
-      labelKeys.forEach((labelKey) => next.delete(labelKey));
+      labelKeys.forEach((labelKey) => (allHidden ? next.delete(labelKey) : next.add(labelKey)));
       return next;
     });
   }, []);
+
+  const handleSelectBlockFrom3D = useCallback(
+    (blockId) => setSelectedBlockId(blockId),
+    [setSelectedBlockId]
+  );
 
   return (
     <div className="editor-body-3d">
@@ -1341,7 +1415,7 @@ export default function Scene3D({ objects = [] }) {
             ref={handleControlsReady}
           />
           <CameraHandle onReady={handleCameraReady} />
-          <SelectableLabelPicker onShowObjectLabels={handleShowObjectLabels} />
+          <ScenePicker onSelectBlock={handleSelectBlockFrom3D} onToggleLabels={handleToggleObjectLabels} />
           <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} onHideLabel={handleHideLabel} />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />

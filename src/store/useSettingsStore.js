@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 import { DEFAULT_COLOR_PRESET } from './colorPresets'
+import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS = {
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
   showPlanePointNormal: true,
+  objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
 }
 
 const useSettingsStore = create((set) => ({

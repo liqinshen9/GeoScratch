@@ -2,6 +2,7 @@ import React, { useState } from 'react' // Import useState for feedback
 import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
 import { COLOR_PRESETS } from '../store/colorPresets'
+import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
@@ -102,6 +103,18 @@ export default function SettingsPage() {
               checked={settings.zoomInvariantSizing}
               onChange={(v) => updateSetting('zoomInvariantSizing', v)}
             />
+            <SelectField
+              label="Object Highlight Style"
+              description="How a 3D object stands out when you click it or select its block. Blink gently pulses its opacity; Outline draws a box around it; Glow lights it up with a soft amber halo."
+              value={settings.objectHighlightStyle}
+              onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
+            >
+              {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
+                <option key={key} value={value}>
+                  {key.replace(/_/g, ' ').toLowerCase()}
+                </option>
+              ))}
+            </SelectField>
           </SettingsSection>
 
           <div className="settings-compact-group">

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import useSettingsStore from './useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
+import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 
 describe('useSettingsStore', () => {
   beforeEach(() => {
@@ -15,6 +16,7 @@ describe('useSettingsStore', () => {
     expect(settings.haloEnabled).toBe(true)
     expect(settings.vectorStyle).toBe(LINE_STYLES.PLAIN_TUBE)
     expect(settings.extraThickVectors).toBe(false)
+    expect(settings.objectHighlightStyle).toBe(OBJECT_HIGHLIGHT_STYLES.BLINK)
   })
 
   it('updateSetting changes only the targeted key', () => {
