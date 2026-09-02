@@ -66,7 +66,11 @@
     transform-origin: 0 0;
     user-select: none;
     -webkit-user-select: none;
-    pointer-events: none;
+    /* The pill stays clickable (left-click hides it). A drag that starts on a
+       pill still orbits: the pointerdown bubbles past it to the R3F wrapper
+       where OrbitControls listens, and no handler here stops it. */
+    pointer-events: auto;
+    cursor: pointer;
 }
 
 .editor-body-3d .label--emphasis {

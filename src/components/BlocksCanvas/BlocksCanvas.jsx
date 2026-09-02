@@ -208,6 +208,9 @@ export default function BlocksCanvas({
   const saveWorkspaceXml = useWorkspaceStore((state) => state.saveWorkspaceXml)
   const addUserBlock = useWorkspaceStore((state) => state.addUserBlock)
   const deleteUserBlock = useWorkspaceStore((state) => state.deleteUserBlock)
+  // Shared block<->3D-object selection (see Scene3D's ScenePicker).
+  const selectedBlockId = useWorkspaceStore((state) => state.selectedBlockId)
+  const setSelectedBlockId = useWorkspaceStore((state) => state.setSelectedBlockId)
   const isFirstLoad = useRef(true)
 
   useEffect(() => {
@@ -542,12 +545,16 @@ export default function BlocksCanvas({
     function handleWorkspaceClick(event) {
       if (event.type === Blockly.Events.CLICK && event.targetType === 'workspace') {
         setPaletteOpen(false)
+        // Clicking empty workspace is the deliberate "deselect" gesture (the
+        // raw SELECTED(null) event can't be trusted -- it also fires on mere
+        // focus loss, see handleSelectedBlock).
+        setSelectedBlockId(null)
       }
     }
 
     workspace.addChangeListener(handleWorkspaceClick)
     return () => workspace.removeChangeListener(handleWorkspaceClick)
-  }, [workspace])
+  }, [setSelectedBlockId, workspace])
 
   useEffect(() => {
     if (!workspace) return
@@ -574,14 +581,64 @@ export default function BlocksCanvas({
         return
       }
 
+      if (event.type === Blockly.Events.BLOCK_DELETE) {
+        const deletedIds = event.ids || (event.blockId ? [event.blockId] : [])
+        if (deletedIds.includes(useWorkspaceStore.getState().selectedBlockId)) {
+          setSelectedBlockId(null)
+        }
+        return
+      }
+
       if (event.type !== Blockly.Events.SELECTED) return
       const block = event.newElementId ? workspace.getBlockById(event.newElementId) : null
       lastSelectedBlockIdRef.current = block?.isDeletable?.() ? block.id : null
+
+      if (event.newElementId) {
+        // A real selection (native click / keyboard nav). The store's identity
+        // check drops the echo when this SELECTED event was itself triggered by
+        // the store -> workspace effect below.
+        setSelectedBlockId(event.newElementId)
+        return
+      }
+
+      // SELECTED(null) is fired on a deliberate deselect BUT ALSO every time the
+      // selected block merely loses DOM focus -- e.g. the user clicks into the
+      // 3D view to rotate the camera. Our selection is a persistent highlight,
+      // not focus-bound, so keep it and re-apply the outline Blockly's blur just
+      // removed. Deliberate deselect runs through handleWorkspaceClick / the
+      // 3D-scene empty click / BLOCK_DELETE instead.
+      const current = useWorkspaceStore.getState().selectedBlockId
+      if (current) workspace.getBlockById(current)?.addSelect?.()
     }
 
     workspace.addChangeListener(handleSelectedBlock)
     return () => workspace.removeChangeListener(handleSelectedBlock)
-  }, [isDraggedBlockTouchingTrash, scheduleTrashDelete, setTrashOpenVisual, workspace])
+  }, [isDraggedBlockTouchingTrash, scheduleTrashDelete, setSelectedBlockId, setTrashOpenVisual, workspace])
+
+  // Store -> workspace: a 3D-scene click (or any other setter) drives the
+  // block's selection outline. We manage the outline directly rather than via
+  // Blockly.common.setSelected(): block.select() alone doesn't clear a
+  // previously selected block or update common.getSelected() (that is
+  // focus-manager backed), and setSelected(null) throws. Tracking the block we
+  // last applied to lets us clear the old one and add the new one, without
+  // pulling keyboard focus out of the 3D canvas.
+  const appliedBlockIdRef = useRef(null)
+  useEffect(() => {
+    if (!workspace) return
+    if (appliedBlockIdRef.current === selectedBlockId) return
+
+    const prev = appliedBlockIdRef.current
+      ? workspace.getBlockById(appliedBlockIdRef.current)
+      : null
+    prev?.removeSelect?.()
+
+    const next = selectedBlockId ? workspace.getBlockById(selectedBlockId) : null
+    appliedBlockIdRef.current = next ? selectedBlockId : null
+    // select() also fires SELECTED -> handleSelectedBlock -> setSelectedBlockId
+    // with the same id, which the store's identity check drops. Skip it when
+    // Blockly already has this block selected (a native workspace click).
+    if (next && Blockly.common.getSelected() !== next) next.select()
+  }, [workspace, selectedBlockId])
 
   return (
     <div id="blocks-canvas" className="blocks-shell">

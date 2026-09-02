@@ -36,6 +36,14 @@ const useWorkspaceStore = create((set) => ({
   savedXml: {},
   userBlocks: loadUserBlocks(),
 
+  // Block id shared between the Blockly workspace and the 3D scene: selecting
+  // a block or its 3D object drives the other side's highlight. null = nothing
+  // selected. The identity short-circuit below is the primary guard against a
+  // block.select() <-> SELECTED-event feedback loop.
+  selectedBlockId: null,
+  setSelectedBlockId: (id) =>
+    set((state) => (state.selectedBlockId === id ? state : { selectedBlockId: id })),
+
   setWorkspace: (ws) => set({ workspace: ws }),
   setDialogOpen: (open) => set({ dialogOpen: open }),
   setExampleXml: (xml) => set({ exampleXml: xml }),
