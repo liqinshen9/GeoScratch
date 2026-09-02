@@ -1,8 +1,7 @@
 // Visual treatments for the currently-selected 3D object (see
-// SelectionHighlight.jsx). Chosen from Settings -> Object Highlight Style.
+// SelectionHighlight.jsx). Chosen from Settings -> Pre-attentive processing.
 export const OBJECT_HIGHLIGHT_STYLES = Object.freeze({
   BLINK: 'blink',
-  OUTLINE: 'outline',
   GLOW: 'glow',
 })
 

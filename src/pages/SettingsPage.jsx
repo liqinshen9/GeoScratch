@@ -72,50 +72,61 @@ export default function SettingsPage() {
         </header>
 
         <main className="settings-layout">
-          <SettingsSection title="Scene">
-            <ToggleRow
-              label="Show 3D Labels"
-              description="Display names of elements in the viewport"
-              checked={settings.showLabels}
-              onChange={(v) => updateSetting('showLabels', v)}
-            />
-            <ToggleRow
-              label="Show Grid"
-              description="Display the ground grid in the viewport"
-              checked={settings.showGrid}
-              onChange={(v) => updateSetting('showGrid', v)}
-            />
-            <ToggleRow
-              label="Show Box"
-              description="Display the bounding box in the viewport"
-              checked={settings.showBox}
-              onChange={(v) => updateSetting('showBox', v)}
-            />
-            <ToggleRow
-              label="Show Box Front Wireframe"
-              description="Display the wireframe on whichever box wall is currently facing the camera"
-              checked={settings.showBoxFrontWireframe}
-              onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
-            />
-            <ToggleRow
-              label="Zoom-Invariant Line & Point Sizing"
-              description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
-              checked={settings.zoomInvariantSizing}
-              onChange={(v) => updateSetting('zoomInvariantSizing', v)}
-            />
-            <SelectField
-              label="Object Highlight Style"
-              description="How a 3D object stands out when you click it or select its block. Blink gently pulses its opacity; Outline draws a box around it; Glow lights it up with a soft amber halo."
-              value={settings.objectHighlightStyle}
-              onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
-            >
-              {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
-                <option key={key} value={value}>
-                  {key.replace(/_/g, ' ').toLowerCase()}
-                </option>
-              ))}
-            </SelectField>
-          </SettingsSection>
+          <div className="settings-stack">
+            <SettingsSection title="Scene">
+              <ToggleRow
+                label="Show 3D Labels"
+                description="Display names of elements in the viewport"
+                checked={settings.showLabels}
+                onChange={(v) => updateSetting('showLabels', v)}
+              />
+              <ToggleRow
+                label="Show Grid"
+                description="Display the ground grid in the viewport"
+                checked={settings.showGrid}
+                onChange={(v) => updateSetting('showGrid', v)}
+              />
+              <ToggleRow
+                label="Show Box"
+                description="Display the bounding box in the viewport"
+                checked={settings.showBox}
+                onChange={(v) => updateSetting('showBox', v)}
+              />
+              <ToggleRow
+                label="Show Box Front Wireframe"
+                description="Display the wireframe on whichever box wall is currently facing the camera"
+                checked={settings.showBoxFrontWireframe}
+                onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
+              />
+              <ToggleRow
+                label="Zoom-Invariant Line & Point Sizing"
+                description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
+                checked={settings.zoomInvariantSizing}
+                onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+              />
+            </SettingsSection>
+
+            <SettingsSection title="Pre-attentive processing">
+              <ToggleRow
+                label="Highlight the selected object"
+                description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
+                checked={settings.objectHighlightEnabled}
+                onChange={(v) => updateSetting('objectHighlightEnabled', v)}
+              />
+              <SelectField
+                label="Highlight style"
+                description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
+                value={settings.objectHighlightStyle}
+                onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
+              >
+                {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
+                  <option key={key} value={value}>
+                    {key.replace(/_/g, ' ').toLowerCase()}
+                  </option>
+                ))}
+              </SelectField>
+            </SettingsSection>
+          </div>
 
           <div className="settings-compact-group">
             <SettingsSection title="Shadows">

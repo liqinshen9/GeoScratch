@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
   showPlanePointNormal: true,
+  objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
 }
 

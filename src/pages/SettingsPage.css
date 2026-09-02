@@ -44,6 +44,14 @@
   grid-column: span 4;
 }
 
+.settings-stack {
+  grid-column: span 4;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .settings-compact-group {
   grid-column: span 8;
   display: grid;
@@ -224,8 +232,19 @@
   background: #00247f;
 }
 
-.settings-reset-button {
+/* Scoped past the ui/button `outline` variant's `hover:bg-accent`, which is the
+   same brand blue as the (resting) Save button -- Reset would turn into a
+   Save look-alike on hover. Keep it a pale-blue secondary hover instead. */
+.settings-actions .settings-reset-button {
   background: #ffffff;
+  border-color: rgba(0, 46, 166, 0.25);
+  color: var(--geo-highlight);
+}
+
+.settings-actions .settings-reset-button:hover {
+  background: #e9eefb;
+  border-color: rgba(0, 46, 166, 0.45);
+  color: var(--geo-highlight);
 }
 
 @media (max-width: 1100px) {
@@ -234,6 +253,7 @@
   }
 
   .settings-layout > .settings-card:first-child,
+  .settings-stack,
   .settings-compact-group {
     grid-column: 1 / -1;
   }
@@ -259,6 +279,7 @@
 
   .settings-card,
   .settings-card--wide,
+  .settings-stack,
   .settings-compact-group,
   .settings-actions {
     grid-column: 1 / -1;

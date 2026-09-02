@@ -176,37 +176,6 @@ function applyBlink(targets) {
   return { tick, restore }
 }
 
-// --- OUTLINE: an axis-aligned box hugging the selected subtree ---------------
-
-function applyOutline(targets, scene) {
-  const box = new THREE.Box3()
-  let hasBounds = false
-  targets.forEach((t) => {
-    t.updateMatrixWorld(true)
-    const b = new THREE.Box3().setFromObject(t)
-    if (!b.isEmpty()) {
-      box.union(b)
-      hasBounds = true
-    }
-  })
-  if (!hasBounds) return { restore: () => {} }
-
-  const helper = new THREE.Box3Helper(box, new THREE.Color(SELECTION_HIGHLIGHT_COLOR))
-  helper.material.depthTest = false
-  helper.material.transparent = true
-  helper.renderOrder = 9999
-  helper.raycast = () => {} // never selectable, never a label owner
-  scene.add(helper)
-
-  return {
-    restore: () => {
-      scene.remove(helper)
-      helper.geometry.dispose()
-      helper.material.dispose()
-    },
-  }
-}
-
 // --- GLOW: an actual warm light + a soft radial haze ------------------------
 
 // A camera-facing haze sprite at `center` (+ an optional warm point light).
@@ -455,7 +424,6 @@ function applyGlow(targets, scene, size) {
 }
 
 function applyHighlight(style, targets, scene, size) {
-  if (style === OBJECT_HIGHLIGHT_STYLES.OUTLINE) return applyOutline(targets, scene)
   if (style === OBJECT_HIGHLIGHT_STYLES.GLOW) return applyGlow(targets, scene, size)
   return applyBlink(targets)
 }
@@ -466,6 +434,7 @@ function applyHighlight(style, targets, scene, size) {
 export default function SelectionHighlight({ objects = [] }) {
   const { scene, invalidate, size } = useThree()
   const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
+  const enabled = useSettingsStore((s) => s.settings.objectHighlightEnabled)
   const style = useSettingsStore((s) => s.settings.objectHighlightStyle)
 
   // srcBlockId is stable across scene rebuilds (uuid is not), so a selection
@@ -481,14 +450,14 @@ export default function SelectionHighlight({ objects = [] }) {
 
   useEffect(() => {
     activeRef.current?.restore()
-    activeRef.current = targets.length ? applyHighlight(style, targets, scene, size) : null
+    activeRef.current = targets.length && enabled ? applyHighlight(style, targets, scene, size) : null
     invalidate()
     return () => {
       activeRef.current?.restore()
       activeRef.current = null
       invalidate()
     }
-  }, [targets, style, scene, size, invalidate])
+  }, [targets, enabled, style, scene, size, invalidate])
 
   // BLINK is the only style that animates; frameloop="demand" -> keep ticking.
   useFrame(({ clock }) => {
