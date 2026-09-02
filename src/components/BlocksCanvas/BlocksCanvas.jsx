@@ -386,7 +386,8 @@ export default function BlocksCanvas({
   const handleDeletedBlockDragStart = useCallback((event, deletedBlock) => {
     event.dataTransfer.setData(TRASH_BLOCK_XML_TRANSFER_TYPE, deletedBlock.xmlText)
     event.dataTransfer.setData(TRASH_BLOCK_ID_TRANSFER_TYPE, deletedBlock.id)
-    event.dataTransfer.effectAllowed = 'move'
+    // must match the 'copy' dropEffect set in handleWorkspaceDragOver, or the drop is rejected
+    event.dataTransfer.effectAllowed = 'copy'
   }, [])
 
   useEffect(() => {
