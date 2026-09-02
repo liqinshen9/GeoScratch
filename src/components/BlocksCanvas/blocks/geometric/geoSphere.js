@@ -83,9 +83,7 @@ export function initGeoSphereBlock() {
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-      this.appendDummyInput()
-        .appendField('Radius:')
-        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'RADIUS')
+      this.appendValueInput('RADIUS').appendField('Radius:').setCheck('scalar')
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     },
   }
@@ -94,7 +92,7 @@ export function initGeoSphereBlock() {
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
     // Fall back safely to window scope context inside the output execution block string
     const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
-    const radius = Number(block.getFieldValue('RADIUS'))
+    const radius = valueToCode('RADIUS') || '1'
     const blockId = JSON.stringify(block.id)
     const code = `(${geoSphereDefinition.toString()})(${centre}, ${radius}, ${blockId})`
     return [code, Order.FUNCTION_CALL]

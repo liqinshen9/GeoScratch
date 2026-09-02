@@ -194,11 +194,17 @@ function isSkewLine2Block(block) {
   return isLineBlock(block, SKEW_LINE_2_POINT, SKEW_LINE_2_DIRECTION)
 }
 
+function scalarInputValue(block, inputName, fallback = 1) {
+  const inputBlock = getInputBlock(block, inputName)
+  if (!inputBlock) return fallback
+  return inputBlock.type === 'scalar' ? Number(inputBlock.getFieldValue('scalar')) : NaN
+}
+
 function isSphereBlock(block, centre, radius) {
   return (
     block?.type === 'geo_sphere' &&
     blockMatchesVec3(getInputBlock(block, 'CENTRE'), centre) &&
-    closeNumber(block.getFieldValue('RADIUS'), radius)
+    closeNumber(scalarInputValue(block, 'RADIUS'), radius)
   )
 }
 
@@ -345,7 +351,11 @@ function addExercisePointPIfNeeded(objects, workspace) {
 const EXERCISE_BACKGROUND_BLOCK_ID = 'ex-bg-sphere-1'
 const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
   <block type="geo_sphere" id="ex-bg-sphere-1" x="20" y="-150">
-    <field name="RADIUS">0.6</field>
+    <value name="RADIUS">
+      <block type="scalar" id="ex-bg-sphere-1-radius">
+        <field name="scalar">0.6</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
         <field name="X">-4</field>
@@ -355,7 +365,11 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
     </value>
   </block>
   <block type="geo_sphere" id="ex-bg-sphere-2" x="20" y="100">
-    <field name="RADIUS">0.4</field>
+    <value name="RADIUS">
+      <block type="scalar" id="ex-bg-sphere-2-radius">
+        <field name="scalar">0.4</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
         <field name="X">3.5</field>
@@ -365,7 +379,11 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
     </value>
   </block>
   <block type="geo_cube" id="ex-bg-cube-1" x="20" y="350">
-    <field name="SIDE_LENGTH">1.1</field>
+    <value name="SIDE_LENGTH">
+      <block type="scalar" id="ex-bg-cube-1-side">
+        <field name="scalar">1.1</field>
+      </block>
+    </value>
     <value name="CENTRE">
       <block type="linalg_vec3" id="ex-bg-cube-1-centre">
         <field name="X">4</field>
@@ -625,7 +643,7 @@ function isTargetTeapotBlock(block) {
     : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
   return (
     centreMatches &&
-    closeNumber(block.getFieldValue('SIZE'), TRANSFORM_TEAPOT_SIZE)
+    closeNumber(scalarInputValue(block, 'SIZE'), TRANSFORM_TEAPOT_SIZE)
   )
 }
 

@@ -72,13 +72,10 @@ export function initGeoTeapotBlock() {
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
+      this.setInputsInline(false)
 
-      this.appendDummyInput()
-        .appendField('Size:')
-        .appendField(new Blockly.FieldNumber(1, 0.01, Infinity, 0.1), 'SIZE')
-
+      this.appendValueInput('SIZE').appendField('Size:').setCheck('scalar')
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
-
       this.appendDummyInput()
         .appendField('Segments:')
         .appendField(new Blockly.FieldNumber(10, 2, 30, 1), 'SEGMENTS')
@@ -90,7 +87,7 @@ export function initGeoTeapotBlock() {
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
     // Fall back safely to window scope context inside the output execution block string
     const centre = valueToCode('CENTRE') || 'new window.THREE.Vector3(0,0,0)'
-    const size = Number(block.getFieldValue('SIZE'))
+    const size = valueToCode('SIZE') || '1'
     const segments = Number(block.getFieldValue('SEGMENTS'))
     const blockId = JSON.stringify(block.id)
     const code = `(${geoTeapotDefinition.toString()})(${centre}, ${size}, ${segments}, ${blockId})`
