@@ -6,7 +6,13 @@ import { forInstance } from '@/store/colorSystem'
 // ===================
 // 1. RUNTIME THREE.JS
 // ===================
-function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
+// Exported so the transform layer (generateAndRun.js) can rebuild a line from a
+// transformed origin/direction rather than applyMatrix4-ing the baked group,
+// which would leave its wall-to-wall extent wrong for the new direction (#77).
+// Still also serialized via .toString() into generated code by the block
+// generator below -- the body only touches `window.*` and its params, so both
+// call styles work.
+export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Pull variables securely from the active window runtime frame
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
@@ -47,32 +53,41 @@ function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const normalised = direction.clone().normalize()
 
-  // Extend the line out to the walls of the 3D view's bounding box
+  // Clip the (infinite) line to the walls of the 3D view's bounding box
   // (BoundingBoxRoom in Scene3D.jsx: a 40-unit cube centred on the world
-  // origin, so half-extent 20) rather than a flat 20 units from the line's
-  // own origin. A flat offset only actually reaches the wall when the line
-  // passes through the world origin AND is axis-aligned -- any off-centre
-  // origin falls short on one side (or shoots past the box) and any
-  // non-axis-aligned direction falls short on both, since the true distance
-  // to a face is 20 only along an axis and up to 20*sqrt(3) at a corner.
+  // origin, so half-extent 20). Proper line-vs-AABB slab intersection: it
+  // returns the [tEnter, tExit] parameter interval where the line is inside
+  // the box, and works whether the line's origin is inside the box (the
+  // common case) or outside it -- e.g. after a translate transform step
+  // pushes the origin past a wall (#77). Both ends of the interval can be
+  // negative. A flat offset from the origin only reaches the wall when the
+  // line passes through the world origin AND is axis-aligned.
   const BOX_HALF_EXTENT = 20
   const FALLBACK_EXTENT = 20
-  const rayBoxExitDistance = (rayOrigin, rayDir) => {
+  const lineBoxInterval = (rayOrigin, rayDir) => {
+    let tEnter = -Infinity
     let tExit = Infinity
     for (const axis of ['x', 'y', 'z']) {
+      const o = rayOrigin[axis]
       const d = rayDir[axis]
-      if (Math.abs(d) < 1e-9) continue
-      const boundary = d > 0 ? BOX_HALF_EXTENT : -BOX_HALF_EXTENT
-      const t = (boundary - rayOrigin[axis]) / d
-      if (t >= 0) tExit = Math.min(tExit, t)
+      if (Math.abs(d) < 1e-9) {
+        // Parallel to this pair of faces -- no intersection if outside them.
+        if (o < -BOX_HALF_EXTENT || o > BOX_HALF_EXTENT) return null
+        continue
+      }
+      let tNear = (-BOX_HALF_EXTENT - o) / d
+      let tFar = (BOX_HALF_EXTENT - o) / d
+      if (tNear > tFar) [tNear, tFar] = [tFar, tNear]
+      tEnter = Math.max(tEnter, tNear)
+      tExit = Math.min(tExit, tFar)
     }
-    return Number.isFinite(tExit) ? tExit : FALLBACK_EXTENT
+    if (!Number.isFinite(tEnter) || !Number.isFinite(tExit) || tExit < tEnter) return null
+    return [tEnter, tExit]
   }
-  const extentPos = rayBoxExitDistance(origin, normalised)
-  const extentNeg = rayBoxExitDistance(origin, normalised.clone().negate())
+  const [tEnter, tExit] = lineBoxInterval(origin, normalised) || [-FALLBACK_EXTENT, FALLBACK_EXTENT]
 
-  const p1 = origin.clone().addScaledVector(normalised, -extentNeg)
-  const p2 = origin.clone().addScaledVector(normalised, extentPos)
+  const p1 = origin.clone().addScaledVector(normalised, tEnter)
+  const p2 = origin.clone().addScaledVector(normalised, tExit)
 
   const group = new THREE.Group()
 

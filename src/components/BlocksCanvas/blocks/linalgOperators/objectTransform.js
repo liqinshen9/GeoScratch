@@ -58,6 +58,17 @@ export function initObjectTransformBlock() {
           else if (was && !isNow)  removeLast(this.transformOrder, name)
           this._wasConnected[name] = isNow
         })
+
+        // A line has no size, so a Scaling matrix only shears its direction into
+        // a different line -- confusing as a size control, so it's skipped at
+        // runtime (#77). Flag it when the target is directly a line.
+        const targetIsLine = this.getInputTargetBlock('TARGET')?.type === 'geo_vector'
+        this.setWarningText(
+          targetIsLine && this.getInputTargetBlock('scale')
+            ? 'Scaling has no effect on a line (a line has no size).'
+            : null,
+          'lineScale',
+        )
       })
     },
 
@@ -88,20 +99,35 @@ export function initObjectTransformBlock() {
     }
 
     const expr = { rot, trans, scale }
-    const steps = order.map(n => `__applyWorld(obj, ${expr[n]});`).join('\n      ')
+    const steps = order
+      .map(n => `obj = ${n === 'scale' ? '__applyScale' : '__applyWorld'}(obj, ${expr[n]});`)
+      .join('\n      ')
 
     const code = `(function(){
-      const obj = ${tgt};
+      let obj = ${tgt};
       if (!obj || !obj.isObject3D) return obj;
 
       // Apply world-space Matrix4 M:
       // M_world' = M * M_world  ⇒  M_local' = P^{-1} * M * P * M_local
       function __applyWorld(target, M) {
-        if (!(M && M.isMatrix4)) return;
+        if (!(M && M.isMatrix4)) return target;
+        // A vector-equation line bakes its extent into geometry -- rebuild it
+        // from the transformed origin/direction instead of spinning it (#77).
+        if (target.userData && target.userData.geoType === 'geo_vector_line'
+            && typeof window.__geoScratchRebuildTransformedLine === 'function') {
+          return window.__geoScratchRebuildTransformedLine(target, M);
+        }
         const P = target.parent ? target.parent.matrixWorld : new THREE.Matrix4();
         const Pinv = P.clone().invert();
         const M_local = Pinv.multiply(M).multiply(P.clone());
         target.applyMatrix4(M_local);
+        return target;
+      }
+
+      // A line has no size -- scaling only shears its direction (#77). Skip it.
+      function __applyScale(target, M) {
+        if (target.userData && target.userData.geoType === 'geo_vector_line') return target;
+        return __applyWorld(target, M);
       }
 
       ${steps}
