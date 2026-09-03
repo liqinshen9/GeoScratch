@@ -166,6 +166,19 @@ export function initVectorArithmeticBlock() {
         { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 
+    // Staged reveal for the play/scrub transport (AnimationDriver): grow a from
+    // its anchor, then b from its anchor, then the result -- exactly the
+    // arrangement drawn above, uncovered in sequence.
+    group.userData.animate = window.makeStagedVectorReveal(
+      isPointDifference
+        ? [{ obj: resObj, full: safeLen(lenR) }]
+        : [
+          { obj: arrowU, full: safeLen(lenU) },
+          { obj: arrowV, full: safeLen(lenV) },
+          { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 },
+        ]
+    );
+
     // Register
     if (typeof threeObjStore==='object' && threeObjStore) {
       const base = ${JSON.stringify(block.id)};

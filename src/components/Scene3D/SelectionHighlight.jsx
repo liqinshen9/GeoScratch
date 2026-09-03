@@ -239,7 +239,10 @@ function addGlowAt(scene, accent, center, radius, strength, opts = {}) {
 
 // World-space arrowhead tip + direction of every vector-shaft glyph in the
 // subtree (buildVectorShaftGlyph tags its group with vectorOrigin/Direction/
-// Length).
+// Length). Also reports whether the glyph is currently visible -- an animated
+// vector_arithmetic arrow toggles its group's `.visible` while it grows, and
+// its head glow should blink out with it. Traversal order is stable across
+// calls, so tick() can zip the result against the parts it built.
 function collectVectorHeads(targets) {
   const heads = []
   targets.forEach((t) =>
@@ -253,7 +256,11 @@ function collectVectorHeads(targets) {
         .addScaledVector(ud.vectorDirection, ud.vectorLength)
         .applyMatrix4(child.matrixWorld)
       const dir = ud.vectorDirection.clone().transformDirection(child.matrixWorld).normalize()
-      heads.push({ tip, dir })
+      let visible = true
+      for (let node = child; node; node = node.parent) {
+        if (node.visible === false) { visible = false; break }
+      }
+      heads.push({ tip, dir, visible })
     })
   )
   return heads
@@ -324,9 +331,12 @@ function applyGlow(targets, scene, size) {
   const planeMeshes = collectPlaneMeshes(targets)
   const heads = planeMeshes.length ? [] : collectVectorHeads(targets)
 
-  // bbox-path only: lets tick() slide the free-floating light/sprite along with
-  // an object the AnimationDriver is translating. { anchor, items:[{obj,offset}] }
+  // Set by whichever path built free-floating glow, so tick() can keep it on a
+  // moving/growing object each frame (see the tick() in the return below).
+  //   follow      -- bbox path: { anchor, items:[{obj,offset}] }
+  //   followHeads -- vector path: [{ head, trail }] parallel to collectVectorHeads
   let follow = null
+  let followHeads = null
 
   if (planeMeshes.length) {
     // Plane: glow radiating from the border, ignoring the defining point +
@@ -347,21 +357,20 @@ function applyGlow(targets, scene, size) {
     // (depthTest off so it never clips the cone), and a faint haze trails back
     // down the shaft. Softer per-head when several share the selection.
     const strength = heads.length > 1 ? 0.75 : 1
+    followHeads = []
     heads.forEach(({ tip, dir }) => {
       const headCenter = tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * 0.4)
-      parts.push(
-        addGlowAt(scene, accent, headCenter, GLOW_HEAD_RADIUS * 0.68, strength * 0.75, {
-          ring: true,
-          depthTest: false,
-        })
-      )
-      const trail = tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * GLOW_HEAD_TRAIL)
-      parts.push(
-        addGlowAt(scene, accent, trail, GLOW_HEAD_RADIUS * 1.1, strength * 0.22, {
-          withLight: false,
-          depthTest: false,
-        })
-      )
+      const head = addGlowAt(scene, accent, headCenter, GLOW_HEAD_RADIUS * 0.68, strength * 0.75, {
+        ring: true,
+        depthTest: false,
+      })
+      const trailPos = tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * GLOW_HEAD_TRAIL)
+      const trail = addGlowAt(scene, accent, trailPos, GLOW_HEAD_RADIUS * 1.1, strength * 0.22, {
+        withLight: false,
+        depthTest: false,
+      })
+      parts.push(head, trail)
+      followHeads.push({ head, trail })
     })
 
     // Make the vector's own geometry glow so the halo reads as light coming off
@@ -422,17 +431,47 @@ function applyGlow(targets, scene, size) {
     )
   }
 
+  const moveGlowPart = (part, pos) => {
+    let moved = false
+    if (part.light && !part.light.position.equals(pos)) { part.light.position.copy(pos); moved = true }
+    if (part.sprite && !part.sprite.position.equals(pos)) { part.sprite.position.copy(pos); moved = true }
+    return moved
+  }
+  const setGlowPartVisible = (part, visible) => {
+    let changed = false
+    if (part.light && part.light.visible !== visible) { part.light.visible = visible; changed = true }
+    if (part.sprite && part.sprite.visible !== visible) { part.sprite.visible = visible; changed = true }
+    return changed
+  }
+
   return {
     // Keep the free-floating glow on the object while the AnimationDriver moves
-    // it. Returns true only when it actually repositioned, so an idle selection
-    // doesn't force the frameloop (unlike blink, which always animates).
+    // or grows it. Returns true only when it actually changed something, so an
+    // idle selection doesn't force the frameloop (unlike blink, which always
+    // animates).
     tick: () => {
-      if (!follow) return false
-      const c = unionBoxCenter(targets, GLOW_TICK_SCRATCH)
-      if (!c || c.equals(follow.anchor)) return false
-      follow.anchor.copy(c)
-      follow.items.forEach(({ obj, offset }) => obj.position.copy(c).add(offset))
-      return true
+      if (follow) {
+        const c = unionBoxCenter(targets, GLOW_TICK_SCRATCH)
+        if (!c || c.equals(follow.anchor)) return false
+        follow.anchor.copy(c)
+        follow.items.forEach(({ obj, offset }) => obj.position.copy(c).add(offset))
+        return true
+      }
+      if (followHeads) {
+        const currentHeads = collectVectorHeads(targets)
+        if (currentHeads.length !== followHeads.length) return false
+        let changed = false
+        currentHeads.forEach(({ tip, dir, visible }, i) => {
+          const { head, trail } = followHeads[i]
+          changed = setGlowPartVisible(head, visible) || changed
+          changed = setGlowPartVisible(trail, visible) || changed
+          if (!visible) return
+          changed = moveGlowPart(head, tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * 0.4)) || changed
+          changed = moveGlowPart(trail, tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * GLOW_HEAD_TRAIL)) || changed
+        })
+        return changed
+      }
+      return false
     },
     restore: () => {
       parts.forEach(({ light, sprite, spriteMat }) => {

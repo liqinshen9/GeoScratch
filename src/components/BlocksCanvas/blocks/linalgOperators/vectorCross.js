@@ -133,6 +133,18 @@ export function initCrossProductBlock() {
       { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]);
 
+    // Staged reveal for the play/scrub transport (AnimationDriver): grow p, then
+    // q, then the cross result -- each from the origin, eased over its own third.
+    group.userData.animate = window.makeStagedVectorReveal(
+      exerciseMode
+        ? [{ obj: crossObj, full: safeLen(lenC) }]
+        : [
+          { obj: arrowU, full: safeLen(lenU) },
+          { obj: arrowV, full: safeLen(lenV) },
+          { obj: crossObj, full: lenC > 1e-8 ? safeLen(lenC) : 0 },
+        ]
+    );
+
     const crossVisualKey = [
       uLabel,
       vLabel,

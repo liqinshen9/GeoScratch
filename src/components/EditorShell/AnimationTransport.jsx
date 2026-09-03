@@ -73,7 +73,7 @@ export default function AnimationTransport() {
       </select>
 
       {!hasTarget && (
-        <span className="animation-transport__hint">Select a transformed object to animate</span>
+        <span className="animation-transport__hint">Select a transform pipeline or a vector operation to animate</span>
       )}
     </div>
   )

@@ -20,6 +20,7 @@ import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
 import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
 import { registerHaloLine, resetHaloIntersectionRegistry, MAX_IMMUNE_IDS } from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
+import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
 import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
 function disposeObject3D(root) {
@@ -113,12 +114,14 @@ function runConnectedTransformPipelines(workspace) {
       continue
     }
 
-    // Bake a start/end pose pair so AnimationDriver can interpolate this object
-    // between "untransformed" and "fully transformed" without re-running code
-    // generation every frame. Assumes `object` is top-level in the scene (its
-    // <primitive> wrapper group is identity) -- true for every current
-    // transform exercise. A second pipeline feeding the same object keeps the
-    // first-captured start and just records its own id as another entry point.
+    // Bake a start/end pose pair + an animate(progress) closure so
+    // AnimationDriver can interpolate this object between "untransformed" and
+    // "fully transformed" without re-running code generation every frame.
+    // Assumes `object` is top-level in the scene (its <primitive> wrapper group
+    // is identity) -- true for every current transform exercise. A second
+    // pipeline feeding the same object keeps the first-captured start and just
+    // records its own id as another entry point (animAliasBlockIds -- selecting
+    // the pipeline block, which renders nothing itself, still drives this).
     object.updateMatrix()
     const priorAnim = object.userData.transformAnim
     const startPos = priorAnim ? priorAnim.startPos : object.position.clone()
@@ -131,7 +134,7 @@ function runConnectedTransformPipelines(workspace) {
 
     object.updateMatrixWorld(true)
 
-    object.userData.transformAnim = {
+    const anim = {
       startPos,
       startQuat,
       startScale,
@@ -139,6 +142,19 @@ function runConnectedTransformPipelines(workspace) {
       endQuat: object.quaternion.clone(),
       endScale: object.scale.clone(),
       pipelineBlockIds: [...(priorAnim?.pipelineBlockIds || []), pipeline.id],
+    }
+    object.userData.transformAnim = anim
+    object.userData.animAliasBlockIds = anim.pipelineBlockIds
+    // One continuous motion, so ease the whole 0..1. Pose lerp: position/scale
+    // linear, rotation via shortest-path quaternion slerp. Limitation: a single
+    // rotation step past 180 degrees animates the short way round -- the
+    // decompose above already collapsed it to a <=180 quaternion.
+    object.userData.animate = (p, ease) => {
+      const e = typeof ease === 'function' ? ease(p) : p
+      object.position.lerpVectors(anim.startPos, anim.endPos, e)
+      object.quaternion.slerpQuaternions(anim.startQuat, anim.endQuat, e)
+      object.scale.lerpVectors(anim.startScale, anim.endScale, e)
+      object.updateMatrixWorld(true)
     }
   }
 }
@@ -161,6 +177,7 @@ export function generateAndRun(workspace, options = {}) {
     window.registerHaloLine = registerHaloLine
     window.HALO_MAX_IMMUNE_IDS = MAX_IMMUNE_IDS
     window.buildVectorShaftGlyph = buildVectorShaftGlyph
+    window.makeStagedVectorReveal = makeStagedVectorReveal
     // Lets object_transform / vector_transform's generated runtime code rebuild
     // a transformed line instead of applyMatrix4-ing its baked geometry (#77).
     window.__geoScratchRebuildTransformedLine = rebuildTransformedLine
