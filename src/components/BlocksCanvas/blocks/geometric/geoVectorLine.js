@@ -797,6 +797,17 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     tSphereRef = tSphere
     group.userData.t = tVal
     group.userData.rPoint = rPoint.clone()
+
+    // Animation opt-in (issue #38 line-t sweep): progress 1 is the resting
+    // state == today's static scene (marker already sitting at rPoint,
+    // above), progress 0 sweeps the marker back to the line's own origin
+    // (t=0) so scrubbing/playing visibly traces out "origin + t*direction"
+    // as t grows, same convention as AnimationDriver's other targets.
+    group.userData.animate = (p, ease) => {
+      const e = typeof ease === 'function' ? ease(p) : p
+      const t = THREE.MathUtils.lerp(0, tVal, e)
+      tSphere.position.copy(origin).addScaledVector(direction, t)
+    }
   } else {
     group.userData.t = undefined
     group.userData.rPoint = undefined
