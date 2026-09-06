@@ -1,40 +1,12 @@
 import { javascriptGenerator } from 'blockly/javascript'
-import * as THREEBase from 'three'
-import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
-import { Line2 } from 'three/examples/jsm/lines/Line2.js'
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
-import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
-const THREE = {
-  ...THREEBase,
-  TeapotGeometry,
-  Line2,
-  LineGeometry,
-  LineMaterial,
-  LineSegments2,
-  LineSegmentsGeometry,
-}
+import THREE from '@/utils/three'
 import {
   applyWorldMatrix4ToObject,
   collectStatementChain,
-  createInfinitePlaneMesh,
   matrix4FromTransformStepBlock,
 } from '@/utils/sceneHelpers'
-import { createVectorNotationRuntime } from '@/utils/vectorNotation'
-import { createRuntimeAccessor } from '@/utils/namingRegistry'
 import { validateVariableOrdering } from '@/utils/validateVariableOrdering'
-import { HALO_LAYER } from '@/utils/haloLayer'
-import { getHaloId } from '@/utils/haloIdRegistry'
-import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
-import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
-import {
-  registerHaloLine,
-  resetHaloIntersectionRegistry,
-  MAX_IMMUNE_IDS,
-} from '@/utils/haloIntersectionRegistry'
-import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
-import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
+import { installSceneRuntime, RUNTIME_PARAM_NAMES } from '@/utils/sceneRuntime'
 import { bakeLineTransformAnimation } from '@/utils/lineTransformAnimation'
 import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
@@ -198,76 +170,28 @@ export function generateAndRun(workspace, options = {}) {
   validateVariableOrdering(workspace)
 
   try {
-    // Standardize runtime variables safely on the window scope
-    window.THREE = THREE
-    if (!window.threeObjStore) window.threeObjStore = {}
-    window.__geoScratchCrossVisualKeys = new Set()
-    window.__geoScratchRuntimeMode = options.runtimeMode || 'sandbox'
-    window.vectorNotation = createVectorNotationRuntime()
-    // Read-only lookup against the persistent naming registry (namingRegistry.js) --
-    // unlike vectorNotation, this is NOT recreated fresh per run; it's a thin
-    // view over names assigned once at block-creation time, so the same
-    // block always reports the same name regardless of run order.
-    window.geoNaming = createRuntimeAccessor(workspace)
-    // Variable-wrapper store. Deliberately NOT threeObjStore: runAndSync.js
-    // renders Object.values(threeObjStore), so a bare Vector3 or number in
-    // there would be handed to Scene3D as a scene object. Keyed by the
-    // wrapper block's refId, rebuilt every run like the scene itself.
-    window.geoVarStore = {}
-    window.geoSetVar = (key, value) => {
-      window.geoVarStore[key] = value
-      return value
-    }
-    // The fallback matters: a dangling or mis-ordered reference returning
-    // undefined into e.g. a vector's "from point:" input throws, and the
-    // catch below swallows it -- silently blanking the ENTIRE scene. A
-    // type-appropriate fallback degrades to one wrong value instead.
-    window.geoVar = (key, fallback = null) =>
-      Object.prototype.hasOwnProperty.call(window.geoVarStore, key)
-        ? window.geoVarStore[key]
-        : fallback
-    window.HALO_LAYER = HALO_LAYER
-    window.getHaloId = getHaloId
-    window.applyHaloDiscardMaterial = applyHaloDiscardMaterial
-    window.createHaloIdMaterial = createHaloIdMaterial
-    window.registerHaloLine = registerHaloLine
-    window.HALO_MAX_IMMUNE_IDS = MAX_IMMUNE_IDS
-    window.buildVectorShaftGlyph = buildVectorShaftGlyph
-    window.makeStagedVectorReveal = makeStagedVectorReveal
+    // Publishes window.THREE, window.threeObjStore and the rest of the API that
+    // stringified block builders depend on -- see sceneRuntime.js for the full
+    // list and for why builders cannot simply import these.
+    const runtimeArgs = installSceneRuntime(workspace, options)
+
     // Lets object_transform / vector_transform's generated runtime code rebuild
     // a transformed line instead of applyMatrix4-ing its baked geometry (#77).
+    // Lives here rather than in sceneRuntime.js because it is defined in this
+    // module, which sceneRuntime.js must not import back (cycle).
     window.__geoScratchRebuildTransformedLine = rebuildTransformedLine
-    // Fresh per run -- a stale entry from a previous run is harmless (its
-    // blockId's id is never written by anything once that run's objects are
-    // gone), but there's no reason to let the registry grow unbounded across
-    // many runs either.
-    resetHaloIntersectionRegistry()
 
-    const runWorkspace = new Function(
-      'THREE',
-      'threeObjStore',
-      'createInfinitePlaneMesh',
-      'vectorNotation',
-      'geoNaming',
-      'geoSetVar',
-      'geoVar',
-      generatedUserCode,
-    )
-
-    // Pass the window reference down into the function argument parameters
-    runWorkspace(
-      THREE,
-      window.threeObjStore,
-      createInfinitePlaneMesh,
-      window.vectorNotation,
-      window.geoNaming,
-      window.geoSetVar,
-      window.geoVar,
-    )
+    const runWorkspace = new Function(...RUNTIME_PARAM_NAMES, generatedUserCode)
+    runWorkspace(...runtimeArgs)
 
     // Run pipelines modifying those exact object instances in place
     runConnectedTransformPipelines(workspace)
   } catch (error) {
-    console.log(error)
+    // Caught, not rethrown: one malformed block should degrade to a partial
+    // scene rather than take the whole editor down. But it MUST be loud -- a
+    // silent failure here looks identical to "the scene is just empty", and the
+    // most common cause is a block builder referencing an imported binding that
+    // does not exist inside its stringified body (see sceneRuntime.js).
+    console.error('[GeoScratch] Generated block code threw; the scene may be incomplete:', error)
   }
 }

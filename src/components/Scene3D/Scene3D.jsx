@@ -1,22 +1,7 @@
 import React, { useMemo, useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
-import { useThree, useFrame, Canvas } from '@react-three/fiber' // ADDED: useFrame
+import { useThree, useFrame, Canvas } from '@react-three/fiber'
 import { OrbitControls, Text, Billboard, Html, GizmoHelper, GizmoViewport } from '@react-three/drei'
-import * as THREEBase from 'three'
-import { TeapotGeometry } from 'three/examples/jsm/geometries/TeapotGeometry.js'
-import { Line2 } from 'three/examples/jsm/lines/Line2.js'
-import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
-import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
-import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
-import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
-const THREE = {
-  ...THREEBase,
-  TeapotGeometry,
-  Line2,
-  LineGeometry,
-  LineMaterial,
-  LineSegments2,
-  LineSegmentsGeometry,
-}
+import THREE from '@/utils/three'
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
