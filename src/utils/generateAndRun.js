@@ -23,6 +23,7 @@ import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
 import { registerHaloLine, resetHaloIntersectionRegistry, MAX_IMMUNE_IDS } from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
+import { bakeLineTransformAnimation } from '@/utils/lineTransformAnimation'
 import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
 function disposeObject3D(root) {
@@ -108,7 +109,25 @@ function runConnectedTransformPipelines(workspace) {
           hasStep = true
         }
       }
-      if (hasStep) rebuildTransformedLine(object, combined)
+      if (hasStep) {
+        // Captured before the rebuild: these are the untransformed line, which
+        // is what progress 0 has to show. A second pipeline feeding the same
+        // line keeps the first-captured start and just adds its own id as
+        // another entry point, same as the pose path below.
+        const priorAnim = object.userData.lineTransformAnim
+        const startOrigin = priorAnim?.startOrigin || object.userData.origin?.clone()
+        const startDirection = priorAnim?.startDirection || object.userData.direction?.clone()
+        const rebuilt = rebuildTransformedLine(object, combined)
+        // rebuildTransformedLine hands back the ORIGINAL object when it can't
+        // rebuild (degenerate direction, missing origin) -- nothing moved, so
+        // there is nothing to animate.
+        if (rebuilt !== object) {
+          bakeLineTransformAnimation(rebuilt, startOrigin, startDirection, [
+            ...(priorAnim?.pipelineBlockIds || []),
+            pipeline.id,
+          ])
+        }
+      }
       pipeline.setWarningText?.(
         skippedScale ? 'Scaling has no effect on a line (a line has no size).' : null,
         'lineScale',

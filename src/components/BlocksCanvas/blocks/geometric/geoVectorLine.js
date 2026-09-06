@@ -841,6 +841,15 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   group.userData.segmentMid = midPoint.clone()
   group.userData.segmentHalfLength = halfDist
   group.userData.srcBlockId = blockId
+  // Consumed by the transform layer's line animation (bakeLineTransformAnimation
+  // in generateAndRun.js), which has to re-clip the line against the bounding box
+  // at every intermediate pose. It gets the very closure this build used, plus
+  // the interval that build settled on, rather than its own copy of the slab
+  // test -- this function is serialized with .toString() by the block generator
+  // below, so it can't import a shared helper for the two to agree on.
+  group.userData.boxInterval = lineBoxInterval
+  group.userData.boxExtent = [tEnter, tExit]
+  group.userData.tMarker = tSphereRef
 
   if (threeObjStore) threeObjStore[blockId] = group
   return group
