@@ -105,6 +105,12 @@ Add an entry to `data/exercises.js` and a module in `src/exercises/`, then
 register it in `src/exercises/index.js`. That index documents the module
 contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
 
+An exercise module can export `settingsOverrides` to force certain app settings
+(e.g. `{ haloEnabled: false }`) while it is open. `settings` in
+`useSettingsStore` is `DEFAULT_SETTINGS < userSettings < exerciseOverrides`;
+`ExercisePage` applies/reverts the active exercise's overrides, and the Settings
+page locks the matching controls.
+
 ## Deeper docs
 
 Long-form subsystem rationale lives in `docs/architecture/` (index at

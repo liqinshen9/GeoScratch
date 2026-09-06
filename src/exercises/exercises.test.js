@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
 import { getExerciseModule, EXERCISE_MODULES } from './index'
 import { EXERCISES } from '@/data/exercises'
+import { SETTING_KEYS } from '@/store/useSettingsStore'
 
 /**
  * These cover the exercise checkers, which decide whether a student has passed.
@@ -87,6 +88,19 @@ describe('exercise registry', () => {
       expect(mod.Givens).toBeTypeOf('function')
       expect(mod.Steps).toBeTypeOf('function')
       expect(mod.evaluate).toBeTypeOf('function')
+    })
+  })
+
+  it('only lets settingsOverrides carry real setting keys with defined values', () => {
+    Object.values(EXERCISE_MODULES).forEach((mod) => {
+      if (mod.settingsOverrides === undefined) return
+      const overrides = mod.settingsOverrides
+      expect(overrides, `exercise ${mod.number}`).toBeTypeOf('object')
+      expect(Array.isArray(overrides)).toBe(false)
+      Object.entries(overrides).forEach(([k, v]) => {
+        expect(SETTING_KEYS, `exercise ${mod.number} override "${k}"`).toContain(k)
+        expect(v, `exercise ${mod.number} override "${k}"`).not.toBeUndefined()
+      })
     })
   })
 

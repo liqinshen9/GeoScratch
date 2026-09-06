@@ -8,16 +8,30 @@ import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
-function ToggleRow({ label, description, checked, onChange }) {
+// True when the currently open exercise has locked this setting.
+function useSettingLocked(settingKey) {
+  return useSettingsStore((s) =>
+    settingKey ? Object.hasOwn(s.exerciseOverrides, settingKey) : false,
+  )
+}
+
+function LockedHint() {
+  return <span className="settings-locked-hint">Set by the current exercise</span>
+}
+
+function ToggleRow({ label, description, checked, onChange, settingKey }) {
+  const locked = useSettingLocked(settingKey)
   return (
     <div className="settings-row">
       <div className="settings-row__copy">
         <label className="settings-label">{label}</label>
         {description && <p className="settings-description">{description}</p>}
+        {locked && <LockedHint />}
       </div>
       <input
         type="checkbox"
         checked={checked}
+        disabled={locked}
         onChange={(e) => onChange(e.target.checked)}
         className="settings-switch"
       />
@@ -43,14 +57,16 @@ function GeometryTile({ title, children }) {
   )
 }
 
-function SelectField({ label, description, value, onChange, children }) {
+function SelectField({ label, description, value, onChange, children, settingKey }) {
+  const locked = useSettingLocked(settingKey)
   return (
     <div className="settings-field">
       <label className="settings-label">{label}</label>
       {description && <p className="settings-description">{description}</p>}
-      <select value={value} onChange={onChange} className="settings-select">
+      <select value={value} onChange={onChange} disabled={locked} className="settings-select">
         {children}
       </select>
+      {locked && <LockedHint />}
     </div>
   )
 }
@@ -80,28 +96,31 @@ export default function SettingsPage() {
                 label="Show Grid"
                 description="Display the ground grid in the viewport"
                 checked={settings.showGrid}
+                settingKey="showGrid"
                 onChange={(v) => updateSetting('showGrid', v)}
               />
               <ToggleRow
                 label="Show Box"
                 description="Display the bounding box in the viewport"
                 checked={settings.showBox}
+                settingKey="showBox"
                 onChange={(v) => updateSetting('showBox', v)}
               />
               <ToggleRow
                 label="Show Box Front Wireframe"
                 description="Display the wireframe on whichever box wall is currently facing the camera"
                 checked={settings.showBoxFrontWireframe}
+                settingKey="showBoxFrontWireframe"
                 onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
               />
               <ToggleRow
                 label="Zoom-Invariant Line & Point Sizing"
                 description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
                 checked={settings.zoomInvariantSizing}
+                settingKey="zoomInvariantSizing"
                 onChange={(v) => updateSetting('zoomInvariantSizing', v)}
               />
             </SettingsSection>
-
           </div>
 
           <div className="settings-compact-group">
@@ -110,12 +129,14 @@ export default function SettingsPage() {
                 label="Object Shadows"
                 description="Let objects receive shadows cast by other objects"
                 checked={settings.objectsReceiveShadows}
+                settingKey="objectsReceiveShadows"
                 onChange={(v) => updateSetting('objectsReceiveShadows', v)}
               />
               <ToggleRow
                 label="Camera Shadows"
                 description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
                 checked={settings.cameraShadowsEnabled}
+                settingKey="cameraShadowsEnabled"
                 onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
               />
             </SettingsSection>
@@ -125,6 +146,7 @@ export default function SettingsPage() {
                 label="Color Preset"
                 description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
                 value={settings.colorPreset}
+                settingKey="colorPreset"
                 onChange={(e) => updateSetting('colorPreset', e.target.value)}
               >
                 {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
@@ -140,6 +162,7 @@ export default function SettingsPage() {
                 label="Auto-Frame Camera"
                 description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
                 checked={settings.autoFocusOnNewObject}
+                settingKey="autoFocusOnNewObject"
                 onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
               />
             </SettingsSection>
@@ -149,6 +172,7 @@ export default function SettingsPage() {
                 label="Enable Halos"
                 description="When a line passes in front of another line, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line styles; vectors not yet supported."
                 checked={settings.haloEnabled}
+                settingKey="haloEnabled"
                 onChange={(v) => updateSetting('haloEnabled', v)}
               />
             </SettingsSection>
@@ -161,6 +185,7 @@ export default function SettingsPage() {
                   label="Speed"
                   description="How long a full play-through of a transform-pipeline animation takes. Also set by the transport bar above the 3D view."
                   value={settings.animationDurationMs}
+                  settingKey="animationDurationMs"
                   onChange={(e) => updateSetting('animationDurationMs', Number(e.target.value))}
                 >
                   {ANIMATION_SPEED_PRESETS.map((preset) => (
@@ -173,6 +198,7 @@ export default function SettingsPage() {
                   label="Easing"
                   description="The acceleration curve the animation follows between its start and end pose."
                   value={settings.animationEasing}
+                  settingKey="animationEasing"
                   onChange={(e) => updateSetting('animationEasing', e.target.value)}
                 >
                   {Object.entries(ANIMATION_EASINGS).map(([key, value]) => (
@@ -185,6 +211,7 @@ export default function SettingsPage() {
                   label="Loop"
                   description="Repeat the animation from the start instead of stopping once it reaches the end."
                   checked={settings.animationLoop}
+                  settingKey="animationLoop"
                   onChange={(v) => updateSetting('animationLoop', v)}
                 />
               </GeometryTile>
@@ -194,12 +221,14 @@ export default function SettingsPage() {
                   label="Highlight the selected object"
                   description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
                   checked={settings.objectHighlightEnabled}
+                  settingKey="objectHighlightEnabled"
                   onChange={(v) => updateSetting('objectHighlightEnabled', v)}
                 />
                 <SelectField
                   label="Highlight style"
                   description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
                   value={settings.objectHighlightStyle}
+                  settingKey="objectHighlightStyle"
                   onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
                 >
                   {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
@@ -219,11 +248,14 @@ export default function SettingsPage() {
                   label="Auto-name style"
                   description="How newly created objects are named by default (e.g. L1 vs Line1). Applies instantly to every object that hasn't been given a custom name, on both its block and its 3D label."
                   value={settings.namingStyle}
+                  settingKey="namingStyle"
                   onChange={(e) => updateSetting('namingStyle', e.target.value)}
                 >
                   {Object.entries(NAMING_STYLES).map(([key, value]) => (
                     <option key={key} value={value}>
-                      {key === 'SHORT' ? 'Short codes (L1, V1, P1)' : 'Descriptive (Line1, Vector1, Point1)'}
+                      {key === 'SHORT'
+                        ? 'Short codes (L1, V1, P1)'
+                        : 'Descriptive (Line1, Vector1, Point1)'}
                     </option>
                   ))}
                 </SelectField>
@@ -234,12 +266,14 @@ export default function SettingsPage() {
                   label="Show 3D Labels"
                   description="Display names of elements in the viewport"
                   checked={settings.showLabels}
+                  settingKey="showLabels"
                   onChange={(v) => updateSetting('showLabels', v)}
                 />
                 <SelectField
                   label="Label detail"
                   description="Show just an object's name, or its name plus its current value, on every 3D-scene label."
                   value={settings.labelDetail}
+                  settingKey="labelDetail"
                   onChange={(e) => updateSetting('labelDetail', e.target.value)}
                 >
                   {Object.entries(LABEL_DETAIL_LEVELS).map(([key, value]) => (
@@ -257,14 +291,18 @@ export default function SettingsPage() {
               <GeometryTile title="Point">
                 <ToggleRow
                   label="Extra Large Points"
-                  description={'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'}
+                  description={
+                    'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'
+                  }
                   checked={settings.extraLargePoints}
+                  settingKey="extraLargePoints"
                   onChange={(v) => updateSetting('extraLargePoints', v)}
                 />
                 <ToggleRow
                   label="Matte Points"
                   description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
                   checked={settings.mattePoints}
+                  settingKey="mattePoints"
                   onChange={(v) => updateSetting('mattePoints', v)}
                 />
               </GeometryTile>
@@ -273,6 +311,7 @@ export default function SettingsPage() {
                 <SelectField
                   label="Vector Style"
                   value={settings.vectorStyle}
+                  settingKey="vectorStyle"
                   onChange={(e) => updateSetting('vectorStyle', e.target.value)}
                 >
                   {Object.entries(LINE_STYLES).map(([key, value]) => (
@@ -285,12 +324,14 @@ export default function SettingsPage() {
                   label="Extra Thick Vectors"
                   description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
                   checked={settings.extraThickVectors}
+                  settingKey="extraThickVectors"
                   onChange={(v) => updateSetting('extraThickVectors', v)}
                 />
                 <ToggleRow
                   label="Show Tail Point"
                   description="Draw a point marker at the tail of a vector that has a block plugged into its origin socket"
                   checked={settings.showVectorOriginPoint}
+                  settingKey="showVectorOriginPoint"
                   onChange={(v) => updateSetting('showVectorOriginPoint', v)}
                 />
               </GeometryTile>
@@ -299,6 +340,7 @@ export default function SettingsPage() {
                 <SelectField
                   label="Line Style"
                   value={settings.lineStyle}
+                  settingKey="lineStyle"
                   onChange={(e) => updateSetting('lineStyle', e.target.value)}
                 >
                   {Object.entries(LINE_STYLES).map(([key, value]) => (
@@ -311,6 +353,7 @@ export default function SettingsPage() {
                   label="Collision Style"
                   description="How a line visually indicates passing through a solid object"
                   value={settings.lineCollisionStyle}
+                  settingKey="lineCollisionStyle"
                   onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
                 >
                   {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
@@ -323,6 +366,7 @@ export default function SettingsPage() {
                   label="Extra Thick Lines"
                   description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
                   checked={settings.extraThickLines}
+                  settingKey="extraThickLines"
                   onChange={(v) => updateSetting('extraThickLines', v)}
                 />
               </GeometryTile>
@@ -332,6 +376,7 @@ export default function SettingsPage() {
                   label="Show Point & Normal"
                   description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
                   checked={settings.showPlanePointNormal}
+                  settingKey="showPlanePointNormal"
                   onChange={(v) => updateSetting('showPlanePointNormal', v)}
                 />
               </GeometryTile>
@@ -341,6 +386,7 @@ export default function SettingsPage() {
                   label="Show Gridlines"
                   description="Display mesh edge lines on teapot objects"
                   checked={settings.teapotShowGridlines}
+                  settingKey="teapotShowGridlines"
                   onChange={(v) => updateSetting('teapotShowGridlines', v)}
                 />
               </GeometryTile>
@@ -350,6 +396,7 @@ export default function SettingsPage() {
                   label="Show Gridlines"
                   description="Display latitude/longitude edge lines on sphere objects"
                   checked={settings.sphereShowGridlines}
+                  settingKey="sphereShowGridlines"
                   onChange={(v) => updateSetting('sphereShowGridlines', v)}
                 />
               </GeometryTile>
@@ -359,6 +406,7 @@ export default function SettingsPage() {
                   label="Outline Edges"
                   description="Draw the 12 edge lines around cube objects"
                   checked={settings.cubeShowEdges}
+                  settingKey="cubeShowEdges"
                   onChange={(v) => updateSetting('cubeShowEdges', v)}
                 />
               </GeometryTile>
@@ -370,24 +418,28 @@ export default function SettingsPage() {
               label="Show Axis Toggle in Scene"
               description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
               checked={settings.showAxisToggleButton}
+              settingKey="showAxisToggleButton"
               onChange={(v) => updateSetting('showAxisToggleButton', v)}
             />
             <ToggleRow
               label="Show Origin Label"
               description="Label the origin with a small 'O' next to its marker"
               checked={settings.showOriginLabel}
+              settingKey="showOriginLabel"
               onChange={(v) => updateSetting('showOriginLabel', v)}
             />
             <ToggleRow
               label="Show Scale Labels"
               description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
               checked={settings.showAxisScaleLabels}
+              settingKey="showAxisScaleLabels"
               onChange={(v) => updateSetting('showAxisScaleLabels', v)}
             />
             <ToggleRow
               label="Show Axis Gizmo"
               description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
               checked={settings.showAxisGizmo}
+              settingKey="showAxisGizmo"
               onChange={(v) => updateSetting('showAxisGizmo', v)}
             />
           </SettingsSection>

@@ -5,6 +5,7 @@ import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 
 describe('useSettingsStore', () => {
   beforeEach(() => {
+    useSettingsStore.getState().clearExerciseOverrides()
     useSettingsStore.getState().resetSettings()
   })
 
@@ -35,5 +36,56 @@ describe('useSettingsStore', () => {
     const { settings } = useSettingsStore.getState()
     expect(settings.showLabels).toBe(true)
     expect(settings.haloEnabled).toBe(true)
+  })
+
+  describe('exercise overrides', () => {
+    it('wins over both the default and the user setting', () => {
+      useSettingsStore.getState().updateSetting('haloEnabled', true)
+      useSettingsStore.getState().setExerciseOverrides({ haloEnabled: false })
+      expect(useSettingsStore.getState().settings.haloEnabled).toBe(false)
+      expect(useSettingsStore.getState().isSettingLocked('haloEnabled')).toBe(true)
+      expect(useSettingsStore.getState().isSettingLocked('showGrid')).toBe(false)
+    })
+
+    it('keeps the user change underneath -- it re-applies when the override clears', () => {
+      useSettingsStore.getState().setExerciseOverrides({ haloEnabled: false })
+      useSettingsStore.getState().updateSetting('haloEnabled', false)
+      // Override still wins while active
+      expect(useSettingsStore.getState().settings.haloEnabled).toBe(false)
+
+      useSettingsStore.getState().clearExerciseOverrides()
+      expect(useSettingsStore.getState().settings.haloEnabled).toBe(false) // the user's value
+    })
+
+    it('clearExerciseOverrides reverts unchanged keys to their default', () => {
+      useSettingsStore.getState().setExerciseOverrides({ colorPreset: 'monochrome' })
+      expect(useSettingsStore.getState().settings.colorPreset).toBe('monochrome')
+
+      useSettingsStore.getState().clearExerciseOverrides()
+      expect(useSettingsStore.getState().settings.colorPreset).toBe('vivid')
+    })
+
+    it('resetSettings leaves the exercise override in place', () => {
+      useSettingsStore.getState().setExerciseOverrides({ haloEnabled: false })
+      useSettingsStore.getState().updateSetting('showLabels', false)
+
+      useSettingsStore.getState().resetSettings()
+
+      expect(useSettingsStore.getState().settings.showLabels).toBe(true) // user layer cleared
+      expect(useSettingsStore.getState().settings.haloEnabled).toBe(false) // override kept
+      expect(useSettingsStore.getState().isSettingLocked('haloEnabled')).toBe(true)
+    })
+
+    it('drops unknown keys and undefined values', () => {
+      useSettingsStore.getState().setExerciseOverrides({
+        haloEnabled: false,
+        notARealSetting: 123,
+        showGrid: undefined,
+      })
+      const { exerciseOverrides, settings } = useSettingsStore.getState()
+      expect(exerciseOverrides).toEqual({ haloEnabled: false })
+      expect(settings.notARealSetting).toBeUndefined()
+      expect(settings.showGrid).toBe(true)
+    })
   })
 })

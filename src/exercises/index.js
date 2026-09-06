@@ -23,6 +23,14 @@ import exercise07 from './exercise07-spheres'
  *   seedWorkspace(workspace)          Drops starter/decorative blocks in on entry.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.
+ *   settingsOverrides                 { <settingKey>: value } forced while this
+ *                                     exercise is open; the matching Settings
+ *                                     controls render as locked. Keys must be
+ *                                     valid useSettingsStore setting keys.
+ *                                     Reverted when the student leaves. Locking
+ *                                     `showAxes` also needs
+ *                                     `showAxisToggleButton: false` (the in-scene
+ *                                     axis button writes `showAxes` directly).
  *
  * The checks themselves are deliberately NOT forced into a shared schema: the
  * seven exercises verify genuinely different things, and a generic checker

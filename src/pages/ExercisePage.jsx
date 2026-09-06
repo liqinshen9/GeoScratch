@@ -7,6 +7,7 @@ import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import useSettingsStore from '@/store/useSettingsStore'
 import { EXERCISES } from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
 
@@ -70,6 +71,8 @@ function AnswerCard({ result, className }) {
 export default function ExercisePage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
+  const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
+  const clearExerciseOverrides = useSettingsStore((s) => s.clearExerciseOverrides)
   const navigate = useNavigate()
   const { exerciseNumber } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
@@ -108,6 +111,13 @@ export default function ExercisePage() {
       exercise.seedWorkspace(workspace)
     }
   }, [exercise, workspace])
+
+  // An exercise can force certain settings while it is open (its
+  // settingsOverrides export); reverted when the student leaves or switches.
+  useEffect(() => {
+    setExerciseOverrides(exercise.settingsOverrides ?? {})
+    return () => clearExerciseOverrides()
+  }, [exercise, setExerciseOverrides, clearExerciseOverrides])
 
   const handleObjectsChange = useCallback(
     (objs) => {

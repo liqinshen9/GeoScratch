@@ -124,6 +124,23 @@
   line-height: 1.35;
 }
 
+.settings-locked-hint {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 46, 166, 0.08);
+  color: #516fa9;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.settings-switch:disabled,
+.settings-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .settings-switch {
   flex: 0 0 auto;
   width: 42px;
