@@ -8,52 +8,31 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { OBJECT_HIGHLIGHT_STYLES, SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
 
-// BLINK: a material is forced transparent and its opacity gently oscillates
-// between this floor and 1. EXCEPTION: a plane's own translucent materials keep
-// their transparency (a plane is too big to read well as a solid wall) --
-// those pulse only from their own opacity toward, but never past,
-// (opacity + BOOST) capped at MAX.
+// BLINK / GLOW highlight tuning. See docs/architecture/selection-and-picking.md.
 const BLINK_MIN_OPACITY = 0.55
 const BLINK_SPEED = 4 // rad/s -> ~1.5s period
 const BLINK_TRANSPARENT_BOOST = 0.26
 const BLINK_TRANSPARENT_MAX = 0.75
-// GLOW: real light coming off the object -- a warm point light at its centre
-// plus a soft radial haze -- while its own colour stays intact.
 const GLOW_LIGHT_INTENSITY = 1.8
-// pointLight.distance = radius * this: kept tight so the light wraps the object
-// rather than flooding the whole scene for a big one. With decay 0 the surface
-// irradiance is intensity * (1 - 1/factor) -- size-independent.
-const GLOW_LIGHT_RANGE_FACTOR = 3
-const GLOW_SPRITE_RADIUS_FACTOR = 2.6 // sprite scale = radius * this (halo wraps the object)
+const GLOW_LIGHT_RANGE_FACTOR = 3 // kept tight so a big object's light doesn't flood the scene
+const GLOW_SPRITE_RADIUS_FACTOR = 2.6
 const GLOW_SPRITE_OPACITY = 0.7
-const GLOW_EMISSIVE_INTENSITY = 0.2 // subtle -- the surface looks lit, not repainted
+const GLOW_EMISSIVE_INTENSITY = 0.2
 const GLOW_RADIUS_MIN = 0.5
 const GLOW_RADIUS_MAX = 4
-// A default-size solid (~1.5 bounding radius) glows at full strength; larger
-// ones are dialled back so a 2x teapot doesn't wash the scene (the halo area
-// would otherwise grow with radius^2).
-const GLOW_RADIUS_REF = 1.5
-// For a vector: the arrowhead + shaft glow amber (emissive), a soft halo RING
-// hugs the head (depthTest off so it never clips the cone), and a faint haze
-// trails a little way back down the shaft. Fixed size, not scaled by length.
+const GLOW_RADIUS_REF = 1.5 // bigger objects dialled back (halo area grows r^2)
 const GLOW_HEAD_RADIUS = 0.55
-const GLOW_HEAD_TRAIL = 1.6 // trailing haze sits this * radius back from the tip
+const GLOW_HEAD_TRAIL = 1.6
 const GLOW_HEAD_EMISSIVE_INTENSITY = 0.28
 
-// For a plane, the glow lives on the border but fades inward toward the middle
-// rather than being a hard rim: a couple of thin bright edge lines ([width,
-// opacity], world units) plus a texture-faded amber fill.
 const GLOW_PLANE_EDGE_LAYERS = [
   [0.05, 0.6],
   [0.2, 0.18],
 ]
 const GLOW_PLANE_FILL_OPACITY = 0.42
-// Fraction of the half-span (centre -> edge) left un-glowed in the middle; the
-// amber ramps from here out to the border.
 const GLOW_PLANE_FILL_INNER = 0.32
 
-// Radial white gradient (opaque centre -> transparent edge), tinted per use via
-// SpriteMaterial.color. Built once, shared, never disposed.
+// Radial white gradient, tinted per use. Built once, shared.
 let radialGlowTexture = null
 function getRadialGlowTexture() {
   if (radialGlowTexture) return radialGlowTexture
@@ -73,8 +52,7 @@ function getRadialGlowTexture() {
   return radialGlowTexture
 }
 
-// Soft amber ring: transparent centre -> bright ring -> transparent outer, so
-// it forms a halo AROUND an object's silhouette instead of a disc over it.
+// Soft ring (halo around a silhouette, not a disc over it). Built once, shared.
 let ringGlowTexture = null
 function getRingGlowTexture() {
   if (ringGlowTexture) return ringGlowTexture
@@ -94,9 +72,8 @@ function getRingGlowTexture() {
   return ringGlowTexture
 }
 
-// White with a soft transparent hole in the middle: opaque toward the edges,
-// clear in the centre. Painted onto a copy of the plane so the glow fills in
-// from the border. Tinted per use via material.color. Built once, shared.
+// Opaque toward the edges, clear in the centre -- painted on a plane copy so
+// the glow fills in from the border. Built once, shared.
 let edgeFadeTexture = null
 function getEdgeFadeTexture() {
   if (edgeFadeTexture) return edgeFadeTexture
@@ -138,8 +115,8 @@ function applyBlink(targets) {
   const seen = new Map()
   targets.forEach((t) =>
     t.traverse((child) => {
-      // Only a plane's own already-translucent materials keep their
-      // transparency; everything else blinks 0.55..1 as normal.
+      // Plane parts keep their own translucency.
+      // See docs/architecture/selection-and-picking.md#blink-plane-exception.
       const keepTranslucent = isPlanePart(child) && child.material
       materialsOf(child).forEach((m) => {
         if (!m || seen.has(m.uuid)) return
@@ -163,7 +140,7 @@ function applyBlink(targets) {
     captured.forEach(({ m, lo, hi }) => {
       m.opacity = lo + (hi - lo) * k
     })
-    return true // always animating -> keep the frameloop going
+    return true // blink always animates
   }
 
   const restore = () => {
@@ -179,9 +156,7 @@ function applyBlink(targets) {
 
 // --- GLOW: an actual warm light + a soft radial haze ------------------------
 
-// Union world-space bbox centre of `targets`, written into `out`. Returns `out`
-// or null if nothing has bounds. Used both to place the bbox-path glow and, each
-// frame, to make it follow an object the AnimationDriver is moving.
+// Union world-space bbox centre of `targets` into `out` (null if no bounds).
 const GLOW_TICK_SCRATCH = new THREE.Vector3()
 function unionBoxCenter(targets, out) {
   const box = new THREE.Box3()
@@ -199,11 +174,8 @@ function unionBoxCenter(targets, out) {
   return out
 }
 
-// A camera-facing haze sprite at `center` (+ an optional warm point light).
-// `strength` (0..1) scales brightness; sprites are cheap, lights are not, so
-// trailing/secondary glows pass withLight:false. `ring` swaps the solid disc
-// for a halo; `depthTest:false` stops the sprite clipping against geometry it
-// overlaps (a flat billboard vs. a cone gives a hard cut otherwise).
+// A camera-facing haze sprite at `center` (+ optional point light). Sprites
+// cheap, lights not. See docs/architecture/selection-and-picking.md#selectionhighlight.
 function addGlowAt(scene, accent, center, radius, strength, opts = {}) {
   const { withLight = true, ring = false, depthTest = true } = opts
   let light = null
@@ -237,12 +209,8 @@ function addGlowAt(scene, accent, center, radius, strength, opts = {}) {
   return { light, sprite, spriteMat }
 }
 
-// World-space arrowhead tip + direction of every vector-shaft glyph in the
-// subtree (buildVectorShaftGlyph tags its group with vectorOrigin/Direction/
-// Length). Also reports whether the glyph is currently visible -- an animated
-// vector_arithmetic arrow toggles its group's `.visible` while it grows, and
-// its head glow should blink out with it. Traversal order is stable across
-// calls, so tick() can zip the result against the parts it built.
+// World-space tip + direction + visibility of every vector-shaft glyph in the
+// subtree. See docs/architecture/selection-and-picking.md#stable-traversal-order.
 function collectVectorHeads(targets) {
   const heads = []
   targets.forEach((t) =>
@@ -279,9 +247,8 @@ function collectPlaneMeshes(targets) {
   return meshes
 }
 
-// A plane's border glow: thin bright edge line(s) for definition, plus a
-// texture-faded amber fill that ramps in from the border toward the middle so
-// it isn't a hard rim. All parented onto the plane mesh so they track it.
+// A plane's border glow: bright edge line(s) + a texture-faded fill ramping
+// in from the border. Parented onto the plane mesh so they track it.
 function addPlaneEdgeGlow(planeMesh, accent, size) {
   const out = []
 
@@ -334,18 +301,15 @@ function applyGlow(targets, scene, size) {
   const planeMeshes = collectPlaneMeshes(targets)
   const heads = planeMeshes.length ? [] : collectVectorHeads(targets)
 
-  // Set by whichever path built free-floating glow, so tick() can keep it on a
-  // moving/growing object each frame (see the tick() in the return below).
+  // Set by whichever glow path ran, so tick() can follow a moving object.
   //   follow      -- bbox path: { anchor, items:[{obj,offset}] }
   //   followHeads -- vector path: [{ head, trail }] parallel to collectVectorHeads
   let follow = null
   let followHeads = null
 
   if (planeMeshes.length) {
-    // Plane: glow radiating from the border, ignoring the defining point +
-    // normal glyphs. Hide the plane's own edge line first -- it's translucent
-    // and sorts inconsistently against the glow, so it peeks through on one
-    // side or the other as the camera moves; the glow gives its own border.
+    // Hide the plane's own edge line first -- it sorts inconsistently and
+    // peeks through. See docs/architecture/selection-and-picking.md#hide-plane-edge-line.
     planeMeshes.forEach((pm) => {
       pm.children.forEach((c) => {
         if (c.isLineSegments && c.visible) {
@@ -356,9 +320,8 @@ function applyGlow(targets, scene, size) {
       added.push(...addPlaneEdgeGlow(pm, accent, size))
     })
   } else if (heads.length) {
-    // Vector(s): the arrowhead + shaft glow amber, a halo ring hugs the head
-    // (depthTest off so it never clips the cone), and a faint haze trails back
-    // down the shaft. Softer per-head when several share the selection.
+    // Vector(s): head ring + shaft trail + emissive bump. Softer per-head when
+    // several share the selection.
     const strength = heads.length > 1 ? 0.75 : 1
     followHeads = []
     heads.forEach(({ tip, dir }) => {
@@ -376,8 +339,7 @@ function applyGlow(targets, scene, size) {
       followHeads.push({ head, trail })
     })
 
-    // Make the vector's own geometry glow so the halo reads as light coming off
-    // it rather than a blob floating nearby.
+    // Bump the vector's own geometry so the halo reads as light off it.
     targets.forEach((t) =>
       t.traverse((child) => {
         if (child.userData?.thickenGroup !== 'vector' || child.visible === false) return
@@ -413,8 +375,7 @@ function applyGlow(targets, scene, size) {
     if (hasBounds) {
       const sphere = box.getBoundingSphere(new THREE.Sphere())
       const radius = THREE.MathUtils.clamp(sphere.radius, GLOW_RADIUS_MIN, GLOW_RADIUS_MAX)
-      // Bigger object -> a touch fainter (a hard cut looks deliberately
-      // greyed-out), so a 2x teapot doesn't read as twice as glowy.
+      // Bigger object -> a touch fainter.
       const strength = THREE.MathUtils.clamp(Math.sqrt(GLOW_RADIUS_REF / radius), 0.78, 1)
       const part = addGlowAt(scene, accent, sphere.center, radius, strength)
       parts.push(part)
@@ -468,10 +429,8 @@ function applyGlow(targets, scene, size) {
   }
 
   return {
-    // Keep the free-floating glow on the object while the AnimationDriver moves
-    // or grows it. Returns true only when it actually changed something, so an
-    // idle selection doesn't force the frameloop (unlike blink, which always
-    // animates).
+    // Follow a moving/growing object. Returns true only on an actual change,
+    // so an idle glow selection doesn't force the frameloop.
     tick: () => {
       if (follow) {
         const c = unionBoxCenter(targets, GLOW_TICK_SCRATCH)
@@ -536,17 +495,14 @@ function applyHighlight(style, targets, scene, size) {
   return applyBlink(targets)
 }
 
-// Headless. Mounted under <Scene>, follows the ZoomInvariantScaler pattern:
-// resolves the selected block's 3D object(s) and applies the chosen highlight,
-// restoring the previous visual on deselect / style change / scene rebuild.
+// Headless, mounted under <Scene>. See docs/architecture/selection-and-picking.md.
 export default function SelectionHighlight({ objects = [] }) {
   const { scene, invalidate, size } = useThree()
   const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
   const enabled = useSettingsStore((s) => s.settings.objectHighlightEnabled)
   const style = useSettingsStore((s) => s.settings.objectHighlightStyle)
 
-  // srcBlockId is stable across scene rebuilds (uuid is not), so a selection
-  // survives a regen and re-attaches to the fresh objects here.
+  // Matched by srcBlockId (stable across rebuilds, unlike uuid).
   const targets = useMemo(() => {
     if (!selectedBlockId) return []
     return objects.filter(
@@ -568,9 +524,7 @@ export default function SelectionHighlight({ objects = [] }) {
     }
   }, [targets, enabled, style, scene, size, invalidate])
 
-  // frameloop="demand": tick returns whether it needs another frame -- blink
-  // always does (continuous pulse); glow only when it repositioned to follow a
-  // moving object.
+  // frameloop="demand": tick returns whether it needs another frame.
   useFrame(({ clock }) => {
     if (activeRef.current?.tick?.(clock.elapsedTime)) invalidate()
   })

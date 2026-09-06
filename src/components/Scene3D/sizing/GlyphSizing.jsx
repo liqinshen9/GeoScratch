@@ -15,21 +15,16 @@ import {
   VECTOR_ZOOM_MAX_SCALE,
 } from '../sceneConstants'
 
-// Skips invisible subtrees (e.g. geo_vector_line's hidden glyph-style
-// siblings) so they don't get a scale computation every frame for nothing.
+// Skips invisible subtrees (geo_vector_line builds every settings version and
+// shows one). See docs/architecture/vector-line-glyphs.md.
 function traverseVisible(object3D, callback) {
   if (object3D.visible === false) return
   callback(object3D)
   object3D.children.forEach((child) => traverseVisible(child, callback))
 }
 
-// Applies zoom-invariant scaling and/or a size multiplier to meshes tagged
-// with userData.zoomInvariantRadius. The multiplier applies regardless of
-// whether zoom-invariant sizing is on, and is picked by glyph kind: a child
-// tagged userData.thickenGroup = 'vector' (a vector's shaft OR its
-// arrowhead cone) always uses extraThickVectors, whichever way it scales;
-// otherwise extraThick for line/tube glyphs (cross-section-only scaling) or
-// extraLargePoints for point markers (uniform scaling).
+// Zoom-invariant scaling + a per-glyph-kind size multiplier for meshes tagged
+// userData.zoomInvariantRadius. See docs/architecture/glyph-sizing.md#zoominvariantscaler.
 function ZoomInvariantScaler({
   objects,
   zoomEnabled,
@@ -43,18 +38,8 @@ function ZoomInvariantScaler({
     objects.forEach((o) => {
       if (!o) return
 
-      // ONE distance -- and so one zoomScale -- per TOP-LEVEL object, not
-      // one independently computed per zoom-invariant child. A multi-piece
-      // glyph (a dashed/ringed line's many small tube/ring segments) needs
-      // to scale as a single uniform unit, the way a texture moves with its
-      // surface; letting each piece compute its own correction from its own
-      // world position made segments at different camera distances end up
-      // visibly different sizes -- a bulging/tapering artifact on any line
-      // long enough (or viewed end-on enough) that its pieces sit at
-      // meaningfully different distances from the camera. Lines expose
-      // userData.segmentMid (their own local-space centre) as a stable
-      // single reference point for this; anything else just uses its own
-      // world position, which is what already happened per-child before.
+      // ONE distance per top-level object (via userData.segmentMid for lines),
+      // not per child. See docs/architecture/glyph-sizing.md#one-distance-per-object.
       let zoomScale = 1
       if (zoomEnabled) {
         if (o.userData?.segmentMid) {
@@ -110,29 +95,15 @@ function ZoomInvariantScaler({
   return null
 }
 
-// Keeps each geo_vector_line's dash/ring collision-accent patterns
-// (userData.updateZoomRatio, see geoVectorLine.js) in sync with camera
-// distance -- geoVectorLineDefinition builds the glyph once, up front, with
-// no access to the camera, so re-deriving the dash/ring count as the user
-// zooms has to happen here instead. Passes the raw (unclamped) distance
-// ratio rather than a pre-clamped scale -- dashes and rings each want their
-// own clamp range (dashes read fine over a narrow range; a fine "ring
-// texture" needs to grow much more at extreme zoom-out to stay legible), so
-// that tuning lives entirely in geoVectorLine.js instead of being split
-// across two files.
+// Keeps each geo_vector_line's dash/ring pattern in sync with camera distance
+// (via userData.updateZoomRatio), passing the raw unclamped ratio.
+// See docs/architecture/glyph-sizing.md#dashzoomsync.
 function DashZoomSync({ objects, zoomEnabled }) {
   const worldMid = useMemo(() => new THREE.Vector3(), [])
 
-  // Explicit priority -1 (lower runs earlier) so this always runs BEFORE
-  // ZoomInvariantScaler in the same frame, not just by JSX/mount-order
-  // coincidence. It matters here specifically: rebuilding the dash pattern
-  // creates brand-new Mesh children with an unset (1,1,1) scale, and
-  // ZoomInvariantScaler is what corrects that to the right zoom-invariant
-  // cross-section radius. If it ran first (or in an unspecified order),
-  // those new segments would render at their raw, un-scaled radius for one
-  // frame every time the pattern rebuilds -- a visible thickness flicker
-  // during a continuous zoom, since rebuilds happen repeatedly as the scale
-  // crosses each threshold.
+  // Priority -1 so this runs BEFORE ZoomInvariantScaler, else new dash
+  // segments flicker at raw radius.
+  // See docs/architecture/glyph-sizing.md#dash-sync-priority.
   useFrame(({ camera }) => {
     if (!zoomEnabled) return
     objects.forEach((o) => {
@@ -147,12 +118,9 @@ function DashZoomSync({ objects, zoomEnabled }) {
   return null
 }
 
-// Syncs Line2/LineMaterial glyphs with canvas resolution (for correct pixel
-// linewidth) and the extra-thick multiplier -- neither is available to
-// geoVectorLine.js/vectorShaftGlyph.js at construction time. A child tagged
-// userData.thickenGroup = 'vector' (vectorShaftGlyph.js's fat-line shaft)
-// keys off extraThickVectors instead of extraThick, so the two toggles stay
-// independent.
+// Syncs Line2/LineMaterial glyphs with canvas resolution + the extra-thick
+// multiplier (neither available at construction time).
+// See docs/architecture/glyph-sizing.md#fatlinesync.
 function FatLineSync({ objects, extraThick, extraThickVectors }) {
   const { size } = useThree()
 

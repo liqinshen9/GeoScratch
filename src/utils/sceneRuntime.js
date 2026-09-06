@@ -15,30 +15,10 @@ import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
 
 /**
- * The runtime API available to block builder functions.
- *
- * WHY THIS IS ON `window` AND NOT IMPORTED
- * ----------------------------------------
- * A block's builder function (geoVectorLineDefinition, geoCubeDefinition, ...)
- * is serialised with `.toString()` by its code generator and evaluated inside a
- * `new Function(...)` in generateAndRun.js. The resulting function body has NO
- * module scope: every `import` at the top of the file it was written in is
- * invisible to it at runtime.
- *
- * So a builder must reach everything through the names installed here. Writing
- * `import * as THREE from 'three'` in a block file and using it inside a builder
- * compiles fine, passes lint, and then throws `THREE is not defined` at runtime
- * -- which generateAndRun.js catches, leaving a blank scene and one console
- * error as the only clue.
- *
- * This module is the single list of what a builder may assume exists. If you
- * need something new inside a builder, add it here rather than importing it.
- *
- * A subset (THREE, threeObjStore, createInfinitePlaneMesh, vectorNotation,
- * geoNaming, geoSetVar, geoVar) is ALSO passed as explicit parameters to the
- * generated function -- see RUNTIME_PARAM_NAMES. Top-level generated statements
- * can use those as bare identifiers; a stringified builder body, being a nested
- * function, sees them too. Everything else is `window.`-qualified at the use site.
+ * The runtime API available to block builder functions. Builders are
+ * .toString()-serialized and have no module scope, so they can't import --
+ * add anything new here, not as an import. sceneRuntime.test.js pins this.
+ * See docs/architecture/generated-code-runtime.md.
  *
  * @typedef {object} SceneRuntime
  * @property {typeof THREE} THREE                    Composed three.js namespace (see utils/three.js).
@@ -91,25 +71,19 @@ export function installSceneRuntime(workspace, options = {}) {
   window.__geoScratchRuntimeMode = options.runtimeMode || 'sandbox'
   window.vectorNotation = createVectorNotationRuntime()
 
-  // Read-only lookup against the persistent naming registry (namingRegistry.js) --
-  // unlike vectorNotation, this is NOT recreated fresh per run; it's a thin
-  // view over names assigned once at block-creation time, so the same
-  // block always reports the same name regardless of run order.
+  // NOT recreated per run -- a thin view over names assigned once at
+  // block-creation time. See docs/architecture/generated-code-runtime.md.
   window.geoNaming = createRuntimeAccessor(workspace)
 
-  // Variable-wrapper store. Deliberately NOT threeObjStore: runAndSync.js
-  // renders Object.values(threeObjStore), so a bare Vector3 or number in
-  // there would be handed to Scene3D as a scene object. Keyed by the
-  // wrapper block's refId, rebuilt every run like the scene itself.
+  // NOT threeObjStore -- a bare value there would render as a scene object.
+  // See docs/architecture/generated-code-runtime.md#varstore-not-threeobjstore.
   window.geoVarStore = {}
   window.geoSetVar = (key, value) => {
     window.geoVarStore[key] = value
     return value
   }
-  // The fallback matters: a dangling or mis-ordered reference returning
-  // undefined into e.g. a vector's "from point:" input throws, and
-  // generateAndRun's catch swallows it -- silently blanking the ENTIRE scene. A
-  // type-appropriate fallback degrades to one wrong value instead.
+  // Fallback matters -- undefined into an input blanks the whole scene.
+  // See docs/architecture/generated-code-runtime.md#geovar-fallback.
   window.geoVar = (key, fallback = null) =>
     Object.prototype.hasOwnProperty.call(window.geoVarStore, key)
       ? window.geoVarStore[key]
@@ -124,10 +98,7 @@ export function installSceneRuntime(workspace, options = {}) {
   window.buildVectorShaftGlyph = buildVectorShaftGlyph
   window.makeStagedVectorReveal = makeStagedVectorReveal
 
-  // Fresh per run -- a stale entry from a previous run is harmless (its
-  // blockId's id is never written by anything once that run's objects are
-  // gone), but there's no reason to let the registry grow unbounded across
-  // many runs either.
+  // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()
 
   return [

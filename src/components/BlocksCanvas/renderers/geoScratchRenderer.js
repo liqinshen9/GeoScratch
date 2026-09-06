@@ -5,17 +5,11 @@ export const GEOSCRATCH_RENDERER = 'geoscratch'
 let REGISTERED = false
 
 /**
- * Marks inputs on a block whose connected child should be allowed to hang past
- * the bottom of its row instead of stretching it.
- *
- * Blockly sizes the row an external value input sits on to the height of
- * whatever is plugged into it, then pushes every row below it down. On a block
- * like linalg_vec3 -- whose socket is deliberately on the top row so a
- * connected block lines up with its top edge -- that means plugging anything
- * tall in shoves the block's own label and coordinates far down the body.
- * Blocks listed here keep their own layout and let the child overflow
- * alongside them instead; the child is drawn from the block's right edge, so
- * it sits next to the body rather than over it.
+ * Marks inputs whose connected child may hang past its row rather than stretch
+ * it. Blockly sizes a value-input's row to the child's height and pushes rows
+ * below it down; on a block like linalg_vec3 (socket on the top row) that
+ * shoves the block's own label far down. Listed blocks keep their layout and
+ * let the child overflow off the right edge.
  *
  * @param {import('blockly/core').Block} block
  * @param {...string} inputNames

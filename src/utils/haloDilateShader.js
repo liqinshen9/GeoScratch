@@ -1,24 +1,12 @@
 import * as THREE from 'three'
 
-// Kernel radius in texels of the (downsampled) raw prepass target -- the
-// actual on-screen margin this produces is roughly
-// KERNEL_RADIUS / HALO_TARGET_SCALE (HaloDepthPrepass.jsx) canvas pixels,
-// e.g. 8 texels / 1.0 scale = ~8 canvas pixels of radius -- doubled from 4
-// alongside HALO_TARGET_SCALE going 0.5 -> 1.0, so the margin size on screen
-// is unchanged, only its resolution (and so how blocky its edge looks) is. A
-// constant PIXEL radius, unlike the old 3D-geometry-based margin, is
-// isotropic: it doesn't elongate at shallow line-crossing angles, and
-// dominates the (now deliberately tiny) residual 3D margin's own shape. See
-// docs/halos-epic-plan.md.
+// On-screen margin is ~KERNEL_RADIUS / HALO_TARGET_SCALE canvas pixels.
+// Paired with HALO_TARGET_SCALE (see docs/architecture/halos.md#target-scale).
 const KERNEL_RADIUS = 8
 
-// Fullscreen "dilate" pass: for each output texel, looks at a small
-// neighborhood of the raw ID+depth target and keeps whichever sample is
-// nearest the camera (smallest depth) -- a standard morphological dilate,
-// same technique used for outline/edge growing in other post-process
-// pipelines. This is what actually produces the constant-pixel-width halo
-// margin; the companion mesh's own 3D inflation (geoVectorLine.js) is kept
-// deliberately small now, just enough to avoid self/edge artifacts.
+// Fullscreen morphological dilate of the raw ID+depth target: per output
+// texel, keep the sample nearest the camera. This is what produces the
+// constant-pixel-width halo margin. See docs/architecture/halos.md.
 export function createHaloDilateMaterial() {
   return new THREE.ShaderMaterial({
     uniforms: {
@@ -53,12 +41,8 @@ export function createHaloDilateMaterial() {
             }
           }
         }
-        // R: winning object's id, re-encoded the same id/255 way the raw
-        // pass encodes it (so the discard shader's decode logic is
-        // unchanged). G: that object's raw (nonlinear) depth, carried
-        // through as a plain color value -- HalfFloatType storage (see
-        // HaloDilatePass.jsx) keeps full precision, no 8-bit quantization
-        // of depth the way the ID channel deliberately has.
+        // R: winning id (id/255, same encoding as the raw pass). G: its raw
+        // depth (HalfFloat storage keeps full precision).
         gl_FragColor = vec4(bestId / 255.0, bestDepth, 0.0, 1.0);
       }
     `,

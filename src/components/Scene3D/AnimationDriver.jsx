@@ -5,21 +5,9 @@ import useAnimationStore from '@/store/useAnimationStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { getEasingFn } from '@/store/animationConfig'
 
-// Headless, mounted under <Scene> alongside <SelectionHighlight>. Same pattern:
-// resolve the selected block's 3D object, mutate it each frame, and call
-// invalidate() (the canvas is frameloop="demand").
-//
-// An object opts into animation by exposing `userData.animate(progress, ease)`
-// -- a closure baked at scene-build time that renders progress 0..1 of whatever
-// that object's blocks describe (a transform pipeline interpolating pose, a
-// vector-arithmetic group revealing its arrows in sequence, ...). It gets the
-// RAW linear progress plus the configured easing function and applies the ease
-// where it makes sense: a single motion eases the whole 0..1, a staged reveal
-// eases each stage's own local progress. A scene rebuild re-bakes the closure;
-// this re-resolves the target by the stable srcBlockId, so a scrub position
-// survives edits. `userData.animAliasBlockIds` lets a helper block (e.g. a
-// transform_pipeline, which renders no object of its own) stand in as the
-// selection that drives another object.
+// Headless, mounted under <Scene>. Resolves the selected block's 3D object
+// (by stable srcBlockId / animAliasBlockIds), calls its userData.animate(p,
+// ease) each frame, invalidate()s. See docs/architecture/animation.md.
 
 export default function AnimationDriver({ objects = [] }) {
   const { invalidate } = useThree()
@@ -62,8 +50,7 @@ export default function AnimationDriver({ objects = [] }) {
     setHasTarget(!!target)
   }, [target, setHasTarget])
 
-  // When the selection moves to a different object (or this unmounts), snap the
-  // one we were animating back to its resting (progress 1) state.
+  // On selection change / unmount, snap the previous target back to progress 1.
   useEffect(() => {
     const restoreTarget = target
     return () => {
@@ -72,9 +59,7 @@ export default function AnimationDriver({ objects = [] }) {
     }
   }, [target, applyAnimation, invalidate])
 
-  // Place the target at the current scrub position -- on selection, on a manual
-  // scrub, and after a scene rebuild re-bakes the closure. The play loop below
-  // drives it directly while playing, so skip it here then.
+  // Place the target at the scrub position (not while playing -- the loop does).
   useEffect(() => {
     if (target && !playing) applyAnimation(target, progress)
     invalidate()
@@ -82,10 +67,8 @@ export default function AnimationDriver({ objects = [] }) {
 
   useFrame((_, delta) => {
     if (!playing || !target) return
-    // frameloop="demand": the first frame after the canvas has been idle
-    // reports the whole elapsed idle time as `delta`. Uncapped, that skips the
-    // animation straight to the end the moment you press play (esp. on replay
-    // after it settled). Cap it, same as LabelDeclutter's MAX_DT.
+    // Cap the first-after-idle delta or the animation skips to the end.
+    // See docs/architecture/animation.md#cap-the-first-delta.
     const dt = Math.min(delta, 0.05)
     let next = progress + (dt * 1000) / durationMs
     if (next >= 1) next = loop ? next % 1 : 1

@@ -1,9 +1,7 @@
 import { Field } from 'blockly/core'
 
-// Deliberately NOT the block's own colour: the wrapper's body is near-black,
-// so a button tinted anything close to it reads as a flat label rather than a
-// control. A light grey carries that contrast without adding another hue to a
-// workspace whose colours already mean something.
+// Light grey, deliberately not the wrapper's near-black body colour (a button
+// tinted close to it reads as a flat label, not a control).
 const BUTTON_COLOUR = '#8d949f'
 const BUTTON_HOVER_COLOUR = '#a8aeb8'
 const BUTTON_BORDER_COLOUR = '#5b616b'
@@ -11,11 +9,9 @@ const BUTTON_TEXT_COLOUR = '#12161c'
 const BUTTON_PADDING = 10
 const BUTTON_CORNER_RADIUS = 7
 
-// Clickable button field on the variable wrapper: spawns a collapsed
-// reference to this wrapper. Modelled on FieldMatrixPreview (matrixPreview.js)
-// -- the proven pattern for a non-editing, click-to-act field in this Blockly
-// version: EDITABLE false, style borderRect_/textElement_ as a button, and do
-// the work in showEditor_.
+// Click-to-act button field: spawns a collapsed reference to this wrapper.
+// Same non-editing-field pattern as FieldMatrixPreview (matrixPreview.js):
+// EDITABLE false, style borderRect_/textElement_, work in showEditor_.
 export class FieldSpawnReference extends Field {
   EDITABLE = false
   SERIALIZABLE = false

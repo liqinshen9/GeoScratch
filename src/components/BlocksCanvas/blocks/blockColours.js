@@ -19,9 +19,8 @@ export const BLOCK_STYLES = Object.freeze({
   WORKSPACE_VARIABLE: 'geoscratch_workspace_variable_blocks',
 })
 
-// Maps each per-type block style to the object-color-system type key, so the
-// toolbox/category baseline color for that style is always the same family
-// an actual instance of that type would render with (see colorSystem.js).
+// block style -> color-system type key, so the toolbox baseline matches an
+// instance's family. See docs/architecture/color-system.md#blockcoloursjs.
 export const BLOCK_STYLE_OBJECT_TYPES = Object.freeze({
   [BLOCK_STYLES.CREATE_POINT]: OBJECT_TYPES.POINT,
   [BLOCK_STYLES.CREATE_VECTOR]: OBJECT_TYPES.VECTOR,
@@ -32,10 +31,8 @@ export const BLOCK_STYLE_OBJECT_TYPES = Object.freeze({
   [BLOCK_STYLES.CREATE_TEAPOT]: OBJECT_TYPES.TEAPOT,
 })
 
-// Maps each of the 7 primary creation blocks' Blockly block *type* (as seen
-// on a live block instance, e.g. block.type) to the object-color-system type
-// key -- used by useBlocksWorkspace.js to recolor every existing block when
-// the color preset changes, since that only has block.type to go on.
+// block.type -> color-system type key, for the live-recolor listener.
+// See docs/architecture/color-system.md#blockcoloursjs.
 export const BLOCK_TYPE_OBJECT_TYPES = Object.freeze({
   linalg_point: OBJECT_TYPES.POINT,
   geo_show_point_on_object: OBJECT_TYPES.POINT,
@@ -48,22 +45,15 @@ export const BLOCK_TYPE_OBJECT_TYPES = Object.freeze({
   geo_teapot: OBJECT_TYPES.TEAPOT,
 })
 
-// Non-renderable value primitives (Scalar, Vector4, ...) have no object
-// type/family of their own to render a match against, but should still
-// track the active color preset rather than sit at a fixed, unthemed color
-// -- the "accent" role is a neutral, already-themed-per-preset color used
-// elsewhere for the same "doesn't belong to one of the 7 types" purpose.
-// Maps block.type -> role, mirroring BLOCK_TYPE_OBJECT_TYPES's job for the
-// useBlocksWorkspace.js live-recolor listener.
+// Non-renderable primitives track the preset via the neutral "accent" role.
+// See docs/architecture/color-system.md#blockcoloursjs.
 export const BLOCK_TYPE_ROLES = Object.freeze({
   scalar: COLOR_ROLES.ACCENT,
   linalg_vec4: COLOR_ROLES.ACCENT,
 })
 
 function typeStyle(objectType) {
-  // Toolbox/category baseline: the type's family "representative" color
-  // (no specific block id yet). Individual blocks override this with their
-  // own per-instance color in their init(), see e.g. geoSphere.js.
+  // Toolbox baseline (no block id yet); blocks override per-instance in init().
   const colour = forInstance(objectType, null)
   return { colourPrimary: colour, colourSecondary: colour, colourTertiary: colour }
 }
@@ -74,71 +64,48 @@ function roleStyle(role) {
 }
 
 export const BLOCK_COLOUR_STYLES = Object.freeze({
-  /** Create > Point. */
   [BLOCK_STYLES.CREATE_POINT]: typeStyle(OBJECT_TYPES.POINT),
-
-  /** Create > Vector. */
   [BLOCK_STYLES.CREATE_VECTOR]: typeStyle(OBJECT_TYPES.VECTOR),
-
-  /** Create > Line. */
   [BLOCK_STYLES.CREATE_LINE]: typeStyle(OBJECT_TYPES.LINE),
-
-  /** Create > Plane. */
   [BLOCK_STYLES.CREATE_PLANE]: typeStyle(OBJECT_TYPES.PLANE),
-
-  /** Create > Sphere. */
   [BLOCK_STYLES.CREATE_SPHERE]: typeStyle(OBJECT_TYPES.SPHERE),
-
-  /** Create > Cube. */
   [BLOCK_STYLES.CREATE_CUBE]: typeStyle(OBJECT_TYPES.CUBE),
-
-  /** Create > Teapot. */
   [BLOCK_STYLES.CREATE_TEAPOT]: typeStyle(OBJECT_TYPES.TEAPOT),
 
-  /** Non-renderable value primitives (Scalar, Vector4, ...). */
   [BLOCK_STYLES.VALUE_PRIMITIVES]: roleStyle(COLOR_ROLES.ACCENT),
 
-  /** Transform > Pipeline. */
   [BLOCK_STYLES.TRANSFORM_PIPELINE]: {
     colourPrimary: '#ff914d',
     colourSecondary: '#ff914d',
     colourTertiary: '#ff914d',
   },
 
-  /** Transform > Transforms. */
   [BLOCK_STYLES.TRANSFORM_STEPS]: {
     colourPrimary: '#5dd979',
     colourSecondary: '#5dd979',
     colourTertiary: '#5dd979',
   },
 
-  /** Compute > Vector operations. */
   [BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]: {
     colourPrimary: '#b17ff0',
     colourSecondary: '#b17ff0',
     colourTertiary: '#b17ff0',
   },
 
-  /** Matrix value blocks that are not currently shown in the main palette. */
   [BLOCK_STYLES.MATRIX_VALUES]: {
     colourPrimary: '#49a1ff',
     colourSecondary: '#49a1ff',
     colourTertiary: '#49a1ff',
   },
 
-  /** 3D object variable getter/setter blocks. */
   [BLOCK_STYLES.OBJECT_VARIABLE]: {
     colourPrimary: '#36cbb4',
     colourSecondary: '#36cbb4',
     colourTertiary: '#36cbb4',
   },
 
-  /**
-   * The variable wrapper and its references. Deliberately outside the object
-   * colour system: these draw nothing in the 3D scene and carry no geometric
-   * type of their own, so they get a neutral near-black rather than a colour
-   * that would imply kinship with some object family.
-   */
+  // Deliberately outside the object color system -- draws nothing in 3D, so
+  // near-black rather than a color implying an object family.
   [BLOCK_STYLES.WORKSPACE_VARIABLE]: {
     colourPrimary: '#2b2f38',
     colourSecondary: '#2b2f38',

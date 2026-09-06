@@ -1,10 +1,6 @@
-// Framework-free helpers for routing pointer gestures on the 3D canvas. Kept
-// out of Scene3D.jsx so they can be unit tested without a WebGL context.
-
-// A press-release is treated as a "click" (select / toggle) only when the
-// pointer barely moved and was down briefly. Anything longer or further is an
-// OrbitControls drag (orbit / pan / zoom) and must not trigger picking --
-// this is what keeps a drag that starts over a big plane from being swallowed.
+// Framework-free pointer-gesture helpers, unit-tested without a WebGL context.
+// Click = barely moved + brief; anything else is an OrbitControls drag.
+// See docs/architecture/selection-and-picking.md#scenepicker.
 export const CLICK_MAX_DIST = 4 // px
 export const CLICK_MAX_MS = 400
 

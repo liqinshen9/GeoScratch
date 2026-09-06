@@ -6,16 +6,9 @@ let SET_REGISTERED = false
 let GET_REGISTERED = false
 
 /**
- * Register variables_set_vector3 / variables_get_vector3: a shared point or
- * vector variable. Unlike variables_set_obj3D, this never touches
- * threeObjStore -- a bare THREE.Vector3 has nothing to render on its own
- * (matching how a non-standalone linalg_vec3/linalg_point already has no
- * independent 3D presence; whichever block eventually consumes the value --
- * a vector_arithmetic, geo_vector, etc. -- is what draws it). The variable's
- * chosen name still propagates everywhere a name would otherwise come from:
- * vectorNotation.setVectorMetadata stamps it as the value's `label`, which
- * every operator block's `vectorNotation.getLabel(value, fallback)` already
- * knows how to read.
+ * variables_set_vector3 / variables_get_vector3: a shared point/vector
+ * variable. Never touches threeObjStore (a bare Vector3 renders nothing on its
+ * own); the name propagates via vectorNotation.setVectorMetadata's `label`.
  */
 export function initSetVector3VarBlock() {
   if (SET_REGISTERED) return

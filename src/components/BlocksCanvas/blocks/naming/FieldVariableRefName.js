@@ -7,19 +7,13 @@ import {
   WRAPPER_BLOCK_TYPE,
 } from '@/utils/variableReference'
 
-// Always offered, and always first, so an un-pointed reference has a value it
-// can legitimately hold (a FieldDropdown refuses a value that is not one of
-// its options) and reads as something to act on rather than as broken.
+// Always first, so an un-pointed reference has a valid dropdown value to hold.
 const UNSET_OPTION = ['(choose a variable)', '']
 
-// Which wrapper a reference points at. A dropdown rather than a read-only
-// label so a reference dragged in from the palette (which has no target yet)
-// can be pointed at a variable, not just ones spawned by the wrapper's
-// "use it" button.
-//
-// Not serializable: the target lives in block.data via setRefTarget, which
-// round-trips through save/load, duplicate, and the id-stripping in
-// addCompositeBlockToWorkspace. The dropdown value is a view of that.
+// Which wrapper a reference points at. A dropdown (not a label) so a
+// palette-dragged reference can be pointed somewhere. NOT serializable -- the
+// target lives in block.data via setRefTarget.
+// See docs/architecture/naming-registry.md#variable-references-variablereferencejs.
 export class FieldVariableRefName extends FieldDropdown {
   SERIALIZABLE = false
 

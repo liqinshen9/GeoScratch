@@ -4,9 +4,8 @@ import { Text, Billboard } from '@react-three/drei'
 import THREE from '@/utils/three'
 import { AXIS_COLORS, AXIS_SHAFT_RADIUS, DESMOS_TICK_COLOR } from './sceneConstants'
 
-// Bounding box room: BackSide walls so the near ones cull automatically.
-// An edge is hidden only when BOTH faces it borders are culled -- if just
-// one side is open, the edge is still the visible rim of the other wall.
+// BackSide walls cull the near ones. An edge hides only when BOTH its faces
+// are culled. See docs/architecture/render-order.md#boundingboxroom-edge-culling.
 function cubeEdges(half) {
   return [
     // edges running along X (y,z fixed) -- border a Y-face and a Z-face
@@ -91,9 +90,7 @@ function AxisArrow({
   const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const group = new THREE.Group()
-    // Emissive keeps the axis color readable from any angle/lighting (like
-    // the old unlit MeshBasicMaterial did); roughness/metalness add the
-    // lit specular highlight that makes it read as shiny instead of flat.
+    // Emissive keeps the axis color readable from any angle.
     const material = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
       emissive: new THREE.Color(color),
@@ -108,9 +105,8 @@ function AxisArrow({
     const shaftStart = -length
     const shaftEnd = length
     const shaftLength = Math.max(0.1, shaftEnd - shaftStart)
-    // Kept under 0.0272 (the thinnest cylinder-based line glyph radius, see
-    // geoVectorLine.js) so a coincident axis-aligned line still wins the
-    // depth test against this shaft (#43).
+    // Radius under 0.0272 so a coincident line wins the depth test (#43).
+    // See docs/architecture/render-order.md#axis-shaft-radius-ceiling.
     const shaft = new THREE.Mesh(
       new THREE.CylinderGeometry(AXIS_SHAFT_RADIUS, AXIS_SHAFT_RADIUS, shaftLength, 12),
       material,
@@ -122,18 +118,8 @@ function AxisArrow({
     head.position.copy(direction).multiplyScalar(length - headHeight / 2)
     head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
-    // transparent + depthWrite:false (above) puts this in the same sorted-
-    // by-distance transparent queue as every scene object. The axis passes
-    // right through most objects, so their bounding-sphere centers are
-    // nearly coincident -- same as the nested-transparent-object flicker
-    // fixed in computeNestingRenderOrders below, but this pair never goes
-    // through that (Axes isn't in the `objects` array), so it was still
-    // solved per-frame by distance, flipping paint order as the camera
-    // orbits: sometimes the object blends over the axis (correct), sometimes
-    // the axis gets drawn after and sits on top of it instead. A fixed,
-    // always-first renderOrder (same fix FadedGrid already uses below) pins
-    // the axis to always draw before any object, so objects consistently
-    // blend over it instead of the order flip-flopping.
+    // Fixed renderOrder pins the axis to always draw first.
+    // See docs/architecture/render-order.md#scenefurniture-fixed-render-orders.
     shaft.renderOrder = -100
     head.renderOrder = -100
 
@@ -166,10 +152,7 @@ function AxisArrow({
   )
 }
 
-// Thin rings around the shaft at each unit interval, like a collar --
-// visible from any camera angle, unlike a flat perpendicular tick would be.
-// Reuses the same "ring around a cylinder" language as the collision-ring
-// line accent (geoVectorLine.js).
+// Collar rings at each interval -- visible from any camera angle.
 function AxisTicks({
   dir = [1, 0, 0],
   color = AXIS_COLORS.x,
@@ -214,8 +197,7 @@ function AxisTicks({
   )
 }
 
-// A bare "0" sitting on the axis lines read as a stray digit, not a place --
-// a small marker where the three axes cross reads as the origin on its own.
+// A small marker where the axes cross, instead of a stray "0" digit.
 function OriginMarker({ radius = 0.06, color = DESMOS_TICK_COLOR, showLabel = false }) {
   return (
     <group>

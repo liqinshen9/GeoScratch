@@ -9,13 +9,9 @@ const BADGE_FILL = '#11151c'
 const BADGE_BORDER = 'rgba(255, 255, 255, 0.38)'
 const BADGE_TEXT = '#f8fafc'
 
-// Shows a block's live name (e.g. "L1"/"Line1", or a custom name) inline on
-// its face. Read-only: renaming goes through the "Rename" context-menu item
-// (blockReferenceLabels.js) so there is exactly one rename entry point,
-// matching the app's existing "Rename reference" convention. Not
-// serializable -- the name itself is persisted by namingRegistry.js on
-// block.data, not by this field's own value, so there is only ever one
-// source of truth for it.
+// Shows a block's live name on its face. Read-only (rename via the context
+// menu) and NOT serializable -- namingRegistry.js owns the name on block.data.
+// See docs/architecture/naming-registry.md.
 export class FieldObjectName extends Field {
   EDITABLE = false
   SERIALIZABLE = false
@@ -72,11 +68,8 @@ export class FieldObjectName extends Field {
     }
   }
 
-  // Resolved live from the registry rather than read back from the field's
-  // stored value, so the displayed name is correct on every render even if a
-  // change notification was never delivered (a subscription orphaned by an
-  // HMR module swap, a block restored with events disabled, ...). The
-  // subscription below is then only an optimisation: it prompts a redraw.
+  // Resolved live from the registry every render, so a missed notification
+  // (HMR-orphaned subscription, events-disabled restore) can't stale it.
   getText() {
     const block = this.getSourceBlock()
     return block ? getDisplayName(block) : ''

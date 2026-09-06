@@ -12,23 +12,17 @@ import {
 export const TRASH_BLOCK_XML_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-xml'
 export const TRASH_BLOCK_ID_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-id'
 
-// The trash button is small, so drop detection uses a padded version of its box.
-const TRASH_DROP_PADDING = 14
-// How long the lid stays open after a drop, so the animation reads.
+const TRASH_DROP_PADDING = 14 // px, drop detection pads the small button's box
 const TRASH_CLOSE_DELAY_MS = 180
-// Deleted blocks kept for restore. Deliberately short: this is an undo
-// affordance, not a history.
-const MAX_RECENT_DELETED = 8
+const MAX_RECENT_DELETED = 8 // an undo affordance, not a history
 
 /**
- * Drag-a-block-to-the-trash deletion, plus the panel of recently deleted blocks
- * they can be dragged back out of.
- *
- * Installs its own workspace change listener for BLOCK_DRAG only, so it stays
- * independent of the selection listener in useBlockSelectionSync.
+ * Drag-a-block-to-the-trash deletion + a panel of recently deleted blocks.
+ * Own BLOCK_DRAG-only listener, independent of useBlockSelectionSync.
+ * See docs/architecture/selection-and-picking.md#trash-useblocktrash.
  *
  * @param {object|null} workspace
- * @param {(ws: object) => void} syncScene  Re-runs generation after a delete/restore.
+ * @param {(ws: object) => void} syncScene
  */
 export function useBlockTrash(workspace, syncScene) {
   const trashTargetRef = useRef(null)
@@ -48,9 +42,8 @@ export function useBlockTrash(workspace, syncScene) {
     }, TRASH_CLOSE_DELAY_MS)
   }, [])
 
-  // Toggled as a class rather than React state on purpose: this fires on every
-  // pointermove during a drag, and re-rendering the whole canvas at that rate
-  // would stutter the drag.
+  // Class toggle, not React state (fires every pointermove).
+  // See docs/architecture/selection-and-picking.md#class-toggle-not-state.
   const setTrashOpenVisual = useCallback((open) => {
     trashIconRef.current?.classList.toggle('is-open', open)
   }, [])
@@ -80,8 +73,7 @@ export function useBlockTrash(workspace, syncScene) {
       const block = workspace.getBlockById(blockId)
       if (!block?.isDeletable?.()) return
 
-      // Snapshot before deleting -- the label, preview and XML all read from the
-      // live block, which is gone a moment later.
+      // Snapshot before deleting -- all fields read the live block.
       const deletedBlock = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         label: getDeletedBlockLabel(block),
@@ -89,7 +81,7 @@ export function useBlockTrash(workspace, syncScene) {
         xmlText: Blockly.Xml.domToText(Blockly.Xml.blockToDomWithXY(block, false)),
       }
 
-      // Grouped so Blockly's own undo treats the whole subtree as one step.
+      // Grouped so undo treats the subtree as one step.
       Blockly.Events.setGroup(true)
       try {
         block.checkAndDelete()
@@ -111,9 +103,8 @@ export function useBlockTrash(workspace, syncScene) {
       setTrashPanelOpen(false)
       setTrashOpenVisual(true)
 
-      // Two frames, not one: the first lets Blockly finish settling the block it
-      // just dropped, the second lets the open-lid class actually paint before
-      // the block disappears.
+      // Two frames, not one.
+      // See docs/architecture/selection-and-picking.md#two-raf-frames.
       trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
         trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
           if (pendingTrashDeleteRef.current !== blockId) return
@@ -162,7 +153,8 @@ export function useBlockTrash(workspace, syncScene) {
   const handleDeletedBlockDragStart = useCallback((event, deletedBlock) => {
     event.dataTransfer.setData(TRASH_BLOCK_XML_TRANSFER_TYPE, deletedBlock.xmlText)
     event.dataTransfer.setData(TRASH_BLOCK_ID_TRANSFER_TYPE, deletedBlock.id)
-    // must match the 'copy' dropEffect set in handleWorkspaceDragOver, or the drop is rejected
+    // Must match handleWorkspaceDragOver's dropEffect.
+    // See docs/architecture/selection-and-picking.md#dropeffect-must-match.
     event.dataTransfer.effectAllowed = 'copy'
   }, [])
 
@@ -190,8 +182,8 @@ export function useBlockTrash(workspace, syncScene) {
     [],
   )
 
-  // Blockly reports no pointer position during a block drag, so hit-testing has
-  // to ride a raw capture-phase pointermove instead.
+  // Capture-phase pointermove -- Blockly reports no pointer pos during a drag.
+  // See docs/architecture/selection-and-picking.md#capture-phase-pointermove.
   useEffect(() => {
     function handlePointerMove() {
       if (!draggingBlockIdRef.current) return
@@ -220,9 +212,8 @@ export function useBlockTrash(workspace, syncScene) {
 
       const blockId = draggingBlockIdRef.current || event.blockId
       draggingBlockIdRef.current = null
-      // Re-test on drop as well as trusting the tracked flag: a drag that ends
-      // without a final pointermove (a flick, or a programmatic end) would
-      // otherwise miss.
+      // Re-test on drop (a flick has no final pointermove).
+      // See docs/architecture/selection-and-picking.md#re-test-on-drop.
       const shouldDelete = dragOverTrashRef.current || isDraggedBlockTouchingTrash(blockId)
       dragOverTrashRef.current = false
       if (blockId && shouldDelete) {

@@ -1,23 +1,6 @@
-// Blockly's javascriptGenerator.workspaceToCode emits top-level stacks in
-// workspace.getTopBlocks(true) order -- sorted by each stack's on-screen
-// position (roughly top-to-bottom, left-to-right; see Workspace.sortObjects),
-// not creation order. A `get` block whose stack sits above its `set` block's
-// stack on the canvas is emitted first, and reads the variable before that
-// `set` statement has run -- this repo's generators default the variable's
-// declaration to `undefined` (via the JS generator's own auto-declaration,
-// see setObj3D.js's comment) rather than throwing, so this silently reads a
-// stale/empty value instead of crashing. Rather than leave that as a silent
-// footgun, flag it as a visible warning on the offending `get` block -- same
-// mechanism generateAndRun.js's runConnectedTransformPipelines already uses
-// for its own warnings. Uses the identical getTopBlocks(true) ordering the
-// real generator uses, so "stack index" here means the same thing it does
-// during actual code generation.
-//
-// Granularity: per top-level stack (a "stack" = one top block plus
-// everything reachable from it), not full statement-by-statement order --
-// sufficient to catch the common "used it in an earlier stack" case; a
-// get/set pair within the very same stack but in the wrong sub-order isn't
-// distinguished. True reordering is out of scope (see the plan).
+// Warns on a variable `get` in a stack emitted before its `set`'s stack
+// (stacks emit in on-screen order, not creation order). Per-stack granularity.
+// See docs/architecture/naming-registry.md#variable-ordering-warnings-validatevariableorderingjs.
 
 import { getRefId, getDisplayName } from '@/utils/namingRegistry'
 import { getRefTarget } from '@/utils/variableReference'
@@ -47,9 +30,8 @@ function resolveGetVarName(workspace, block) {
   return workspace.getVariableMap().getVariableById(id)?.name ?? id
 }
 
-// One description of "this block writes a value" / "this block reads one",
-// covering both the typed set/get pairs and the variable wrapper + its
-// references, so the stack-ordering logic below is written once.
+// One "writes a value" / "reads one" description covering both typed set/get
+// pairs and the wrapper + its references.
 function describeBlock(workspace, block) {
   if (SET_TYPES.has(block.type)) {
     return { role: 'set', key: block.getFieldValue('VAR') }

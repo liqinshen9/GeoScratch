@@ -1,12 +1,8 @@
 import { create } from 'zustand'
 
-// Transient playback transport for the 3D scene. Persistent knobs (speed,
-// easing, loop) live in useSettingsStore; this store only holds the live
-// transport state.
-//
-// `progress` is normalized 0..1 and defaults to 1: progress 1 == "fully
-// transformed" == exactly the static scene the app renders today, so nothing
-// changes visually until the user actually plays or scrubs.
+// Transient playback transport (persistent knobs live in useSettingsStore).
+// progress defaults to 1 == resting == today's static scene.
+// See docs/architecture/animation.md.
 
 const clamp01 = (n) => (n < 0 ? 0 : n > 1 ? 1 : n)
 

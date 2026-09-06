@@ -1,11 +1,10 @@
 import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES } from '@/store/lineStyles'
 
-// Every size below is an eyeballed number, tuned per style independently --
-// there's no formula linking them, so just edit a number to change how a
-// style looks.
+// Every size below is an eyeballed per-style number, no formula.
+// See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
 
-// Plain Line: a flat GL line (constant pixel width, doesn't get thinner far away)
+// Plain Line: a flat GL line (constant pixel width)
 const LINE_SHAFT_PX = 4.6
 const LINE_HEAD_RADIUS = 0.2
 const LINE_HEAD_LENGTH = 0.35
@@ -26,17 +25,12 @@ const RINGED_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED
 // Never let a very short vector produce a negative/zero shaft length.
 const MIN_SHAFT_LENGTH = 0.001
 
-// Ultimate fallback only -- reached if a caller omits `color` AND
-// window.GeoScratchColors (colorSystem.js) isn't loaded yet. Every current
-// call site passes an explicit color or relies on the GeoScratchColors
-// lookup below, so in practice this is a defensive default, not the normal
-// path.
+// Defensive default only -- reached if `color` is omitted and GeoScratchColors
+// isn't loaded.
 const VECTOR_COLOR = 0x15803d
 
-// headLength is the active style's own cone length (LINE/TUBE/RINGED_HEAD_LENGTH)
-// -- the shaft stops exactly that far short of the true tip, so the cone
-// (fixed length, never zoom-scaled -- see makeArrowhead) always reaches
-// exactly to the true tip, matching where the object's label is anchored.
+// The shaft stops `headLength` short of the true tip so the fixed-length cone
+// reaches it. See docs/architecture/vector-line-glyphs.md#shaft-stops-short.
 export function computeVectorShaftLayout(origin, direction, length, headLength) {
   const shaftLength = Math.max(length - headLength, MIN_SHAFT_LENGTH)
   const shaftMid = origin.clone().addScaledVector(direction, shaftLength / 2)
@@ -44,9 +38,8 @@ export function computeVectorShaftLayout(origin, direction, length, headLength) 
   return { shaftLength, shaftMid, shaftEnd }
 }
 
-// 2-color repeating texture, same technique as geoVectorLine.js's
-// makeRingTexture -- duplicated rather than shared, see file-level note in
-// buildVectorShaftGlyph.
+// 2-color repeating texture, deliberately duplicated from geoVectorLine.js.
+// See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
 function makeRingTexture(THREE, colorA, colorB) {
   const canvas = document.createElement('canvas')
   canvas.width = 4
@@ -75,10 +68,7 @@ function orient(object, from, to, THREE) {
   object.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to)
 }
 
-// Derives the ringed-tube's 2-tone band colors from the shaft's base color
-// -- a lighter and a darker lightness step at the same hue/saturation -- so
-// any colored vector (the default green, or an operand/result glyph reusing
-// this builder with its own color) gets a consistent ring look.
+// Ringed-tube band colors: +/- a lightness step from the base color.
 function deriveRingBandColors(THREE, baseColor) {
   const hsl = {}
   new THREE.Color(baseColor).getHSL(hsl)
@@ -87,33 +77,22 @@ function deriveRingBandColors(THREE, baseColor) {
   return { bandA, bandB }
 }
 
-// `color` omitted -> this instance's color from the shared object-color
-// framework (colorSystem.js), same as every other object type's glyph gets.
-// `blockId` doubles as the color seed here, so a suffixed id (an
-// operand/result glyph's own threeObjStore key, e.g. "<id>_u") still gets a
-// stable, distinct color -- callers that care about a *specific* color
-// (operand roles, a plane's normal matching its plane color, ...) just pass
-// `color` explicitly and this lookup is skipped.
+// `color` omitted -> colorSystem.js instance color, keyed by blockId (a
+// suffixed id like "<id>_u" still gets a stable distinct color).
 function resolveVectorColor(blockId, color) {
   if (color != null) return color
   const colors = typeof window !== 'undefined' ? window.GeoScratchColors : null
   return colors ? colors.forInstance('vector', blockId) : VECTOR_COLOR
 }
 
-// Builds a vector's shaft (in all 3 styles, toggled by settings.vectorStyle)
-// plus each style's own arrowhead cone, and live-reacts to Settings changes.
-// Not shared with geoVectorLine.js -- a vector shaft is one finite,
-// already-known segment (no collision zones, no halo, no dash-zoom-sync),
-// so it's much simpler than that file's machinery.
+// Builds a vector's shaft in all 3 styles + arrowhead cones, live-reacting to
+// settings. Not shared with geoVectorLine.js.
+// See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
 export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length, color) {
   const group = new THREE.Group()
   const shaftColor = resolveVectorColor(blockId, color)
   const { bandA, bandB } = deriveRingBandColors(THREE, shaftColor)
 
-  // Each style's shaft ends exactly its OWN cone's length short of the true
-  // tip (origin + direction*length -- the same point the object's label is
-  // anchored to), so every cone (fixed length, never zoom-scaled -- see
-  // makeArrowhead) reaches exactly to the true tip, at any zoom/thickness.
   let lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
   let tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
   let ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
@@ -179,14 +158,8 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
   ringedTube.userData.thickenGroup = 'vector'
   group.add(ringedTube)
 
-  // Arrowhead cones -- one per style, anchored at their own shaftEnd via
-  // their BASE (geometry translated so the base, not the centre, is the
-  // local origin). Length is fixed (never zoom-scaled), same as the shaft
-  // itself, so the tip always lands exactly on the true tip regardless of
-  // zoom or Extra Thick Vectors -- only radius responds to those. A point
-  // marker's label always tracks perfectly because a sphere scaled from its
-  // own centre never moves; a cone scaled from its base does, which is
-  // exactly what broke this before.
+  // Cones anchored at their BASE (fixed length, only radius zoom-scales).
+  // See docs/architecture/vector-line-glyphs.md#cone-anchored-at-base.
   const makeArrowhead = (radius, coneLength, shaftEnd, mat) => {
     const geom = new THREE.ConeGeometry(radius, coneLength, 12)
     geom.translate(0, coneLength / 2, 0)
@@ -236,12 +209,8 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     })
   }
 
-  // Rescales the glyph to a new length in place, e.g. Vector Transform's
-  // scalar-scale step -- rebuilds each style's shaft geometry (its length
-  // changed) and repositions its cone (fixed length/radius, just moves to
-  // the new shaftEnd). Kept as a userData method rather than callers
-  // re-invoking buildVectorShaftGlyph so a rescale doesn't have to also
-  // re-wire the settings subscription or replace the group in threeObjStore.
+  // Rescales in place (e.g. Vector Transform's scale step). A userData method
+  // so a rescale needn't re-wire the subscription or replace the group.
   group.userData.setVectorLength = (newLength) => {
     length = Math.max(0, newLength)
     lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)

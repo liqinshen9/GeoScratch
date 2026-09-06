@@ -1,8 +1,7 @@
 import * as Blockly from 'blockly/core'
 
-// Attributes that describe where a block sits, not what it is. Two "My Blocks"
-// saved from the same arrangement at different workspace positions, or with
-// freshly generated ids, must compare as duplicates.
+// Position/identity attributes ignored in the duplicate fingerprint.
+// See docs/architecture/blockly-integration.md#my-block-duplicate-detection-blocklyxmljs.
 const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
 
 /**

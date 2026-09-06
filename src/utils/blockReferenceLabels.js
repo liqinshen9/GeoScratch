@@ -2,17 +2,9 @@ import * as Blockly from 'blockly/core'
 import * as namingRegistry from './namingRegistry'
 import { REF_BLOCK_TYPE, referenceDisplayName } from './variableReference'
 
-// "Collapse to reference" -- lets a block shrink to a small labeled puck.
-// Naming itself is delegated entirely to namingRegistry.js: a block that's
-// already nameable (geo_vector/geo_sphere/parametric_plane/... -- see
-// NAMEABLE_KIND_CONFIG) already has a real name the moment it's created, so
-// collapsing it just needs to display that name; a plain compute-result
-// operand (vector_arithmetic, scalar_arithmetic, ...) being collapsed as a
-// nested input has no name of its own, so it's given one from a pooled
-// single-letter scheme (a-z, then r1, r2, ...) the first time it's
-// collapsed. Both kinds of name live in the exact same namingRegistry
-// storage, so they can never collide and are shown identically everywhere
-// (block face, 3D label, collapsed bubble).
+// "Collapse to reference" -- shrink a block to a labeled puck. Naming is
+// delegated to namingRegistry.js; anonymous operands get a pooled alias.
+// See docs/architecture/naming-registry.md#collapse-to-reference-blockreferencelabelsjs.
 const ALIAS_POOL = 'abcdefghijklmnopqrstuvwxyz'.split('')
 const COLLAPSIBLE_INPUT_PARENT_TYPES = new Set([
   'vector_arithmetic',
@@ -50,10 +42,8 @@ function nextPooledAlias(workspace) {
   return 'r'
 }
 
-// Blockly bakes toString() into a FieldLabel once, when the block is
-// collapsed -- so a later rename leaves the old name on the collapsed puck.
-// Re-push it. (Pre-existing bug for any collapsed object, not just variable
-// references: renameNameable below only re-rendered.)
+// Re-push the collapsed label -- Blockly bakes it once on collapse.
+// See docs/architecture/naming-registry.md#collapsed-label-baked-once.
 export function refreshCollapsedLabel(block) {
   if (!block?.isCollapsed?.()) return
   block.getField(Blockly.Block.COLLAPSED_FIELD_NAME)?.setValue(block.toString())
@@ -149,11 +139,8 @@ export function installBlockReferenceLabels() {
   const originalToString = Blockly.Block.prototype.toString
   Blockly.Block.prototype.toString = function patchedReferenceToString(...args) {
     if (this.isCollapsed?.()) {
-      // A variable reference has no naming record of its own -- it shows the
-      // name of the wrapper it points at. Resolving it here (rather than
-      // falling through) matters because Blockly's default toString on a
-      // collapsed block renders the collapsed label itself, so refreshing
-      // that label from toString() would just rewrite the stale text.
+      // Resolve a reference here, not via fall-through.
+      // See docs/architecture/naming-registry.md#tostring-patch-resolves-reference.
       if (this.type === REF_BLOCK_TYPE) return referenceDisplayName(this)
       const name = namingRegistry.getDisplayName(this)
       if (name) return name

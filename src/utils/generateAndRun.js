@@ -26,15 +26,10 @@ function disposeObject3D(root) {
 }
 
 /**
- * A "Vector Equation of Line" bakes its wall-to-wall extent into geometry at
- * build time (rayBoxExitDistance in geoVectorLine.js). Applying a transform via
- * applyMatrix4 just spins that baked segment, so after a rotation it no longer
- * spans the bounding box for its new direction -- it falls short on one side and
- * pokes out the other (#77). Rebuild it from the transformed origin/direction
- * instead, which re-runs the extent calculation. `worldMatrix` is a world-space
- * Matrix4; lines are top-level in the scene so no parent-space correction is
- * needed. Returns the object to use going forward (rebuilt, or the original if
- * it could not be rebuilt).
+ * Rebuilds a transformed line from its new origin/direction instead of
+ * applyMatrix4-ing its baked geometry (#77). Returns the rebuilt object, or
+ * the original if it couldn't rebuild.
+ * See docs/architecture/transform-and-line-rebuild.md.
  */
 export function rebuildTransformedLine(object, worldMatrix) {
   if (object?.userData?.geoType !== 'geo_vector_line' || !worldMatrix?.isMatrix4) return object
@@ -75,10 +70,8 @@ function runConnectedTransformPipelines(workspace) {
     const steps = collectStatementChain(pipeline.getInputTargetBlock('STEPS'))
 
     if (object.userData?.geoType === 'geo_vector_line') {
-      // Combine the steps into one world matrix (same order as the block's
-      // matrix preview) and rebuild once. Scale steps are skipped: a line has
-      // no size, so "scaling" it only shears its direction into a different
-      // line, which is confusing as a size control (#77).
+      // Combine steps into one world matrix and rebuild once; scale steps
+      // skipped. See docs/architecture/transform-and-line-rebuild.md#runconnectedtransformpipelines.
       const combined = new THREE.Matrix4()
       let hasStep = false
       let skippedScale = false
@@ -94,17 +87,12 @@ function runConnectedTransformPipelines(workspace) {
         }
       }
       if (hasStep) {
-        // Captured before the rebuild: these are the untransformed line, which
-        // is what progress 0 has to show. A second pipeline feeding the same
-        // line keeps the first-captured start and just adds its own id as
-        // another entry point, same as the pose path below.
+        // Captured before the rebuild -- the untransformed line is progress 0.
         const priorAnim = object.userData.lineTransformAnim
         const startOrigin = priorAnim?.startOrigin || object.userData.origin?.clone()
         const startDirection = priorAnim?.startDirection || object.userData.direction?.clone()
         const rebuilt = rebuildTransformedLine(object, combined)
-        // rebuildTransformedLine hands back the ORIGINAL object when it can't
-        // rebuild (degenerate direction, missing origin) -- nothing moved, so
-        // there is nothing to animate.
+        // Same object back == couldn't rebuild == nothing moved == nothing to animate.
         if (rebuilt !== object) {
           bakeLineTransformAnimation(rebuilt, startOrigin, startDirection, [
             ...(priorAnim?.pipelineBlockIds || []),
@@ -119,14 +107,8 @@ function runConnectedTransformPipelines(workspace) {
       continue
     }
 
-    // Bake a start/end pose pair + an animate(progress) closure so
-    // AnimationDriver can interpolate this object between "untransformed" and
-    // "fully transformed" without re-running code generation every frame.
-    // Assumes `object` is top-level in the scene (its <primitive> wrapper group
-    // is identity) -- true for every current transform exercise. A second
-    // pipeline feeding the same object keeps the first-captured start and just
-    // records its own id as another entry point (animAliasBlockIds -- selecting
-    // the pipeline block, which renders nothing itself, still drives this).
+    // Bake a start/end pose pair + animate(progress) closure.
+    // See docs/architecture/animation.md#pose-pair-baking.
     object.updateMatrix()
     const priorAnim = object.userData.transformAnim
     const startPos = priorAnim ? priorAnim.startPos : object.position.clone()
@@ -150,10 +132,8 @@ function runConnectedTransformPipelines(workspace) {
     }
     object.userData.transformAnim = anim
     object.userData.animAliasBlockIds = anim.pipelineBlockIds
-    // One continuous motion, so ease the whole 0..1. Pose lerp: position/scale
-    // linear, rotation via shortest-path quaternion slerp. Limitation: a single
-    // rotation step past 180 degrees animates the short way round -- the
-    // decompose above already collapsed it to a <=180 quaternion.
+    // Pose lerp: linear pos/scale, shortest-path quaternion slerp.
+    // See docs/architecture/transform-and-line-rebuild.md#rotation-past-180.
     object.userData.animate = (p, ease) => {
       const e = typeof ease === 'function' ? ease(p) : p
       object.position.lerpVectors(anim.startPos, anim.endPos, e)
@@ -170,15 +150,12 @@ export function generateAndRun(workspace, options = {}) {
   validateVariableOrdering(workspace)
 
   try {
-    // Publishes window.THREE, window.threeObjStore and the rest of the API that
-    // stringified block builders depend on -- see sceneRuntime.js for the full
-    // list and for why builders cannot simply import these.
+    // Publishes window.THREE, window.threeObjStore, etc. for stringified
+    // builders. See docs/architecture/generated-code-runtime.md.
     const runtimeArgs = installSceneRuntime(workspace, options)
 
-    // Lets object_transform / vector_transform's generated runtime code rebuild
-    // a transformed line instead of applyMatrix4-ing its baked geometry (#77).
-    // Lives here rather than in sceneRuntime.js because it is defined in this
-    // module, which sceneRuntime.js must not import back (cycle).
+    // Set here, not in sceneRuntime.js, to avoid an import cycle (#77).
+    // See docs/architecture/transform-and-line-rebuild.md#the-77-problem.
     window.__geoScratchRebuildTransformedLine = rebuildTransformedLine
 
     const runWorkspace = new Function(...RUNTIME_PARAM_NAMES, generatedUserCode)
@@ -187,11 +164,9 @@ export function generateAndRun(workspace, options = {}) {
     // Run pipelines modifying those exact object instances in place
     runConnectedTransformPipelines(workspace)
   } catch (error) {
-    // Caught, not rethrown: one malformed block should degrade to a partial
-    // scene rather than take the whole editor down. But it MUST be loud -- a
-    // silent failure here looks identical to "the scene is just empty", and the
-    // most common cause is a block builder referencing an imported binding that
-    // does not exist inside its stringified body (see sceneRuntime.js).
+    // Caught, not rethrown, but MUST be loud -- usually a builder referencing
+    // an import from inside its stringified body.
+    // See docs/architecture/generated-code-runtime.md#failure-mode.
     console.error('[GeoScratch] Generated block code threw; the scene may be incomplete:', error)
   }
 }

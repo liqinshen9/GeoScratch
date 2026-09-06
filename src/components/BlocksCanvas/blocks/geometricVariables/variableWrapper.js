@@ -16,17 +16,9 @@ import {
 } from '@/utils/variableReference'
 import addBlockToWorkspace from '@/utils/addBlockToWorkspace'
 
-// A pass-through wrapper: plug any Point/Vector/Line/Sphere/Scalar/compute
-// result into it and it behaves exactly as that block did (same output, same
-// place in the graph, same rendering), while also publishing the value under
-// its own refId so `geo_variable_ref` blocks elsewhere can read the SAME
-// value back without re-evaluating anything -- no duplicate object in the 3D
-// scene.
-//
-// Pairing is by the wrapper's naming-registry refId rather than its block id,
-// because refId survives addCompositeBlockToWorkspace (which strips ids) and
-// because a duplicated wrapper is given a fresh one (see namingRegistry's
-// ensureAssigned), so a copy can never hijack the original's references.
+// A pass-through wrapper that also republishes its value under its own refId
+// for geo_variable_ref blocks. See docs/architecture/blockly-integration.md#the-variable-wrappers-block-layout
+// and docs/architecture/naming-registry.md#the-variable-wrapper.
 
 export const VALUE_TYPES = ['vector3', 'obj3D', 'scalar']
 
@@ -46,8 +38,7 @@ export function spawnReferenceFor(wrapper) {
 
   const wrapperXY = wrapper.getRelativeToSurfaceXY()
   return addBlockToWorkspace(workspace, 'geo_variable_ref', {
-    // Collapse before the open-spot search measures the block, so placement
-    // uses the small collapsed footprint rather than the expanded one.
+    // Collapse before the open-spot search measures the block.
     initBlock: (block) => {
       setRefTarget(block, refId, getDisplayName(wrapper))
       block.setCollapsed(true)
@@ -62,22 +53,9 @@ export function initVariableWrapperBlocks() {
 
     Blockly.Blocks.geo_variable = {
       init() {
-        // Laid out like transform_pipeline (see transformPipeline.js +
-        // appendMatrixPreviewUI): a title row, the socket row, then a
-        // right-aligned control row, so the body carries on below and around
-        // whatever is plugged in rather than hugging it. No spacer row: the
-        // pipeline needs one to give its statement carve a floor, but here
-        // the button row is already that floor, and a spacer on top of it
-        // just leaves dead space under a tall wrapped block.
-        //
-        // The pipeline gets its enclosure from appendStatementInput, which
-        // is unavailable here -- the blocks being wrapped are value blocks.
-        // The value-input equivalent is an INLINE input: Blockly draws it as
-        // a puzzle hole punched into the body, with the child rendered
-        // inside the parent's outline, whereas an external input hangs the
-        // child off the right edge entirely. Inline inputs also merge
-        // consecutive inputs onto one row, so each row is closed explicitly
-        // with appendEndRowInput().
+        // Layout mirrors transform_pipeline; inline input, no spacer row, each
+        // row closed with appendEndRowInput().
+        // See docs/architecture/blockly-integration.md#the-variable-wrappers-block-layout.
         this.appendEndRowInput('VARIABLE_TITLE')
           .appendField('Variable')
           .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
@@ -87,8 +65,7 @@ export function initVariableWrapperBlocks() {
           .setAlign(Blockly.inputs.Align.RIGHT)
           .appendField(new FieldSpawnReference(), 'GEOSCRATCH_SPAWN_REF')
         this.setInputsInline(true)
-        // Pass-through: accepts and reports every type it can wrap, so it can
-        // sit exactly where the block it wraps already sat.
+        // Pass-through: accepts and reports every wrappable type.
         this.setOutput(true, VALUE_TYPES)
         this.setStyle(BLOCK_STYLES.WORKSPACE_VARIABLE)
         this.setTooltip(
@@ -113,9 +90,7 @@ export function initVariableWrapperBlocks() {
   Blockly.Blocks.geo_variable_ref = {
     init() {
       this.appendDummyInput().appendField(new FieldVariableRefName(), 'GEOSCRATCH_REF_NAME')
-      // Same multi-type output as the wrapper: Blockly accepts a connection
-      // when the two check arrays intersect, so one reference block plugs
-      // into vector3, obj3D and scalar sockets alike.
+      // Multi-type output -- Blockly connects on check-array intersection.
       this.setOutput(true, VALUE_TYPES)
       this.setStyle(BLOCK_STYLES.WORKSPACE_VARIABLE)
       this.setTooltip('A reference to a wrapped block. Reuses its value without drawing it again.')

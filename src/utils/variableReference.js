@@ -8,15 +8,9 @@ import {
 export const REF_BLOCK_TYPE = 'geo_variable_ref'
 export const WRAPPER_BLOCK_TYPE = 'geo_variable'
 
-// Which wrapper a `geo_variable_ref` block points at, persisted in its own
-// namespace on block.data (alongside, never clobbering, the naming record).
-// Lives here rather than in variableWrapper.js so lightweight utilities --
-// validateVariableOrdering.js in particular -- can read it without pulling in
-// the whole block-definition/colour-system import chain.
-//
-// Pairing is by the wrapper's naming refId, not its block id: refId survives
-// addCompositeBlockToWorkspace (which strips ids), and a duplicated wrapper
-// gets a fresh one, so a copy can never hijack the original's references.
+// Which wrapper a geo_variable_ref points at, in its own block.data namespace.
+// Kept out of variableWrapper.js so lightweight utils can read it.
+// See docs/architecture/naming-registry.md#variable-references-variablereferencejs.
 export const REF_DATA_NAMESPACE = 'geoScratchVarRef'
 
 export function getRefTarget(block) {
@@ -37,21 +31,16 @@ export function referenceDisplayName(block) {
   const targetBlock = resolveRefTargetBlock(block)
   if (targetBlock) return getDisplayName(targetBlock) || 'Variable'
   const target = getRefTarget(block)
-  // Only "(missing)" when it actually pointed somewhere once -- a fresh
-  // reference (the palette preview, or one dragged out before being wired)
-  // has never had a target and shouldn't read as broken.
+  // "(missing)" only when it once pointed somewhere.
+  // See docs/architecture/naming-registry.md#missing-only-when-once-pointed.
   if (!target?.targetRefId) return 'Variable reference'
   return `${target.lastKnownName || 'Variable'} (missing)`
 }
 
-// ---------------------------------------------------------------------
-// Code generation (kept here, away from the block definitions, so it stays
-// unit-testable without pulling in the field/colour import chain).
-// ---------------------------------------------------------------------
+// Code generation, kept out of the block definitions to stay unit-testable.
 
-// geoSetVar stores AND returns the value, so the wrapped expression is
-// evaluated exactly once -- splicing it in twice would construct two separate
-// objects (the lesson already learned in setObj3D.js).
+// geoSetVar stores AND returns, so the expression is evaluated once.
+// See docs/architecture/naming-registry.md#wrapper-code-evaluates-once.
 export function wrapperCode(refId, innerCode) {
   return `geoSetVar(${JSON.stringify(refId)}, ${innerCode})`
 }
@@ -60,11 +49,8 @@ export function referenceCode(targetRefId, fallbackExpression) {
   return `geoVar(${JSON.stringify(targetRefId)}, ${fallbackExpression})`
 }
 
-// A dangling or mis-ordered reference must not hand `undefined` to a consumer
-// -- e.g. linalg_vec3's "from point:" does `__anchor.clone()`, which would
-// throw and (via generateAndRun's catch) blank the ENTIRE scene. Pick the
-// fallback from what the wrapper actually holds where that's knowable, else
-// from the socket this reference is plugged into.
+// Type-appropriate fallback so a dangling reference can't blank the scene.
+// See docs/architecture/naming-registry.md#reference-fallback.
 export function fallbackExpressionFor(block) {
   const targetBlock = resolveRefTargetBlock(block)
   const wrappedCheck = targetBlock?.getInputTargetBlock?.('VALUE')?.outputConnection?.getCheck?.()

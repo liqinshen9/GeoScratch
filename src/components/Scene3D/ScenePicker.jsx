@@ -11,15 +11,10 @@ import {
 } from '@/utils/scenePicking'
 import { getLabelsForObject, getLabelVisibilityKeysForObject } from './labels/labelData'
 
-// Owns all raw pointer routing on the canvas. It NEVER calls stopPropagation
-// or preventDefault on pointerdown -- OrbitControls listens on the same element
-// (the R3F wrapper div) and must always be free to start a drag. Whether a
-// gesture was a "click" is decided on pointerup from how far/long the pointer
-// moved (see classifyGesture), so a drag that begins over a large plane still
-// orbits the camera instead of being swallowed (issue #92).
-//
-//   left click  -> select the hit object's block (empty space clears)
-//   right click -> toggle that object's scene labels (issue #75)
+// Owns raw pointer routing on the canvas. NEVER stopPropagation/preventDefault
+// on pointerdown (OrbitControls shares the element). Click vs drag is decided
+// on pointerup (#92). Left click -> select; right click -> toggle labels (#75).
+// See docs/architecture/selection-and-picking.md#scenepicker.
 function ScenePicker({ onSelectBlock, onToggleLabels }) {
   const { camera, gl, scene } = useThree()
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
@@ -38,10 +33,8 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
       return raycaster.intersectObjects(scene.children, true).filter((hit) => hit.object.visible)
     }
 
-    // The active/most-recent press. Kept alive until the next pointerdown so
-    // contextmenu can consult it regardless of whether it fires before or
-    // after pointerup (that ordering is platform-dependent). `moved` is set
-    // during the drag, so a wander-and-return still counts as a drag.
+    // Kept alive until the next pointerdown so contextmenu can consult it
+    // (its ordering vs pointerup is platform-dependent).
     const handlePointerDown = (event) => {
       // Ignore secondary touch points (pinch-zoom).
       if (event.pointerType === 'touch' && event.isPrimary === false) return
@@ -63,8 +56,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
       }
     }
 
-    // On window, not the canvas: OrbitControls sets pointer capture on the
-    // wrapper during a drag, so the canvas child would miss move/up.
+    // On window, not the canvas -- OrbitControls captures the pointer mid-drag.
     const handlePointerUp = (event) => {
       const down = downRef.current
       if (!down || down.button !== 0 || event.pointerId !== down.pointerId) return

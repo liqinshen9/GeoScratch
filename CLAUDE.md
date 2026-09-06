@@ -105,6 +105,28 @@ Add an entry to `data/exercises.js` and a module in `src/exercises/`, then
 register it in `src/exercises/index.js`. That index documents the module
 contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
 
+## Deeper docs
+
+Long-form subsystem rationale lives in `docs/architecture/` (index at
+`docs/architecture/README.md`), not in source. A source file with a
+non-obvious mechanism carries a one-line pointer to the relevant section.
+
+| Doc                             | When you need it                                                        |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| `generated-code-runtime.md`     | touching `sceneRuntime.js`, generated code, or a block builder body     |
+| `halos.md`                      | the haloed-line GPU depth-trick (`utils/halo*.js`, `Scene3D/Halo*.jsx`) |
+| `vector-line-glyphs.md`         | `geoVectorLine.js`, `vectorShaftGlyph.js`                               |
+| `glyph-sizing.md`               | `GlyphSizing.jsx`, zoom-invariant scaling, `sceneConstants.js`          |
+| `label-declutter.md`            | `Scene3D/labels/LabelDeclutter.jsx`                                     |
+| `collision.md`                  | `utils/tubeCollision.js`                                                |
+| `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash              |
+| `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`      |
+| `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                          |
+| `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                  |
+| `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference       |
+| `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`          |
+| `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                       |
+
 ## Conventions
 
 - `@/` aliases `src/`. Sibling imports within `blocks/<category>/` stay relative.
@@ -112,7 +134,10 @@ contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
   columns. Run `pnpm format` before committing.
 - Tests are colocated as `*.test.js` and cover pure logic in `utils/`. React
   components have no automated coverage -- verify those in the running app.
-- Comments here explain _why_, often at length, and several document real bugs
-  that a plausible-looking simplification would reintroduce (transparent render
-  ordering, label declutter force continuity, per-segment zoom scaling). Read
-  before you tidy.
+- Default to no comments. Write one only when the _why_ is non-obvious: a hidden
+  constraint, a subtle invariant, a workaround for a specific bug. Don't narrate
+  _what_ the code does. Long-form rationale goes in `docs/architecture/`, not
+  source -- a source comment that runs past a couple of lines should be a
+  one-line pointer into that folder instead. Several docs there document real
+  bugs a plausible-looking simplification would reintroduce (see the "Recurring
+  bug classes" section of `docs/architecture/README.md`). Read before you tidy.

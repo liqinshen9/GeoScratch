@@ -7,12 +7,9 @@ import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldOb
 // ===================
 // 1. RUNTIME THREE.JS
 // ===================
-// Exported so the transform layer (generateAndRun.js) can rebuild a line from a
-// transformed origin/direction rather than applyMatrix4-ing the baked group,
-// which would leave its wall-to-wall extent wrong for the new direction (#77).
-// Still also serialized via .toString() into generated code by the block
-// generator below -- the body only touches `window.*` and its params, so both
-// call styles work.
+// Both .toString()-serialized into generated code AND called directly by
+// generateAndRun.js to rebuild a transformed line. See
+// docs/architecture/vector-line-glyphs.md.
 export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Pull variables securely from the active window runtime frame
   const THREE = window.THREE
@@ -21,11 +18,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   if (!THREE) return null
 
-  // This instance's colors, from the shared object-color framework
-  // (colorSystem.js) -- the "Line" family, shared by every glyph style
-  // below, plus a lighter/darker variant for the ringed-tube's two-band
-  // texture and the "Point" family for the t-parameter marker (which is,
-  // visually, a point -- see POINT_MARKER_RADIUS below).
+  // This instance's colors from the shared framework (colorSystem.js): the
+  // "Line" family + light/dark variants for the ringed texture, "Point" for
+  // the t-marker.
   const colorInt = (hex) => parseInt(hex.slice(1), 16)
   const lineColor = window.GeoScratchColors.forInstance('line', blockId)
   const lineColorLight = window.GeoScratchColors.forInstanceVariant('line', blockId, 28)
@@ -44,25 +39,14 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const origin = getRawVector(posInput)
   let direction = getRawVector(dirInput)
   if (!Number.isFinite(direction.length()) || direction.length() === 0) {
-    // Not axis-aligned -- an axis-aligned default (e.g. (1,0,0)) makes an
-    // unconfigured line sit exactly on top of that axis, visually
-    // indistinguishable from the axis itself (its tick-mark collars are
-    // wider than the axis shaft and poke through whatever's coincident
-    // with it).
+    // Not axis-aligned -- see docs/architecture/vector-line-glyphs.md#default-direction.
     direction = new THREE.Vector3(1, 1, 1)
   }
 
   const normalised = direction.clone().normalize()
 
-  // Clip the (infinite) line to the walls of the 3D view's bounding box
-  // (BoundingBoxRoom in Scene3D.jsx: a 40-unit cube centred on the world
-  // origin, so half-extent 20). Proper line-vs-AABB slab intersection: it
-  // returns the [tEnter, tExit] parameter interval where the line is inside
-  // the box, and works whether the line's origin is inside the box (the
-  // common case) or outside it -- e.g. after a translate transform step
-  // pushes the origin past a wall (#77). Both ends of the interval can be
-  // negative. A flat offset from the origin only reaches the wall when the
-  // line passes through the world origin AND is axis-aligned.
+  // Line-vs-AABB slab clip to the 40-unit view box.
+  // See docs/architecture/vector-line-glyphs.md#line-vs-box-clipping.
   const BOX_HALF_EXTENT = 20
   const FALLBACK_EXTENT = 20
   const lineBoxInterval = (rayOrigin, rayDir) => {
@@ -72,7 +56,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       const o = rayOrigin[axis]
       const d = rayDir[axis]
       if (Math.abs(d) < 1e-9) {
-        // Parallel to this pair of faces -- no intersection if outside them.
+        // Parallel to this face pair -- no intersection if outside them.
         if (o < -BOX_HALF_EXTENT || o > BOX_HALF_EXTENT) return null
         continue
       }
@@ -92,12 +76,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const group = new THREE.Group()
 
-  // Two lines with the same origin/direction produce numerically coincident
-  // geometry, which GPU depth testing resolves inconsistently frame-to-frame
-  // (z-fighting flicker). Nudge the whole line by a tiny, deterministic
-  // (per-block) offset perpendicular to its own direction -- small enough to
-  // be visually imperceptible (well under the tube's own 0.051 radius) but
-  // enough to break exact coincidence so depth comparisons stay stable.
+  // Tiny deterministic per-block perpendicular nudge to break exact
+  // coincidence between two identical lines (z-fighting flicker).
+  // See docs/architecture/vector-line-glyphs.md#z-fight-jitter.
   let blockHash = 2166136261
   const blockIdStr = String(blockId)
   for (let i = 0; i < blockIdStr.length; i += 1) {
@@ -116,28 +97,19 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const distance = p1.distanceTo(p2)
   const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
   const lineLabel = window.geoNaming?.nameFor?.(blockId) || 'L'
-  // Local tube frame is centred on the segment's midpoint, not the vector
-  // equation's origin -- the two only coincide when extentPos === extentNeg.
+  // Local frame centred on the segment midpoint, not the equation origin.
+  // See docs/architecture/vector-line-glyphs.md#line-vs-box-clipping.
   const halfDist = distance / 2
   const worldAt = (y) => midPoint.clone().addScaledVector(normalised, y)
 
-  // Collision zones (local Y offsets from midPoint, filled in later by
-  // tubeCollision.js via setCollisionZones) and the dash pattern used to
-  // punch literal gaps in a glyph for the "dashed" collision style. Shared
-  // by every technique style below so there's one definition of "what does
-  // dashed look like" instead of several that could drift apart.
+  // Shared dash pattern for the "dashed" collision style.
+  // See docs/architecture/vector-line-glyphs.md#segment-and-dash-machinery.
   const DASHED_SEGMENT_LENGTH = 0.14
   const DASHED_GAP_LENGTH = 0.09
   let currentZones = []
 
-  // Returns the y-ranges (local offset from midPoint along `normalised`)
-  // that should actually be drawn, tagged by whether each is a genuine
-  // short "dash" bump (inside a collision zone) or a long continuous
-  // "solid" stretch (outside any zone, or the whole line when not dashing
-  // at all). The two get different zoom-invariant treatment further down:
-  // bumps need to grow in every dimension as the camera pulls back so they
-  // don't collapse to sub-pixel, but solid stretches must only grow in
-  // cross-section, or neighbouring stretches would visibly gap apart.
+  // y-ranges to draw, each tagged isDash (bump) or not (solid stretch).
+  // See docs/architecture/vector-line-glyphs.md#segment-and-dash-machinery.
   const computeSegmentPairs = (
     zones,
     dashed,
@@ -165,22 +137,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     return pairs
   }
 
-  // Every "replacement" glyph below (dashed tube segments, ring-textured
-  // dash segments, collision accent overlays) rebuilds by clearing a
-  // group's children and adding fresh ones every time the zoom scale
-  // crosses a threshold or the collision zones change -- which, during a
-  // fast zoom/pan, can fire many times a second. `.remove()` only detaches
-  // a child from the scene graph; it does NOT free the GPU-side texture/
-  // buffer resources a Geometry/Material/Texture hold, so without an
-  // explicit `.dispose()` each rebuild leaks GPU memory. A single slow
-  // zoom leaks too little to notice, but a fast one can leak enough,
-  // enough times a second, to exhaust GPU resources mid-session --
-  // surfacing as exactly this kind of corrupted/"torn" texture that
-  // doesn't self-heal once it happens. `disposeMaterial` is false for
-  // segments sharing one of this glyph's persistent materials (only their
-  // per-segment geometry is actually new each rebuild); true only where
-  // the material (and its texture, if any -- a clone made just for that
-  // segment) is itself freshly created per segment.
+  // MUST .dispose() -- .remove() alone leaks GPU resources, and rebuilds
+  // fire many times a second during a fast zoom. disposeMaterial is false
+  // for segments sharing a persistent material.
+  // See docs/architecture/vector-line-glyphs.md#dispose-on-rebuild.
   const clearGroupChildren = (targetGroup, disposeMaterial) => {
     while (targetGroup.children.length) {
       const child = targetGroup.children[0]
@@ -193,22 +153,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     }
   }
 
-  // Haloed-line GPU depth-trick (docs/halos-epic-plan.md). A second,
-  // invisible-in-the-main-pass "inflated" companion mesh per line style --
-  // same shape as whichever glyph is actually visible, bigger radius --
-  // tagged with the SAME zoomInvariantRadius mechanism the real glyph uses,
-  // so it inflates/deflates in lockstep with it at every zoom level via the
-  // existing, already-correct ZoomInvariantScaler, rather than a bespoke
-  // per-frame gap-width calculation. HALO_LAYER keeps it out of the normal
-  // color pass entirely (see HaloDepthPrepass.jsx); applyHaloDiscardMaterial
-  // wires a REAL glyph's material to discard fragments a DIFFERENT haloable
-  // object's inflated footprint occludes.
-  // Settings > Halos toggle: gates whether a NEW line gets the companion
-  // mesh/discard wiring at all. Toggling the setting back on doesn't
-  // retroactively add it to lines already built while it was off (would
-  // need a scene regeneration to pick it up) -- HaloUniformSync's
-  // haloEnabled uniform is what makes on/off instant for already-built
-  // lines that DO have the wiring.
+  // Haloed-line GPU depth-trick. Per-style inflated companion meshes; the
+  // Halos setting only gates NEW lines. See docs/architecture/halos.md and
+  // docs/architecture/vector-line-glyphs.md#halo-companions.
   const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
   const haloAvailable =
     haloSettingEnabled &&
@@ -218,20 +165,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     window.applyHaloDiscardMaterial &&
     window.registerHaloLine &&
     window.HALO_MAX_IMMUNE_IDS != null
-  // Shared across every material that can end up as the visible glyph, for
-  // any line style (cylMat/dashedTubeMat, ringedTubeMat and its dash
-  // segments, plainLineThickMat) -- getHaloId is stable per blockId, so
-  // reusing it isn't strictly required for correctness, but keeping one id
-  // per line is simpler to reason about than re-deriving it per style.
+  // One haloId per line, shared by every material that can be the visible glyph.
   const haloId = haloAvailable ? window.getHaloId(blockId) : null
-  // Ids of other lines THIS line genuinely intersects in 3D (shared array
-  // reference, mutated in place by registerHaloLine below whenever a
-  // later-built line turns out to touch this one) -- see
-  // haloIntersectionRegistry.js. A real 3D touch is a depth-comparison
-  // false positive waiting to happen (the two surfaces are ~coincident
-  // right there), not a legitimate occlusion, so these ids are exempted
-  // from the discard check entirely rather than trying to tune a
-  // tolerance around it.
+  // Ids of lines THIS one genuinely touches in 3D, exempt from the discard
+  // check. Shared array, mutated by registerHaloLine.
+  // See docs/architecture/halos.md.
   const haloImmuneIds = haloAvailable ? new Array(window.HALO_MAX_IMMUNE_IDS).fill(-1) : null
   if (haloAvailable) {
     window.registerHaloLine(blockId, origin, normalised, (partnerId) => {
@@ -240,21 +178,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  // Builds one inflated companion mesh sized for a given style's real glyph
-  // radius. Every style gets its OWN companion (rather than one shared,
-  // roughly-averaged size) so the dilated footprint actually matches what's
-  // on screen -- a thin plain_line shouldn't punch as wide a gap as a fat
-  // ringed_tube. Only the currently-active style's companion is ever
-  // visible at once (see applyGlyphVisibility's haloCompanion*.visible
-  // lines below), so the depth prepass never sees two different-sized
-  // footprints fighting each other for the same line. Margin kept as small
-  // as practical (was 0.051+0.25, then 0.051+0.03, now +0.01) -- any extra
-  // 3D-geometry margin here still elongates at shallow crossing angles
-  // (scales with 1/sin(angle)), which is the exact sharp-point problem the
-  // screen-space dilate step (HaloDilatePass.jsx) exists to avoid. This
-  // margin's only job now is clearing self-occlusion/edge noise at the
-  // companion/real-surface boundary -- the visible gap shape should come
-  // almost entirely from dilation.
+  // One inflated companion per style (baseRadius + 0.01). Only the active
+  // style's is visible at once. See docs/architecture/vector-line-glyphs.md#halo-companions.
   const buildHaloCompanion = (baseRadius) => {
     const radius = baseRadius + 0.01
     const mesh = new THREE.Mesh(
@@ -270,31 +195,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     return mesh
   }
 
-  // 1. TECHNIQUE STYLE: Plain Line. WebGL clamps LineBasicMaterial's
-  // linewidth to 1px on most platforms (ANGLE on Windows, notably), so a
-  // real solid-mesh line is the only way to make this style visibly
-  // thicker. Built with three's "fat lines" (LineSegments2/
-  // LineSegmentsGeometry/LineMaterial) rather than a cylinder: a cylinder is
-  // a real 3D solid, so its two ends foreshorten independently whenever
-  // they're at different distances from the camera (same reason a distant
-  // object looks smaller), which a literal GL line never does -- it's a
-  // 0-width primitive the GPU always strokes to a flat, constant-width
-  // screen-space band. LineMaterial's default worldUnits:false mode
-  // reproduces exactly that: `linewidth` is a pixel width applied per-point
-  // in screen space via the vertex shader, so this reads as "a real GL
-  // line, just actually visible" at any zoom or angle, rather than a thin
-  // 3D tube. Its resolution uniform and the "Extra Thick Lines" pixel-width
-  // multiplier are kept in sync from Scene3D's FatLineSync
-  // (geoVectorLineDefinition has no access to canvas size here).
-  //
-  // One LineSegments2 per pair (a small group), NOT one LineSegmentsGeometry
-  // holding all pairs as separate instances: a multi-instance
-  // LineSegmentsGeometry can silently fail to render some of its instances
-  // depending on camera distance/angle (reproduced directly -- 2 instances
-  // in one geometry: one vanishes when zoomed in close; the same 2 segments
-  // as 2 separate single-instance objects: both render correctly at the
-  // same camera state). Each pair gets its own tiny geometry/object instead,
-  // sharing one material.
+  // 1. TECHNIQUE STYLE: Plain Line. Three's "fat lines" (screen-space
+  // stroked), not a cylinder; one LineSegments2 per pair (multi-instance
+  // geometry silently drops instances).
+  // See docs/architecture/vector-line-glyphs.md#plain_line.
   const PLAIN_LINE_THICK_BASE_PX = 2.2
   const plainLineThickMat = new THREE.LineMaterial({
     color: lineColor,
@@ -304,17 +208,12 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const plainLineThickGroup = new THREE.Group()
   group.add(plainLineThickGroup)
 
-  // No true 3D radius (it's a screen-space fat line, not a solid), so its
-  // companion uses the same thin nominal size the collision-accent ring
-  // overlay falls back to for this style (see getAccentRadius below).
+  // No true 3D radius -- companion uses the same thin nominal size as the
+  // accent overlay for this style.
   const haloCompanionPlainLine = haloAvailable ? buildHaloCompanion(0.035) : null
   if (haloAvailable) window.applyHaloDiscardMaterial(plainLineThickMat, haloId, haloImmuneIds)
 
-  // Plain Line (thick) is a "0 radius" glyph, sharing the bigger,
-  // zoom-responsive THICK_DASHED_* sizing with plain_tube (see
-  // rebuildThickDashedGlyphs) so the dashed look is consistent across every
-  // "thick" line style, not just plain_tube. One LineSegments2 child per
-  // pair (see plainLineThickGroup's comment above for why).
+  // Shares plain_tube's THICK_DASHED_* sizing. One LineSegments2 per pair.
   const setThickLineSegmentPairs = (pairs) => {
     clearGroupChildren(plainLineThickGroup, false) // shares plainLineThickMat
     pairs.forEach((pair) => {
@@ -330,10 +229,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   }
   setThickLineSegmentPairs([{ start: -halfDist, end: halfDist, isDash: false }])
 
-  // 2. TECHNIQUE STYLE: Plain Tube (Cylinder). MeshStandardMaterial (not
-  // MeshBasicMaterial) so it actually picks up the scene's lights and shows
-  // a real shaded gradient across its curved surface, same as every other
-  // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
+  // 2. TECHNIQUE STYLE: Plain Tube. MeshStandardMaterial so it picks up
+  // scene lights like every other solid.
   const cylGeom = new THREE.CylinderGeometry(0.051, 0.051, distance, 12)
   const cylMat = new THREE.MeshStandardMaterial({
     color: lineColor,
@@ -349,53 +246,32 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const haloCompanionPlainTube = haloAvailable ? buildHaloCompanion(0.051) : null
   if (haloAvailable) window.applyHaloDiscardMaterial(cylMat, haloId, haloImmuneIds)
 
-  // 3b. "dashed" collision-style replacement for the plain tube: REPLACES
-  // the base cylinder (rather than overlaying it) with alternating
-  // solid/gap segments across collision zones, so the solid actually shows
-  // through the gaps instead of the continuous tube covering them. Outside
-  // any zone the tube stays one continuous solid piece.
+  // "dashed" collision style: REPLACES the base cylinder with solid/gap
+  // segments across collision zones (solid shows through the gaps).
   const dashedTubeGroup = new THREE.Group()
   dashedTubeGroup.position.copy(midPoint)
   dashedTubeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   dashedTubeGroup.visible = false
   group.add(dashedTubeGroup)
 
-  // Same shaded material as the continuous plain tube (cylMat) -- the
-  // dashed segments are that same glyph, just chopped up, so they shouldn't
-  // suddenly look flat/unlit when the dashed collision style is active.
+  // Same shading as cylMat, but a SEPARATE material -- it must be wired
+  // through the discard shader too.
+  // See docs/architecture/vector-line-glyphs.md#discard-shader-asymmetry.
   const dashedTubeMat = new THREE.MeshStandardMaterial({
     color: lineColor,
     roughness: 0.5,
     metalness: 0.1,
   })
-  // A SEPARATE material from cylMat -- when this line is ALSO the dashed
-  // replacement (collision zones, or its own crossing gap), this is what's
-  // actually visible, not cylMat. Without wiring it through the discard
-  // shader too, a colliding line's own gap silently stops working (its
-  // real surface never discards) even though other lines still gap
-  // correctly around IT, since its inflated companion is unaffected by
-  // collision state -- exactly the asymmetric bug reported.
   if (haloAvailable) window.applyHaloDiscardMaterial(dashedTubeMat, haloId, haloImmuneIds)
 
-  // Tuned bigger than the shared DASHED_SEGMENT_LENGTH/DASHED_GAP_LENGTH --
-  // "fewer, larger dashes" reads better on a real solid tube than the small
-  // default pattern. Shared by every "thick" dashed glyph (plain_tube,
-  // plain_line-thick) so they all look consistent, not just plain_tube.
-  // Deliberately NOT zoom-invariant-scaled per-segment
-  // (see addTubeSegment's `uniform` param, passed false for these): a dash
-  // is a literal piece of the glyph's own length, not a separate small
-  // accent glyph like a ring, so it should get bigger/smaller with normal
-  // perspective exactly like the glyph itself (and the solid it's crossing)
-  // does. Instead, DashZoomSync (Scene3D.jsx) multiplies these by a
-  // camera-distance-derived scale each time it changes meaningfully (see
-  // group.userData.updateDashZoomScale below) -- that's what makes the
-  // dash COUNT itself respond to zoom, not just each dash's apparent size.
+  // "Fewer, larger dashes", shared by plain_tube and plain_line-thick. NOT
+  // per-segment zoom-invariant -- DashZoomSync scales the length instead,
+  // which is what makes the dash count respond to zoom.
+  // See docs/architecture/vector-line-glyphs.md#dash-length-vs-count.
   const THICK_DASHED_SEGMENT_LENGTH = 0.45
   const THICK_DASHED_GAP_LENGTH = 0.3
 
-  // `uniform` marks a piece as a discrete "bump" that should scale
-  // apparent-size-constant in every dimension (see the zoom-invariant note
-  // by computeSegmentPairs) rather than just in cross-section.
+  // `uniform` = a discrete bump, scaled apparent-size-constant in every dimension.
   const addTubeSegment = (targetGroup, material, radius, start, end, uniform) => {
     const height = end - start
     if (height <= 1e-6) return
@@ -406,27 +282,13 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     targetGroup.add(segment)
   }
 
-  // Single named color for the shared "ring accent" collision overlay
-  // (collisionRingTexture, below) -- pulled from HERE so retuning the whole
-  // project's ring accent color later is a one-line change instead of a
-  // hunt through several materials. Sourced from the shared object-color
-  // framework's "accent" role (colorPresets.js), which is also what a
-  // preset switch (Settings > Colors) recolors it to.
+  // "accent" role color (colorPresets.js), recolored by a preset switch.
   const RING_ACCENT_COLOR = colorInt(window.GeoScratchColors.forRole('accent'))
 
-  // Builds a small repeating 2-color striped texture (alternating bands
-  // along its V axis) instead of many separate ring meshes. This is what
-  // makes a "ring texture" ACTUALLY behave like a texture: it's painted
-  // flat onto whichever cylinder it's applied to (so it structurally cannot
-  // bulge), and changing the band frequency in response to zoom is a single
-  // cheap `texture.repeat.y` write -- no geometry to destroy and rebuild
-  // every time the zoom scale crosses a threshold, which was the source of
-  // the flicker with the old many-small-rings approach (every rebuild
-  // popped in brand-new meshes with a one-frame-stale scale, and shifted
-  // every ring's position at once). `colorB` may be null for a fully
-  // transparent second band (used by the collision accent overlay, so the
-  // glyph underneath shows through in the gaps instead of a second flat
-  // color).
+  // A repeating 2-band texture instead of many ring meshes -- can't bulge,
+  // and zoom response is one texture.repeat.y write with no rebuild flicker.
+  // colorB null = transparent second band (accent overlay).
+  // See docs/architecture/vector-line-glyphs.md#ringed_tube.
   const makeRingTexture = (colorA, colorB) => {
     const canvas = document.createElement('canvas')
     canvas.width = 4
@@ -442,28 +304,15 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const texture = new THREE.CanvasTexture(canvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.RepeatWrapping
-    // Hard-edged 2-color stripes are worst-case content for texture
-    // filtering: bilinear magFilter blurs the band boundary into a soft
-    // gradient at any zoom where a band covers more than a few screen
-    // pixels (the "not crisp" look), and with no anisotropy the GPU's
-    // mipmap selection for a repeating pattern viewed at a shallow angle
-    // (a tube running away from the camera) picks an inconsistent mip
-    // level per screen pixel frame-to-frame -- the "flickering"/torn-edge
-    // look. Nearest magFilter keeps close-up edges crisp; a high
-    // anisotropy (clamped by three.js to whatever the GPU actually
-    // supports) fixes the grazing-angle minification aliasing. Both are
-    // read by every clone of this texture (ring dash segments, collision
-    // accent overlay) since clone() copies these fields too.
+    // NearestFilter + high anisotropy for hard-edged stripes.
+    // See docs/architecture/vector-line-glyphs.md#ring-texture-filtering.
     texture.magFilter = THREE.NearestFilter
     texture.minFilter = THREE.LinearMipmapLinearFilter
     texture.anisotropy = 16
     return texture
   }
-  // Applies a period (world units per light+dark cycle) to a texture sized
-  // for a cylinder of the given world-space length -- shared by every
-  // ring-textured glyph below (ringed_tube's own base tube and dashed
-  // segments, and the collision accent overlay) so they all resize the same
-  // way in response to zoom.
+  // Shared ring-texture repeat calc so every ring-textured glyph resizes the
+  // same way.
   const setRingTextureRepeat = (texture, length, period, scale) => {
     texture.repeat.set(1, length / (period * scale))
   }
@@ -471,52 +320,21 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // 3. TECHNIQUE STYLE: Ringed Tube
   const ringedTube = new THREE.Group()
 
-  // Fixed at build time and never touched again as the camera moves --
-  // ring band frequency is intentionally NOT zoom-responsive (unlike the
-  // dash length below), so there is no per-frame or per-threshold texture
-  // rebuild for it to race against the cross-section's own zoom-invariant
-  // scaling during a fast zoom/pan.
+  // Fixed at build time -- ring band frequency is NOT zoom-responsive, so no
+  // texture rebuild races the cross-section's zoom-invariant scaling.
   const RINGED_TUBE_RING_PERIOD = 0.8
 
-  // THE ACTUAL BUG: CylinderGeometry(r, r, height, radialSegments) has only
-  // ONE height segment unless told otherwise -- its side is just two giant
-  // triangles per radial facet, spanning the tube's ENTIRE length (up to
-  // ~40 world units, see extentPos/extentNeg above) against a radius of
-  // 0.085. That's an aspect ratio upwards of 1000:1 -- a "needle" triangle.
-  // The collision-accent ring (rebuildSharedAccents, below) never hits
-  // this: its cylinders are only ever as long as one collision zone (a
-  // handful of world units at most), never the whole line -- which is
-  // exactly why it renders cleanly on the SAME geometry/material recipe
-  // while this one didn't. Perspective-correct texture-coordinate
-  // interpolation across a triangle that extreme loses precision on at
-  // least some GPU/driver combinations, worse the more that triangle is
-  // foreshortened on screen (i.e. worse from an oblique angle, fine
-  // looking straight down the tube) -- matching exactly what breaks and
-  // what doesn't. Giving the tube real height segments (one roughly per
-  // ring) keeps every individual triangle short, however long the tube
-  // itself is, which is the fix -- not the ring size/count itself.
+  // Real height segments (~one per ring) keep every triangle short. This is
+  // the fix for the torn ring texture, NOT the ring size/count.
+  // See docs/architecture/vector-line-glyphs.md#needle-triangle.
   const RINGED_TUBE_HEIGHT_SEGMENTS = (length) =>
     Math.max(1, Math.ceil(length / RINGED_TUBE_RING_PERIOD) * 2)
-  // A 16-sided cylinder is visibly faceted under a specular highlight --
-  // each flat facet catches the light slightly differently, and wherever
-  // that per-facet brightness step happens to land on one of the texture's
-  // hard color-band edges, it reads as a jagged/torn cut instead of a
-  // clean ring. More radial segments (rounder cross-section) plus a
-  // softer, less mirror-like highlight (higher roughness) both shrink
-  // that per-facet step, independent of anything zoom- or texture-repeat-
-  // related.
+  // More radial segments + higher roughness shrink the per-facet specular
+  // step that otherwise reads as a jagged cut on a band edge.
   const RINGED_TUBE_RADIAL_SEGMENTS = 48
   const RINGED_TUBE_ROUGHNESS = 0.75
-  // NOTE: deliberately NOT transparent (unlike the collision-accent ring
-  // below, which is meant to be a see-through overlay). This is the solid
-  // base tube -- setting transparent:true here (as an earlier attempt at
-  // the jagged-texture bug did, before the real fix turned out to be the
-  // height-segment change above) moves it into the transparent render
-  // queue, which sorts whole objects by distance rather than testing
-  // per-pixel depth, breaking correct occlusion against any OTHER
-  // transparent object (e.g. a see-through cube) it happens to cross.
-  // Staying opaque keeps it in the normal depth-tested pass, same as
-  // plain_tube's cylinder, which occludes/is-occluded correctly.
+  // Deliberately NOT transparent -- transparent:true breaks depth-tested
+  // occlusion. See docs/architecture/vector-line-glyphs.md#ringed-tube-opaque.
   const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
   const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
   const RINGED_TUBE_METALNESS = 0.15
@@ -546,12 +364,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   const haloCompanionRingedTube = haloAvailable ? buildHaloCompanion(0.085) : null
   if (haloAvailable) window.applyHaloDiscardMaterial(ringedTubeMat, haloId, haloImmuneIds)
 
-  // "dashed" collision style REPLACES the base tube (rather than overlaying
-  // it) with alternating solid/gap segments across collision zones, exactly
-  // like plain_tube's dashedTubeGroup -- reuses the same ring texture
-  // (cloned per segment so each can carry its own correctly-scaled repeat)
-  // so a solid stretch still reads as "ringed tube" rather than suddenly
-  // looking like a different style.
+  // "dashed" style REPLACES the base tube, like plain_tube's dashedTubeGroup;
+  // ring texture cloned per segment for a correctly-scaled repeat.
   const ringedTubeDashedGroup = new THREE.Group()
   ringedTubeDashedGroup.visible = false
   ringedTube.add(ringedTubeDashedGroup)
@@ -568,11 +382,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       roughness: RINGED_TUBE_ROUGHNESS,
       metalness: RINGED_TUBE_METALNESS,
     })
-    // A fresh material every call (see the comment above), so a colliding
-    // ringed_tube's own gap needs the same per-segment discard wiring
-    // dashedTubeMat gets for plain_tube -- otherwise its dashed replacement
-    // never discards its own occluded fragments even though other lines
-    // still gap correctly around it.
+    // Fresh material per call -- needs its own discard wiring.
+    // See docs/architecture/vector-line-glyphs.md#discard-shader-asymmetry.
     if (haloAvailable) window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds)
     const segment = new THREE.Mesh(
       new THREE.CylinderGeometry(
@@ -593,19 +404,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   ringedTube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
   group.add(ringedTube)
 
-  // 4. COLLISION ACCENTS: how a line indicates the exact stretch(es) where
-  // it passes into a solid object. Two of the three interchangeable looks
-  // (picked via settings.lineCollisionStyle) are pure overlay geometry --
-  // small rings, or a darker band -- anchored to the same local frame as
-  // cylinder/ringedTube (Y axis along the line, origin at midPoint) but with
-  // NO dependency on the currently-active glyph having a real radius, so a
-  // single shared pair of groups works for every line style (plain_line,
-  // plain_tube, ringed_tube) rather than needing its own copy per style.
-  // The third style, "dashed", instead punches a literal gap in whichever
-  // glyph is actually visible right now -- there's no "overlay" that can
-  // remove material from something else, so that one is handled per-glyph
-  // (dashedTubeGroup / ringedTubeDashedGroup / setThickLineSegmentPairs
-  // visibility, above and below).
+  // 4. COLLISION ACCENTS. `ringed`/`dark_texture` are shared overlay groups
+  // (no dependency on a real glyph radius); `dashed` is handled per-glyph.
+  // See docs/architecture/vector-line-glyphs.md#collision-accents.
   const collisionAccentRinged = new THREE.Group()
   collisionAccentRinged.position.copy(midPoint)
   collisionAccentRinged.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normalised)
@@ -618,9 +419,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   collisionAccentDarkTexture.visible = false
   group.add(collisionAccentDarkTexture)
 
-  // Pink bands alternating with full transparency (colorB: null), so the
-  // glyph underneath shows through in the gaps instead of a second flat
-  // color -- this is the overlay, not a whole-tube replacement.
+  // Accent bands alternating with transparency (colorB null) -- an overlay.
   const collisionRingTexture = makeRingTexture(RING_ACCENT_COLOR, null)
   const darkTextureMat = new THREE.MeshStandardMaterial({
     color: 0x18181b,
@@ -631,10 +430,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Fixed, same as RINGED_TUBE_RING_PERIOD above -- not zoom-responsive.
   const COLLISION_RING_PERIOD = 0.5
 
-  // Sized to match whichever glyph is actually visible right now (plus a
-  // hair so it sits just outside a coincident surface instead of z-fighting
-  // it), so the ring reads as a texture ON the line rather than a bump
-  // bulging off it -- picked per refresh (below), not fixed at build time.
+  // Sized to the visible glyph's radius (plus a clearance hair), picked per
+  // refresh. See docs/architecture/vector-line-glyphs.md#collision-accents.
   const getAccentRadius = (activeStyle) => {
     if (activeStyle === 'ringed_tube') return 0.085 // == baseTube's own radius
     if (activeStyle === 'plain_tube') return 0.051 // == cylinder's own radius
@@ -645,15 +442,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     clearGroupChildren(collisionAccentRinged, true) // each segment gets its own cloned texture + material
     clearGroupChildren(collisionAccentDarkTexture, false) // shares darkTextureMat
 
-    // The "hair" of clearance from getAccentRadius's own base radius needs to
-    // be big enough to actually separate the two surfaces in the depth
-    // buffer, not just nonzero -- 0.001 (the original value) was still close
-    // enough to the base tube's own radius that at ordinary camera distances
-    // the two z-fought, and which one "won" was inconsistent per-pixel. For
-    // collisionAccentRinged (semi-transparent) that mostly just looked like a
-    // faint flicker; for collisionAccentDarkTexture (a fully opaque overlay
-    // meant to completely replace what's underneath) it meant the base
-    // tube's own ring texture kept showing through instead of being hidden.
+    // Clearance must actually separate the surfaces in the depth buffer.
+    // See docs/architecture/vector-line-glyphs.md#accent-clearance.
     const radius = getAccentRadius(activeStyle) + 0.006
 
     currentZones.forEach(({ start, end }) => {
@@ -684,27 +474,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  // Rebuilds plain_tube's dashedTubeGroup (the separate, hidden-unless-
-  // active "replacement" object) at the given zoom scale -- called once at
-  // scale 1 below, then kept in sync with the camera by Scene3D's
-  // DashZoomSync (group.userData.updateZoomRatio), which is the only thing
-  // that can see the camera each frame. Scaling the dash/gap LENGTH (not
-  // just cross-section radius) by camera distance is what makes the actual
-  // dash COUNT respond to zoom: fewer, bigger dashes fit across the same
-  // fixed-width collision zone as the camera pulls back, and more, smaller
-  // (but still legible) ones as it moves in -- unlike a flat apparent-size-
-  // constant scale (see zoomInvariantUniform elsewhere in this file), which
-  // only changes how big each already-fixed-count dash looks. Built
-  // unconditionally "as if" dashed is active (matching the pre-existing
-  // precedent for this group) since actual visibility is gated separately
-  // below; plain_line-thick has no such separate object to hide behind --
-  // its own geometry IS the toggle -- so it's handled inside
-  // applyGlyphVisibility instead, using the same lastDashZoomScale.
-  //
-  // Only the dash length/count responds to zoom -- ring band frequency
-  // (RINGED_TUBE_RING_PERIOD/COLLISION_RING_PERIOD, set where each texture
-  // is built) is fixed and never rebuilt off the camera, so there's no
-  // ring-texture rebuild to land mid-frame during a fast zoom/pan.
+  // Dash/gap LENGTH scales with camera distance (via DashZoomSync ->
+  // updateZoomRatio), which is what makes the dash COUNT respond to zoom.
+  // Ring band frequency stays fixed. See
+  // docs/architecture/vector-line-glyphs.md#dash-length-vs-count.
   const DASH_ZOOM_MIN_SCALE = 0.38
   const DASH_ZOOM_MAX_SCALE = 4
   let lastDashZoomScale = 1
@@ -745,13 +518,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const hasAccent = currentZones.length > 0
     const isDashed = hasAccent && collisionStyle === 'dashed'
 
-    // plain_line has no tube radius for a ring/band accent to sit on, so
-    // "dashed" is the only collision style that reads on it at all -- it
-    // punches real gaps straight into its own geometry.
+    // plain_line has no radius for a ring/band accent, so "dashed" (real
+    // gaps in its own geometry) is its only collision style.
     const linesNeedDashing = isDashed && activeStyle === 'plain_line'
-    // plain_line-thick shares the bigger THICK_DASHED_* sizing (and its
-    // current zoom scale) with plain_tube instead of a small fixed pattern,
-    // so "thick" reads consistently across every line style.
     setThickLineSegmentPairs(
       linesNeedDashing
         ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
@@ -762,31 +531,21 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
     plainLineThickGroup.visible = activeStyle === 'plain_line'
 
-    // The dashed collision style fully replaces the plain-tube glyph (real
-    // gaps instead of an overlay), so hide the continuous base tube while
-    // it's active.
+    // "dashed" fully replaces the continuous glyph, so hide the base tube.
     cylinder.visible = activeStyle === 'plain_tube' && !useTubeDashedReplacement
     dashedTubeGroup.visible = useTubeDashedReplacement
     ringedTube.visible = activeStyle === 'ringed_tube'
 
-    // Same "dashed fully replaces the continuous glyph" treatment as
-    // plain_tube -- ringed_tube no longer has individual ring meshes to
-    // hide, just its own (now texture-based) dashedTubeGroup analogue.
     const useRingedTubeDashedReplacement = isDashed && activeStyle === 'ringed_tube'
     baseTube.visible = !useRingedTubeDashedReplacement
     ringedTubeDashedGroup.visible = useRingedTubeDashedReplacement
 
     rebuildSharedAccents(activeStyle)
-    // ringed_tube's "ringed" collision style now goes through this same
-    // shared overlay too (no more special-casing) -- it's just a pink-
-    // textured band sitting a hair outside the base tube's own radius,
-    // same as every other style.
     collisionAccentRinged.visible = hasAccent && collisionStyle === 'ringed'
     collisionAccentDarkTexture.visible = hasAccent && collisionStyle === 'dark_texture'
 
-    // Only the active style's own companion should ever be on HALO_LAYER at
-    // once -- three differently-sized footprints for the same line would
-    // fight each other in the depth prepass (see buildHaloCompanion above).
+    // Only the active style's companion on HALO_LAYER at once.
+    // See docs/architecture/vector-line-glyphs.md#one-companion-visible.
     if (haloAvailable) {
       haloCompanionPlainLine.visible = activeStyle === 'plain_line'
       haloCompanionPlainTube.visible = activeStyle === 'plain_tube'
@@ -794,18 +553,15 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     }
   }
 
-  // Lets an external pass (tubeCollision.js) re-apply visibility after
-  // calling setCollisionZones(), without duplicating the style lookup.
+  // Lets tubeCollision.js re-apply visibility after setCollisionZones().
   group.userData.refreshGlyph = () => {
     const settings = useSettingsStore?.getState().settings || {}
     applyGlyphVisibility(settings)
   }
 
-  // FIXED: Look up configurations out of useSettingsStore safely
   const currentSettings = useSettingsStore?.getState().settings || {}
   applyGlyphVisibility(currentSettings)
 
-  // FIXED: Attach live reactive change subscription handlers targeting the correct store identifier
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
       if (window.threeObjStore?.[blockId] !== group) {
@@ -813,10 +569,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         return
       }
       applyGlyphVisibility(state.settings)
-      // Re-derive the flat-color glyphs from the active color preset. The
-      // ringed-tube texture bands and collision-accent overlays are left
-      // as-is here (regenerating their canvas textures live is out of
-      // scope) -- they pick up a new preset next time this line is rebuilt.
+      // Live recolor of the flat-color glyphs only; textured glyphs pick up
+      // a new preset on the next rebuild.
       const newLineColor = window.GeoScratchColors.forInstance('line', blockId)
       plainLineThickMat.color.set(newLineColor)
       cylMat.color.set(newLineColor)
@@ -846,11 +600,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     group.userData.t = tVal
     group.userData.rPoint = rPoint.clone()
 
-    // Animation opt-in (issue #38 line-t sweep): progress 1 is the resting
-    // state == today's static scene (marker already sitting at rPoint,
-    // above), progress 0 sweeps the marker back to the line's own origin
-    // (t=0) so scrubbing/playing visibly traces out "origin + t*direction"
-    // as t grows, same convention as AnimationDriver's other targets.
+    // Animation opt-in (issue #38 t-sweep): progress 1 = resting, 0 sweeps
+    // the marker to the origin. See docs/architecture/vector-line-glyphs.md#userdata-contract.
     group.userData.animate = (p, ease) => {
       const e = typeof ease === 'function' ? ease(p) : p
       const t = THREE.MathUtils.lerp(0, tVal, e)
@@ -884,19 +635,13 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       color: lineColor,
     },
   ]
-  // Consumed by tubeCollision.js's worldSegment(), which needs the same
-  // centre/half-length the tube's own local geometry is built around (the
-  // segment midpoint), not the vector equation's origin -- see the
-  // extentPos/extentNeg comment above for why those two points can differ.
+  // For tubeCollision.js's worldSegment(): segment midpoint, not the
+  // equation origin. See docs/architecture/vector-line-glyphs.md#userdata-contract.
   group.userData.segmentMid = midPoint.clone()
   group.userData.segmentHalfLength = halfDist
   group.userData.srcBlockId = blockId
-  // Consumed by the transform layer's line animation (bakeLineTransformAnimation
-  // in generateAndRun.js), which has to re-clip the line against the bounding box
-  // at every intermediate pose. It gets the very closure this build used, plus
-  // the interval that build settled on, rather than its own copy of the slab
-  // test -- this function is serialized with .toString() by the block generator
-  // below, so it can't import a shared helper for the two to agree on.
+  // For generateAndRun.js's line animation: the exact closure + interval
+  // this build used (can't share a helper -- this function is .toString()d).
   group.userData.boxInterval = lineBoxInterval
   group.userData.boxExtent = [tEnter, tExit]
   group.userData.tMarker = tSphereRef
@@ -946,7 +691,6 @@ export function initVector3Block() {
 
     const blockId = JSON.stringify(block.id)
 
-    // FIXED: Cleaned parameters up to leverage our isolated window scope injection securely
     const code = `(${geoVectorLineDefinition.toString()})(${vecPos}, ${vecDir}, ${vecScaleCode}, ${blockId})`
 
     return [code, Order.FUNCTION_CALL]

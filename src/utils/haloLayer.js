@@ -1,6 +1,3 @@
-// Layer channel reserved for halo "inflated companion" meshes (see
-// docs/halos-epic-plan.md). Shared between HaloDepthPrepass.jsx (which
-// renders only this layer into its offscreen target) and the sandboxed
-// generated-code context (block definition functions, which read it via
-// window.HALO_LAYER -- see generateAndRun.js) that builds companion meshes.
+// Layer channel for halo "inflated companion" meshes. Shared with the
+// sandboxed builder context as window.HALO_LAYER. See docs/architecture/halos.md.
 export const HALO_LAYER = 1

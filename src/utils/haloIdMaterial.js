@@ -1,10 +1,8 @@
 import * as THREE from 'three'
 
-// Bare, unlit material for a halo companion mesh's ID encoding. Deliberately
-// NOT MeshBasicMaterial -- built-in materials' fragment shaders include
-// tonemapping_fragment/colorspace_fragment chunks that would distort the
-// raw id/255 value before haloDiscardShader.js reads it back. A from-scratch
-// ShaderMaterial with no chunk includes writes gl_FragColor untouched.
+// Bare, unlit ID-encoding material for a halo companion mesh. NOT
+// MeshBasicMaterial: built-in materials tonemap/colorspace-convert the
+// output and corrupt the raw id/255 value. See docs/architecture/halos.md#id-material.
 export function createHaloIdMaterial(id) {
   return new THREE.ShaderMaterial({
     uniforms: { haloId: { value: id } },

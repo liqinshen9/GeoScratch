@@ -1,14 +1,5 @@
-// Curated color presets for the object-color framework (see colorSystem.js).
-//
-// Each preset defines, per object TYPE, an HCT family: a fixed `hue` (the
-// family identity -- what makes "all spheres" read as one group) plus a
-// `chromaRange`/`toneRange` that per-instance colors are drawn from (what
-// makes two different spheres look distinct from each other). `chromaRange:
-// [0, 0]` pins a type to a neutral gray/black family regardless of hue.
-//
-// Also defines a small fixed "role" palette for auto-generated teaching
-// illustrations (vector arithmetic operands, results, warnings) that does
-// NOT vary per instance -- "Operand A" should always mean the same color.
+// Curated HCT color presets. Per-type families (hue + chroma/tone ranges) plus
+// a fixed per-role palette. See docs/architecture/color-system.md.
 
 export const OBJECT_TYPES = Object.freeze({
   POINT: 'point',
@@ -36,12 +27,8 @@ export const DEFAULT_COLOR_PRESET = 'vivid'
 export const COLOR_PRESETS = Object.freeze({
   vivid: {
     label: 'Vivid',
-    // Hex values are the color at each family's midpoint chroma/tone (i.e.
-    // roughly what a "typical" instance looks like) -- actual instances vary
-    // across the full chromaRange/toneRange, so a given block's real color
-    // won't match this exactly. Recompute with colorSystem.js's
-    // Hct.from(hue, midChroma, midTone) if you change a range and want an
-    // updated reference.
+    // The // ~#hex comments are each family's midpoint color, not what every
+    // instance renders. See docs/architecture/color-system.md#preset-hex-comments.
     types: {
       [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [40, 55], toneRange: [35, 60] }, // ~#4570bb
       [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [45, 60], toneRange: [30, 50] }, // ~#1f6d23
@@ -63,10 +50,7 @@ export const COLOR_PRESETS = Object.freeze({
 
   monochrome: {
     label: 'Monochrome',
-    // See the `vivid` preset above for what these hex comments mean. Capped
-    // at tone 58 (none of these should get much lighter than a mid gray) --
-    // the scene background and room walls are already very light, so
-    // anything lighter than that washed out and was hard to see against them.
+    // Capped at tone 58 -- lighter washed out against the light background.
     types: {
       [OBJECT_TYPES.POINT]: { hue: 0, chromaRange: [0, 0], toneRange: [40, 48] }, // ~#707070
       [OBJECT_TYPES.VECTOR]: { hue: 0, chromaRange: [0, 0], toneRange: [31, 39] }, // ~#595959
@@ -88,7 +72,6 @@ export const COLOR_PRESETS = Object.freeze({
 
   highContrast: {
     label: 'High Contrast',
-    // See the `vivid` preset above for what these hex comments mean.
     types: {
       [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [70, 90], toneRange: [30, 65] }, // ~#006de1
       [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [75, 95], toneRange: [25, 55] }, // ~#006e17

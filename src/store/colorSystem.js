@@ -1,8 +1,8 @@
 import { Hct, hexFromArgb } from '@material/material-color-utilities'
 import { COLOR_PRESETS, DEFAULT_COLOR_PRESET, OBJECT_TYPE_KEYS, COLOR_ROLES } from './colorPresets'
 
-// Deterministic 32-bit string hash (FNV-1a) so a given block id always maps
-// to the same color, across reloads, without persisting anything extra.
+// Deterministic FNV-1a hash: same block id -> same color, nothing persisted.
+// See docs/architecture/color-system.md.
 function hashString(str) {
   let hash = 0x811c9dc5
   for (let i = 0; i < str.length; i++) {
@@ -41,21 +41,16 @@ function instanceHct(type, blockId) {
   return { hue: family.hue, chroma, tone }
 }
 
-// Color for a specific object instance. `blockId` should be the Blockly
-// block's stable id; the same id always produces the same color. When no
-// blockId is available (e.g. a toolbox/flyout preview), a per-type stable
-// fallback seed is used so the swatch still represents that type's family.
+// Color for an object instance, keyed by stable blockId (per-type fallback
+// seed when absent). See docs/architecture/color-system.md.
 function forInstance(type, blockId) {
   const hct = instanceHct(type, blockId)
   if (!hct) return '#94a3b8'
   return hexFromArgb(Hct.from(hct.hue, hct.chroma, hct.tone).toInt())
 }
 
-// A tone-shifted variant of the SAME instance's color (same hue/chroma,
-// deterministically the same as forInstance for this type+blockId) -- for
-// glyphs that need a second, related shade (e.g. a two-band texture, or a
-// second marker on the same object that should still read as "the same
-// family" but be visually distinguishable from the first).
+// A tone-shifted variant of the SAME instance's color (two-band textures, a
+// second marker). See docs/architecture/color-system.md.
 function forInstanceVariant(type, blockId, toneDelta) {
   const hct = instanceHct(type, blockId)
   if (!hct) return '#94a3b8'
@@ -63,8 +58,7 @@ function forInstanceVariant(type, blockId, toneDelta) {
   return hexFromArgb(Hct.from(hct.hue, hct.chroma, tone).toInt())
 }
 
-// Fixed semantic-role color (operand A/B, result, warning, accent) used by
-// auto-generated teaching illustrations. Not varied per instance.
+// Fixed semantic-role color for teaching illustrations, not per-instance.
 function forRole(role) {
   const preset = activePreset()
   return preset.roles[role] || preset.roles[COLOR_ROLES.WARNING]
