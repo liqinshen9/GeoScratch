@@ -77,12 +77,6 @@ export default function SettingsPage() {
           <div className="settings-stack">
             <SettingsSection title="Scene">
               <ToggleRow
-                label="Show 3D Labels"
-                description="Display names of elements in the viewport"
-                checked={settings.showLabels}
-                onChange={(v) => updateSetting('showLabels', v)}
-              />
-              <ToggleRow
                 label="Show Grid"
                 description="Display the ground grid in the viewport"
                 checked={settings.showGrid}
@@ -236,6 +230,12 @@ export default function SettingsPage() {
               </GeometryTile>
 
               <GeometryTile title="3D Labels">
+                <ToggleRow
+                  label="Show 3D Labels"
+                  description="Display names of elements in the viewport"
+                  checked={settings.showLabels}
+                  onChange={(v) => updateSetting('showLabels', v)}
+                />
                 <SelectField
                   label="Label detail"
                   description="Show just an object's name, or its name plus its current value, on every 3D-scene label."
