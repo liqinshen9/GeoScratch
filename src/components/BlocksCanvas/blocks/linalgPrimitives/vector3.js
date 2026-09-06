@@ -43,15 +43,12 @@ export function initVec3Block() {
       .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
     allowOverflowingInputs(block, 'ORIGIN')
     block.appendDummyInput().appendField(label)
-    block.appendDummyInput()
-      .setAlign(Blockly.inputs.Align.CENTRE)
-      .appendField(new Blockly.FieldNumber(1), 'X')
-    block.appendDummyInput()
-      .setAlign(Blockly.inputs.Align.CENTRE)
-      .appendField(new Blockly.FieldNumber(1), 'Y')
-    block.appendDummyInput()
-      .setAlign(Blockly.inputs.Align.CENTRE)
-      .appendField(new Blockly.FieldNumber(1), 'Z')
+    for (const axis of ['X', 'Y', 'Z']) {
+      block.appendDummyInput()
+        .setAlign(Blockly.inputs.Align.CENTRE)
+        .appendField(`${axis.toLowerCase()}:`)
+        .appendField(new Blockly.FieldNumber(1), axis)
+    }
   }
 
   function initVector3LikeBlock(block, label, tooltip, objectType, options = {}) {
@@ -70,7 +67,7 @@ export function initVec3Block() {
 
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      initVector3LikeBlock(this, 'vector:', '3D vector coordinate', 'vector', { column: true })
+      initVector3LikeBlock(this, 'vector', '3D vector coordinate', 'vector', { column: true })
     },
   }
 
