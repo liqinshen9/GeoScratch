@@ -1,4 +1,4 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
 
 function navLinkClass(isActive) {
@@ -10,6 +10,12 @@ function navLinkClass(isActive) {
 }
 
 export default function Header() {
+  const location = useLocation()
+  // Both /exercises (the browser) and /exercise/:n (an open exercise) should
+  // read as "you're in the exercise area" -- NavLink's own isActive only
+  // matches its own `to` prefix, which wouldn't cover both paths at once.
+  const isExerciseAreaActive = location.pathname.startsWith('/exercise')
+
   return (
     <header className="app-nav flex h-14 w-full items-center justify-between bg-[#002ea6] px-6 sm:px-8 shadow-md border-b border-white/10 z-[999] shrink-0 select-none">
       <Link to="/landing" className="app-nav__logo flex items-center gap-2 no-underline text-white">
@@ -17,8 +23,8 @@ export default function Header() {
       </Link>
 
       <nav className="landing-nav__links flex h-full items-center justify-center gap-2 pr-2 py-2" aria-label="Main Navigation">
-        <NavLink to="/exercise" className={({ isActive }) => navLinkClass(isActive)}>
-          Exercise
+        <NavLink to="/exercises" className={navLinkClass(isExerciseAreaActive)}>
+          Exercises
         </NavLink>
         <NavLink to="/sandbox" className={({ isActive }) => navLinkClass(isActive)}>
           Sandbox

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import * as THREE from 'three'
 import * as Blockly from 'blockly/core'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
-import { ArrowLeft, ArrowRight } from '@icon-park/react'
+import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { collectStatementChain, getScalarInputValue } from '@/utils/sceneHelpers'
+import { EXERCISES } from '@/data/exercises'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -45,36 +47,6 @@ const COMBINED_ROTATE_DEGREES = 45
 const TRANSLATE_X = 3
 const TRANSLATE_Y = 0
 const TRANSLATE_Z = 0
-const EXERCISES = [
-  {
-    number: 1,
-    title: 'Scale this object by 3',
-  },
-  {
-    number: 2,
-    title: 'Rotate this object',
-  },
-  {
-    number: 3,
-    title: 'Transform this object',
-  },
-  {
-    number: 4,
-    title: 'Translate this object',
-  },
-  {
-    number: 5,
-    title: 'Calculate distance from point P to a plane',
-  },
-  {
-    number: 6,
-    title: 'Calculate the shortest distance between two skew lines',
-  },
-  {
-    number: 7,
-    title: 'Calculate the distance between two spheres',
-  },
-]
 const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
 const LINE_INTERSECTION_3D_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
 const SPHERE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
@@ -822,9 +794,14 @@ function getDistanceAnswer(objects, expectedDistance = null, workspace = null, o
 export default function ExercisePage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
+  const navigate = useNavigate()
+  const { exerciseNumber } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
-  const [activeExercise, setActiveExercise] = useState(1)
   const clearWorkspaceRef = useRef(() => {})
+  // The URL is the source of truth for which exercise is open (deep-linkable,
+  // shareable, survives reload) -- /exercise with no param defaults to 1,
+  // matching the page's original behaviour before routing was added.
+  const activeExercise = EXERCISES.find(({ number }) => number === Number(exerciseNumber))?.number ?? 1
   const activeExerciseConfig = EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
   const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExerciseConfig.number)
   const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
@@ -944,12 +921,12 @@ export default function ExercisePage() {
     }
     : null
 
-  const handleSelectExercise = useCallback((exerciseNumber) => {
-    setActiveExercise(exerciseNumber)
+  const handleSelectExercise = useCallback((number) => {
+    navigate(`/exercise/${number}`)
     setWorkspaceMaximized(false)
     setPendingObjects([])
     setObjects([])
-  }, [setObjects, setPendingObjects])
+  }, [navigate, setObjects, setPendingObjects])
 
   // Drop the background blocks straight into the workspace once it's ready,
   // rather than injecting rendered objects behind the scenes -- they need to
@@ -993,6 +970,16 @@ export default function ExercisePage() {
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
               <div className="exercise-column-heading__actions" aria-label="Exercise navigation">
+                <button
+                  type="button"
+                  className="exercise-nav-button exercise-nav-button--wide"
+                  onClick={() => navigate('/exercises')}
+                  title="Browse all exercises"
+                  aria-label="Browse all exercises"
+                >
+                  <AllApplication theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                  <span>Browse</span>
+                </button>
                 <button
                   type="button"
                   className="exercise-nav-button"
