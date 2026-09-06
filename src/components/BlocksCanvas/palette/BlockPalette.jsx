@@ -3,13 +3,14 @@ import * as Blockly from 'blockly/core'
 import { getCategory } from '@/components/BlocksCanvas/catalog/blockCatalog'
 import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import { registerGeoScratchRenderer } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 
 const PALETTE_WS_OPTIONS = {
   readOnly: true,
   scrollbars: false,
   zoom: { controls: false, wheel: false, startScale: 0.72 },
   move: { scrollbars: false, drag: false, wheel: false },
-  renderer: 'geras',
+  renderer: registerGeoScratchRenderer(),
   theme: GEO_SCRATCH_BLOCK_THEME,
 }
 

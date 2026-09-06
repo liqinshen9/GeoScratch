@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId, THREE, threeObjStore) {
   const point = pointInput?.isVector3 ? pointInput.clone() : new THREE.Vector3()
@@ -93,8 +94,19 @@ function geoParametricPlaneDefinition(pointInput, normInput, normLabel, blockId,
   group.userData.normalRaw = normalRaw.clone()
   group.userData.normalUnit = normalUnit.clone()
   group.userData.planeSize = planeSize
-  group.userData.labelAnchors = {}
-  group.userData.labels = []
+  group.userData.labelAnchors = {
+    point: { type: 'world', position: [point.x, point.y, point.z] },
+  }
+  group.userData.labels = [
+    {
+      anchor: 'point',
+      name: window.geoNaming?.nameFor?.(blockId) || 'Plane',
+      value: 'point ' + window.vectorNotation.formatVector(point) + ', normal ' + window.vectorNotation.formatVector(normalUnit),
+      distanceFactor: 8,
+      offset: [0.12, 0.12, 0],
+      color: planeColor,
+    },
+  ]
 
   plane.userData = Object.assign(plane.userData || {}, { geoType: 'plane_mesh', srcBlockId: blockId })
 
@@ -110,7 +122,7 @@ export function initParametricPlaneBlock() {
 
   Blockly.Blocks.parametric_plane = {
     init() {
-      this.appendDummyInput().appendField('Plane')
+      this.appendDummyInput().appendField('Plane').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('point').appendField('Point:').setCheck('vector3')
       this.appendValueInput('norm').appendField('Normal:').setCheck('vector3')
       this.setStyle(BLOCK_STYLES.CREATE_PLANE)

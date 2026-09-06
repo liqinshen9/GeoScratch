@@ -36,12 +36,3 @@ const TOOLBOX_XML = `
     `
 
 export default TOOLBOX_XML
-
-{/* <category name="Geometric Object Variables" custom="OBJS_3D" colour=140>
-    <button text="Create 3D Object..." callbackKey="createObj3DButtonCallback"></button>
-    <block type="variables_get_obj3D"></block>
-    <block type="variables_set_obj3D"></block>
-</category> */}
-
-{/* <category name="Variables" custom="VARIABLE" colour=330>
-</category> */}

@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   // Pull context strictly from the window where Three has been cleanly mounted
@@ -52,6 +53,19 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   mesh.userData.sideLength = sideLength
   mesh.userData.side = sideLength
   mesh.userData.srcBlockId = blockId
+  mesh.userData.labelAnchors = {
+    centre: { type: 'world', position: [centre.x, centre.y, centre.z] },
+  }
+  mesh.userData.labels = [
+    {
+      anchor: 'centre',
+      name: window.geoNaming?.nameFor?.(blockId) || 'Cube',
+      value: 'side ' + Number(sideLength.toFixed(3)),
+      distanceFactor: 7,
+      offset: [0.12, 0.12, 0],
+      color: '#111827',
+    },
+  ]
 
   if (threeObjStore) threeObjStore[blockId] = mesh
 
@@ -74,7 +88,7 @@ export default function initGeoCubeBlock() {
 
   Blockly.Blocks.geo_cube = {
     init() {
-      this.appendDummyInput().appendField('Cube')
+      this.appendDummyInput().appendField('Cube').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_CUBE)
       this.setColour(forInstance('cube', this.id))
       this.setTooltip('Axis-aligned cube defined by centre and side length.')

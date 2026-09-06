@@ -3,6 +3,8 @@ import * as en from 'blockly/msg/en'
 import * as Blockly from 'blockly/core'
 import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
 import { flattenCollapsedReferenceEdges, installBlockReferenceLabels } from '@/utils/blockReferenceLabels'
+import { installNamingRegistry } from '@/utils/namingRegistry'
+import { registerGeoScratchRenderer } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 
 let CONTEXT_MENU_CONFIGURED = false
 
@@ -22,7 +24,7 @@ const Workspace = (hostElement) => {
   configureContextMenu()
 
   const workspace = Blockly.inject(hostElement, {
-    renderer: 'geras',
+    renderer: registerGeoScratchRenderer(),
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
     zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
     trashcan: false,
@@ -39,6 +41,7 @@ const Workspace = (hostElement) => {
   })
 
   flattenCollapsedReferenceEdges(workspace)
+  installNamingRegistry(workspace)
   return workspace
 }
 

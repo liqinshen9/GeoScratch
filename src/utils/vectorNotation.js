@@ -1,18 +1,4 @@
 export function createVectorNotationRuntime() {
-  const anyPointLabelsByBlockId = {}
-  const lineLabelsByBlockId = {}
-  const pointLabelsByBlockId = {}
-  const vectorLabelsByBlockId = {}
-
-  const labelFromRun = (labelsByBlockId, blockId, base, firstHasNumber = false) => {
-    if (!blockId) return base
-    if (!labelsByBlockId[blockId]) {
-      const index = Object.keys(labelsByBlockId).length + 1
-      labelsByBlockId[blockId] = index === 1 && !firstHasNumber ? base : `${base}${index}`
-    }
-    return labelsByBlockId[blockId]
-  }
-
   const getLabel = (value, fallback) => value?.userData?.label || fallback
   const hasLabel = (value) => Boolean(value?.userData?.label)
   const hasVisibleLabel = (value) => Boolean(value?.userData?.labelVisible)
@@ -27,10 +13,6 @@ export function createVectorNotationRuntime() {
   }
 
   return {
-    assignAnyPointLabel: (blockId) => labelFromRun(anyPointLabelsByBlockId, blockId, 'Q', true),
-    assignLineLabel: (blockId) => labelFromRun(lineLabelsByBlockId, blockId, 'L', true),
-    assignPointLabel: (blockId) => labelFromRun(pointLabelsByBlockId, blockId, 'P'),
-    assignVectorLabel: (blockId) => labelFromRun(vectorLabelsByBlockId, blockId, 'v'),
     binaryLabel: (left, operator, right, leftFallback = 'a', rightFallback = 'b') => (
       `${getLabel(left, leftFallback)} ${operator} ${getLabel(right, rightFallback)}`
     ),

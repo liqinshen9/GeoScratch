@@ -2,27 +2,6 @@ import { describe, it, expect } from 'vitest'
 import { createVectorNotationRuntime } from './vectorNotation'
 
 describe('createVectorNotationRuntime', () => {
-  it('assigns stable, numbered point labels per block id, unnumbered on the first', () => {
-    const runtime = createVectorNotationRuntime()
-    expect(runtime.assignPointLabel('block-a')).toBe('P')
-    expect(runtime.assignPointLabel('block-b')).toBe('P2')
-    // Re-querying the same block id returns the same label, not a new one.
-    expect(runtime.assignPointLabel('block-a')).toBe('P')
-  })
-
-  it('numbers the first label when firstHasNumber is set (line/any-point labels)', () => {
-    const runtime = createVectorNotationRuntime()
-    expect(runtime.assignLineLabel('line-a')).toBe('L1')
-    expect(runtime.assignLineLabel('line-b')).toBe('L2')
-    expect(runtime.assignAnyPointLabel('pt-a')).toBe('Q1')
-  })
-
-  it('keeps separate label sequences per label kind', () => {
-    const runtime = createVectorNotationRuntime()
-    runtime.assignPointLabel('block-a')
-    expect(runtime.assignVectorLabel('vec-a')).toBe('v')
-  })
-
   it('reads labels off userData with a fallback', () => {
     const runtime = createVectorNotationRuntime()
     const labeled = { userData: { label: 'w' } }

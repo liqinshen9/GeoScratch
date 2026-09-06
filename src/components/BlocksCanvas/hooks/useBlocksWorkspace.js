@@ -6,7 +6,8 @@ import { BLOCK_TYPE_OBJECT_TYPES, BLOCK_TYPE_ROLES } from '@/components/BlocksCa
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useThreeStore from '@/store/useThreeStore'
 import { forInstance, forRole, subscribeToPreset } from '@/store/colorSystem'
-import { obj3DFlyoutCallback } from '@/utils/callbacks'
+import useSettingsStore from '@/store/useSettingsStore'
+import { notifyAllBlockNamesChanged } from '@/utils/namingRegistry'
 import runAndSync from '@/utils/runAndSync'
 import attachResizeObserver from '@/utils/attachResizeOberver'
 import setupChangeListener from '@/utils/setupChangeListener'
@@ -23,7 +24,6 @@ export function useBlocksWorkspace({
   const {
     workspace,
     setWorkspace,
-    setDialogOpen,
     exampleXml,
     clearExampleXml,
   } = useWorkspaceStore()
@@ -36,24 +36,12 @@ export function useBlocksWorkspace({
     [onObjectsChangeRef, runtimeMode],
   )
 
-  const registerToolboxCallbacks = useCallback(
-    (ws) => {
-      ws.registerButtonCallback('createObj3DButtonCallback', () => {
-        setWorkspace(ws)
-        setDialogOpen(true)
-      })
-      ws.registerToolboxCategoryCallback('OBJS_3D', obj3DFlyoutCallback)
-    },
-    [setWorkspace, setDialogOpen],
-  )
-
   useEffect(() => {
     defineBlocks()
     if (!registryRef.current) registryRef.current = new BlockRegistry()
 
     const ws = initWorkSpace(workspaceHostRef.current)
     setWorkspace(ws)
-    registerToolboxCallbacks(ws)
 
     const cleanupListener = setupChangeListener(ws, (changedWorkspace) => {
       clearObjects()
@@ -106,6 +94,20 @@ export function useBlocksWorkspace({
         const role = BLOCK_TYPE_ROLES[block.type]
         if (role) block.setColour(forRole(role))
       })
+    })
+  }, [workspace])
+
+  // Retroactively repaint every block's name field when the naming style
+  // (short codes vs. descriptive) changes -- getDisplayName already prefers
+  // a custom name over the style, so custom-named blocks are unaffected.
+  useEffect(() => {
+    if (!workspace) return
+    let prev = useSettingsStore.getState().settings.namingStyle
+    return useSettingsStore.subscribe((state) => {
+      if (state.settings.namingStyle !== prev) {
+        prev = state.settings.namingStyle
+        notifyAllBlockNamesChanged(workspace)
+      }
     })
   }, [workspace])
 

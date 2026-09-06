@@ -154,16 +154,16 @@ export function initVectorArithmeticBlock() {
       : (lenR > 1e-8 ? window.GeoScratchColors.forRole('result') : window.GeoScratchColors.forRole('warning'));
     group.userData.labels = isPointDifference
       ? [
-        { anchor:'rTip', text: pointDifferenceLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'rTip', name: pointDifferenceLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
-        { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
         : [
-        { anchor:'rTip', text: genericResultLabel + ' = ' + fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 
     // Staged reveal for the play/scrub transport (AnimationDriver): grow a from

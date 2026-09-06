@@ -122,6 +122,21 @@ export function matrix4FromTransformStepBlock(block, { fallbackToIdentity = fals
   return fallbackToIdentity ? new THREE.Matrix4() : null
 }
 
+/**
+ * Whether a value block is "on its own" for rendering purposes -- i.e. it
+ * isn't feeding a real consumer. A geo_variable wrapper is transparent here:
+ * wrapping a lone Point must not make it stop drawing in the 3D view, which
+ * is exactly what a plain `!outputConnection.targetConnection` check would do.
+ * @param {import('blockly/core').Block | null} block
+ */
+export function isEffectivelyStandalone(block) {
+  let parent = block?.outputConnection?.targetBlock?.() ?? null
+  while (parent?.type === 'geo_variable') {
+    parent = parent.outputConnection?.targetBlock?.() ?? null
+  }
+  return !parent
+}
+
 /** @param {import('blockly/core').Block | null} startBlock */
 export function collectStatementChain(startBlock) {
   const chain = []

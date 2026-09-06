@@ -4,6 +4,7 @@ import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
 import { COLOR_PRESETS } from '../store/colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
+import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
@@ -217,6 +218,40 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
+          <SettingsSection title="Labels & Naming" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Naming">
+                <SelectField
+                  label="Auto-name style"
+                  description="How newly created objects are named by default (e.g. L1 vs Line1). Applies instantly to every object that hasn't been given a custom name, on both its block and its 3D label."
+                  value={settings.namingStyle}
+                  onChange={(e) => updateSetting('namingStyle', e.target.value)}
+                >
+                  {Object.entries(NAMING_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key === 'SHORT' ? 'Short codes (L1, V1, P1)' : 'Descriptive (Line1, Vector1, Point1)'}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+
+              <GeometryTile title="3D Labels">
+                <SelectField
+                  label="Label detail"
+                  description="Show just an object's name, or its name plus its current value, on every 3D-scene label."
+                  value={settings.labelDetail}
+                  onChange={(e) => updateSetting('labelDetail', e.target.value)}
+                >
+                  {Object.entries(LABEL_DETAIL_LEVELS).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key === 'NAME_ONLY' ? 'Name only (L1)' : 'Name and value (L1 = (1, 2, 3))'}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+            </div>
+          </SettingsSection>
+
           <SettingsSection title="Objects & Geometry" className="settings-card--wide">
             <div className="settings-geometry-grid">
               <GeometryTile title="Point">
@@ -251,6 +286,12 @@ export default function SettingsPage() {
                   description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
                   checked={settings.extraThickVectors}
                   onChange={(v) => updateSetting('extraThickVectors', v)}
+                />
+                <ToggleRow
+                  label="Show Tail Point"
+                  description="Draw a point marker at the tail of a vector that has a block plugged into its origin socket"
+                  checked={settings.showVectorOriginPoint}
+                  onChange={(v) => updateSetting('showVectorOriginPoint', v)}
                 />
               </GeometryTile>
 

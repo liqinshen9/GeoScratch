@@ -3,6 +3,7 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forRole } from '@/store/colorSystem'
 import { COLOR_ROLES } from '@/store/colorPresets'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 let REGISTERED = false
 
@@ -14,6 +15,7 @@ export function initScalarBlock() {
     init() {
       this.appendDummyInput()
         .appendField('Scalar')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
         .appendField(new Blockly.FieldNumber(1), 'scalar')
       this.setStyle(BLOCK_STYLES.VALUE_PRIMITIVES)
       this.setColour(forRole(COLOR_ROLES.ACCENT))

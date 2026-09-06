@@ -3,6 +3,7 @@ import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 import { DEFAULT_COLOR_PRESET } from './colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 import { ANIMATION_EASINGS, DEFAULT_ANIMATION_DURATION_MS } from './animationConfig'
+import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from './namingConfig'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
@@ -31,12 +32,15 @@ const DEFAULT_SETTINGS = {
   haloEnabled: true,
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
+  showVectorOriginPoint: false,
   showPlanePointNormal: true,
   objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
   animationDurationMs: DEFAULT_ANIMATION_DURATION_MS,
   animationEasing: ANIMATION_EASINGS.EASE_IN_OUT,
   animationLoop: false,
+  namingStyle: NAMING_STYLES.SHORT,
+  labelDetail: LABEL_DETAIL_LEVELS.NAME_ONLY,
 }
 
 const useSettingsStore = create((set) => ({

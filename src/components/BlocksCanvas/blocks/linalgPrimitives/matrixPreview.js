@@ -35,7 +35,10 @@ let outsidePointerListener = null
 let rafId = 0
 let trackRafId = 0
 
-class FieldMatrixSpacer extends Field {
+// Exported so other blocks can reserve body height the same way the
+// transform pipeline does (an invisible, zero-width field with a forced
+// height), which is what makes its body extend below the inputs.
+export class FieldMatrixSpacer extends Field {
   /** @type {number} */
   spacerHeight_
 

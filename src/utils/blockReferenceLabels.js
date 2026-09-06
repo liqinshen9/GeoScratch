@@ -1,8 +1,18 @@
 import * as Blockly from 'blockly/core'
+import * as namingRegistry from './namingRegistry'
+import { REF_BLOCK_TYPE, referenceDisplayName } from './variableReference'
 
-const DATA_KEY = 'geoScratchReferenceAlias'
-const AUTO_DATA_KEY = 'geoScratchReferenceAliasAuto'
-const REF_ID_KEY = 'geoScratchReferenceId'
+// "Collapse to reference" -- lets a block shrink to a small labeled puck.
+// Naming itself is delegated entirely to namingRegistry.js: a block that's
+// already nameable (geo_vector/geo_sphere/parametric_plane/... -- see
+// NAMEABLE_KIND_CONFIG) already has a real name the moment it's created, so
+// collapsing it just needs to display that name; a plain compute-result
+// operand (vector_arithmetic, scalar_arithmetic, ...) being collapsed as a
+// nested input has no name of its own, so it's given one from a pooled
+// single-letter scheme (a-z, then r1, r2, ...) the first time it's
+// collapsed. Both kinds of name live in the exact same namingRegistry
+// storage, so they can never collide and are shown identically everywhere
+// (block face, 3D label, collapsed bubble).
 const ALIAS_POOL = 'abcdefghijklmnopqrstuvwxyz'.split('')
 const COLLAPSIBLE_INPUT_PARENT_TYPES = new Set([
   'vector_arithmetic',
@@ -16,121 +26,49 @@ const COLLAPSIBLE_INPUT_PARENT_TYPES = new Set([
 const COLLAPSIBLE_CREATION_PARENT_INPUTS = Object.freeze({
   geo_vector: new Set(['POS', 'DIR']),
 })
-const COLLAPSIBLE_WHOLE_BLOCK_TYPES = new Set([
-  'geo_vector',
-  'geo_sphere',
-  'parametric_plane',
-])
 
 let INSTALLED = false
-let originalToString = null
-let originalSetCollapsed = null
 
-function parseData(block) {
-  if (!block?.data) return {}
-  try {
-    const parsed = JSON.parse(block.data)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeData(block, nextData) {
-  block.data = Object.keys(nextData).length ? JSON.stringify(nextData) : null
-}
-
-function getAlias(block) {
-  const alias = parseData(block)[DATA_KEY]
-  return typeof alias === 'string' ? alias.trim() : ''
-}
-
-function getReferenceId(block) {
-  const refId = parseData(block)[REF_ID_KEY]
-  return typeof refId === 'string' ? refId.trim() : ''
-}
-
-function getCollapsedFieldAlias(block) {
-  const text = block?.getField?.(Blockly.Block.COLLAPSED_FIELD_NAME)?.getText?.()
-  return typeof text === 'string' ? text.trim() : ''
-}
-
-function setAlias(block, alias, { auto = false } = {}) {
-  const trimmed = String(alias || '').trim()
-  const data = parseData(block)
-  if (trimmed) {
-    data[DATA_KEY] = trimmed
-    data[AUTO_DATA_KEY] = auto
-  } else {
-    delete data[DATA_KEY]
-    delete data[AUTO_DATA_KEY]
-  }
-  writeData(block, data)
-}
-
-function ensureReferenceId(block) {
-  const existing = getReferenceId(block)
-  if (existing) return existing
-
-  const data = parseData(block)
-  const refId = `ref-${Blockly.utils.idGenerator.genUid()}`
-  data[REF_ID_KEY] = refId
-  writeData(block, data)
-  return refId
-}
-
-function usedAliases(workspace) {
+function usedNames(workspace) {
   return new Set(
     workspace
       .getAllBlocks(false)
-      .map(getAlias)
+      .map((block) => namingRegistry.getDisplayName(block))
       .filter(Boolean)
   )
 }
 
-function nextNumberedAlias(used, prefix) {
-  for (let index = 1; index < 1000; index += 1) {
-    const alias = `${prefix}${index}`
-    if (!used.has(alias)) return alias
-  }
-
-  return prefix
-}
-
-function nextAlias(workspace, block = null) {
-  const used = usedAliases(workspace)
-
-  if (block?.type === 'geo_vector') return nextNumberedAlias(used, 'Line')
-  if (block?.type === 'geo_sphere') return nextNumberedAlias(used, 'Sphere')
-  if (block?.type === 'parametric_plane') return nextNumberedAlias(used, 'Plane')
-
+function nextPooledAlias(workspace) {
+  const used = usedNames(workspace)
   const pooled = ALIAS_POOL.find((alias) => !used.has(alias))
   if (pooled) return pooled
 
-  return nextNumberedAlias(used, 'r')
+  for (let index = 1; index < 1000; index += 1) {
+    const alias = `r${index}`
+    if (!used.has(alias)) return alias
+  }
+  return 'r'
 }
 
-function nextAliasForBlock(block) {
-  return nextAlias(block.workspace, block)
-}
-
-function preserveDurableAliasBeforeExpand(block) {
-  const alias = getAlias(block) || getCollapsedFieldAlias(block)
-  if (!alias) return
-
-  if (!getAlias(block)) setAlias(block, alias, { auto: true })
-  ensureReferenceId(block)
+// Blockly bakes toString() into a FieldLabel once, when the block is
+// collapsed -- so a later rename leaves the old name on the collapsed puck.
+// Re-push it. (Pre-existing bug for any collapsed object, not just variable
+// references: renameNameable below only re-rendered.)
+export function refreshCollapsedLabel(block) {
+  if (!block?.isCollapsed?.()) return
+  block.getField(Blockly.Block.COLLAPSED_FIELD_NAME)?.setValue(block.toString())
 }
 
 function refresh(block) {
+  refreshCollapsedLabel(block)
   block.render?.()
   block.workspace?.resizeContents?.()
 }
 
 function collapseWithAlias(block) {
-  const alias = getAlias(block) || nextAliasForBlock(block)
-  setAlias(block, alias, { auto: true })
-  ensureReferenceId(block)
+  if (!namingRegistry.getDisplayName(block)) {
+    namingRegistry.setCustomName(block, nextPooledAlias(block.workspace))
+  }
   block.setCollapsed(true)
   refresh(block)
 }
@@ -140,17 +78,30 @@ function expandReference(block) {
   refresh(block)
 }
 
-function renameReference(block) {
-  const current = getAlias(block) || nextAliasForBlock(block)
+function renamePooledOperand(block) {
+  const current = namingRegistry.getDisplayName(block) || nextPooledAlias(block.workspace)
   const next = window.prompt('Reference name', current)
   if (next == null) return
 
   const trimmed = next.trim()
   if (!trimmed) return
 
-  setAlias(block, trimmed, { auto: false })
-  ensureReferenceId(block)
+  namingRegistry.setCustomName(block, trimmed)
   if (block.isCollapsed()) refresh(block)
+}
+
+function renameNameable(block) {
+  const current = namingRegistry.getDisplayName(block)
+  const next = window.prompt('Name', current)
+  if (next == null) return
+
+  const trimmed = next.trim()
+  if (!trimmed) {
+    namingRegistry.clearCustomName(block)
+  } else {
+    namingRegistry.setCustomName(block, trimmed)
+  }
+  refresh(block)
 }
 
 function canCollapseInput(block) {
@@ -172,12 +123,19 @@ function canCollapseWholeBlock(block) {
   return Boolean(
     block?.outputConnection &&
     !block.isInFlyout &&
-    (COLLAPSIBLE_WHOLE_BLOCK_TYPES.has(block.type) || getAlias(block) || getCollapsedFieldAlias(block))
+    (
+      namingRegistry.isNameable(block) ||
+      namingRegistry.getDisplayName(block) ||
+      // A variable reference has no naming record of its own (it displays the
+      // wrapper's name), but is spawned collapsed -- without this it could be
+      // expanded and then never collapsed again.
+      block.type === 'geo_variable_ref'
+    )
   )
 }
 
 function canExpandReference(block) {
-  return Boolean(block?.outputConnection && !block.isInFlyout && (getAlias(block) || getCollapsedFieldAlias(block)))
+  return Boolean(block?.outputConnection && !block.isInFlyout)
 }
 
 function registerMenuItem(id, item) {
@@ -190,24 +148,26 @@ export function installBlockReferenceLabels() {
   if (INSTALLED) return
   INSTALLED = true
 
-  originalToString = Blockly.Block.prototype.toString
+  const originalToString = Blockly.Block.prototype.toString
   Blockly.Block.prototype.toString = function patchedReferenceToString(...args) {
-    const alias = this.isCollapsed?.() ? getAlias(this) : ''
-    if (alias) return alias
+    if (this.isCollapsed?.()) {
+      // A variable reference has no naming record of its own -- it shows the
+      // name of the wrapper it points at. Resolving it here (rather than
+      // falling through) matters because Blockly's default toString on a
+      // collapsed block renders the collapsed label itself, so refreshing
+      // that label from toString() would just rewrite the stale text.
+      if (this.type === REF_BLOCK_TYPE) return referenceDisplayName(this)
+      const name = namingRegistry.getDisplayName(this)
+      if (name) return name
+    }
     return originalToString.apply(this, args)
-  }
-
-  originalSetCollapsed = Blockly.BlockSvg.prototype.setCollapsed
-  Blockly.BlockSvg.prototype.setCollapsed = function patchedReferenceSetCollapsed(collapsed) {
-    if (!collapsed && this.isCollapsed?.()) preserveDurableAliasBeforeExpand(this)
-    return originalSetCollapsed.call(this, collapsed)
   }
 
   registerMenuItem('geoScratchCollapseToReference', {
     weight: 6,
     displayText: (scope) => {
-      const alias = getAlias(scope.block)
-      return alias ? `Collapse to reference (${alias})` : 'Collapse to reference'
+      const name = namingRegistry.getDisplayName(scope.block)
+      return name ? `Collapse to reference (${name})` : 'Collapse to reference'
     },
     preconditionFn: (scope) => (
       (canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block)) && !scope.block.isCollapsed()
@@ -219,20 +179,28 @@ export function installBlockReferenceLabels() {
 
   registerMenuItem('geoScratchExpandReference', {
     weight: 7,
-    displayText: (scope) => `Expand reference (${getAlias(scope.block) || 'unnamed'})`,
+    displayText: (scope) => `Expand reference (${namingRegistry.getDisplayName(scope.block) || 'unnamed'})`,
     preconditionFn: (scope) => (
       canExpandReference(scope.block) && scope.block.isCollapsed() ? 'enabled' : 'hidden'
     ),
     callback: (scope) => expandReference(scope.block),
   })
 
+  // Scoped to compute-result operands only -- whole nameable objects (Line,
+  // Sphere, Plane, ...) use the broader "Rename" item below instead, so the
+  // two don't both show up on the same block.
   registerMenuItem('geoScratchRenameReference', {
     weight: 8,
-    displayText: (scope) => (getAlias(scope.block) ? 'Rename reference' : 'Name reference'),
-    preconditionFn: (scope) => (
-      canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block) ? 'enabled' : 'hidden'
-    ),
-    callback: (scope) => renameReference(scope.block),
+    displayText: (scope) => (namingRegistry.getDisplayName(scope.block) ? 'Rename reference' : 'Name reference'),
+    preconditionFn: (scope) => (canCollapseInput(scope.block) ? 'enabled' : 'hidden'),
+    callback: (scope) => renamePooledOperand(scope.block),
+  })
+
+  registerMenuItem('geoScratchRename', {
+    weight: 8,
+    displayText: () => 'Rename',
+    preconditionFn: (scope) => (namingRegistry.isNameable(scope.block) ? 'enabled' : 'hidden'),
+    callback: (scope) => renameNameable(scope.block),
   })
 }
 

@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 // ===================
 // 1. RUNTIME THREE.JS
@@ -113,7 +114,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
 
   const distance = p1.distanceTo(p2)
   const midPoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5)
-  const lineLabel = window.vectorNotation?.assignLineLabel?.(blockId) || 'L'
+  const lineLabel = window.geoNaming?.nameFor?.(blockId) || 'L'
   // Local tube frame is centred on the segment's midpoint, not the vector
   // equation's origin -- the two only coincide when extentPos === extentNeg.
   const halfDist = distance / 2
@@ -824,7 +825,14 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     line: { type: 'local', position: [midPoint.x, midPoint.y, midPoint.z] },
   }
   group.userData.labels = [
-    { anchor: 'line', text: lineLabel, distanceFactor: 8, offset: [0.12, 0.12, 0], color: lineColor },
+    {
+      anchor: 'line',
+      name: lineLabel,
+      value: window.vectorNotation.formatVector(origin) + ' + t·' + window.vectorNotation.formatVector(direction),
+      distanceFactor: 8,
+      offset: [0.12, 0.12, 0],
+      color: lineColor,
+    },
   ]
   // Consumed by tubeCollision.js's worldSegment(), which needs the same
   // centre/half-length the tube's own local geometry is built around (the
@@ -849,7 +857,7 @@ export function initVector3Block() {
 
   Blockly.Blocks.geo_vector = {
     init() {
-      this.appendDummyInput().appendField('Line')
+      this.appendDummyInput().appendField('Line').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('POS').appendField('Position:').setCheck('vector3')
       this.appendValueInput('DIR').appendField('Direction:').setCheck('vector3')
       this.appendValueInput('SCALE').appendField('t:').setCheck('scalar')

@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { BLOCK_STYLES } from '../blockColours'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 let REGISTERED = false
 
@@ -11,7 +12,7 @@ export default function initObjectCompositionBlocks() {
 
   Blockly.Blocks.geo_show_point_on_object = {
     init() {
-      this.appendDummyInput().appendField('Show any point on object')
+      this.appendDummyInput().appendField('Show any point on object').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('OBJECT').appendField('object:').setCheck('obj3D')
       this.setStyle(BLOCK_STYLES.CREATE_POINT)
       this.setColour(forInstance('point', this.id))
@@ -270,7 +271,7 @@ export default function initObjectCompositionBlocks() {
       const pointParams = cachedParams || pickPointParams(object);
       anyPointCache[cacheKey] = pointParams;
       const markerPoint = resolvePointFromParams(object, pointParams);
-      const pointLabel = vectorNotation.assignAnyPointLabel(${JSON.stringify(block.id)});
+      const pointLabel = geoNaming.nameFor(${JSON.stringify(block.id)});
 
       const markerMat = new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)}) });
       const applyPointFinish = (mat, s) => {
@@ -294,7 +295,7 @@ export default function initObjectCompositionBlocks() {
         q: { type: 'world', position: [markerPoint.x, markerPoint.y, markerPoint.z] },
       };
       group.userData.labels = [
-        { anchor: 'q', text: pointLabel + ' = ' + vectorNotation.formatVector(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)}) },
+        { anchor: 'q', name: pointLabel, value: vectorNotation.formatVector(markerPoint), distanceFactor: 8, offset: [0.12, 0.12, 0], color: window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)}) },
       ];
 
       if (typeof threeObjStore === 'object' && threeObjStore) {

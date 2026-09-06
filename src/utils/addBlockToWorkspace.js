@@ -150,7 +150,7 @@ function clientToWorkspaceXY(workspace, clientX, clientY, block) {
 }
 
 export function addBlockToWorkspace(workspace, type, options = {}) {
-  if (!workspace || workspace.isFlyout) return
+  if (!workspace || workspace.isFlyout) return null
 
   const group = Blockly.utils.idGenerator.genUid()
   Blockly.Events.setGroup(group)
@@ -159,22 +159,27 @@ export function addBlockToWorkspace(workspace, type, options = {}) {
     block.initSvg()
     block.render()
 
+    // Configure before measuring: a block that collapses itself here is then
+    // placed using its small collapsed footprint, not the expanded one.
+    options.initBlock?.(block)
+
     const hasDropPoint =
       Number.isFinite(options.clientX) && Number.isFinite(options.clientY)
 
-    const pipelineAnchor = hasDropPoint ? null : getPipelineAnchor(workspace, block)
+    const anchor = hasDropPoint ? null : (options.preferredSpot ?? getPipelineAnchor(workspace, block))
     const dropPoint = hasDropPoint
       ? clientToWorkspaceXY(workspace, options.clientX, options.clientY, block)
       : null
     const { x, y } = dropPoint || (
-      pipelineAnchor
-        ? findCascadedOpenSpot(workspace, block, pipelineAnchor)
+      anchor
+        ? findCascadedOpenSpot(workspace, block, anchor)
         : findOpenSpot(workspace, block)
     )
     const xy = block.getRelativeToSurfaceXY()
     block.moveBy(x - xy.x, y - xy.y)
 
     Blockly.svgResize(workspace)
+    return block
   } finally {
     Blockly.Events.setGroup(false)
   }

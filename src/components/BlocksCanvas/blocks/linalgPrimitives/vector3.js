@@ -2,6 +2,9 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
+import { isEffectivelyStandalone } from '@/utils/sceneHelpers'
+import { allowOverflowingInputs } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 
 let REGISTERED = false
 
@@ -14,6 +17,8 @@ export function initVec3Block() {
   if (REGISTERED) return
   REGISTERED = true
 
+  // The name badge shares the label's row rather than getting one of its
+  // own: on its own it cost a whole row of height for a two-character badge.
   function appendCoordinateFields(block, label) {
     block.appendDummyInput()
       .appendField(label)
@@ -23,11 +28,21 @@ export function initVec3Block() {
       .appendField(',')
       .appendField(new Blockly.FieldNumber(1), 'Z')
       .appendField(')')
+      .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
   }
 
+  // Column-vector layout: the name badge takes the top row and the origin
+  // socket shares it, carrying no label text, so a plugged-in block sits
+  // flush with this block's top edge. The socket is marked as overflowing
+  // (see geoScratchRenderer.js) so connecting a tall block parks it alongside
+  // this one instead of stretching the top row and shoving the coordinates
+  // down the body.
   function appendColumnVectorFields(block, label) {
-    block.appendDummyInput()
-      .appendField(label)
+    block.appendValueInput('ORIGIN')
+      .setCheck('vector3')
+      .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+    allowOverflowingInputs(block, 'ORIGIN')
+    block.appendDummyInput().appendField(label)
     block.appendDummyInput()
       .setAlign(Blockly.inputs.Align.CENTRE)
       .appendField(new Blockly.FieldNumber(1), 'X')
@@ -45,9 +60,6 @@ export function initVec3Block() {
     } else {
       appendCoordinateFields(block, label)
     }
-    if (options.origin) {
-      block.appendValueInput('ORIGIN').setCheck('vector3').appendField('from point:')
-    }
     block.setStyle(objectType === 'point' ? BLOCK_STYLES.CREATE_POINT : BLOCK_STYLES.CREATE_VECTOR)
     block.setColour(forInstance(objectType, block.id))
     block.setTooltip(tooltip)
@@ -58,7 +70,7 @@ export function initVec3Block() {
 
   Blockly.Blocks['linalg_vec3'] = {
     init() {
-      initVector3LikeBlock(this, 'vector: ', '3D vector coordinate', 'vector', { column: true, origin: true })
+      initVector3LikeBlock(this, 'vector:', '3D vector coordinate', 'vector', { column: true })
     },
   }
 
@@ -74,12 +86,12 @@ export function initVec3Block() {
     // A point/vector block feeding another block's input keeps its old
     // value-only behaviour (rendering that is handled by whatever consumes
     // it); only a block sitting alone on the workspace gets its own glyph.
-    const isStandalone = !block.outputConnection?.targetConnection
+    const isStandalone = isEffectivelyStandalone(block)
 
     if (block.type === 'linalg_point') {
       return [`(function(){
         const point = new THREE.Vector3(${coords});
-        const label = vectorNotation.assignPointLabel(${blockId});
+        const label = geoNaming.nameFor(${blockId});
         point.userData = {
           geoType: 'linalg_point_vector',
           label,
@@ -101,7 +113,7 @@ export function initVec3Block() {
         marker.userData.srcBlockId = ${blockId};
         marker.userData.labelAnchors = { p: { type: 'world', position: [point.x, point.y, point.z] } };
         marker.userData.labels = [
-          { anchor: 'p', text: label + ' = ' + vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: pointColor },
+          { anchor: 'p', name: label, value: vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: pointColor },
         ];
         if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = marker;
         if (window.useSettingsStore) {
@@ -129,7 +141,7 @@ export function initVec3Block() {
       // standalone glyph below.
       vec.userData = { ...(vec.userData || {}), anchor: __anchor.clone() };` : ''}
       ${isStandalone ? `
-      const label = vectorNotation.assignVectorLabel(${blockId});
+      const label = geoNaming.nameFor(${blockId});
       const origin = __anchor.clone();
       const tip = origin.clone().add(vec);
       const len = vec.length();
@@ -150,12 +162,13 @@ export function initVec3Block() {
       visual.userData.srcBlockId = ${blockId};
       visual.userData.labelAnchors = { tip: { type: 'world', position: [tip.x, tip.y, tip.z] } };
       visual.userData.labels = [
-        { anchor: 'tip', text: label + ' = ' + vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: vectorColor },
+        { anchor: 'tip', name: label, value: vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: vectorColor },
       ];
       ${originConnected ? `
-      // "from point:" gives this vector a specific tail -- without this it
-      // rendered only the shaft, so the vector appeared to start from
-      // nowhere. Same marker look a standalone Point block gets.
+      // A marker at the tail of a vector given a specific origin. Off by
+      // default and behind the "Show Tail Point" setting: the tail is already
+      // implied by where the shaft starts, and the extra dot reads as a
+      // separate object that nobody asked for.
       const originPointColor = window.GeoScratchColors.forInstance('point', ${blockId});
       const originMarkerMat = new THREE.MeshStandardMaterial({ color: originPointColor });
       const applyOriginPointFinish = (mat, s) => {
@@ -164,6 +177,7 @@ export function initVec3Block() {
       };
       applyOriginPointFinish(originMarkerMat, window.useSettingsStore?.getState().settings || {});
       const originMarker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), originMarkerMat);
+      originMarker.visible = !!(window.useSettingsStore?.getState().settings?.showVectorOriginPoint);
       originMarker.position.copy(origin);
       originMarker.userData.zoomInvariantRadius = 0.24;
       originMarker.userData.zoomInvariantUniform = true;
@@ -182,6 +196,7 @@ export function initVec3Block() {
         const unsubscribe = window.useSettingsStore.subscribe((state) => {
           if (window.threeObjStore?.[${blockId}] !== visual) { unsubscribe(); return; }
           applyOriginPointFinish(originMarkerMat, state.settings);
+          originMarker.visible = !!state.settings.showVectorOriginPoint;
         });
       }
       ` : ''}

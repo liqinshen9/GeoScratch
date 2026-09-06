@@ -854,7 +854,17 @@ function getLabelVisibilityKeysForObject(object3D) {
   return getLabelsForObject(object3D).map((label, index) => getLabelVisibilityKey(labelIdBase, label, index));
 }
 
-function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel }) {
+// A label describes either a real object's own identity (`name`, plus an
+// optional formatted `value`) or a diagnostic/derived readout that's never
+// affected by the detail-level setting (a pre-formatted `text`, e.g. a
+// distance measurement or a status message).
+function formatLabelText(lbl, labelDetail) {
+  if (lbl.text != null) return lbl.text
+  if (lbl.name == null) return ''
+  return labelDetail === 'nameOnly' ? lbl.name : `${lbl.name} = ${lbl.value ?? ''}`
+}
+
+function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
   const ud = object3D.userData || {};
   const derived = getLabelsForObject(object3D);
   //srcBlockId stays stable across scene regenerations (uuid doesn't), so
@@ -870,7 +880,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel }) {
         const pos = resolveAnchor(object3D, lbl.anchor);
         if (!pos) return null;
 
-        let text = lbl.text;
+        let text = formatLabelText(lbl, labelDetail);
         if (!text) {
           const val =
             lbl.anchor === 'origin' ? ud.origin :
@@ -1297,7 +1307,14 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
-            {settings.showLabels && <LabelLayer object3D={o} hiddenLabelKeys={hiddenLabelKeys} onHideLabel={onHideLabel} />}
+            {settings.showLabels && (
+              <LabelLayer
+                object3D={o}
+                hiddenLabelKeys={hiddenLabelKeys}
+                onHideLabel={onHideLabel}
+                labelDetail={settings.labelDetail}
+              />
+            )}
           </group>
         );
       })}

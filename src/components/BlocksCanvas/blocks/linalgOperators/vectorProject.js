@@ -241,12 +241,12 @@ export function initVectorProjectBlock() {
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', text: uLabel + ' = ' + fmt(uVal),      distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-        { anchor:'vTip', text: vLabel + ' = ' + fmt(vVal),      distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
-        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
+        { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
       ]
         : [
-        { anchor:'pTip', text: projectionLabel + ' = ' + fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
+        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
       ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

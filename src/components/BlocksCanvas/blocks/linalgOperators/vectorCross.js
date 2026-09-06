@@ -121,16 +121,16 @@ export function initCrossProductBlock() {
     const crossLabelColor = lenC > 1e-8 ? crossVectorColor : warningColor;
     group.userData.labels = exerciseMode
       ? [
-      { anchor:'cTip', text:'n = ' + crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'cTip', name: 'n = ' + crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]
       : (showOperandLabels
       ? [
-      { anchor:'uTip', text:'p = ' + fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-      { anchor:'vTip', text:'q = ' + fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
-      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'uTip', name: 'p', value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+      { anchor:'vTip', name: 'q', value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]
       : [
-      { anchor:'cTip', text: crossLabel + ' = ' + fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
     ]);
 
     // Staged reveal for the play/scrub transport (AnimationDriver): grow p, then

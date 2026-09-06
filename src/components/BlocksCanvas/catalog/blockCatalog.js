@@ -1,4 +1,4 @@
-/** @typedef {'create' | 'transform' | 'compute' | 'mybox'} BlockCategoryId */
+/** @typedef {'create' | 'transform' | 'compute' | 'variables' | 'mybox'} BlockCategoryId */
 
 /** Demo objects placed at the bottom of the transform pipeline workspace layout. */
 export const PIPELINE_DEMO_OBJECT_TYPES = ['geo_cube', 'geo_sphere']
@@ -90,6 +90,13 @@ export const BLOCK_CATEGORIES = {
           { type: 'vector_normalise', label: 'Normalise' },
           { type: 'vector_project', label: 'Project' },
           { type: 'vector_magnitude', label: 'Magnitude' },
+        ],
+      },
+      {
+        label: 'Reuse a block',
+        blocks: [
+          { type: 'geo_variable', label: 'Variable' },
+          { type: 'geo_variable_ref', label: 'Variable reference' },
         ],
       },
     ],

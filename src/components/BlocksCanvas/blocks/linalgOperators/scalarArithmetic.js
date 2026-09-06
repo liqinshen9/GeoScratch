@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { isEffectivelyStandalone } from '@/utils/sceneHelpers'
 
 const OPERATORS = Object.freeze({
   add: {
@@ -57,7 +58,7 @@ export function initScalarArithmeticBlock() {
     const a = generator.valueToCode(block, 'A', Order.FUNCTION_CALL) || '0'
     const b = generator.valueToCode(block, 'B', Order.FUNCTION_CALL) || '0'
     const blockId = JSON.stringify(block.id)
-    const isStandalone = !block.outputConnection?.targetConnection
+    const isStandalone = isEffectivelyStandalone(block)
 
     const code = `(function(){
     const rawA = ${a};

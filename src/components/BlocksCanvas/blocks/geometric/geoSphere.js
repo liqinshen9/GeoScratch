@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 function geoSphereDefinition(centreInput, radiusInput, blockId) {
   const THREE = window.THREE
@@ -61,7 +62,8 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   mesh.userData.labels = [
     {
       anchor: 'centre',
-      text: 'center point = ' + formatCenterPoint(centre),
+      name: window.geoNaming?.nameFor?.(blockId) || 'Sphere',
+      value: formatCenterPoint(centre),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: '#111827',
@@ -76,7 +78,7 @@ export function initGeoSphereBlock() {
   REGISTERED = true
   Blockly.Blocks.geo_sphere = {
     init() {
-      this.appendDummyInput().appendField('Sphere')
+      this.appendDummyInput().appendField('Sphere').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_SPHERE)
       this.setColour(forInstance('sphere', this.id))
       this.setTooltip('Geometric Sphere Object')

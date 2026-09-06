@@ -16,7 +16,8 @@ export function initGetObj3DBlock() {
     init() {
       this.appendDummyInput()
         .appendField(
-          new Blockly.FieldVariable('item', null, ['obj3D'], 'obj3D')
+          new Blockly.FieldVariable('item', null, ['obj3D'], 'obj3D'),
+          'VAR'
         )
         .appendField(' (3D Object)')
       this.setOutput(true, 'obj3D')

@@ -79,11 +79,11 @@ export function initNormInplaceBlock() {
     const normLabelColor = lenV > 1e-8 ? normVectorColor : warningColor;
     group.userData.labels = showOperandLabels
       ? [
-      { anchor:'vTip',    text: valueLabel + ' = ' + fmt(vVal),   distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-      { anchor:'normTip', text: normLabel + ' = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: normLabelColor },
+      { anchor:'vTip',    name: valueLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+      { anchor:'normTip', name: normLabel,  value: fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: normLabelColor },
     ]
       : [
-      { anchor:'normTip', text: normLabel + ' = ' + fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: normLabelColor },
+      { anchor:'normTip', name: normLabel, value: fmt(normVec), distanceFactor:8, offset:[0.12,0.12,0], color: normLabelColor },
     ];
 
     if (typeof threeObjStore==='object' && threeObjStore){

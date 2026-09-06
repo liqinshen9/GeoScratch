@@ -16,6 +16,7 @@ export const BLOCK_STYLES = Object.freeze({
   COMPUTE_VECTOR_OPERATIONS: 'geoscratch_compute_vector_operations_blocks',
   MATRIX_VALUES: 'geoscratch_matrix_value_blocks',
   OBJECT_VARIABLE: 'geoscratch_object_variable_blocks',
+  WORKSPACE_VARIABLE: 'geoscratch_workspace_variable_blocks',
 })
 
 // Maps each per-type block style to the object-color-system type key, so the
@@ -130,6 +131,18 @@ export const BLOCK_COLOUR_STYLES = Object.freeze({
     colourPrimary: '#36cbb4',
     colourSecondary: '#36cbb4',
     colourTertiary: '#36cbb4',
+  },
+
+  /**
+   * The variable wrapper and its references. Deliberately outside the object
+   * colour system: these draw nothing in the 3D scene and carry no geometric
+   * type of their own, so they get a neutral near-black rather than a colour
+   * that would imply kinship with some object family.
+   */
+  [BLOCK_STYLES.WORKSPACE_VARIABLE]: {
+    colourPrimary: '#2b2f38',
+    colourSecondary: '#2b2f38',
+    colourTertiary: '#2b2f38',
   },
 })
 

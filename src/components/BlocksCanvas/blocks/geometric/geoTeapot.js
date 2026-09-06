@@ -2,6 +2,7 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { forInstance } from '@/store/colorSystem'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
 
 function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   const THREE = window.THREE
@@ -54,6 +55,19 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   mesh.userData.centre = centre.clone()
   mesh.userData.size = size
   mesh.userData.srcBlockId = blockId
+  mesh.userData.labelAnchors = {
+    centre: { type: 'world', position: [centre.x, centre.y, centre.z] },
+  }
+  mesh.userData.labels = [
+    {
+      anchor: 'centre',
+      name: window.geoNaming?.nameFor?.(blockId) || 'Teapot',
+      value: 'size ' + Number(size.toFixed(3)),
+      distanceFactor: 7,
+      offset: [0.12, 0.12, 0],
+      color: '#111827',
+    },
+  ]
   if (threeObjStore) threeObjStore[blockId] = mesh
   return mesh
 }
@@ -65,7 +79,7 @@ export function initGeoTeapotBlock() {
 
   Blockly.Blocks.geo_teapot = {
     init() {
-      this.appendDummyInput().appendField('Teapot')
+      this.appendDummyInput().appendField('Teapot').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_TEAPOT)
       this.setColour(forInstance('teapot', this.id))
       this.setTooltip('Utah Teapot Object')

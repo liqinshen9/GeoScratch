@@ -14,6 +14,8 @@ import {
   matrix4FromTransformStepBlock,
 } from '@/utils/sceneHelpers'
 import { createVectorNotationRuntime } from '@/utils/vectorNotation'
+import { createRuntimeAccessor } from '@/utils/namingRegistry'
+import { validateVariableOrdering } from '@/utils/validateVariableOrdering'
 import { HALO_LAYER } from '@/utils/haloLayer'
 import { getHaloId } from '@/utils/haloIdRegistry'
 import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
@@ -162,6 +164,7 @@ function runConnectedTransformPipelines(workspace) {
 export function generateAndRun(workspace, options = {}) {
   javascriptGenerator.addReservedWords('generatedUserCode')
   const generatedUserCode = javascriptGenerator.workspaceToCode(workspace)
+  validateVariableOrdering(workspace)
 
   try {
     // Standardize runtime variables safely on the window scope
@@ -170,6 +173,27 @@ export function generateAndRun(workspace, options = {}) {
     window.__geoScratchCrossVisualKeys = new Set()
     window.__geoScratchRuntimeMode = options.runtimeMode || 'sandbox'
     window.vectorNotation = createVectorNotationRuntime()
+    // Read-only lookup against the persistent naming registry (namingRegistry.js) --
+    // unlike vectorNotation, this is NOT recreated fresh per run; it's a thin
+    // view over names assigned once at block-creation time, so the same
+    // block always reports the same name regardless of run order.
+    window.geoNaming = createRuntimeAccessor(workspace)
+    // Variable-wrapper store. Deliberately NOT threeObjStore: runAndSync.js
+    // renders Object.values(threeObjStore), so a bare Vector3 or number in
+    // there would be handed to Scene3D as a scene object. Keyed by the
+    // wrapper block's refId, rebuilt every run like the scene itself.
+    window.geoVarStore = {}
+    window.geoSetVar = (key, value) => {
+      window.geoVarStore[key] = value
+      return value
+    }
+    // The fallback matters: a dangling or mis-ordered reference returning
+    // undefined into e.g. a vector's "from point:" input throws, and the
+    // catch below swallows it -- silently blanking the ENTIRE scene. A
+    // type-appropriate fallback degrades to one wrong value instead.
+    window.geoVar = (key, fallback = null) => (
+      Object.prototype.hasOwnProperty.call(window.geoVarStore, key) ? window.geoVarStore[key] : fallback
+    )
     window.HALO_LAYER = HALO_LAYER
     window.getHaloId = getHaloId
     window.applyHaloDiscardMaterial = applyHaloDiscardMaterial
@@ -192,11 +216,22 @@ export function generateAndRun(workspace, options = {}) {
       'threeObjStore',
       'createInfinitePlaneMesh',
       'vectorNotation',
+      'geoNaming',
+      'geoSetVar',
+      'geoVar',
       generatedUserCode,
     )
 
     // Pass the window reference down into the function argument parameters
-    runWorkspace(THREE, window.threeObjStore, createInfinitePlaneMesh, window.vectorNotation)
+    runWorkspace(
+      THREE,
+      window.threeObjStore,
+      createInfinitePlaneMesh,
+      window.vectorNotation,
+      window.geoNaming,
+      window.geoSetVar,
+      window.geoVar,
+    )
 
     // Run pipelines modifying those exact object instances in place
     runConnectedTransformPipelines(workspace)
