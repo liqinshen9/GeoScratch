@@ -3,12 +3,12 @@ import Layout from '@/layout/Layout'
 import LandingPage from '@/pages/LandingPage'
 import ExercisePage from '@/pages/ExercisePage'
 import SettingsPage from '@/pages/SettingsPage'
-import SandboxPage from '@/pages/SandboxPage' // Cleaned up name from App
+import SandboxPage from '@/pages/SandboxPage'
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Layout />, // Master wrapper containing the header
+    element: <Layout />,
     children: [
       {
         index: true,
