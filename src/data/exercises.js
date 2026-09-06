@@ -1,10 +1,15 @@
 // Exercise metadata only -- title/category/difficulty for navigation and
-// browsing. The actual per-exercise instructions, given values, starter
-// blocks, and pass/fail verification logic all still live in
-// ExercisePage.jsx (keyed by `number`); extracting those into data here too
-// would mean re-deriving a generic checker schema for ~7 hand-written,
-// heterogeneous verification strategies, which is a much bigger, separate
-// undertaking than "browse and navigate between exercises".
+// browsing, used by ExerciseBrowserPage and for the prev/next controls.
+//
+// Each exercise's instructions, given values, starter blocks and pass/fail
+// checking live in its own module under src/exercises/, keyed by the same
+// `number`. They are deliberately NOT expressed as data here: the seven
+// verification strategies are genuinely heterogeneous, and forcing them into a
+// generic checker schema would obscure them rather than clarify them.
+//
+// Adding an exercise means adding an entry here AND a module in src/exercises/
+// (registered in its index.js). The test in src/exercises/exercises.test.js
+// fails if the two lists drift apart.
 
 export const DIFFICULTIES = Object.freeze({
   EASY: 'easy',

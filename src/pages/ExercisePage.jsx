@@ -1,841 +1,69 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import * as THREE from 'three'
-import * as Blockly from 'blockly/core'
+import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
-import { collectStatementChain, getScalarInputValue } from '@/utils/sceneHelpers'
 import { EXERCISES } from '@/data/exercises'
+import { getExerciseModule } from '@/exercises'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
 
-const POINT_P = new THREE.Vector3(3, 4, 5)
-const PLANE_POINT_A = new THREE.Vector3(1, 1, 2)
-const PLANE_NORMAL = new THREE.Vector3(0, 1, 0)
-const CORRECT_DISTANCE = 3
-const POINT_VECTOR_BLOCK_TYPES = ['linalg_vec3', 'linalg_point']
+const fixed2 = (n) => n.toFixed(2)
 
-const SKEW_LINE_1_POINT = new THREE.Vector3(1, 2, 0)
-const SKEW_LINE_1_DIRECTION = new THREE.Vector3(1, 2, 3)
-const SKEW_LINE_2_POINT = new THREE.Vector3(5, 5, -3)
-const SKEW_LINE_2_DIRECTION = new THREE.Vector3(2, -1, 1)
-const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW_LINE_2_DIRECTION)
-const SKEW_DISTANCE =
-  Math.abs(SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL)) / SKEW_NORMAL.length()
-const SPHERE_A_CENTRE = new THREE.Vector3(-4, 2, 1)
-const SPHERE_B_CENTRE = new THREE.Vector3(3, -1, 6)
-const SPHERE_A_RADIUS = 1.3
-const SPHERE_B_RADIUS = 0.9
-const SPHERE_DISTANCE = Math.max(
-  0,
-  SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
-)
-const TRANSFORM_TEAPOT_CENTRE = new THREE.Vector3(0, 0, 0)
-const TRANSFORM_TEAPOT_SIZE = 1
-const SCALE_FACTOR = 3
-const ROTATE_AXIS = 'Z'
-const ROTATE_DEGREES = 90
-const COMBINED_SCALE_FACTOR = 2
-const COMBINED_ROTATE_AXIS = 'Y'
-const COMBINED_ROTATE_DEGREES = 45
-const TRANSLATE_X = 3
-const TRANSLATE_Y = 0
-const TRANSLATE_Z = 0
-const POINT_PLANE_DISTANCE_BLOCK_XML =
-  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
-const LINE_INTERSECTION_3D_BLOCK_XML =
-  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
-const SPHERE_DISTANCE_BLOCK_XML =
-  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
+/**
+ * The pass/fail readout under the task list. Transform exercises show the
+ * object's live pose (there is no single number to check); distance exercises
+ * show the computed scalar.
+ */
+function AnswerCard({ result, className }) {
+  const { answer, target } = result
 
-function closeNumber(a, b, tolerance = 1e-6) {
-  return Math.abs(Number(a) - b) <= tolerance
-}
-
-function blockMatchesVec3(block, target) {
-  return (
-    POINT_VECTOR_BLOCK_TYPES.includes(block?.type) &&
-    closeNumber(block.getFieldValue('X'), target.x) &&
-    closeNumber(block.getFieldValue('Y'), target.y) &&
-    closeNumber(block.getFieldValue('Z'), target.z)
-  )
-}
-
-function vec3FromBlock(block) {
-  if (!POINT_VECTOR_BLOCK_TYPES.includes(block?.type)) return null
-  const x = Number(block.getFieldValue('X'))
-  const y = Number(block.getFieldValue('Y'))
-  const z = Number(block.getFieldValue('Z'))
-  return [x, y, z].every(Number.isFinite) ? new THREE.Vector3(x, y, z) : null
-}
-
-function vectorMatches(a, b, tolerance = 1e-6) {
-  return (
-    a?.isVector3 &&
-    b?.isVector3 &&
-    closeNumber(a.x, b.x, tolerance) &&
-    closeNumber(a.y, b.y, tolerance) &&
-    closeNumber(a.z, b.z, tolerance)
-  )
-}
-
-function vectorsAreParallel(a, b, tolerance = 1e-6) {
-  return (
-    a?.isVector3 &&
-    b?.isVector3 &&
-    a.lengthSq() > tolerance &&
-    b.lengthSq() > tolerance &&
-    new THREE.Vector3().crossVectors(a, b).length() <= tolerance * a.length() * b.length()
-  )
-}
-
-function pointBlockLiesOnLine(block, linePoint, lineDirection, tolerance = 1e-6) {
-  if (
-    block?.type === 'geo_show_point_on_object' &&
-    isLineBlock(getInputBlock(block, 'OBJECT'), linePoint, lineDirection)
-  ) {
-    return true
-  }
-
-  const point = vec3FromBlock(block)
-  if (!point) return false
-  return (
-    new THREE.Vector3().crossVectors(point.clone().sub(linePoint), lineDirection).length() <=
-    tolerance * Math.max(1, lineDirection.length())
-  )
-}
-
-function pointLiesOnExercisePlane(point, tolerance = 1e-5) {
-  if (!point?.isVector3) return false
-  return Math.abs(point.clone().sub(PLANE_POINT_A).dot(PLANE_NORMAL)) <= tolerance
-}
-
-function isExercisePlaneObject(object) {
-  const point = object?.userData?.point
-  const normal = object?.userData?.normalRaw
-  return (
-    object.userData?.geoType === 'point_normal_plane_group' &&
-    vectorMatches(point, PLANE_POINT_A) &&
-    vectorMatches(normal, PLANE_NORMAL)
-  )
-}
-
-function objectOrChildMatches(object, predicate) {
-  if (!object?.isObject3D) return false
-  let matched = false
-  object.traverse((child) => {
-    if (!matched && predicate(child)) matched = true
-  })
-  return matched
-}
-
-function workspaceHasPointPVector(workspace) {
-  if (!workspace) return false
-  return POINT_VECTOR_BLOCK_TYPES.some((type) =>
-    workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P)),
-  )
-}
-
-function getInputBlock(block, inputName) {
-  return block?.getInputTargetBlock?.(inputName) ?? null
-}
-
-function isExercisePlaneBlock(block) {
-  return (
-    block?.type === 'parametric_plane' &&
-    blockMatchesVec3(getInputBlock(block, 'point'), PLANE_POINT_A) &&
-    blockMatchesVec3(getInputBlock(block, 'norm'), PLANE_NORMAL)
-  )
-}
-
-function isLineBlock(block, point, direction) {
-  return (
-    block?.type === 'geo_vector' &&
-    blockMatchesVec3(getInputBlock(block, 'POS'), point) &&
-    blockMatchesVec3(getInputBlock(block, 'DIR'), direction)
-  )
-}
-
-function isSkewLine1Block(block) {
-  return isLineBlock(block, SKEW_LINE_1_POINT, SKEW_LINE_1_DIRECTION)
-}
-
-function isSkewLine2Block(block) {
-  return isLineBlock(block, SKEW_LINE_2_POINT, SKEW_LINE_2_DIRECTION)
-}
-
-function scalarInputMatches(block, inputName, target, fallback = 0) {
-  return Boolean(
-    block?.getInputTargetBlock?.(inputName) &&
-    closeNumber(getScalarInputValue(block, inputName, null, fallback), target),
-  )
-}
-
-function isSphereBlock(block, centre, radius) {
-  return (
-    block?.type === 'geo_sphere' &&
-    blockMatchesVec3(getInputBlock(block, 'CENTRE'), centre) &&
-    scalarInputMatches(block, 'RADIUS_INPUT', radius, 1)
-  )
-}
-
-function isSphereABlock(block) {
-  return isSphereBlock(block, SPHERE_A_CENTRE, SPHERE_A_RADIUS)
-}
-
-function isSphereBBlock(block) {
-  return isSphereBlock(block, SPHERE_B_CENTRE, SPHERE_B_RADIUS)
-}
-
-function isSkewCrossProductBlock(block) {
-  if (block?.type !== 'vector_cross_product') return false
-  const left = getInputBlock(block, 'U')
-  const right = getInputBlock(block, 'V')
-  const isLine1Direction = (inputBlock) =>
-    blockMatchesVec3(inputBlock, SKEW_LINE_1_DIRECTION) || isSkewLine1Block(inputBlock)
-  const isLine2Direction = (inputBlock) =>
-    blockMatchesVec3(inputBlock, SKEW_LINE_2_DIRECTION) || isSkewLine2Block(inputBlock)
-  return (
-    (isLine1Direction(left) && isLine2Direction(right)) ||
-    (isLine2Direction(left) && isLine1Direction(right))
-  )
-}
-
-function isSkewNormalBlock(block) {
-  return vectorsAreParallel(vec3FromBlock(block), SKEW_NORMAL) || isSkewCrossProductBlock(block)
-}
-
-function getSkewPlaneLine(block) {
-  if (
-    block?.type === 'parametric_plane' &&
-    isSkewNormalBlock(getInputBlock(block, 'norm')) &&
-    pointBlockLiesOnLine(getInputBlock(block, 'point'), SKEW_LINE_1_POINT, SKEW_LINE_1_DIRECTION)
-  ) {
-    return 'line1'
-  }
-
-  if (
-    block?.type === 'parametric_plane' &&
-    isSkewNormalBlock(getInputBlock(block, 'norm')) &&
-    pointBlockLiesOnLine(getInputBlock(block, 'point'), SKEW_LINE_2_POINT, SKEW_LINE_2_DIRECTION)
-  ) {
-    return 'line2'
-  }
-
-  return null
-}
-
-function isSkewPlaneBlock(block) {
-  return Boolean(getSkewPlaneLine(block))
-}
-
-function isPointOnObjectBlock(block, objectPredicate) {
-  return (
-    block?.type === 'geo_show_point_on_object' && objectPredicate(getInputBlock(block, 'OBJECT'))
-  )
-}
-
-function isPointOnSkewPlaneBlock(block) {
-  return isPointOnObjectBlock(block, isSkewPlaneBlock)
-}
-
-function isPointOnOtherSkewLineBlock(block, planeLine) {
-  return isPointOnObjectBlock(block, planeLine === 'line1' ? isSkewLine2Block : isSkewLine1Block)
-}
-
-function isExercisePointQBlock(block) {
-  return (
-    block?.type === 'geo_show_point_on_object' &&
-    isExercisePlaneBlock(getInputBlock(block, 'OBJECT'))
-  )
-}
-
-function isPointPBlock(block) {
-  return blockMatchesVec3(block, POINT_P)
-}
-
-function isNormalVectorBlock(block) {
-  return blockMatchesVec3(block, PLANE_NORMAL)
-}
-
-function isPointDifferenceBlock(block) {
-  return (
-    block?.type === 'vector_arithmetic' &&
-    block.getFieldValue('OP') === 'subtract' &&
-    isPointPBlock(getInputBlock(block, 'U')) &&
-    isExercisePointQBlock(getInputBlock(block, 'V'))
-  )
-}
-
-function isSkewPointDifferenceBlock(block) {
-  if (block?.type !== 'vector_arithmetic' || block.getFieldValue('OP') !== 'subtract') return false
-
-  const left = getInputBlock(block, 'U')
-  const right = getInputBlock(block, 'V')
-  const leftIsPlanePoint = isPointOnSkewPlaneBlock(left)
-  const rightIsPlanePoint = isPointOnSkewPlaneBlock(right)
-  const planePointBlock = leftIsPlanePoint ? left : rightIsPlanePoint ? right : null
-  const otherPointBlock = leftIsPlanePoint ? right : rightIsPlanePoint ? left : null
-
-  const planeLine = getSkewPlaneLine(getInputBlock(planePointBlock, 'OBJECT'))
-  return Boolean(planeLine && isPointOnOtherSkewLineBlock(otherPointBlock, planeLine))
-}
-
-function objectIsAtPointP(object) {
-  const position = object?.userData?.point ?? object?.position
-  return (
-    position?.isVector3 &&
-    closeNumber(position.x, POINT_P.x) &&
-    closeNumber(position.y, POINT_P.y) &&
-    closeNumber(position.z, POINT_P.z)
-  )
-}
-
-function createPointPMarker() {
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.04, 20, 14),
-    new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 }),
-  )
-
-  marker.position.copy(POINT_P)
-  marker.userData.geoType = 'exercise_point_p'
-  marker.userData.labelAnchors = {
-    p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
-  }
-  marker.userData.labels = [
-    {
-      anchor: 'p',
-      text: 'P = [3, 4, 5]',
-      distanceFactor: 8,
-      offset: [0.12, 0.12, 0],
-      color: '#2563eb',
-    },
-  ]
-
-  return marker
-}
-
-function addExercisePointPIfNeeded(objects, workspace) {
-  if (!workspaceHasPointPVector(workspace)) return objects
-  if (objects.some(objectIsAtPointP)) return objects
-  return [...objects, createPointPMarker()]
-}
-
-// Purely decorative "given" blocks for the Transform exercise, so the
-// workspace/scene doesn't read as one lone teapot floating in an empty room.
-// These are real geo_sphere/geo_cube/geo_vector blocks, dropped straight
-// into the student's own workspace (via Blockly.Xml.domToWorkspace) so they
-// appear as actual blocks the student can see and move, not just rendered
-// shapes with no block behind them. Fixed ids let the injection effect below
-// find and remove any earlier copies before reseeding, so a layout change
-// here actually reaches workspaces that already have an older copy saved
-// from a previous visit, instead of silently keeping the stale positions.
-const EXERCISE_BACKGROUND_BLOCK_IDS = [
-  'ex-bg-sphere-1',
-  'ex-bg-sphere-2',
-  'ex-bg-cube-1',
-  'ex-bg-line-1',
-]
-const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="geo_sphere" id="ex-bg-sphere-1" x="-350" y="-350">
-    <value name="RADIUS_INPUT">
-      <block type="scalar" id="ex-bg-sphere-1-radius">
-        <field name="scalar">0.6</field>
-      </block>
-    </value>
-    <value name="CENTRE">
-      <block type="linalg_vec3" id="ex-bg-sphere-1-centre">
-        <field name="X">-4</field>
-        <field name="Y">0.6</field>
-        <field name="Z">-3</field>
-      </block>
-    </value>
-  </block>
-  <block type="geo_sphere" id="ex-bg-sphere-2" x="50" y="-350">
-    <value name="RADIUS_INPUT">
-      <block type="scalar" id="ex-bg-sphere-2-radius">
-        <field name="scalar">0.4</field>
-      </block>
-    </value>
-    <value name="CENTRE">
-      <block type="linalg_vec3" id="ex-bg-sphere-2-centre">
-        <field name="X">3.5</field>
-        <field name="Y">0.4</field>
-        <field name="Z">-4</field>
-      </block>
-    </value>
-  </block>
-  <block type="geo_cube" id="ex-bg-cube-1" x="-350" y="50">
-    <value name="SIDE_LENGTH_INPUT">
-      <block type="scalar" id="ex-bg-cube-1-side-length">
-        <field name="scalar">1.1</field>
-      </block>
-    </value>
-    <value name="CENTRE">
-      <block type="linalg_vec3" id="ex-bg-cube-1-centre">
-        <field name="X">4</field>
-        <field name="Y">0.55</field>
-        <field name="Z">2.5</field>
-      </block>
-    </value>
-  </block>
-  <block type="geo_vector" id="ex-bg-line-1" x="50" y="50">
-    <value name="POS">
-      <block type="linalg_vec3" id="ex-bg-line-1-pos">
-        <field name="X">-5</field>
-        <field name="Y">0</field>
-        <field name="Z">3</field>
-      </block>
-    </value>
-    <value name="DIR">
-      <block type="linalg_vec3" id="ex-bg-line-1-dir">
-        <field name="X">1</field>
-        <field name="Y">0</field>
-        <field name="Z">-0.6</field>
-      </block>
-    </value>
-  </block>
-</xml>`
-
-function hasExercisePlane(objects) {
-  return objects.some((object) => objectOrChildMatches(object, isExercisePlaneObject))
-}
-
-function hasPointQOnExercisePlane(objects) {
-  return objects.some(
-    (object) =>
-      object?.userData?.geoType === 'annotated_object' &&
-      pointLiesOnExercisePlane(object.userData.point) &&
-      objectOrChildMatches(object, isExercisePlaneObject),
-  )
-}
-
-function hasPointDifferenceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_arithmetic', false).some(isPointDifferenceBlock)
-}
-
-function hasProjectionDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_magnitude', false).some((block) => {
-    const projectBlock = getInputBlock(block, 'V')
+  if (answer.type === 'position') {
     return (
-      projectBlock?.type === 'vector_project' &&
-      isPointDifferenceBlock(getInputBlock(projectBlock, 'U')) &&
-      isNormalVectorBlock(getInputBlock(projectBlock, 'V'))
+      <div className={className}>
+        <span>Current position:</span>
+        <strong>
+          {target
+            ? `(${fixed2(target.position.x)}, ${fixed2(target.position.y)}, ${fixed2(target.position.z)})`
+            : ''}
+        </strong>
+      </div>
     )
-  })
-}
-
-function hasDotProductDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_dot_product', false).some((block) => {
-    const left = getInputBlock(block, 'U')
-    const right = getInputBlock(block, 'V')
-    return (
-      (isPointDifferenceBlock(left) && isNormalVectorBlock(right)) ||
-      (isNormalVectorBlock(left) && isPointDifferenceBlock(right))
-    )
-  })
-}
-
-function hasValidDistanceComputation(workspace) {
-  return hasProjectionDistanceBlock(workspace) || hasDotProductDistanceBlock(workspace)
-}
-
-function hasSkewLineBlocks(workspace) {
-  if (!workspace) return false
-  const lines = workspace.getBlocksByType('geo_vector', false)
-  return lines.some(isSkewLine1Block) && lines.some(isSkewLine2Block)
-}
-
-function hasSkewCrossProductBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_cross_product', false).some(isSkewCrossProductBlock)
-}
-
-function hasSkewPlaneBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('parametric_plane', false).some(isSkewPlaneBlock)
-}
-
-function hasSkewOtherLinePointBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('geo_show_point_on_object', false).some((block) => {
-    const planeBlocks = workspace
-      .getBlocksByType('parametric_plane', false)
-      .filter(isSkewPlaneBlock)
-    return planeBlocks.some((planeBlock) =>
-      isPointOnOtherSkewLineBlock(block, getSkewPlaneLine(planeBlock)),
-    )
-  })
-}
-
-function hasSkewPointDifferenceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_arithmetic', false).some(isSkewPointDifferenceBlock)
-}
-
-function hasSkewProjectionDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_magnitude', false).some((block) => {
-    const projectBlock = getInputBlock(block, 'V')
-    return (
-      projectBlock?.type === 'vector_project' &&
-      isSkewPointDifferenceBlock(getInputBlock(projectBlock, 'U')) &&
-      isSkewNormalBlock(getInputBlock(projectBlock, 'V'))
-    )
-  })
-}
-
-function hasSkewDotProductDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_dot_product', false).some((block) => {
-    const left = getInputBlock(block, 'U')
-    const right = getInputBlock(block, 'V')
-    return (
-      (isSkewPointDifferenceBlock(left) && isSkewNormalBlock(right)) ||
-      (isSkewNormalBlock(left) && isSkewPointDifferenceBlock(right))
-    )
-  })
-}
-
-function isSkewReusableDistanceBlock(block) {
-  if (block?.type !== 'point_plane_distance') return false
-
-  const planeBlock = getInputBlock(block, 'PLANE')
-  const planeLine = getSkewPlaneLine(planeBlock)
-  return Boolean(planeLine && isPointOnOtherSkewLineBlock(getInputBlock(block, 'POINT'), planeLine))
-}
-
-function hasSkewReusableDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('point_plane_distance', false).some(isSkewReusableDistanceBlock)
-}
-
-function hasValidSkewDistanceComputation(workspace) {
-  return (
-    hasSkewProjectionDistanceBlock(workspace) ||
-    hasSkewDotProductDistanceBlock(workspace) ||
-    hasSkewReusableDistanceBlock(workspace)
-  )
-}
-
-function hasSphereBlocks(workspace) {
-  if (!workspace) return false
-  const spheres = workspace.getBlocksByType('geo_sphere', false)
-  return spheres.some(isSphereABlock) && spheres.some(isSphereBBlock)
-}
-
-function isSphereCenterDifferenceBlock(block) {
-  if (block?.type !== 'vector_arithmetic' || block.getFieldValue('OP') !== 'subtract') return false
-  const left = getInputBlock(block, 'U')
-  const right = getInputBlock(block, 'V')
-  return (
-    (blockMatchesVec3(left, SPHERE_B_CENTRE) && blockMatchesVec3(right, SPHERE_A_CENTRE)) ||
-    (blockMatchesVec3(left, SPHERE_A_CENTRE) && blockMatchesVec3(right, SPHERE_B_CENTRE))
-  )
-}
-
-function hasSphereCenterDifferenceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_arithmetic', false).some(isSphereCenterDifferenceBlock)
-}
-
-function hasSphereCenterMagnitudeBlock(workspace) {
-  if (!workspace) return false
-  return workspace
-    .getBlocksByType('vector_magnitude', false)
-    .some((block) => isSphereCenterDifferenceBlock(getInputBlock(block, 'V')))
-}
-
-function isSphereCenterMagnitudeBlock(block) {
-  return (
-    block?.type === 'vector_magnitude' && isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
-  )
-}
-
-function getSphereRadiusScalar(block) {
-  if (block?.type !== 'scalar') return null
-  if (closeNumber(block.getFieldValue('scalar'), SPHERE_A_RADIUS)) return 'a'
-  if (closeNumber(block.getFieldValue('scalar'), SPHERE_B_RADIUS)) return 'b'
-  return null
-}
-
-function isSphereRadiusSumBlock(block) {
-  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'add') return false
-  const leftRadius = getSphereRadiusScalar(getInputBlock(block, 'A'))
-  const rightRadius = getSphereRadiusScalar(getInputBlock(block, 'B'))
-  return (
-    new Set([leftRadius, rightRadius]).size === 2 && leftRadius !== null && rightRadius !== null
-  )
-}
-
-function getCenterMinusOneRadius(block) {
-  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'subtract') return null
-  if (!isSphereCenterMagnitudeBlock(getInputBlock(block, 'A'))) return null
-  return getSphereRadiusScalar(getInputBlock(block, 'B'))
-}
-
-function isSphereScalarDistanceBlock(block) {
-  if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'subtract') return false
-
-  if (
-    isSphereCenterMagnitudeBlock(getInputBlock(block, 'A')) &&
-    isSphereRadiusSumBlock(getInputBlock(block, 'B'))
-  ) {
-    return true
   }
 
-  const firstSubtractedRadius = getCenterMinusOneRadius(getInputBlock(block, 'A'))
-  const secondSubtractedRadius = getSphereRadiusScalar(getInputBlock(block, 'B'))
-  return Boolean(
-    firstSubtractedRadius &&
-    secondSubtractedRadius &&
-    firstSubtractedRadius !== secondSubtractedRadius,
-  )
-}
+  if (answer.type === 'scale' || answer.type === 'scaleAndRotation') {
+    const euler = target ? new THREE.Euler().setFromQuaternion(target.quaternion, 'XYZ') : null
+    const deg = (radians) => THREE.MathUtils.radToDeg(radians).toFixed(1)
 
-function hasSphereScalarDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('scalar_arithmetic', false).some(isSphereScalarDistanceBlock)
-}
-
-function blockTreeContains(block, predicate, visited = new Set()) {
-  if (!block || visited.has(block.id)) return false
-  visited.add(block.id)
-  if (predicate(block)) return true
-  return (block.inputList || []).some((input) =>
-    blockTreeContains(input.connection?.targetBlock?.(), predicate, visited),
-  )
-}
-
-function isSphereScalarDistanceCandidateBlock(block) {
-  if (block?.type !== 'scalar_arithmetic') return false
-  return (
-    blockTreeContains(getInputBlock(block, 'A'), isSphereCenterMagnitudeBlock) ||
-    blockTreeContains(getInputBlock(block, 'B'), isSphereCenterMagnitudeBlock)
-  )
-}
-
-function hasValidSphereDistanceComputation(workspace) {
-  return (
-    hasSphereBlocks(workspace) &&
-    hasSphereCenterDifferenceBlock(workspace) &&
-    hasSphereCenterMagnitudeBlock(workspace) &&
-    hasSphereScalarDistanceBlock(workspace)
-  )
-}
-
-function isTargetTeapotBlock(block) {
-  if (block?.type !== 'geo_teapot') return false
-  // An unconnected CENTRE input isn't "missing" -- geoTeapotDefinition falls
-  // back to (0,0,0) at runtime, so a bare Teapot block already sits at the
-  // target centre without a student needing to wire up a redundant Vector
-  // block for it.
-  const centreBlock = getInputBlock(block, 'CENTRE')
-  const centreMatches = centreBlock
-    ? blockMatchesVec3(centreBlock, TRANSFORM_TEAPOT_CENTRE)
-    : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
-  return centreMatches && scalarInputMatches(block, 'SIZE_INPUT', TRANSFORM_TEAPOT_SIZE, 1)
-}
-
-function isScaleStepBlock(block, factor) {
-  return (
-    block?.type === 'scale_matrix' &&
-    closeNumber(block.getFieldValue('SX'), factor) &&
-    closeNumber(block.getFieldValue('SY'), factor) &&
-    closeNumber(block.getFieldValue('SZ'), factor)
-  )
-}
-
-function isRotateStepBlock(block, axis, degrees) {
-  return (
-    block?.type === 'rot_matrix' &&
-    block.getFieldValue('AXIS') === axis &&
-    closeNumber(block.getFieldValue('DEGREES'), degrees)
-  )
-}
-
-function isTranslateStepBlock(block, tx, ty, tz) {
-  return (
-    block?.type === 'trans_matrix' &&
-    closeNumber(block.getFieldValue('TX'), tx) &&
-    closeNumber(block.getFieldValue('TY'), ty) &&
-    closeNumber(block.getFieldValue('TZ'), tz)
-  )
-}
-
-function pipelineTargetsTeapot(pipelineBlock) {
-  return (
-    pipelineBlock?.type === 'transform_pipeline' &&
-    isTargetTeapotBlock(getInputBlock(pipelineBlock, 'INPUT'))
-  )
-}
-
-function pipelineStepChain(pipelineBlock) {
-  return collectStatementChain(pipelineBlock?.getInputTargetBlock?.('STEPS') ?? null)
-}
-
-function hasTargetTeapotBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('geo_teapot', false).some(isTargetTeapotBlock)
-}
-
-function hasPipelineConnectedToTeapot(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('transform_pipeline', false).some(pipelineTargetsTeapot)
-}
-
-function hasScaleStepForTeapot(workspace, factor) {
-  if (!workspace) return false
-  return workspace
-    .getBlocksByType('transform_pipeline', false)
-    .some(
-      (pipeline) =>
-        pipelineTargetsTeapot(pipeline) &&
-        pipelineStepChain(pipeline).some((step) => isScaleStepBlock(step, factor)),
+    return (
+      <div className={className}>
+        <span>Current scale:</span>
+        <strong>
+          {target
+            ? `(${fixed2(target.scale.x)}, ${fixed2(target.scale.y)}, ${fixed2(target.scale.z)})`
+            : ''}
+        </strong>
+        {answer.type === 'scaleAndRotation' && (
+          <>
+            <span>Current rotation (X, Y, Z):</span>
+            <strong>{euler ? `(${deg(euler.x)}°, ${deg(euler.y)}°, ${deg(euler.z)}°)` : ''}</strong>
+          </>
+        )}
+      </div>
     )
-}
-
-function hasRotateStepForTeapot(workspace, axis, degrees) {
-  if (!workspace) return false
-  return workspace
-    .getBlocksByType('transform_pipeline', false)
-    .some(
-      (pipeline) =>
-        pipelineTargetsTeapot(pipeline) &&
-        pipelineStepChain(pipeline).some((step) => isRotateStepBlock(step, axis, degrees)),
-    )
-}
-
-function hasTranslateStepForTeapot(workspace, tx, ty, tz) {
-  if (!workspace) return false
-  return workspace
-    .getBlocksByType('transform_pipeline', false)
-    .some(
-      (pipeline) =>
-        pipelineTargetsTeapot(pipeline) &&
-        pipelineStepChain(pipeline).some((step) => isTranslateStepBlock(step, tx, ty, tz)),
-    )
-}
-
-function hasValidScaleComputation(workspace) {
-  return hasScaleStepForTeapot(workspace, SCALE_FACTOR)
-}
-
-function hasValidRotateComputation(workspace) {
-  return hasRotateStepForTeapot(workspace, ROTATE_AXIS, ROTATE_DEGREES)
-}
-
-function hasValidTransformComputation(workspace) {
-  return (
-    hasScaleStepForTeapot(workspace, COMBINED_SCALE_FACTOR) &&
-    hasRotateStepForTeapot(workspace, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES)
-  )
-}
-
-function hasValidTranslateComputation(workspace) {
-  return hasTranslateStepForTeapot(workspace, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z)
-}
-
-function getTransformTargetObject(objects) {
-  return (
-    objects.find(
-      (object) =>
-        object?.userData?.geoType === 'geo_teapot' &&
-        vectorMatches(object.userData.centre, TRANSFORM_TEAPOT_CENTRE) &&
-        closeNumber(object.userData.size, TRANSFORM_TEAPOT_SIZE),
-    ) ?? null
-  )
-}
-
-function quaternionAngleDegrees(qa, qb) {
-  const dot = Math.min(1, Math.max(-1, Math.abs(qa.dot(qb))))
-  return 2 * Math.acos(dot) * (180 / Math.PI)
-}
-
-function scaleMatches(object, factor, tolerance = 0.01) {
-  return (
-    Boolean(object) &&
-    closeNumber(object.scale.x, factor, tolerance) &&
-    closeNumber(object.scale.y, factor, tolerance) &&
-    closeNumber(object.scale.z, factor, tolerance)
-  )
-}
-
-function rotationMatches(object, axis, degrees, tolerance = 0.5) {
-  if (!object) return false
-  const axisVector =
-    axis === 'X'
-      ? new THREE.Vector3(1, 0, 0)
-      : axis === 'Y'
-        ? new THREE.Vector3(0, 1, 0)
-        : new THREE.Vector3(0, 0, 1)
-  const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(
-    axisVector,
-    THREE.MathUtils.degToRad(degrees),
-  )
-  return closeNumber(quaternionAngleDegrees(object.quaternion, expectedQuaternion), 0, tolerance)
-}
-
-function translationMatches(object, tx, ty, tz, tolerance = 0.01) {
-  return (
-    Boolean(object) &&
-    closeNumber(object.position.x, tx, tolerance) &&
-    closeNumber(object.position.y, ty, tolerance) &&
-    closeNumber(object.position.z, tz, tolerance)
-  )
-}
-
-function getScalarAnswerFromWorkspace(objects, workspace, blockPredicate) {
-  if (!workspace) return null
-  const scalarObject = objects.find((object) => {
-    if (object?.userData?.geoType !== 'scalar_arithmetic_result') return false
-    const sourceBlock = workspace.getBlockById?.(object.userData?.srcBlockId)
-    return blockPredicate(sourceBlock)
-  })
-  const value = Number(scalarObject?.userData?.value)
-  return Number.isFinite(value) ? value : null
-}
-
-function getDistanceAnswer(objects, expectedDistance = null, workspace = null, options = {}) {
-  if (options.isSphereExercise) {
-    const sphereScalarAnswer = getScalarAnswerFromWorkspace(
-      objects,
-      workspace,
-      isSphereScalarDistanceCandidateBlock,
-    )
-    if (sphereScalarAnswer !== null) return sphereScalarAnswer
   }
 
-  if (options.isSkewExercise) {
-    const lineIntersectionAnswer = objects.find(
-      (object) => object?.userData?.geoType === 'geo_line_intersection',
-    )
-    const distance = Number(lineIntersectionAnswer?.userData?.distance)
-    if (Number.isFinite(distance)) return distance
-  }
-
-  const distanceObject = objects.find(
-    (object) =>
-      object?.userData?.geoType === 'point_plane_distance_dot' ||
-      object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
-      object?.userData?.geoType === 'sphere_sphere_distance',
+  return (
+    <div className={className}>
+      <span>Your answer:</span>
+      <strong>{answer.value !== null ? Number(answer.value.toFixed(3)) : ''}</strong>
+    </div>
   )
-  const scalarObjects = objects.filter(
-    (object) => object?.userData?.geoType === 'scalar_arithmetic_result',
-  )
-  const scalarAnswer = Number.isFinite(expectedDistance)
-    ? scalarObjects.find((object) => closeNumber(object.userData?.value, expectedDistance, 0.01))
-    : scalarObjects[0]
-  const distance = Number(distanceObject?.userData?.distance ?? scalarAnswer?.userData?.value)
-  return Number.isFinite(distance) ? distance : null
 }
 
 export default function ExercisePage() {
@@ -845,144 +73,24 @@ export default function ExercisePage() {
   const { exerciseNumber } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const clearWorkspaceRef = useRef(() => {})
+
   // The URL is the source of truth for which exercise is open (deep-linkable,
   // shareable, survives reload) -- /exercise with no param defaults to 1,
   // matching the page's original behaviour before routing was added.
-  const activeExercise =
-    EXERCISES.find(({ number }) => number === Number(exerciseNumber))?.number ?? 1
   const activeExerciseConfig =
-    EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
-  const previousExercise = EXERCISES.toReversed().find(
-    ({ number }) => number < activeExerciseConfig.number,
-  )
-  const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
-  const isScaleExercise = activeExerciseConfig.number === 1
-  const isRotateExercise = activeExerciseConfig.number === 2
-  const isTransformExercise = activeExerciseConfig.number === 3
-  const isTranslateExercise = activeExerciseConfig.number === 4
-  const isSkewExercise = activeExerciseConfig.number === 6
-  const isSphereExercise = activeExerciseConfig.number === 7
-  const isTransformTypeExercise =
-    isScaleExercise || isRotateExercise || isTransformExercise || isTranslateExercise
-  const expectedDistance = isSkewExercise
-    ? SKEW_DISTANCE
-    : isSphereExercise
-      ? SPHERE_DISTANCE
-      : CORRECT_DISTANCE
-  const distanceAnswer = isTransformTypeExercise
-    ? null
-    : getDistanceAnswer(objects, expectedDistance, workspace, { isSkewExercise, isSphereExercise })
-  const hasDistanceComputation = isSkewExercise
-    ? hasValidSkewDistanceComputation(workspace)
-    : isSphereExercise
-      ? hasValidSphereDistanceComputation(workspace)
-      : hasValidDistanceComputation(workspace)
-  const distanceIsCorrect =
-    distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
+    EXERCISES.find(({ number }) => number === Number(exerciseNumber)) ?? EXERCISES[0]
+  const activeExercise = activeExerciseConfig.number
+  const exercise = getExerciseModule(activeExercise)
 
-  const transformTargetObject = isTransformTypeExercise ? getTransformTargetObject(objects) : null
-  const transformIsCorrect = isScaleExercise
-    ? scaleMatches(transformTargetObject, SCALE_FACTOR)
-    : isRotateExercise
-      ? rotationMatches(transformTargetObject, ROTATE_AXIS, ROTATE_DEGREES)
-      : isTransformExercise
-        ? scaleMatches(transformTargetObject, COMBINED_SCALE_FACTOR) &&
-          rotationMatches(transformTargetObject, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES)
-        : isTranslateExercise
-          ? translationMatches(transformTargetObject, TRANSLATE_X, TRANSLATE_Y, TRANSLATE_Z)
-          : false
-  const hasTransformComputation = isScaleExercise
-    ? hasValidScaleComputation(workspace)
-    : isRotateExercise
-      ? hasValidRotateComputation(workspace)
-      : isTransformExercise
-        ? hasValidTransformComputation(workspace)
-        : isTranslateExercise
-          ? hasValidTranslateComputation(workspace)
-          : false
+  const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExercise)
+  const nextExercise = EXERCISES.find(({ number }) => number > activeExercise)
 
-  const answerIsCorrect = isTransformTypeExercise
-    ? Boolean(transformTargetObject) && transformIsCorrect
-    : distanceIsCorrect
-  const answerIncorrect = isTransformTypeExercise
-    ? Boolean(transformTargetObject) && !transformIsCorrect
-    : distanceAnswer !== null && !distanceIsCorrect
-  const exercisePassed = isTransformTypeExercise
-    ? answerIsCorrect && hasTransformComputation
-    : distanceIsCorrect && hasDistanceComputation
-  const answerCardClass = `exercise-answer-card${answerIsCorrect ? ' is-correct' : ''}${answerIncorrect ? ' is-incorrect' : ''}`
-  const hasPlaneStep = hasExercisePlane(objects)
-  const hasPointPStep = workspaceHasPointPVector(workspace)
-  const hasPointQStep = hasPointQOnExercisePlane(objects)
-  const stepCompletion = {
-    plane: hasPlaneStep,
-    pointP: hasPointPStep,
-    pointQ: hasPointQStep,
-    difference: hasPointPStep && hasPointQStep && hasPointDifferenceBlock(workspace),
-    distance: exercisePassed,
-  }
-  const skewStepCompletion = {
-    lines: hasSkewLineBlocks(workspace),
-    normal: hasSkewCrossProductBlock(workspace),
-    plane: hasSkewPlaneBlock(workspace),
-    point: hasSkewOtherLinePointBlock(workspace) || hasSkewReusableDistanceBlock(workspace),
-    difference: hasSkewPointDifferenceBlock(workspace) || hasSkewReusableDistanceBlock(workspace),
-    distance: exercisePassed,
-  }
-  const sphereStepCompletion = {
-    spheres: hasSphereBlocks(workspace),
-    difference: hasSphereCenterDifferenceBlock(workspace),
-    magnitude: hasSphereCenterMagnitudeBlock(workspace),
-    distance: hasSphereScalarDistanceBlock(workspace) && exercisePassed,
-  }
-  const scaleStepCompletion = {
-    teapot: hasTargetTeapotBlock(workspace),
-    pipeline: hasPipelineConnectedToTeapot(workspace),
-    scale: hasValidScaleComputation(workspace) && exercisePassed,
-  }
-  const rotateStepCompletion = {
-    teapot: hasTargetTeapotBlock(workspace),
-    pipeline: hasPipelineConnectedToTeapot(workspace),
-    rotate: hasValidRotateComputation(workspace) && exercisePassed,
-  }
-  const transformStepCompletion = {
-    teapot: hasTargetTeapotBlock(workspace),
-    pipeline: hasPipelineConnectedToTeapot(workspace),
-    scale: hasScaleStepForTeapot(workspace, COMBINED_SCALE_FACTOR),
-    rotate: hasRotateStepForTeapot(workspace, COMBINED_ROTATE_AXIS, COMBINED_ROTATE_DEGREES),
-    both: exercisePassed,
-  }
-  const translateStepCompletion = {
-    teapot: hasTargetTeapotBlock(workspace),
-    pipeline: hasPipelineConnectedToTeapot(workspace),
-    translate: hasValidTranslateComputation(workspace) && exercisePassed,
-  }
-  const reusableBlockTemplate =
-    exercisePassed && !isTransformTypeExercise
-      ? activeExerciseConfig.number === 5
-        ? {
-            defaultName: 'Distance from point to plane',
-            description:
-              'Save a reusable distance block with open inputs for any point and any plane.',
-            source: 'exercise',
-            xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
-          }
-        : activeExerciseConfig.number === 6
-          ? {
-              defaultName: 'Intersect 3D lines',
-              description:
-                'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
-              source: 'exercise',
-              xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
-            }
-          : {
-              defaultName: 'Distance between spheres',
-              description:
-                'Save a reusable sphere distance block with open inputs for any two spheres.',
-              source: 'exercise',
-              xmlText: SPHERE_DISTANCE_BLOCK_XML,
-            }
-      : null
+  // Everything the page needs to know about progress comes from one call into
+  // the exercise's own checker.
+  const result = exercise.evaluate({ objects, workspace })
+  const answerCardClass = `exercise-answer-card${result.correct ? ' is-correct' : ''}${
+    result.incorrect ? ' is-incorrect' : ''
+  }`
 
   const handleSelectExercise = useCallback(
     (number) => {
@@ -994,43 +102,35 @@ export default function ExercisePage() {
     [navigate, setObjects, setPendingObjects],
   )
 
-  // Drop the background blocks straight into the workspace once it's ready,
-  // rather than injecting rendered objects behind the scenes -- they need to
-  // be actual blocks a student can see and move, not just shapes that appear
-  // in the 3D view. Re-entering the exercise restores the previously-saved
-  // workspace XML, which may include an older copy of these blocks at
-  // outdated positions -- remove those by id first, then reseed fresh, so
-  // a layout change here always reaches an already-saved workspace instead
-  // of silently keeping whatever position was saved on an earlier visit.
+  // Starter/decorative blocks, for the exercises that have them.
   useEffect(() => {
-    if (!isTransformExercise || !workspace) return
+    if (!exercise.seedWorkspace || !workspace) return
     // React StrictMode double-mounts in dev, disposing the first workspace
     // instance almost immediately -- skip it silently rather than throwing;
     // the effect re-runs once the real, settled workspace comes through.
     if (!workspace.rendered) return
-    try {
-      EXERCISE_BACKGROUND_BLOCK_IDS.map((id) => workspace.getBlockById(id))
-        .filter(Boolean)
-        .forEach((block) => block.dispose())
-      Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(EXERCISE_BACKGROUND_XML), workspace)
-    } catch (err) {
-      console.error('[GeoScratch] Failed to seed exercise background blocks:', err)
-    }
-  }, [isTransformExercise, workspace])
+    exercise.seedWorkspace(workspace)
+  }, [exercise, workspace])
 
   const handleObjectsChange = useCallback(
     (objs) => {
-      const exerciseObjects = addExercisePointPIfNeeded(objs, workspace)
+      const exerciseObjects = exercise.decorateObjects
+        ? exercise.decorateObjects(objs, workspace)
+        : objs
       setPendingObjects(exerciseObjects)
       if (autoRender) setObjects(exerciseObjects)
     },
-    [autoRender, setPendingObjects, setObjects, workspace],
+    [exercise, autoRender, setPendingObjects, setObjects, workspace],
   )
+
+  const { Givens, Steps } = exercise
 
   return (
     <div className="exercise-page exercise-page--editor">
       <main
-        className={`editor-shell editor-shell--with-leading exercise-editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}
+        className={`editor-shell editor-shell--with-leading exercise-editor-shell${
+          workspaceMaximized ? ' editor-shell--maximized' : ''
+        }`}
       >
         <EditorColumnHeaders
           leadingHeader={
@@ -1083,9 +183,9 @@ export default function ExercisePage() {
 
         <div className="editor-body-row">
           {!workspaceMaximized && (
-            <aside className={`exercise-task-panel${exercisePassed ? ' is-passed' : ''}`}>
+            <aside className={`exercise-task-panel${result.passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {exercisePassed && (
+                {result.passed && (
                   <div className="exercise-task-panel__meta-row">
                     <span className="exercise-pass-badge">Passed</span>
                   </div>
@@ -1095,267 +195,9 @@ export default function ExercisePage() {
                 </h1>
               </div>
 
-              {isSkewExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Line L1</h3>
-                      <p>P1 = (1, 2, 0)</p>
-                      <p>d1 = (1, 2, 3)</p>
-                    </section>
-                    <section>
-                      <h3>Line L2</h3>
-                      <p>P2 = (5, 5, -3)</p>
-                      <p>d2 = (2, -1, 1)</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={skewStepCompletion.lines ? 'is-complete' : ''}>
-                      Create: L1, L2 with Line blocks.
-                    </li>
-                    <li className={skewStepCompletion.normal ? 'is-complete' : ''}>
-                      Compute: n = d1 x d2. This normal is perpendicular to both line directions.
-                    </li>
-                    <li className={skewStepCompletion.plane ? 'is-complete' : ''}>
-                      Create: helper plane from any point on L1 or L2 and normal n. The chosen line
-                      should lie in the plane.
-                    </li>
-                    <li className={skewStepCompletion.point ? 'is-complete' : ''}>
-                      Create: any point on the other line.
-                    </li>
-                    <li className={skewStepCompletion.difference ? 'is-complete' : ''}>
-                      Use the point on the other line as the point input, and use the helper plane
-                      as the plane input.
-                    </li>
-                    <li className={skewStepCompletion.distance ? 'is-complete' : ''}>
-                      Calculate the distance from that point to that helper plane.
-                    </li>
-                  </ol>
-                </>
-              ) : isSphereExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Sphere A</h3>
-                      <p>Center A = (-4, 2, 1)</p>
-                      <p>Radius rA = 1.3</p>
-                    </section>
-                    <section>
-                      <h3>Sphere B</h3>
-                      <p>Center B = (3, -1, 6)</p>
-                      <p>Radius rB = 0.9</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={sphereStepCompletion.spheres ? 'is-complete' : ''}>
-                      Create: Sphere A, Sphere B, Center A, Center B. Use Scalar blocks for each
-                      radius, and Point blocks for the centers so the center-to-center vector draws
-                      in the right place.
-                    </li>
-                    <li className={sphereStepCompletion.difference ? 'is-complete' : ''}>
-                      Compute: center difference with the Vector Arithmetic block, B - A or A - B.
-                      This vector should run from one sphere center to the other.
-                    </li>
-                    <li className={sphereStepCompletion.magnitude ? 'is-complete' : ''}>
-                      Compute: center distance with the Vector Magnitude block, |B - A|.
-                    </li>
-                    <li className={sphereStepCompletion.distance ? 'is-complete' : ''}>
-                      Compute: sphere distance with the Scalar Arithmetic block, i.e., |B - A| - rA
-                      - rB.
-                    </li>
-                  </ol>
-                </>
-              ) : isScaleExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Teapot</h3>
-                      <p>Centre = (0, 0, 0)</p>
-                      <p>Size = 1</p>
-                    </section>
-                    <section>
-                      <h3>Target</h3>
-                      <p>Scale factor = 3 (all axes)</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={scaleStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size Scalar 1.
-                    </li>
-                    <li className={scaleStepCompletion.pipeline ? 'is-complete' : ''}>
-                      Build: a Transform Pipeline and connect its input to the Teapot.
-                    </li>
-                    <li className={scaleStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix (sx=3, sy=3, sz=3) as a step in the pipeline.
-                    </li>
-                  </ol>
-                </>
-              ) : isRotateExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Teapot</h3>
-                      <p>Centre = (0, 0, 0)</p>
-                      <p>Size = 1</p>
-                    </section>
-                    <section>
-                      <h3>Target</h3>
-                      <p>Rotate 90&deg; about the Z axis</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={rotateStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size Scalar 1.
-                    </li>
-                    <li className={rotateStepCompletion.pipeline ? 'is-complete' : ''}>
-                      Build: a Transform Pipeline and connect its input to the Teapot.
-                    </li>
-                    <li className={rotateStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix (axis Z, 90 degrees) as a step in the pipeline.
-                    </li>
-                  </ol>
-                </>
-              ) : isTransformExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Teapot</h3>
-                      <p>Centre = (0, 0, 0)</p>
-                      <p>Size = 1</p>
-                    </section>
-                    <section>
-                      <h3>Target</h3>
-                      <p>Scale factor = 2 (all axes)</p>
-                      <p>Rotate 45&deg; about the Y axis</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={transformStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size Scalar 1.
-                    </li>
-                    <li className={transformStepCompletion.pipeline ? 'is-complete' : ''}>
-                      Build: a Transform Pipeline and connect its input to the Teapot.
-                    </li>
-                    <li className={transformStepCompletion.scale ? 'is-complete' : ''}>
-                      Add: a Scale Matrix (sx=2, sy=2, sz=2) as a step in the pipeline.
-                    </li>
-                    <li className={transformStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline.
-                      Order does not matter.
-                    </li>
-                  </ol>
-                </>
-              ) : isTranslateExercise ? (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Teapot</h3>
-                      <p>Centre = (0, 0, 0)</p>
-                      <p>Size = 1</p>
-                    </section>
-                    <section>
-                      <h3>Target</h3>
-                      <p>Translate by (3, 0, 0)</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={translateStepCompletion.teapot ? 'is-complete' : ''}>
-                      Create: Teapot at (0, 0, 0) with size Scalar 1.
-                    </li>
-                    <li className={translateStepCompletion.pipeline ? 'is-complete' : ''}>
-                      Build: a Transform Pipeline and connect its input to the Teapot.
-                    </li>
-                    <li className={translateStepCompletion.translate ? 'is-complete' : ''}>
-                      Add: a Translation Matrix (x=3, y=0, z=0) as a step in the pipeline.
-                    </li>
-                  </ol>
-                </>
-              ) : (
-                <>
-                  <div className="exercise-given-values" aria-label="Given values">
-                    <section>
-                      <h3>Plane</h3>
-                      <p>Point A = (1, 1, 2)</p>
-                      <p>Normal n = (0, 1, 0)</p>
-                    </section>
-                    <section>
-                      <h3>Point</h3>
-                      <p>P = (3, 4, 5)</p>
-                    </section>
-                  </div>
-
-                  <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={stepCompletion.plane ? 'is-complete' : ''}>Create: plane</li>
-                    <li className={stepCompletion.pointP ? 'is-complete' : ''}>Create: Point P</li>
-                    <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
-                      Create: any point Q on the plane
-                    </li>
-                    <li className={stepCompletion.difference ? 'is-complete' : ''}>
-                      Compute: P - Q with the Vector Arithmetic block.
-                    </li>
-                    <li className={stepCompletion.distance ? 'is-complete' : ''}>
-                      Compute: distance by projecting P - Q onto n and taking Vector Magnitude.
-                      Alternatively, you can use the dot product of (P - Q) and n because n is a
-                      unit vector. This gives the distance from P to the plane.
-                    </li>
-                  </ol>
-                </>
-              )}
-
-              {isTransformTypeExercise ? (
-                <div className={answerCardClass}>
-                  {isTranslateExercise ? (
-                    <>
-                      <span>Current position:</span>
-                      <strong>
-                        {transformTargetObject
-                          ? `(${transformTargetObject.position.x.toFixed(2)}, ${transformTargetObject.position.y.toFixed(2)}, ${transformTargetObject.position.z.toFixed(2)})`
-                          : ''}
-                      </strong>
-                    </>
-                  ) : (
-                    <>
-                      <span>Current scale:</span>
-                      <strong>
-                        {transformTargetObject
-                          ? `(${transformTargetObject.scale.x.toFixed(2)}, ${transformTargetObject.scale.y.toFixed(2)}, ${transformTargetObject.scale.z.toFixed(2)})`
-                          : ''}
-                      </strong>
-                      {!isScaleExercise && (
-                        <>
-                          <span>Current rotation (X, Y, Z):</span>
-                          <strong>
-                            {transformTargetObject
-                              ? (() => {
-                                  const euler = new THREE.Euler().setFromQuaternion(
-                                    transformTargetObject.quaternion,
-                                    'XYZ',
-                                  )
-                                  const toDeg = (radians) =>
-                                    THREE.MathUtils.radToDeg(radians).toFixed(1)
-                                  return `(${toDeg(euler.x)}°, ${toDeg(euler.y)}°, ${toDeg(euler.z)}°)`
-                                })()
-                              : ''}
-                          </strong>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className={answerCardClass}>
-                  <span>Your answer:</span>
-                  <strong>
-                    {distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}
-                  </strong>
-                </div>
-              )}
+              <Givens />
+              <Steps steps={result.steps} passed={result.passed} />
+              <AnswerCard result={result} className={answerCardClass} />
             </aside>
           )}
 
@@ -1363,7 +205,7 @@ export default function ExercisePage() {
             key={`exercise-${activeExercise}`}
             id={`exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
-            reusableBlockTemplate={reusableBlockTemplate}
+            reusableBlockTemplate={result.passed ? exercise.reusableBlockTemplate : null}
             onObjectsChange={handleObjectsChange}
             onRegisterClear={(fn) => {
               clearWorkspaceRef.current = fn
