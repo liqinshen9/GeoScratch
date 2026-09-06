@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import Layout from '@/layout/Layout'
 import LandingPage from '@/pages/LandingPage'
 import ExercisePage from '@/pages/ExercisePage'
+import ExerciseBrowserPage from '@/pages/ExerciseBrowserPage'
 import SettingsPage from '@/pages/SettingsPage'
 import SandboxPage from '@/pages/SandboxPage' // Cleaned up name from App
 
@@ -19,7 +20,15 @@ const router = createBrowserRouter([
         element: <LandingPage />,
       },
       {
+        path: 'exercises',
+        element: <ExerciseBrowserPage />,
+      },
+      {
         path: 'exercise',
+        element: <ExercisePage />,
+      },
+      {
+        path: 'exercise/:exerciseNumber',
         element: <ExercisePage />,
       },
       {

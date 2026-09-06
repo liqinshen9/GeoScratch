@@ -115,6 +115,15 @@
   cursor: not-allowed;
 }
 
+.exercise-nav-button--wide {
+  width: auto;
+  gap: 0.3rem;
+  padding: 0 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
 .exercise-task-panel h1 {
   margin: 0;
   color: var(--exercise-blue);
