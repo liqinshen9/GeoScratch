@@ -41,15 +41,18 @@
   flex-direction: column;
   gap: 0.55rem;
   padding: 0.65rem;
-  border-right: 1px solid var(--geo-border-light);
+  /* No border-right: the divider to the toolbox is .editor-shell's background
+     showing through its 1px column-gap (see editor-shell.css). A border here
+     would sit next to that gap and paint the seam 2px wide, thicker than every
+     other column divider. The passed state tints the same edge with an INSET
+     shadow for the same reason -- it must not change the panel's box. */
   background: var(--bg-main);
   overflow-y: auto;
 }
 
 .exercise-task-panel.is-passed {
-  border-right-color: #22c55e;
   background: color-mix(in srgb, #22c55e 8%, var(--bg-main));
-  box-shadow: inset 4px 0 0 #22c55e;
+  box-shadow: inset 4px 0 0 #22c55e, inset -1px 0 0 #22c55e;
 }
 
 .exercise-task-panel__top {
