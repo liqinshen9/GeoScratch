@@ -36,6 +36,10 @@ export function useBlocksWorkspace({
     [onObjectsChangeRef, runtimeMode],
   )
 
+  // Mount-once by design: this injects the Blockly workspace into the DOM host
+  // and disposes it on unmount. Re-running it when syncScene/clearObjects change
+  // identity would tear down and rebuild the whole workspace, losing the user's
+  // blocks -- so the empty dep array is deliberate, not an oversight.
   useEffect(() => {
     defineBlocks()
     if (!registryRef.current) registryRef.current = new BlockRegistry()
@@ -59,6 +63,7 @@ export function useBlocksWorkspace({
       cleanupResize()
       ws.dispose()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {

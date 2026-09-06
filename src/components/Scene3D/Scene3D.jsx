@@ -647,6 +647,11 @@ function LabelAnchor({
 }) {
   const bodyRef = useRef(null)
 
+  // Keyed on `id` alone on purpose: this registers/unregisters the label in the
+  // simulation, and worldPos/emphasis are only its *initial* values -- the
+  // effect below writes later changes onto the live entry in place. Adding them
+  // here would drop and re-add the entry on every camera-driven change, losing
+  // its settled offset and velocity.
   useEffect(() => {
     const entry = {
       bodyRef,
@@ -665,6 +670,7 @@ function LabelAnchor({
       labelRegistry.delete(id)
       labelRegistryRevision += 1
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   useEffect(() => {

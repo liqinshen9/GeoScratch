@@ -31,7 +31,7 @@ export function initVec4Block() {
     },
   }
 
-  javascriptGenerator.forBlock['linalg_vec4'] = function (block, generator) {
+  javascriptGenerator.forBlock['linalg_vec4'] = function (block) {
     const vecString = `new THREE.Vector4(${block.getFieldValue('W')}, ${block.getFieldValue('X')}, ${block.getFieldValue('Y')}, ${block.getFieldValue('Z')})`
     return [vecString, Order.ATOMIC]
   }

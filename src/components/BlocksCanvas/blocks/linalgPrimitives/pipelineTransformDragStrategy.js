@@ -1,4 +1,4 @@
-export function useSingleStepDrag(block) {
+export function attachSingleStepDrag(block) {
   if (block._singleStepDragEnabled || typeof block.startDrag !== 'function') return
 
   const startDrag = block.startDrag.bind(block)

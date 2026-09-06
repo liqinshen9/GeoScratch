@@ -26,7 +26,7 @@ export function initScalarBlock() {
     },
   }
 
-  javascriptGenerator.forBlock['scalar'] = function (block, generator) {
+  javascriptGenerator.forBlock['scalar'] = function (block) {
     const v = Number(block.getFieldValue('scalar'))
     return [String(isFinite(v) ? v : 1), Order.ATOMIC]
   }

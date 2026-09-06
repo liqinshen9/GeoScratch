@@ -45,7 +45,7 @@ export function initMat4x4Block() {
   }
 
   //Linalg primitives
-  javascriptGenerator.forBlock['linalg_mat4x4'] = function (block, generator) {
+  javascriptGenerator.forBlock['linalg_mat4x4'] = function (block) {
     const matString =
       `new THREE.Matrix4(${block.getFieldValue('r1c1')}, ${block.getFieldValue('r1c2')}, ${block.getFieldValue('r1c3')}, ${block.getFieldValue('r1c4')},` +
       `${block.getFieldValue('r2c1')}, ${block.getFieldValue('r2c2')}, ${block.getFieldValue('r2c3')}, ${block.getFieldValue('r2c4')}, ` +

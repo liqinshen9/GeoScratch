@@ -3,7 +3,7 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator } from 'blockly/javascript'
 import { translationMatrix, translationMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
-import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
+import { attachSingleStepDrag } from './pipelineTransformDragStrategy.js'
 
 let REGISTERED = false
 
@@ -41,7 +41,7 @@ export function initTransMatrixBlock() {
       this.setTooltip('Homogeneous translation by (x,y,z).')
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
-      useSingleStepDrag(this)
+      attachSingleStepDrag(this)
     },
   }
 

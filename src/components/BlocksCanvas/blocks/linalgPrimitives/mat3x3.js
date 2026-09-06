@@ -37,7 +37,7 @@ export function initMat3x3Block() {
   }
 
   //Linalg primitives
-  javascriptGenerator.forBlock['linalg_mat3x3'] = function (block, generator) {
+  javascriptGenerator.forBlock['linalg_mat3x3'] = function (block) {
     const matString =
       `new THREE.Matrix3(${block.getFieldValue('r1c1')}, ${block.getFieldValue(
         'r1c2',

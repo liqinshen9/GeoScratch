@@ -6,7 +6,7 @@ import {
   rotationMatrixAroundAxisFromDegrees,
 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
-import { useSingleStepDrag } from './pipelineTransformDragStrategy.js'
+import { attachSingleStepDrag } from './pipelineTransformDragStrategy.js'
 
 let REGISTERED = false
 const AXIS_OPTIONS = [
@@ -50,7 +50,7 @@ export function initRotMatrixBlock() {
       )
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
-      useSingleStepDrag(this)
+      attachSingleStepDrag(this)
     },
   }
 
