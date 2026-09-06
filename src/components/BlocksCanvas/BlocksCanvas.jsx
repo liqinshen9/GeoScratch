@@ -19,7 +19,8 @@ const BUILT_IN_BLOCK_TYPES = new Set(
 const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
 const TRASH_BLOCK_XML_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-xml'
 const TRASH_BLOCK_ID_TRANSFER_TYPE = 'application/x-geoscratch-trash-block-id'
-const WORKSPACE_CONTROL_ICON_COLOR = '#777'
+const WORKSPACE_CONTROL_ICON_COLOR = 'currentColor'
+const TRASH_DROP_PADDING = 14
 
 function canonicalizeNode(node) {
   const tagName = node.tagName?.toLowerCase()
@@ -119,36 +120,40 @@ function WorkspaceControls({
 
   return (
     <div className="workspace-controls" aria-label="Workspace controls" onPointerDown={stopWorkspaceGesture}>
-      <button
-        type="button"
-        className="workspace-control-button"
-        aria-label="Zoom in"
-        title="Zoom in"
-        onClick={() => zoom(1)}
-      >
-        <ZoomIn theme="outline" size="36" fill={WORKSPACE_CONTROL_ICON_COLOR} />
-      </button>
-      <button
-        type="button"
-        className="workspace-control-button"
-        aria-label="Zoom out"
-        title="Zoom out"
-        onClick={() => zoom(-1)}
-      >
-        <ZoomOut theme="outline" size="36" fill={WORKSPACE_CONTROL_ICON_COLOR} />
-      </button>
-      <button
-        ref={trashTargetRef}
-        type="button"
-        className="workspace-control-button workspace-control-button--trash"
-        aria-label="Trash"
-        title="Drag a block here to delete it"
-        onClick={onTrashClick}
-      >
-        <span ref={trashIconRef} className="workspace-trash-icon">
-          <Delete theme="outline" size="48" fill={WORKSPACE_CONTROL_ICON_COLOR} />
-        </span>
-      </button>
+      <div className="workspace-control-group">
+        <button
+          type="button"
+          className="workspace-control-button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          onClick={() => zoom(1)}
+        >
+          <ZoomIn theme="outline" size="18" fill={WORKSPACE_CONTROL_ICON_COLOR} />
+        </button>
+        <button
+          type="button"
+          className="workspace-control-button"
+          aria-label="Zoom out"
+          title="Zoom out"
+          onClick={() => zoom(-1)}
+        >
+          <ZoomOut theme="outline" size="18" fill={WORKSPACE_CONTROL_ICON_COLOR} />
+        </button>
+      </div>
+      <div className="workspace-control-group">
+        <button
+          ref={trashTargetRef}
+          type="button"
+          className="workspace-control-button workspace-control-button--trash"
+          aria-label="Trash"
+          title="Drag a block here to delete it"
+          onClick={onTrashClick}
+        >
+          <span ref={trashIconRef} className="workspace-trash-icon">
+            <Delete theme="outline" size="18" fill={WORKSPACE_CONTROL_ICON_COLOR} />
+          </span>
+        </button>
+      </div>
       {trashPanelOpen && (
         <div className="workspace-trash-panel" onPointerDown={stopWorkspaceGesture}>
           {recentDeletedBlocks.length ? (
@@ -313,8 +318,15 @@ export default function BlocksCanvas({
 
   const isDraggedBlockTouchingTrash = useCallback((blockId) => {
     if (!workspace || !blockId) return false
-    const trashRect = trashIconRef.current?.getBoundingClientRect()
-    if (!trashRect) return false
+    // The button is small, so drop detection uses a padded version of its box.
+    const buttonRect = trashTargetRef.current?.getBoundingClientRect()
+    if (!buttonRect) return false
+    const trashRect = {
+      left: buttonRect.left - TRASH_DROP_PADDING,
+      right: buttonRect.right + TRASH_DROP_PADDING,
+      top: buttonRect.top - TRASH_DROP_PADDING,
+      bottom: buttonRect.bottom + TRASH_DROP_PADDING,
+    }
 
     const block = workspace.getBlockById(blockId)
     const blockRect = getPrimaryBlockRect(block)
