@@ -123,10 +123,22 @@ export function bakeLineTransformAnimation(line, startOrigin, startDirection, pi
     // Matrix4.set's row-major order doesn't come into it.
     const g = k - 1
     mScale.set(
-      1 + g * u1.x * u1.x, g * u1.x * u1.y, g * u1.x * u1.z, 0,
-      g * u1.y * u1.x, 1 + g * u1.y * u1.y, g * u1.y * u1.z, 0,
-      g * u1.z * u1.x, g * u1.z * u1.y, 1 + g * u1.z * u1.z, 0,
-      0, 0, 0, 1,
+      1 + g * u1.x * u1.x,
+      g * u1.x * u1.y,
+      g * u1.x * u1.z,
+      0,
+      g * u1.y * u1.x,
+      1 + g * u1.y * u1.y,
+      g * u1.y * u1.z,
+      0,
+      g * u1.z * u1.x,
+      g * u1.z * u1.y,
+      1 + g * u1.z * u1.z,
+      0,
+      0,
+      0,
+      0,
+      1,
     )
     mRot.makeRotationFromQuaternion(qp)
     mFrom.makeTranslation(-o1.x, -o1.y, -o1.z)
@@ -156,4 +168,3 @@ export function bakeLineTransformAnimation(line, startOrigin, startDirection, pi
     }
   }
 }
-

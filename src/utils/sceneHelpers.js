@@ -149,7 +149,7 @@ export function collectStatementChain(startBlock) {
 }
 
 export function applyWorldMatrix4ToObject(object, matrix) {
-  if (!(matrix?.isMatrix4)) return
+  if (!matrix?.isMatrix4) return
   const parentWorld = object.parent?.matrixWorld?.clone() ?? new THREE.Matrix4()
   const parentWorldInverse = parentWorld.clone().invert()
   const localMatrix = parentWorldInverse.multiply(matrix).multiply(parentWorld.clone())

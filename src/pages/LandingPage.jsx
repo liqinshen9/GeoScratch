@@ -11,12 +11,8 @@ export default function LandingPage() {
       <main className="landing-hero">
         <div className="landing-hero__content">
           <h1 className="landing-hero__title">
-            <span className="landing-hero__title-line">
-              Snap blocks together.
-            </span>
-            <span className="landing-hero__title-line landing-hero__accent">
-              See it in 3D.
-            </span>
+            <span className="landing-hero__title-line">Snap blocks together.</span>
+            <span className="landing-hero__title-line landing-hero__accent">See it in 3D.</span>
           </h1>
 
           <div className="landing-hero__actions">

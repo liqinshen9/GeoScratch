@@ -23,10 +23,7 @@ export function initInverseInplaceBlock() {
     },
   }
 
-  javascriptGenerator.forBlock['inverse_inplace'] = function (
-    block,
-    generator
-  ) {
+  javascriptGenerator.forBlock['inverse_inplace'] = function (block, generator) {
     var varName = generator.getVariableName(block.getFieldValue('VAR'))
     const invString = varName + `.invert();`
     return [invString, Order.FUNCTION_CALL]

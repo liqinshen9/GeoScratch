@@ -30,7 +30,12 @@ export default function MyBlockDialog({
       <form className="my-block-dialog" onSubmit={handleSubmit}>
         <div className="my-block-dialog__header">
           <h2>{title}</h2>
-          <button type="button" className="my-block-dialog__close" onClick={onCancel} aria-label="Close">
+          <button
+            type="button"
+            className="my-block-dialog__close"
+            onClick={onCancel}
+            aria-label="Close"
+          >
             x
           </button>
         </div>

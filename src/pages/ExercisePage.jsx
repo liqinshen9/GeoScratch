@@ -25,9 +25,8 @@ const SKEW_LINE_1_DIRECTION = new THREE.Vector3(1, 2, 3)
 const SKEW_LINE_2_POINT = new THREE.Vector3(5, 5, -3)
 const SKEW_LINE_2_DIRECTION = new THREE.Vector3(2, -1, 1)
 const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW_LINE_2_DIRECTION)
-const SKEW_DISTANCE = Math.abs(
-  SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL),
-) / SKEW_NORMAL.length()
+const SKEW_DISTANCE =
+  Math.abs(SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL)) / SKEW_NORMAL.length()
 const SPHERE_A_CENTRE = new THREE.Vector3(-4, 2, 1)
 const SPHERE_B_CENTRE = new THREE.Vector3(3, -1, 6)
 const SPHERE_A_RADIUS = 1.3
@@ -47,9 +46,12 @@ const COMBINED_ROTATE_DEGREES = 45
 const TRANSLATE_X = 3
 const TRANSLATE_Y = 0
 const TRANSLATE_Z = 0
-const POINT_PLANE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
-const LINE_INTERSECTION_3D_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
-const SPHERE_DISTANCE_BLOCK_XML = '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
+const POINT_PLANE_DISTANCE_BLOCK_XML =
+  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
+const LINE_INTERSECTION_3D_BLOCK_XML =
+  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
+const SPHERE_DISTANCE_BLOCK_XML =
+  '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
 
 function closeNumber(a, b, tolerance = 1e-6) {
   return Math.abs(Number(a) - b) <= tolerance
@@ -102,9 +104,10 @@ function pointBlockLiesOnLine(block, linePoint, lineDirection, tolerance = 1e-6)
 
   const point = vec3FromBlock(block)
   if (!point) return false
-  return new THREE.Vector3()
-    .crossVectors(point.clone().sub(linePoint), lineDirection)
-    .length() <= tolerance * Math.max(1, lineDirection.length())
+  return (
+    new THREE.Vector3().crossVectors(point.clone().sub(linePoint), lineDirection).length() <=
+    tolerance * Math.max(1, lineDirection.length())
+  )
 }
 
 function pointLiesOnExercisePlane(point, tolerance = 1e-5) {
@@ -133,9 +136,9 @@ function objectOrChildMatches(object, predicate) {
 
 function workspaceHasPointPVector(workspace) {
   if (!workspace) return false
-  return POINT_VECTOR_BLOCK_TYPES.some((type) => (
-    workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P))
-  ))
+  return POINT_VECTOR_BLOCK_TYPES.some((type) =>
+    workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P)),
+  )
 }
 
 function getInputBlock(block, inputName) {
@@ -169,7 +172,7 @@ function isSkewLine2Block(block) {
 function scalarInputMatches(block, inputName, target, fallback = 0) {
   return Boolean(
     block?.getInputTargetBlock?.(inputName) &&
-    closeNumber(getScalarInputValue(block, inputName, null, fallback), target)
+    closeNumber(getScalarInputValue(block, inputName, null, fallback), target),
   )
 }
 
@@ -193,8 +196,10 @@ function isSkewCrossProductBlock(block) {
   if (block?.type !== 'vector_cross_product') return false
   const left = getInputBlock(block, 'U')
   const right = getInputBlock(block, 'V')
-  const isLine1Direction = (inputBlock) => blockMatchesVec3(inputBlock, SKEW_LINE_1_DIRECTION) || isSkewLine1Block(inputBlock)
-  const isLine2Direction = (inputBlock) => blockMatchesVec3(inputBlock, SKEW_LINE_2_DIRECTION) || isSkewLine2Block(inputBlock)
+  const isLine1Direction = (inputBlock) =>
+    blockMatchesVec3(inputBlock, SKEW_LINE_1_DIRECTION) || isSkewLine1Block(inputBlock)
+  const isLine2Direction = (inputBlock) =>
+    blockMatchesVec3(inputBlock, SKEW_LINE_2_DIRECTION) || isSkewLine2Block(inputBlock)
   return (
     (isLine1Direction(left) && isLine2Direction(right)) ||
     (isLine2Direction(left) && isLine1Direction(right))
@@ -230,7 +235,9 @@ function isSkewPlaneBlock(block) {
 }
 
 function isPointOnObjectBlock(block, objectPredicate) {
-  return block?.type === 'geo_show_point_on_object' && objectPredicate(getInputBlock(block, 'OBJECT'))
+  return (
+    block?.type === 'geo_show_point_on_object' && objectPredicate(getInputBlock(block, 'OBJECT'))
+  )
 }
 
 function isPointOnSkewPlaneBlock(block) {
@@ -301,7 +308,13 @@ function createPointPMarker() {
     p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
   }
   marker.userData.labels = [
-    { anchor: 'p', text: 'P = [3, 4, 5]', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
+    {
+      anchor: 'p',
+      text: 'P = [3, 4, 5]',
+      distanceFactor: 8,
+      offset: [0.12, 0.12, 0],
+      color: '#2563eb',
+    },
   ]
 
   return marker
@@ -322,7 +335,12 @@ function addExercisePointPIfNeeded(objects, workspace) {
 // find and remove any earlier copies before reseeding, so a layout change
 // here actually reaches workspaces that already have an older copy saved
 // from a previous visit, instead of silently keeping the stale positions.
-const EXERCISE_BACKGROUND_BLOCK_IDS = ['ex-bg-sphere-1', 'ex-bg-sphere-2', 'ex-bg-cube-1', 'ex-bg-line-1']
+const EXERCISE_BACKGROUND_BLOCK_IDS = [
+  'ex-bg-sphere-1',
+  'ex-bg-sphere-2',
+  'ex-bg-cube-1',
+  'ex-bg-line-1',
+]
 const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
   <block type="geo_sphere" id="ex-bg-sphere-1" x="-350" y="-350">
     <value name="RADIUS_INPUT">
@@ -389,11 +407,12 @@ function hasExercisePlane(objects) {
 }
 
 function hasPointQOnExercisePlane(objects) {
-  return objects.some((object) => (
-    object?.userData?.geoType === 'annotated_object' &&
-    pointLiesOnExercisePlane(object.userData.point) &&
-    objectOrChildMatches(object, isExercisePlaneObject)
-  ))
+  return objects.some(
+    (object) =>
+      object?.userData?.geoType === 'annotated_object' &&
+      pointLiesOnExercisePlane(object.userData.point) &&
+      objectOrChildMatches(object, isExercisePlaneObject),
+  )
 }
 
 function hasPointDifferenceBlock(workspace) {
@@ -448,8 +467,12 @@ function hasSkewPlaneBlock(workspace) {
 function hasSkewOtherLinePointBlock(workspace) {
   if (!workspace) return false
   return workspace.getBlocksByType('geo_show_point_on_object', false).some((block) => {
-    const planeBlocks = workspace.getBlocksByType('parametric_plane', false).filter(isSkewPlaneBlock)
-    return planeBlocks.some((planeBlock) => isPointOnOtherSkewLineBlock(block, getSkewPlaneLine(planeBlock)))
+    const planeBlocks = workspace
+      .getBlocksByType('parametric_plane', false)
+      .filter(isSkewPlaneBlock)
+    return planeBlocks.some((planeBlock) =>
+      isPointOnOtherSkewLineBlock(block, getSkewPlaneLine(planeBlock)),
+    )
   })
 }
 
@@ -526,13 +549,15 @@ function hasSphereCenterDifferenceBlock(workspace) {
 
 function hasSphereCenterMagnitudeBlock(workspace) {
   if (!workspace) return false
-  return workspace.getBlocksByType('vector_magnitude', false).some((block) => (
-    isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
-  ))
+  return workspace
+    .getBlocksByType('vector_magnitude', false)
+    .some((block) => isSphereCenterDifferenceBlock(getInputBlock(block, 'V')))
 }
 
 function isSphereCenterMagnitudeBlock(block) {
-  return block?.type === 'vector_magnitude' && isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
+  return (
+    block?.type === 'vector_magnitude' && isSphereCenterDifferenceBlock(getInputBlock(block, 'V'))
+  )
 }
 
 function getSphereRadiusScalar(block) {
@@ -546,7 +571,9 @@ function isSphereRadiusSumBlock(block) {
   if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'add') return false
   const leftRadius = getSphereRadiusScalar(getInputBlock(block, 'A'))
   const rightRadius = getSphereRadiusScalar(getInputBlock(block, 'B'))
-  return new Set([leftRadius, rightRadius]).size === 2 && leftRadius !== null && rightRadius !== null
+  return (
+    new Set([leftRadius, rightRadius]).size === 2 && leftRadius !== null && rightRadius !== null
+  )
 }
 
 function getCenterMinusOneRadius(block) {
@@ -583,9 +610,9 @@ function blockTreeContains(block, predicate, visited = new Set()) {
   if (!block || visited.has(block.id)) return false
   visited.add(block.id)
   if (predicate(block)) return true
-  return (block.inputList || []).some((input) => (
-    blockTreeContains(input.connection?.targetBlock?.(), predicate, visited)
-  ))
+  return (block.inputList || []).some((input) =>
+    blockTreeContains(input.connection?.targetBlock?.(), predicate, visited),
+  )
 }
 
 function isSphereScalarDistanceCandidateBlock(block) {
@@ -615,10 +642,7 @@ function isTargetTeapotBlock(block) {
   const centreMatches = centreBlock
     ? blockMatchesVec3(centreBlock, TRANSFORM_TEAPOT_CENTRE)
     : TRANSFORM_TEAPOT_CENTRE.equals(new THREE.Vector3(0, 0, 0))
-  return (
-    centreMatches &&
-    scalarInputMatches(block, 'SIZE_INPUT', TRANSFORM_TEAPOT_SIZE, 1)
-  )
+  return centreMatches && scalarInputMatches(block, 'SIZE_INPUT', TRANSFORM_TEAPOT_SIZE, 1)
 }
 
 function isScaleStepBlock(block, factor) {
@@ -670,26 +694,35 @@ function hasPipelineConnectedToTeapot(workspace) {
 
 function hasScaleStepForTeapot(workspace, factor) {
   if (!workspace) return false
-  return workspace.getBlocksByType('transform_pipeline', false).some((pipeline) => (
-    pipelineTargetsTeapot(pipeline) &&
-    pipelineStepChain(pipeline).some((step) => isScaleStepBlock(step, factor))
-  ))
+  return workspace
+    .getBlocksByType('transform_pipeline', false)
+    .some(
+      (pipeline) =>
+        pipelineTargetsTeapot(pipeline) &&
+        pipelineStepChain(pipeline).some((step) => isScaleStepBlock(step, factor)),
+    )
 }
 
 function hasRotateStepForTeapot(workspace, axis, degrees) {
   if (!workspace) return false
-  return workspace.getBlocksByType('transform_pipeline', false).some((pipeline) => (
-    pipelineTargetsTeapot(pipeline) &&
-    pipelineStepChain(pipeline).some((step) => isRotateStepBlock(step, axis, degrees))
-  ))
+  return workspace
+    .getBlocksByType('transform_pipeline', false)
+    .some(
+      (pipeline) =>
+        pipelineTargetsTeapot(pipeline) &&
+        pipelineStepChain(pipeline).some((step) => isRotateStepBlock(step, axis, degrees)),
+    )
 }
 
 function hasTranslateStepForTeapot(workspace, tx, ty, tz) {
   if (!workspace) return false
-  return workspace.getBlocksByType('transform_pipeline', false).some((pipeline) => (
-    pipelineTargetsTeapot(pipeline) &&
-    pipelineStepChain(pipeline).some((step) => isTranslateStepBlock(step, tx, ty, tz))
-  ))
+  return workspace
+    .getBlocksByType('transform_pipeline', false)
+    .some(
+      (pipeline) =>
+        pipelineTargetsTeapot(pipeline) &&
+        pipelineStepChain(pipeline).some((step) => isTranslateStepBlock(step, tx, ty, tz)),
+    )
 }
 
 function hasValidScaleComputation(workspace) {
@@ -712,11 +745,14 @@ function hasValidTranslateComputation(workspace) {
 }
 
 function getTransformTargetObject(objects) {
-  return objects.find((object) => (
-    object?.userData?.geoType === 'geo_teapot' &&
-    vectorMatches(object.userData.centre, TRANSFORM_TEAPOT_CENTRE) &&
-    closeNumber(object.userData.size, TRANSFORM_TEAPOT_SIZE)
-  )) ?? null
+  return (
+    objects.find(
+      (object) =>
+        object?.userData?.geoType === 'geo_teapot' &&
+        vectorMatches(object.userData.centre, TRANSFORM_TEAPOT_CENTRE) &&
+        closeNumber(object.userData.size, TRANSFORM_TEAPOT_SIZE),
+    ) ?? null
+  )
 }
 
 function quaternionAngleDegrees(qa, qb) {
@@ -735,8 +771,16 @@ function scaleMatches(object, factor, tolerance = 0.01) {
 
 function rotationMatches(object, axis, degrees, tolerance = 0.5) {
   if (!object) return false
-  const axisVector = axis === 'X' ? new THREE.Vector3(1, 0, 0) : axis === 'Y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1)
-  const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(axisVector, THREE.MathUtils.degToRad(degrees))
+  const axisVector =
+    axis === 'X'
+      ? new THREE.Vector3(1, 0, 0)
+      : axis === 'Y'
+        ? new THREE.Vector3(0, 1, 0)
+        : new THREE.Vector3(0, 0, 1)
+  const expectedQuaternion = new THREE.Quaternion().setFromAxisAngle(
+    axisVector,
+    THREE.MathUtils.degToRad(degrees),
+  )
   return closeNumber(quaternionAngleDegrees(object.quaternion, expectedQuaternion), 0, tolerance)
 }
 
@@ -771,19 +815,22 @@ function getDistanceAnswer(objects, expectedDistance = null, workspace = null, o
   }
 
   if (options.isSkewExercise) {
-    const lineIntersectionAnswer = objects.find((object) => (
-      object?.userData?.geoType === 'geo_line_intersection'
-    ))
+    const lineIntersectionAnswer = objects.find(
+      (object) => object?.userData?.geoType === 'geo_line_intersection',
+    )
     const distance = Number(lineIntersectionAnswer?.userData?.distance)
     if (Number.isFinite(distance)) return distance
   }
 
-  const distanceObject = objects.find((object) => (
-    object?.userData?.geoType === 'point_plane_distance_dot' ||
-    object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
-    object?.userData?.geoType === 'sphere_sphere_distance'
-  ))
-  const scalarObjects = objects.filter((object) => object?.userData?.geoType === 'scalar_arithmetic_result')
+  const distanceObject = objects.find(
+    (object) =>
+      object?.userData?.geoType === 'point_plane_distance_dot' ||
+      object?.userData?.geoType === 'point_plane_distance_projection_magnitude' ||
+      object?.userData?.geoType === 'sphere_sphere_distance',
+  )
+  const scalarObjects = objects.filter(
+    (object) => object?.userData?.geoType === 'scalar_arithmetic_result',
+  )
   const scalarAnswer = Number.isFinite(expectedDistance)
     ? scalarObjects.find((object) => closeNumber(object.userData?.value, expectedDistance, 0.01))
     : scalarObjects[0]
@@ -801,9 +848,13 @@ export default function ExercisePage() {
   // The URL is the source of truth for which exercise is open (deep-linkable,
   // shareable, survives reload) -- /exercise with no param defaults to 1,
   // matching the page's original behaviour before routing was added.
-  const activeExercise = EXERCISES.find(({ number }) => number === Number(exerciseNumber))?.number ?? 1
-  const activeExerciseConfig = EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
-  const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExerciseConfig.number)
+  const activeExercise =
+    EXERCISES.find(({ number }) => number === Number(exerciseNumber))?.number ?? 1
+  const activeExerciseConfig =
+    EXERCISES.find(({ number }) => number === activeExercise) ?? EXERCISES[0]
+  const previousExercise = EXERCISES.toReversed().find(
+    ({ number }) => number < activeExerciseConfig.number,
+  )
   const nextExercise = EXERCISES.find(({ number }) => number > activeExerciseConfig.number)
   const isScaleExercise = activeExerciseConfig.number === 1
   const isRotateExercise = activeExerciseConfig.number === 2
@@ -811,8 +862,13 @@ export default function ExercisePage() {
   const isTranslateExercise = activeExerciseConfig.number === 4
   const isSkewExercise = activeExerciseConfig.number === 6
   const isSphereExercise = activeExerciseConfig.number === 7
-  const isTransformTypeExercise = isScaleExercise || isRotateExercise || isTransformExercise || isTranslateExercise
-  const expectedDistance = isSkewExercise ? SKEW_DISTANCE : isSphereExercise ? SPHERE_DISTANCE : CORRECT_DISTANCE
+  const isTransformTypeExercise =
+    isScaleExercise || isRotateExercise || isTransformExercise || isTranslateExercise
+  const expectedDistance = isSkewExercise
+    ? SKEW_DISTANCE
+    : isSphereExercise
+      ? SPHERE_DISTANCE
+      : CORRECT_DISTANCE
   const distanceAnswer = isTransformTypeExercise
     ? null
     : getDistanceAnswer(objects, expectedDistance, workspace, { isSkewExercise, isSphereExercise })
@@ -821,7 +877,8 @@ export default function ExercisePage() {
     : isSphereExercise
       ? hasValidSphereDistanceComputation(workspace)
       : hasValidDistanceComputation(workspace)
-  const distanceIsCorrect = distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
+  const distanceIsCorrect =
+    distanceAnswer !== null && closeNumber(distanceAnswer, expectedDistance, 0.01)
 
   const transformTargetObject = isTransformTypeExercise ? getTransformTargetObject(objects) : null
   const transformIsCorrect = isScaleExercise
@@ -844,7 +901,9 @@ export default function ExercisePage() {
           ? hasValidTranslateComputation(workspace)
           : false
 
-  const answerIsCorrect = isTransformTypeExercise ? Boolean(transformTargetObject) && transformIsCorrect : distanceIsCorrect
+  const answerIsCorrect = isTransformTypeExercise
+    ? Boolean(transformTargetObject) && transformIsCorrect
+    : distanceIsCorrect
   const answerIncorrect = isTransformTypeExercise
     ? Boolean(transformTargetObject) && !transformIsCorrect
     : distanceAnswer !== null && !distanceIsCorrect
@@ -898,35 +957,42 @@ export default function ExercisePage() {
     pipeline: hasPipelineConnectedToTeapot(workspace),
     translate: hasValidTranslateComputation(workspace) && exercisePassed,
   }
-  const reusableBlockTemplate = exercisePassed && !isTransformTypeExercise
-    ? activeExerciseConfig.number === 5
-      ? {
-      defaultName: 'Distance from point to plane',
-      description: 'Save a reusable distance block with open inputs for any point and any plane.',
-      source: 'exercise',
-      xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
-    }
-      : activeExerciseConfig.number === 6
+  const reusableBlockTemplate =
+    exercisePassed && !isTransformTypeExercise
+      ? activeExerciseConfig.number === 5
         ? {
-      defaultName: 'Intersect 3D lines',
-      description: 'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
-      source: 'exercise',
-      xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
-    }
-        : {
-      defaultName: 'Distance between spheres',
-      description: 'Save a reusable sphere distance block with open inputs for any two spheres.',
-      source: 'exercise',
-      xmlText: SPHERE_DISTANCE_BLOCK_XML,
-    }
-    : null
+            defaultName: 'Distance from point to plane',
+            description:
+              'Save a reusable distance block with open inputs for any point and any plane.',
+            source: 'exercise',
+            xmlText: POINT_PLANE_DISTANCE_BLOCK_XML,
+          }
+        : activeExerciseConfig.number === 6
+          ? {
+              defaultName: 'Intersect 3D lines',
+              description:
+                'Save a reusable Intersect 3D block with open inputs for any two vector lines.',
+              source: 'exercise',
+              xmlText: LINE_INTERSECTION_3D_BLOCK_XML,
+            }
+          : {
+              defaultName: 'Distance between spheres',
+              description:
+                'Save a reusable sphere distance block with open inputs for any two spheres.',
+              source: 'exercise',
+              xmlText: SPHERE_DISTANCE_BLOCK_XML,
+            }
+      : null
 
-  const handleSelectExercise = useCallback((number) => {
-    navigate(`/exercise/${number}`)
-    setWorkspaceMaximized(false)
-    setPendingObjects([])
-    setObjects([])
-  }, [navigate, setObjects, setPendingObjects])
+  const handleSelectExercise = useCallback(
+    (number) => {
+      navigate(`/exercise/${number}`)
+      setWorkspaceMaximized(false)
+      setPendingObjects([])
+      setObjects([])
+    },
+    [navigate, setObjects, setPendingObjects],
+  )
 
   // Drop the background blocks straight into the workspace once it's ready,
   // rather than injecting rendered objects behind the scenes -- they need to
@@ -943,8 +1009,7 @@ export default function ExercisePage() {
     // the effect re-runs once the real, settled workspace comes through.
     if (!workspace.rendered) return
     try {
-      EXERCISE_BACKGROUND_BLOCK_IDS
-        .map((id) => workspace.getBlockById(id))
+      EXERCISE_BACKGROUND_BLOCK_IDS.map((id) => workspace.getBlockById(id))
         .filter(Boolean)
         .forEach((block) => block.dispose())
       Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(EXERCISE_BACKGROUND_XML), workspace)
@@ -964,7 +1029,9 @@ export default function ExercisePage() {
 
   return (
     <div className="exercise-page exercise-page--editor">
-      <main className={`editor-shell editor-shell--with-leading exercise-editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}>
+      <main
+        className={`editor-shell editor-shell--with-leading exercise-editor-shell${workspaceMaximized ? ' editor-shell--maximized' : ''}`}
+      >
         <EditorColumnHeaders
           leadingHeader={
             <div className="exercise-column-heading">
@@ -977,7 +1044,12 @@ export default function ExercisePage() {
                   title="Browse all exercises"
                   aria-label="Browse all exercises"
                 >
-                  <AllApplication theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                  <AllApplication
+                    theme="outline"
+                    size="13"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  />
                   <span>Browse</span>
                 </button>
                 <button
@@ -1046,13 +1118,15 @@ export default function ExercisePage() {
                       Compute: n = d1 x d2. This normal is perpendicular to both line directions.
                     </li>
                     <li className={skewStepCompletion.plane ? 'is-complete' : ''}>
-                      Create: helper plane from any point on L1 or L2 and normal n. The chosen line should lie in the plane.
+                      Create: helper plane from any point on L1 or L2 and normal n. The chosen line
+                      should lie in the plane.
                     </li>
                     <li className={skewStepCompletion.point ? 'is-complete' : ''}>
                       Create: any point on the other line.
                     </li>
                     <li className={skewStepCompletion.difference ? 'is-complete' : ''}>
-                      Use the point on the other line as the point input, and use the helper plane as the plane input.
+                      Use the point on the other line as the point input, and use the helper plane
+                      as the plane input.
                     </li>
                     <li className={skewStepCompletion.distance ? 'is-complete' : ''}>
                       Calculate the distance from that point to that helper plane.
@@ -1076,16 +1150,20 @@ export default function ExercisePage() {
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
                     <li className={sphereStepCompletion.spheres ? 'is-complete' : ''}>
-                      Create: Sphere A, Sphere B, Center A, Center B. Use Scalar blocks for each radius, and Point blocks for the centers so the center-to-center vector draws in the right place.
+                      Create: Sphere A, Sphere B, Center A, Center B. Use Scalar blocks for each
+                      radius, and Point blocks for the centers so the center-to-center vector draws
+                      in the right place.
                     </li>
                     <li className={sphereStepCompletion.difference ? 'is-complete' : ''}>
-                      Compute: center difference with the Vector Arithmetic block, B - A or A - B. This vector should run from one sphere center to the other.
+                      Compute: center difference with the Vector Arithmetic block, B - A or A - B.
+                      This vector should run from one sphere center to the other.
                     </li>
                     <li className={sphereStepCompletion.magnitude ? 'is-complete' : ''}>
                       Compute: center distance with the Vector Magnitude block, |B - A|.
                     </li>
                     <li className={sphereStepCompletion.distance ? 'is-complete' : ''}>
-                      Compute: sphere distance with the Scalar Arithmetic block, i.e., |B - A| - rA - rB.
+                      Compute: sphere distance with the Scalar Arithmetic block, i.e., |B - A| - rA
+                      - rB.
                     </li>
                   </ol>
                 </>
@@ -1167,7 +1245,8 @@ export default function ExercisePage() {
                       Add: a Scale Matrix (sx=2, sy=2, sz=2) as a step in the pipeline.
                     </li>
                     <li className={transformStepCompletion.rotate ? 'is-complete' : ''}>
-                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline. Order does not matter.
+                      Add: a Rotation Matrix (axis Y, 45 degrees) as another step in the pipeline.
+                      Order does not matter.
                     </li>
                   </ol>
                 </>
@@ -1212,12 +1291,8 @@ export default function ExercisePage() {
                   </div>
 
                   <ol className={`exercise-task-steps${exercisePassed ? ' is-passed' : ''}`}>
-                    <li className={stepCompletion.plane ? 'is-complete' : ''}>
-                      Create: plane
-                    </li>
-                    <li className={stepCompletion.pointP ? 'is-complete' : ''}>
-                      Create: Point P
-                    </li>
+                    <li className={stepCompletion.plane ? 'is-complete' : ''}>Create: plane</li>
+                    <li className={stepCompletion.pointP ? 'is-complete' : ''}>Create: Point P</li>
                     <li className={stepCompletion.pointQ ? 'is-complete' : ''}>
                       Create: any point Q on the plane
                     </li>
@@ -1225,7 +1300,9 @@ export default function ExercisePage() {
                       Compute: P - Q with the Vector Arithmetic block.
                     </li>
                     <li className={stepCompletion.distance ? 'is-complete' : ''}>
-                      Compute: distance by projecting P - Q onto n and taking Vector Magnitude. Alternatively, you can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance from P to the plane.
+                      Compute: distance by projecting P - Q onto n and taking Vector Magnitude.
+                      Alternatively, you can use the dot product of (P - Q) and n because n is a
+                      unit vector. This gives the distance from P to the plane.
                     </li>
                   </ol>
                 </>
@@ -1256,10 +1333,14 @@ export default function ExercisePage() {
                           <strong>
                             {transformTargetObject
                               ? (() => {
-                                const euler = new THREE.Euler().setFromQuaternion(transformTargetObject.quaternion, 'XYZ')
-                                const toDeg = (radians) => THREE.MathUtils.radToDeg(radians).toFixed(1)
-                                return `(${toDeg(euler.x)}°, ${toDeg(euler.y)}°, ${toDeg(euler.z)}°)`
-                              })()
+                                  const euler = new THREE.Euler().setFromQuaternion(
+                                    transformTargetObject.quaternion,
+                                    'XYZ',
+                                  )
+                                  const toDeg = (radians) =>
+                                    THREE.MathUtils.radToDeg(radians).toFixed(1)
+                                  return `(${toDeg(euler.x)}°, ${toDeg(euler.y)}°, ${toDeg(euler.z)}°)`
+                                })()
                               : ''}
                           </strong>
                         </>
@@ -1270,7 +1351,9 @@ export default function ExercisePage() {
               ) : (
                 <div className={answerCardClass}>
                   <span>Your answer:</span>
-                  <strong>{distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}</strong>
+                  <strong>
+                    {distanceAnswer !== null ? Number(distanceAnswer.toFixed(3)) : ''}
+                  </strong>
                 </div>
               )}
             </aside>

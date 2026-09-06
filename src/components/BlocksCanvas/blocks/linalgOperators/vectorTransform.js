@@ -11,13 +11,9 @@ export function initVectorTransformBlock() {
   Blockly.Blocks['vector_transform'] = {
     init() {
       this.appendDummyInput().appendField('Vector Transform')
-      this.appendValueInput('TARGET')
-        .setCheck('obj3D')
-        .appendField('Target Vector:')
+      this.appendValueInput('TARGET').setCheck('obj3D').appendField('Target Vector:')
       this.appendValueInput('rot').appendField('Rotate:').setCheck('rotMat')
-      this.appendValueInput('trans')
-        .appendField('Translate:')
-        .setCheck('transMat')
+      this.appendValueInput('trans').appendField('Translate:').setCheck('transMat')
       this.appendValueInput('scale').appendField('Scaling:').setCheck('scalar')
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Translate / rotate vector in R3')
@@ -41,17 +37,11 @@ export function initVectorTransformBlock() {
     },
   }
 
-  javascriptGenerator.forBlock['vector_transform'] = function (
-    block,
-    generator
-  ) {
+  javascriptGenerator.forBlock['vector_transform'] = function (block, generator) {
     const tgt = generator.valueToCode(block, 'TARGET', Order.FUNCTION_CALL) || 'null'
-    const rot =
-      generator.valueToCode(block, 'rot', Order.FUNCTION_CALL) || 'null'
-    const trans =
-      generator.valueToCode(block, 'trans', Order.FUNCTION_CALL) || 'null'
-    const scale =
-      generator.valueToCode(block, 'scale', Order.FUNCTION_CALL) || 'null'
+    const rot = generator.valueToCode(block, 'rot', Order.FUNCTION_CALL) || 'null'
+    const trans = generator.valueToCode(block, 'trans', Order.FUNCTION_CALL) || 'null'
+    const scale = generator.valueToCode(block, 'scale', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
       const obj = ${tgt};

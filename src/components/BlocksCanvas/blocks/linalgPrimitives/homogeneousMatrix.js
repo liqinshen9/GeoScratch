@@ -20,10 +20,7 @@ export function formatMatrixEntry(n, decimals = 4) {
  */
 export function formatMatrixHtml(m) {
   const rows = m
-    .map(
-      (row) =>
-        `<tr>${row.map((v) => `<td>${formatMatrixEntry(v)}</td>`).join('')}</tr>`
-    )
+    .map((row) => `<tr>${row.map((v) => `<td>${formatMatrixEntry(v)}</td>`).join('')}</tr>`)
     .join('')
   return `<table class="blockly-matrix-preview-table"><tbody>${rows}</tbody></table>`
 }

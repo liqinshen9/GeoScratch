@@ -19,7 +19,7 @@ export function initVectorArithmeticBlock() {
             ['a + b', 'add'],
             ['a - b', 'subtract'],
           ]),
-          'OP'
+          'OP',
         )
 
       // Value block output: visualizes the operation and returns the result vector.
@@ -33,9 +33,9 @@ export function initVectorArithmeticBlock() {
   }
 
   javascriptGenerator.forBlock['vector_arithmetic'] = function (block, g) {
-    const op = block.getFieldValue('OP') || 'add';
-    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null';
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const op = block.getFieldValue('OP') || 'add'
+    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
     const uVal = ${u};
@@ -205,9 +205,8 @@ export function initVectorArithmeticBlock() {
       });
     }
     return resultVector;
-  })()`;
+  })()`
 
-    return [code, Order.FUNCTION_CALL];
-  };
-
+    return [code, Order.FUNCTION_CALL]
+  }
 }

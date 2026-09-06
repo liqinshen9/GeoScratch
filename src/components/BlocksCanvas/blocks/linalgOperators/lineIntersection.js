@@ -3,7 +3,15 @@ import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { closestLineData, leastSquares2 } from '@/utils/lineIntersectionMath'
 
-function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, threeObjStore, closestLineDataFn, leastSquares2Fn) {
+function lineIntersectionDefinition(
+  lineAInput,
+  lineBInput,
+  blockId,
+  THREE,
+  threeObjStore,
+  closestLineDataFn,
+  leastSquares2Fn,
+) {
   const getLineData = (input) => {
     if (!input?.isObject3D || input.userData?.geoType !== 'geo_vector_line') return null
     const origin = input.userData.origin?.isVector3 ? input.userData.origin.clone() : null
@@ -28,7 +36,8 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
   group.userData.hasIntersection = false
   group.userData.status = 'missing-lines'
 
-  const markerMaterial = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.34, metalness: 0.08 })
+  const markerMaterial = (color) =>
+    new THREE.MeshStandardMaterial({ color, roughness: 0.34, metalness: 0.08 })
   const marker = (position, color) => {
     const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), markerMaterial(color))
     mesh.userData.zoomInvariantRadius = 0.04
@@ -41,20 +50,31 @@ function lineIntersectionDefinition(lineAInput, lineBInput, blockId, THREE, thre
     const fallback = marker(new THREE.Vector3(), 0xef4444)
     group.add(fallback)
     group.userData.labels = [
-      { anchor: 'status', text: 'Connect two vector lines', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ef4444' },
+      {
+        anchor: 'status',
+        text: 'Connect two vector lines',
+        distanceFactor: 8,
+        offset: [0.12, 0.12, 0],
+        color: '#ef4444',
+      },
     ]
     group.userData.labelAnchors = { status: { type: 'world', position: [0, 0, 0] } }
     if (threeObjStore) threeObjStore[blockId] = group
     return group
   }
 
-  const result = closestLineDataFn(lineA, lineB, {
-    dot: (a, b) => a.dot(b),
-    sub: (a, b) => a.clone().sub(b),
-    add: (a, b) => a.clone().add(b),
-    scale: (a, scalar) => a.clone().multiplyScalar(scalar),
-    distance: (a, b) => a.distanceTo(b),
-  }, leastSquares2Fn)
+  const result = closestLineDataFn(
+    lineA,
+    lineB,
+    {
+      dot: (a, b) => a.dot(b),
+      sub: (a, b) => a.clone().sub(b),
+      add: (a, b) => a.clone().add(b),
+      scale: (a, scalar) => a.clone().multiplyScalar(scalar),
+      distance: (a, b) => a.distanceTo(b),
+    },
+    leastSquares2Fn,
+  )
   const { pointA, pointB, midpoint, gap: distance, t1: tA, t2: tB } = result
   const hasIntersection = distance <= 1e-4
 
@@ -109,7 +129,9 @@ export function initLineIntersectionBlock() {
       this.setInputsInline(false)
       this.setOutput(true, 'obj3D')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Find the intersection of two 3D vector lines, or show the closest midpoint when they are skew.')
+      this.setTooltip(
+        'Find the intersection of two 3D vector lines, or show the closest midpoint when they are skew.',
+      )
       this.setDeletable(true)
       this.setMovable(true)
     },

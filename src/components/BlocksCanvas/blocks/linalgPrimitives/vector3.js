@@ -20,7 +20,8 @@ export function initVec3Block() {
   // The name badge shares the label's row rather than getting one of its
   // own: on its own it cost a whole row of height for a two-character badge.
   function appendCoordinateFields(block, label) {
-    block.appendDummyInput()
+    block
+      .appendDummyInput()
       .appendField(label)
       .appendField(new Blockly.FieldNumber(1), 'X')
       .appendField(',')
@@ -38,13 +39,15 @@ export function initVec3Block() {
   // this one instead of stretching the top row and shoving the coordinates
   // down the body.
   function appendColumnVectorFields(block, label) {
-    block.appendValueInput('ORIGIN')
+    block
+      .appendValueInput('ORIGIN')
       .setCheck('vector3')
       .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
     allowOverflowingInputs(block, 'ORIGIN')
     block.appendDummyInput().appendField(label)
     for (const axis of ['X', 'Y', 'Z']) {
-      block.appendDummyInput()
+      block
+        .appendDummyInput()
         .setAlign(Blockly.inputs.Align.CENTRE)
         .appendField(`${axis.toLowerCase()}:`)
         .appendField(new Blockly.FieldNumber(1), axis)
@@ -86,7 +89,8 @@ export function initVec3Block() {
     const isStandalone = isEffectivelyStandalone(block)
 
     if (block.type === 'linalg_point') {
-      return [`(function(){
+      return [
+        `(function(){
         const point = new THREE.Vector3(${coords});
         const label = geoNaming.nameFor(${blockId});
         point.userData = {
@@ -94,7 +98,9 @@ export function initVec3Block() {
           label,
           point: point.clone(),
         };
-        ${isStandalone ? `
+        ${
+          isStandalone
+            ? `
         const pointColor = window.GeoScratchColors.forInstance('point', ${blockId});
         const markerMat = new THREE.MeshStandardMaterial({ color: pointColor });
         const applyPointFinish = (mat, s) => {
@@ -119,9 +125,13 @@ export function initVec3Block() {
             applyPointFinish(markerMat, state.settings);
           });
         }
-        ` : ''}
+        `
+            : ''
+        }
         return point;
-      })()`, Order.FUNCTION_CALL]
+      })()`,
+        Order.FUNCTION_CALL,
+      ]
     }
 
     const originInput = block.getInput && block.getInput('ORIGIN')
@@ -130,14 +140,21 @@ export function initVec3Block() {
       ? javascriptGenerator.valueToCode(block, 'ORIGIN', Order.FUNCTION_CALL)
       : ''
 
-    return [`(function(){
+    return [
+      `(function(){
       const vec = new THREE.Vector3(${coords});
-      const __anchor = ${originConnected ? (originCode || 'new THREE.Vector3(0, 0, 0)') : 'new THREE.Vector3(0, 0, 0)'};
-      ${originConnected ? `// "from point:" tail -- consumed by operators (e.g. vector_arithmetic
+      const __anchor = ${originConnected ? originCode || 'new THREE.Vector3(0, 0, 0)' : 'new THREE.Vector3(0, 0, 0)'};
+      ${
+        originConnected
+          ? `// "from point:" tail -- consumed by operators (e.g. vector_arithmetic
       // draws this operand from here instead of the origin) as well as the
       // standalone glyph below.
-      vec.userData = { ...(vec.userData || {}), anchor: __anchor.clone() };` : ''}
-      ${isStandalone ? `
+      vec.userData = { ...(vec.userData || {}), anchor: __anchor.clone() };`
+          : ''
+      }
+      ${
+        isStandalone
+          ? `
       const label = geoNaming.nameFor(${blockId});
       const origin = __anchor.clone();
       const tip = origin.clone().add(vec);
@@ -161,7 +178,9 @@ export function initVec3Block() {
       visual.userData.labels = [
         { anchor: 'tip', name: label, value: vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: vectorColor },
       ];
-      ${originConnected ? `
+      ${
+        originConnected
+          ? `
       // A marker at the tail of a vector given a specific origin. Off by
       // default and behind the "Show Tail Point" setting: the tail is already
       // implied by where the shaft starts, and the extra dot reads as a
@@ -196,11 +215,17 @@ export function initVec3Block() {
           originMarker.visible = !!state.settings.showVectorOriginPoint;
         });
       }
-      ` : ''}
+      `
+          : ''
+      }
       if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = visual;
-      ` : ''}
+      `
+          : ''
+      }
       return vec;
-    })()`, Order.FUNCTION_CALL]
+    })()`,
+      Order.FUNCTION_CALL,
+    ]
   }
 
   //Linalg primitives

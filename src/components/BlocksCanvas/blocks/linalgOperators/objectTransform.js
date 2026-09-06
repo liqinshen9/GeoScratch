@@ -28,14 +28,17 @@ export function initObjectTransformBlock() {
       // Chronological order of connected sockets
       this.transformOrder = this.transformOrder || []
       this._wasConnected = {
-        rot:   !!this.getInputTargetBlock('rot'),
+        rot: !!this.getInputTargetBlock('rot'),
         trans: !!this.getInputTargetBlock('trans'),
         scale: !!this.getInputTargetBlock('scale'),
       }
 
       const removeLast = (arr, name) => {
         for (let i = arr.length - 1; i >= 0; --i) {
-          if (arr[i] === name) { arr.splice(i, 1); break }
+          if (arr[i] === name) {
+            arr.splice(i, 1)
+            break
+          }
         }
       }
 
@@ -44,18 +47,17 @@ export function initObjectTransformBlock() {
         if (!e) return
         const t = e.type
         if (t === Blockly.Events.BLOCK_MOVE && !blockMoveChangesGeneratedCode(e)) return
-        const watch = (
+        const watch =
           t === Blockly.Events.BLOCK_MOVE ||
           t === Blockly.Events.BLOCK_CREATE ||
           t === Blockly.Events.BLOCK_DELETE
-        )
         if (!watch) return
 
-          ;['rot','trans','scale'].forEach((name) => {
+        ;['rot', 'trans', 'scale'].forEach((name) => {
           const isNow = !!this.getInputTargetBlock(name)
-          const was   = !!this._wasConnected[name]
-          if (!was && isNow)       this.transformOrder.push(name)
-          else if (was && !isNow)  removeLast(this.transformOrder, name)
+          const was = !!this._wasConnected[name]
+          if (!was && isNow) this.transformOrder.push(name)
+          else if (was && !isNow) removeLast(this.transformOrder, name)
           this._wasConnected[name] = isNow
         })
 
@@ -86,21 +88,21 @@ export function initObjectTransformBlock() {
 
   // Generator: apply world-space matrices in recorded order
   javascriptGenerator.forBlock['object_transform'] = function (block, generator) {
-    const tgt   = generator.valueToCode(block, 'TARGET', Order.FUNCTION_CALL) || 'null'
-    const rot   = generator.valueToCode(block, 'rot',    Order.FUNCTION_CALL) || 'null'
-    const trans = generator.valueToCode(block, 'trans',  Order.FUNCTION_CALL) || 'null'
-    const scale = generator.valueToCode(block, 'scale',  Order.FUNCTION_CALL) || 'null'
+    const tgt = generator.valueToCode(block, 'TARGET', Order.FUNCTION_CALL) || 'null'
+    const rot = generator.valueToCode(block, 'rot', Order.FUNCTION_CALL) || 'null'
+    const trans = generator.valueToCode(block, 'trans', Order.FUNCTION_CALL) || 'null'
+    const scale = generator.valueToCode(block, 'scale', Order.FUNCTION_CALL) || 'null'
 
     let order = (block.transformOrder || [])
-      .filter(n => n === 'rot' || n === 'trans' || n === 'scale')
-      .filter(n => !!block.getInputTargetBlock(n))
+      .filter((n) => n === 'rot' || n === 'trans' || n === 'scale')
+      .filter((n) => !!block.getInputTargetBlock(n))
     if (!order.length) {
-      order = ['rot', 'trans', 'scale'].filter(n => !!block.getInputTargetBlock(n))
+      order = ['rot', 'trans', 'scale'].filter((n) => !!block.getInputTargetBlock(n))
     }
 
     const expr = { rot, trans, scale }
     const steps = order
-      .map(n => `obj = ${n === 'scale' ? '__applyScale' : '__applyWorld'}(obj, ${expr[n]});`)
+      .map((n) => `obj = ${n === 'scale' ? '__applyScale' : '__applyWorld'}(obj, ${expr[n]});`)
       .join('\n      ')
 
     const code = `(function(){

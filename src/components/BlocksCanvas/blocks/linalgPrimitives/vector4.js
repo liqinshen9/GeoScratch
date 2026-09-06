@@ -12,18 +12,23 @@ export function initVec4Block() {
 
   Blockly.Blocks['linalg_vec4'] = {
     init() {
-      this.appendDummyInput().appendField('Vector4: (')
-        .appendField(new Blockly.FieldNumber(1), 'W').appendField(',')
-        .appendField(new Blockly.FieldNumber(1), 'X').appendField(',')
-        .appendField(new Blockly.FieldNumber(1), 'Y').appendField(',')
-        .appendField(new Blockly.FieldNumber(1), 'Z').appendField(')')
+      this.appendDummyInput()
+        .appendField('Vector4: (')
+        .appendField(new Blockly.FieldNumber(1), 'W')
+        .appendField(',')
+        .appendField(new Blockly.FieldNumber(1), 'X')
+        .appendField(',')
+        .appendField(new Blockly.FieldNumber(1), 'Y')
+        .appendField(',')
+        .appendField(new Blockly.FieldNumber(1), 'Z')
+        .appendField(')')
       this.setStyle(BLOCK_STYLES.VALUE_PRIMITIVES)
       this.setColour(forRole(COLOR_ROLES.ACCENT))
       this.setTooltip('4D Vector')
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'vector4')
-    }
+    },
   }
 
   javascriptGenerator.forBlock['linalg_vec4'] = function (block, generator) {

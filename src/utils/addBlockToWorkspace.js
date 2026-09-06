@@ -71,9 +71,9 @@ function findCascadedOpenSpot(workspace, newBlock, preferredSpot) {
 function findOpenSpot(workspace, newBlock, preferredSpot = null) {
   const center = preferredSpot
     ? {
-      x: preferredSpot.x + newBlock.getHeightWidth().width / 2,
-      y: preferredSpot.y + newBlock.getHeightWidth().height / 2,
-    }
+        x: preferredSpot.x + newBlock.getHeightWidth().width / 2,
+        y: preferredSpot.y + newBlock.getHeightWidth().height / 2,
+      }
     : getViewCenter(workspace)
   const hw = newBlock.getHeightWidth()
   const occupied = getOccupiedRects(workspace, newBlock)
@@ -163,18 +163,17 @@ export function addBlockToWorkspace(workspace, type, options = {}) {
     // placed using its small collapsed footprint, not the expanded one.
     options.initBlock?.(block)
 
-    const hasDropPoint =
-      Number.isFinite(options.clientX) && Number.isFinite(options.clientY)
+    const hasDropPoint = Number.isFinite(options.clientX) && Number.isFinite(options.clientY)
 
-    const anchor = hasDropPoint ? null : (options.preferredSpot ?? getPipelineAnchor(workspace, block))
+    const anchor = hasDropPoint
+      ? null
+      : (options.preferredSpot ?? getPipelineAnchor(workspace, block))
     const dropPoint = hasDropPoint
       ? clientToWorkspaceXY(workspace, options.clientX, options.clientY, block)
       : null
-    const { x, y } = dropPoint || (
-      anchor
-        ? findCascadedOpenSpot(workspace, block, anchor)
-        : findOpenSpot(workspace, block)
-    )
+    const { x, y } =
+      dropPoint ||
+      (anchor ? findCascadedOpenSpot(workspace, block, anchor) : findOpenSpot(workspace, block))
     const xy = block.getRelativeToSurfaceXY()
     block.moveBy(x - xy.x, y - xy.y)
 

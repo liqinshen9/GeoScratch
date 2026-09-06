@@ -39,14 +39,18 @@ export function initScalarArithmeticBlock() {
       this.appendValueInput('B')
         .setCheck(['scalar', 'obj3D'])
         .appendField(
-          new Blockly.FieldDropdown(Object.entries(OPERATORS).map(([value, { label }]) => [label, value])),
+          new Blockly.FieldDropdown(
+            Object.entries(OPERATORS).map(([value, { label }]) => [label, value]),
+          ),
           'OP',
         )
         .appendField('b:')
       this.setInputsInline(true)
       this.setOutput(true, 'scalar')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Compute with two scalar values. Also accepts visual scalar results like Vector Magnitude.')
+      this.setTooltip(
+        'Compute with two scalar values. Also accepts visual scalar results like Vector Magnitude.',
+      )
       this.setDeletable(true)
       this.setMovable(true)
     },
@@ -167,7 +171,9 @@ export function initScalarArithmeticBlock() {
     }
     const boxedResult = Object(safeResult);
     boxedResult.userData = resultMeta;
-    ${isStandalone && hasCompleteInputs ? `
+    ${
+      isStandalone && hasCompleteInputs
+        ? `
     const group = new THREE.Group();
     group.userData.geoType = 'scalar_arithmetic_result';
     group.userData.srcBlockId = ${blockId};
@@ -254,7 +260,9 @@ export function initScalarArithmeticBlock() {
       },
     ];
     if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = group;
-    ` : ''}
+    `
+        : ''
+    }
     return boxedResult;
   })()`
 

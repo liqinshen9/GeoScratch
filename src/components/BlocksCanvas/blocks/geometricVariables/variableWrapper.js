@@ -91,7 +91,9 @@ export function initVariableWrapperBlocks() {
         // sit exactly where the block it wraps already sat.
         this.setOutput(true, VALUE_TYPES)
         this.setStyle(BLOCK_STYLES.WORKSPACE_VARIABLE)
-        this.setTooltip('Wrap a block to reuse its value elsewhere. Press Create to make a reference.')
+        this.setTooltip(
+          'Wrap a block to reuse its value elsewhere. Press Create to make a reference.',
+        )
         this.setDeletable(true)
         this.setMovable(true)
       },

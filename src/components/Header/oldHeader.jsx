@@ -9,7 +9,6 @@ export default function Header({ onRun, autoRender, onAutoRenderChange }) {
   const navigate = useNavigate()
   return (
     <div className="grid grid-cols-3 gap-4 px-[var(--app-nav-gutter)] h-full w-full items-center">
-
       <div className="flex items-center gap-4 text-left">
         <Title />
       </div>
@@ -21,11 +20,7 @@ export default function Header({ onRun, autoRender, onAutoRenderChange }) {
           className="flex items-center gap-1.5 cursor-pointer opacity-90 hover:opacity-100 transition-opacity py-1 select-none"
           onClick={() => navigate('/settings')}
         >
-          <SettingConfig
-            theme="outline"
-            size="22"
-            fill="#ffffff"
-          />
+          <SettingConfig theme="outline" size="22" fill="#ffffff" />
           <span className="text-sm font-medium text-white tracking-wide hidden sm:inline">
             View Options
           </span>

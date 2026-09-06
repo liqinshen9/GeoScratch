@@ -28,14 +28,14 @@ export function initScaleMatrixBlock() {
           scaleMatrix3x3(
             Number(b.getFieldValue('SX')),
             Number(b.getFieldValue('SY')),
-            Number(b.getFieldValue('SZ'))
+            Number(b.getFieldValue('SZ')),
           ),
         (b) =>
           scaleMatrix(
             Number(b.getFieldValue('SX')),
             Number(b.getFieldValue('SY')),
-            Number(b.getFieldValue('SZ'))
-          )
+            Number(b.getFieldValue('SZ')),
+          ),
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Homogeneous scaling by (sx, sy, sz).')

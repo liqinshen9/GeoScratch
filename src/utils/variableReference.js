@@ -1,4 +1,9 @@
-import { readBlockData, writeBlockData, findBlockByRefId, getDisplayName } from '@/utils/namingRegistry'
+import {
+  readBlockData,
+  writeBlockData,
+  findBlockByRefId,
+  getDisplayName,
+} from '@/utils/namingRegistry'
 
 export const REF_BLOCK_TYPE = 'geo_variable_ref'
 export const WRAPPER_BLOCK_TYPE = 'geo_variable'

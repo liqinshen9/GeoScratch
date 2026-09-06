@@ -12,11 +12,15 @@ export default function initObjectCompositionBlocks() {
 
   Blockly.Blocks.geo_show_point_on_object = {
     init() {
-      this.appendDummyInput().appendField('Show any point on object').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendDummyInput()
+        .appendField('Show any point on object')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('OBJECT').appendField('object:').setCheck('obj3D')
       this.setStyle(BLOCK_STYLES.CREATE_POINT)
       this.setColour(forInstance('point', this.id))
-      this.setTooltip('Adds a visible point marker on the connected object and returns its R3 coordinate vector.')
+      this.setTooltip(
+        'Adds a visible point marker on the connected object and returns its R3 coordinate vector.',
+      )
       this.setOutput(true, 'vector3')
     },
   }

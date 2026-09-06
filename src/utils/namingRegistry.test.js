@@ -95,7 +95,7 @@ describe('namingRegistry', () => {
     return copy
   }
 
-  it('gives a duplicated block a fresh name instead of the original\'s', async () => {
+  it("gives a duplicated block a fresh name instead of the original's", async () => {
     const ws = new Blockly.Workspace()
     installNamingRegistry(ws)
     const original = await addBlock(ws)
@@ -118,7 +118,7 @@ describe('namingRegistry', () => {
     expect(getDisplayName(copy)).toMatch(/^L\d+$/)
   })
 
-  it('gives a duplicate a fresh refId so it cannot hijack the original\'s references', async () => {
+  it("gives a duplicate a fresh refId so it cannot hijack the original's references", async () => {
     const ws = new Blockly.Workspace()
     installNamingRegistry(ws)
     const original = await addBlock(ws)
@@ -175,7 +175,9 @@ describe('namingRegistry', () => {
   it('rehydrates its counter from already-persisted block data (e.g. a reloaded workspace)', async () => {
     const ws = new Blockly.Workspace()
     const preExisting = ws.newBlock('geo_vector')
-    preExisting.data = JSON.stringify({ geoScratchNaming: { kind: 'line', number: 2, custom: null, refId: 'ref-x' } })
+    preExisting.data = JSON.stringify({
+      geoScratchNaming: { kind: 'line', number: 2, custom: null, refId: 'ref-x' },
+    })
     await flush()
 
     installNamingRegistry(ws)

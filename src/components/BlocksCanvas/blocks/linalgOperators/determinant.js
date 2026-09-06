@@ -23,11 +23,7 @@ export function initDeterminantBlock() {
   }
 
   javascriptGenerator.forBlock['determinant'] = function (block, generator) {
-    const detString = `(${generator.valueToCode(
-      block,
-      'mat',
-      Order.FUNCTION_CALL
-    )}).determinant()`
+    const detString = `(${generator.valueToCode(block, 'mat', Order.FUNCTION_CALL)}).determinant()`
     return [detString, Order.FUNCTION_CALL]
   }
 }

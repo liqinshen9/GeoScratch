@@ -48,11 +48,14 @@ export default function HaloDilatePass({ rawTarget, onTargetReady }) {
     onTargetReady?.(target)
   }, [target, onTargetReady])
 
-  useEffect(() => () => {
-    target.dispose()
-    material.dispose()
-    quad.current?.dispose()
-  }, [target, material])
+  useEffect(
+    () => () => {
+      target.dispose()
+      material.dispose()
+      quad.current?.dispose()
+    },
+    [target, material],
+  )
 
   useFrame(() => {
     if (!haloEnabled || !rawTarget) return

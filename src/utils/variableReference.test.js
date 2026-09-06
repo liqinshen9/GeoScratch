@@ -93,7 +93,9 @@ describe('variableReference', () => {
     // `undefined` here would throw inside a consumer and, via
     // generateAndRun's catch, silently blank the entire 3D scene.
     expect(fallbackExpressionFor(reference)).toBe('null')
-    expect(referenceCode('ref-missing', fallbackExpressionFor(reference))).toBe('geoVar("ref-missing", null)')
+    expect(referenceCode('ref-missing', fallbackExpressionFor(reference))).toBe(
+      'geoVar("ref-missing", null)',
+    )
   })
 
   it('keeps the ref target and the naming record in separate namespaces', () => {

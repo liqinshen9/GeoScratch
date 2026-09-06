@@ -24,8 +24,8 @@ export function initVectorProjectBlock() {
   }
 
   javascriptGenerator.forBlock['vector_project'] = function (block, g) {
-    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null';
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
     const uVal = ${u};
@@ -282,8 +282,8 @@ export function initVectorProjectBlock() {
       });
     }
     return resultVector;
-  })()`;
+  })()`
 
-    return [code, Order.FUNCTION_CALL];
-  };
+    return [code, Order.FUNCTION_CALL]
+  }
 }

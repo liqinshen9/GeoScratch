@@ -3,10 +3,11 @@ import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
 
 function navLinkClass(isActive) {
   // Use h-full and items-center inside the link to lock vertical alignment completely
-  return `flex h-full items-center px-4 rounded-lg text-sm transition-all duration-200 ease-out no-underline ${isActive
+  return `flex h-full items-center px-4 rounded-lg text-sm transition-all duration-200 ease-out no-underline ${
+    isActive
       ? 'bg-white/15 text-white shadow-sm'
       : 'text-white/75 hover:text-white hover:bg-white/5 active:bg-white/10'
-    }`
+  }`
 }
 
 export default function Header() {
@@ -22,7 +23,10 @@ export default function Header() {
         <GeoScratchLogo showWordmark compact />
       </Link>
 
-      <nav className="landing-nav__links flex h-full items-center justify-center gap-2 pr-2 py-2" aria-label="Main Navigation">
+      <nav
+        className="landing-nav__links flex h-full items-center justify-center gap-2 pr-2 py-2"
+        aria-label="Main Navigation"
+      >
         <NavLink to="/exercises" className={navLinkClass(isExerciseAreaActive)}>
           Exercises
         </NavLink>

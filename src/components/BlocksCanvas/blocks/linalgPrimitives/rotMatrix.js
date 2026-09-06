@@ -36,16 +36,18 @@ export function initRotMatrixBlock() {
         (b) =>
           rotationMatrix3x3AroundAxisFromDegrees(
             b.getFieldValue('AXIS') || 'X',
-            Number(b.getFieldValue('DEGREES')) || 0
+            Number(b.getFieldValue('DEGREES')) || 0,
           ),
         (b) =>
           rotationMatrixAroundAxisFromDegrees(
             b.getFieldValue('AXIS') || 'X',
-            Number(b.getFieldValue('DEGREES')) || 0
-          )
+            Number(b.getFieldValue('DEGREES')) || 0,
+          ),
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
-      this.setTooltip('Rotate around one selected axis. Stack rotation blocks to control rotation order.')
+      this.setTooltip(
+        'Rotate around one selected axis. Stack rotation blocks to control rotation order.',
+      )
       this.setPreviousStatement(true, 'transformStep')
       this.setNextStatement(true, 'transformStep')
       useSingleStepDrag(this)

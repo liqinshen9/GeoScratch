@@ -22,7 +22,7 @@ export function initVectorMagnitude() {
   }
 
   javascriptGenerator.forBlock['vector_magnitude'] = function (block, g) {
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function () {
     const vVal = ${v};
@@ -128,9 +128,8 @@ export function initVectorMagnitude() {
       threeObjStore[baseId] = group;
     }
     return group;
-  })()`;
+  })()`
 
-    return [code, Order.FUNCTION_CALL];
-  };
-
+    return [code, Order.FUNCTION_CALL]
+  }
 }

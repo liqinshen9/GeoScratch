@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef } from 'react'
 import * as Blockly from 'blockly/core'
 import defineBlocks from '@/components/BlocksCanvas/blocks/index'
 import { BlockRegistry } from '@/components/BlocksCanvas/state/BlockRegistry'
-import { BLOCK_TYPE_OBJECT_TYPES, BLOCK_TYPE_ROLES } from '@/components/BlocksCanvas/blocks/blockColours'
+import {
+  BLOCK_TYPE_OBJECT_TYPES,
+  BLOCK_TYPE_ROLES,
+} from '@/components/BlocksCanvas/blocks/blockColours'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useThreeStore from '@/store/useThreeStore'
 import { forInstance, forRole, subscribeToPreset } from '@/store/colorSystem'
@@ -21,17 +24,14 @@ export function useBlocksWorkspace({
   runtimeMode,
 }) {
   const registryRef = useRef(null)
-  const {
-    workspace,
-    setWorkspace,
-    exampleXml,
-    clearExampleXml,
-  } = useWorkspaceStore()
+  const { workspace, setWorkspace, exampleXml, clearExampleXml } = useWorkspaceStore()
   const clearObjects = useThreeStore((s) => s.clearObjects)
 
   const syncScene = useCallback(
     (ws) => {
-      runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current, { runtimeMode })
+      runAndSync(ws, (objs) => onObjectsChangeRef.current?.(objs), registryRef.current, {
+        runtimeMode,
+      })
     },
     [onObjectsChangeRef, runtimeMode],
   )

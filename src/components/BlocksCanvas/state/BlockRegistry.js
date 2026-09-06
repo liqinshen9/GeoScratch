@@ -1,9 +1,9 @@
 export class BlockRegistry {
   constructor() {
     this.nextId = 1
-    this.byId = new Map()     // id -> { id, obj, srcBlockId }
-    this.idBySrc = new Map()  // srcBlockId -> id
-    this.order = []           // render order (ids)
+    this.byId = new Map() // id -> { id, obj, srcBlockId }
+    this.idBySrc = new Map() // srcBlockId -> id
+    this.order = [] // render order (ids)
   }
 
   upsertFromSource(srcBlockId, obj3d) {
@@ -32,16 +32,18 @@ export class BlockRegistry {
       const rec = this.byId.get(id)
       if (rec) this.idBySrc.delete(rec.srcBlockId)
       this.byId.delete(id)
-      this.order = this.order.filter(x => x !== id)
+      this.order = this.order.filter((x) => x !== id)
     }
   }
 
   list() {
     return this.order
-      .map(id => this.byId.get(id))
+      .map((id) => this.byId.get(id))
       .filter(Boolean)
       .map(({ id, obj, srcBlockId }) => ({ id, obj, srcBlockId }))
   }
 
-  getById(id) { return this.byId.get(id)?.obj || null }
+  getById(id) {
+    return this.byId.get(id)?.obj || null
+  }
 }

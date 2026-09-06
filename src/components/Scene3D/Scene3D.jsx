@@ -8,7 +8,15 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
-const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial, LineSegments2, LineSegmentsGeometry }
+const THREE = {
+  ...THREEBase,
+  TeapotGeometry,
+  Line2,
+  LineGeometry,
+  LineMaterial,
+  LineSegments2,
+  LineSegmentsGeometry,
+}
 
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
@@ -75,9 +83,11 @@ const AXIS_COLORS = {
 }
 
 function CameraHandle({ onReady }) {
-  const { camera } = useThree();
-  useEffect(() => { onReady?.(camera); }, [camera, onReady]);
-  return null;
+  const { camera } = useThree()
+  useEffect(() => {
+    onReady?.(camera)
+  }, [camera, onReady])
+  return null
 }
 
 // Camera-following headlamp; matches the fixed point light's shadow
@@ -88,31 +98,29 @@ const HEADLIGHT_SHADOW_MIN_FAR = 280
 const HEADLIGHT_SHADOW_FAR_MARGIN = 1.5
 
 function HeadLight({ controlsRef, castShadow = true }) {
-  const lightRef = useRef();
+  const lightRef = useRef()
   // Offset scales with camera-to-target distance (#57) so it stays a
   // small, consistent angle at any zoom instead of a fixed world vector.
-  const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), []);
-  const worldOffset = useMemo(() => new THREE.Vector3(), []);
+  const offset = useMemo(() => new THREE.Vector3(1.5, 2.5, 0.5), [])
+  const worldOffset = useMemo(() => new THREE.Vector3(), [])
 
   useFrame(({ camera }) => {
-    if (!lightRef.current) return;
+    if (!lightRef.current) return
 
-    const target = controlsRef?.current?.target;
-    const distance = target
-      ? camera.position.distanceTo(target)
-      : ZOOM_INVARIANT_REFERENCE_DISTANCE;
+    const target = controlsRef?.current?.target
+    const distance = target ? camera.position.distanceTo(target) : ZOOM_INVARIANT_REFERENCE_DISTANCE
     const scale = THREE.MathUtils.clamp(
       distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
       HEADLIGHT_OFFSET_MIN_SCALE,
-      HEADLIGHT_OFFSET_MAX_SCALE
-    );
-    worldOffset.copy(offset).multiplyScalar(scale).applyQuaternion(camera.quaternion);
-    lightRef.current.position.copy(camera.position).add(worldOffset);
+      HEADLIGHT_OFFSET_MAX_SCALE,
+    )
+    worldOffset.copy(offset).multiplyScalar(scale).applyQuaternion(camera.quaternion)
+    lightRef.current.position.copy(camera.position).add(worldOffset)
 
-    const shadowCam = lightRef.current.shadow.camera;
-    shadowCam.far = Math.max(HEADLIGHT_SHADOW_MIN_FAR, distance * HEADLIGHT_SHADOW_FAR_MARGIN);
-    shadowCam.updateProjectionMatrix();
-  });
+    const shadowCam = lightRef.current.shadow.camera
+    shadowCam.far = Math.max(HEADLIGHT_SHADOW_MIN_FAR, distance * HEADLIGHT_SHADOW_FAR_MARGIN)
+    shadowCam.updateProjectionMatrix()
+  })
 
   return (
     <pointLight
@@ -127,7 +135,7 @@ function HeadLight({ controlsRef, castShadow = true }) {
       shadow-bias={-0.001}
       shadow-camera-far={HEADLIGHT_SHADOW_MIN_FAR}
     />
-  );
+  )
 }
 
 // Bounding box room: BackSide walls so the near ones cull automatically.
@@ -150,33 +158,36 @@ function cubeEdges(half) {
     { faces: ['NX', 'PY'], a: [-half, half, -half], b: [-half, half, half] },
     { faces: ['PX', 'NY'], a: [half, -half, -half], b: [half, -half, half] },
     { faces: ['PX', 'PY'], a: [half, half, -half], b: [half, half, half] },
-  ];
+  ]
 }
 
 // A face is culled ("open") when the camera is beyond its plane.
 function openFaces(cameraPosition, half) {
-  const { x, y, z } = cameraPosition;
+  const { x, y, z } = cameraPosition
   return {
-    PX: x > half, NX: x < -half,
-    PY: y > half, NY: y < -half,
-    PZ: z > half, NZ: z < -half,
-  };
+    PX: x > half,
+    NX: x < -half,
+    PY: y > half,
+    NY: y < -half,
+    PZ: z > half,
+    NZ: z < -half,
+  }
 }
 
 function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
-  const half = size / 2;
-  const edges = useMemo(() => cubeEdges(half), [half]);
-  const edgeRefs = useRef([]);
+  const half = size / 2
+  const edges = useMemo(() => cubeEdges(half), [half])
+  const edgeRefs = useRef([])
 
   useFrame(({ camera }) => {
-    const open = showFrontWireframe ? null : openFaces(camera.position, half);
+    const open = showFrontWireframe ? null : openFaces(camera.position, half)
     edges.forEach((edge, i) => {
-      const obj = edgeRefs.current[i];
-      if (!obj) return;
-      const [f1, f2] = edge.faces;
-      obj.visible = !open || !(open[f1] && open[f2]);
-    });
-  });
+      const obj = edgeRefs.current[i]
+      if (!obj) return
+      const [f1, f2] = edge.faces
+      obj.visible = !open || !(open[f1] && open[f2])
+    })
+  })
 
   return (
     <group>
@@ -185,7 +196,12 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
         <meshStandardMaterial color="#ffffff" side={THREE.BackSide} roughness={1} />
       </mesh>
       {edges.map((edge, i) => (
-        <line key={i} ref={(el) => { edgeRefs.current[i] = el; }}>
+        <line
+          key={i}
+          ref={(el) => {
+            edgeRefs.current[i] = el
+          }}
+        >
           <bufferGeometry>
             <bufferAttribute
               attach="attributes-position"
@@ -196,10 +212,16 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
         </line>
       ))}
     </group>
-  );
+  )
 }
 
-function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity = 0.82, showLabel = true }) {
+function AxisArrow({
+  dir = [1, 0, 0],
+  color = AXIS_COLORS.x,
+  length = 3,
+  opacity = 0.82,
+  showLabel = true,
+}) {
   const arrowGroup = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const group = new THREE.Group()
@@ -223,7 +245,10 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
     // Kept under 0.0272 (the thinnest cylinder-based line glyph radius, see
     // geoVectorLine.js) so a coincident axis-aligned line still wins the
     // depth test against this shaft (#43).
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(AXIS_SHAFT_RADIUS, AXIS_SHAFT_RADIUS, shaftLength, 12), material)
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(AXIS_SHAFT_RADIUS, AXIS_SHAFT_RADIUS, shaftLength, 12),
+      material,
+    )
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
 
@@ -260,7 +285,13 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
       <primitive object={arrowGroup} />
       {showLabel && (
         <Billboard position={[tip.x, tip.y, tip.z]}>
-          <Text fontSize={0.52} color={color} fillOpacity={opacity} anchorX="center" anchorY="middle">
+          <Text
+            fontSize={0.52}
+            color={color}
+            fillOpacity={opacity}
+            anchorX="center"
+            anchorY="middle"
+          >
             {dir[0] ? 'x' : dir[1] ? 'y' : 'z'}
           </Text>
         </Billboard>
@@ -273,7 +304,13 @@ function AxisArrow({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, opacity
 // visible from any camera angle, unlike a flat perpendicular tick would be.
 // Reuses the same "ring around a cylinder" language as the collision-ring
 // line accent (geoVectorLine.js).
-function AxisTicks({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, step = 5, showLabels = true }) {
+function AxisTicks({
+  dir = [1, 0, 0],
+  color = AXIS_COLORS.x,
+  length = 3,
+  step = 5,
+  showLabels = true,
+}) {
   const { ticksGroup, labelPositions } = useMemo(() => {
     const direction = new THREE.Vector3(...dir).normalize()
     const perpOffset = dir[0] ? new THREE.Vector3(0, 0, 0.3) : new THREE.Vector3(0.3, 0, 0)
@@ -299,13 +336,14 @@ function AxisTicks({ dir = [1, 0, 0], color = AXIS_COLORS.x, length = 3, step = 
   return (
     <group>
       <primitive object={ticksGroup} />
-      {showLabels && labelPositions.map(({ t, pos }) => (
-        <Billboard key={t} position={[pos.x, pos.y, pos.z]}>
-          <Text fontSize={0.3} color={color} fillOpacity={0.75} anchorX="center" anchorY="middle">
-            {t}
-          </Text>
-        </Billboard>
-      ))}
+      {showLabels &&
+        labelPositions.map(({ t, pos }) => (
+          <Billboard key={t} position={[pos.x, pos.y, pos.z]}>
+            <Text fontSize={0.3} color={color} fillOpacity={0.75} anchorX="center" anchorY="middle">
+              {t}
+            </Text>
+          </Billboard>
+        ))}
     </group>
   )
 }
@@ -330,43 +368,87 @@ function OriginMarker({ radius = 0.06, color = DESMOS_TICK_COLOR, showLabel = fa
   )
 }
 
-function Axes({ length = 3, showTicks = true, tickStep = 5, showOriginLabel = false, showScaleLabels = true, showEndLabels = true }) {
+function Axes({
+  length = 3,
+  showTicks = true,
+  tickStep = 5,
+  showOriginLabel = false,
+  showScaleLabels = true,
+  showEndLabels = true,
+}) {
   return (
     <group>
       <OriginMarker showLabel={showOriginLabel} />
-      <AxisArrow dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} opacity={0.82} showLabel={showEndLabels} />
-      <AxisArrow dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} opacity={0.82} showLabel={showEndLabels} />
-      <AxisArrow dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} opacity={0.82} showLabel={showEndLabels} />
+      <AxisArrow
+        dir={[1, 0, 0]}
+        color={AXIS_COLORS.x}
+        length={length}
+        opacity={0.82}
+        showLabel={showEndLabels}
+      />
+      <AxisArrow
+        dir={[0, 1, 0]}
+        color={AXIS_COLORS.y}
+        length={length}
+        opacity={0.82}
+        showLabel={showEndLabels}
+      />
+      <AxisArrow
+        dir={[0, 0, 1]}
+        color={AXIS_COLORS.z}
+        length={length}
+        opacity={0.82}
+        showLabel={showEndLabels}
+      />
       {showTicks && (
         <>
-          <AxisTicks dir={[1, 0, 0]} color={AXIS_COLORS.x} length={length} step={tickStep} showLabels={showScaleLabels} />
-          <AxisTicks dir={[0, 1, 0]} color={AXIS_COLORS.y} length={length} step={tickStep} showLabels={showScaleLabels} />
-          <AxisTicks dir={[0, 0, 1]} color={AXIS_COLORS.z} length={length} step={tickStep} showLabels={showScaleLabels} />
+          <AxisTicks
+            dir={[1, 0, 0]}
+            color={AXIS_COLORS.x}
+            length={length}
+            step={tickStep}
+            showLabels={showScaleLabels}
+          />
+          <AxisTicks
+            dir={[0, 1, 0]}
+            color={AXIS_COLORS.y}
+            length={length}
+            step={tickStep}
+            showLabels={showScaleLabels}
+          />
+          <AxisTicks
+            dir={[0, 0, 1]}
+            color={AXIS_COLORS.z}
+            length={length}
+            step={tickStep}
+            showLabels={showScaleLabels}
+          />
         </>
       )}
     </group>
   )
 }
 
-const GRID_OPACITY = 0.18;
+const GRID_OPACITY = 0.18
 
 function FadedGrid() {
-  const gridRef = useRef(null);
+  const gridRef = useRef(null)
 
   useLayoutEffect(() => {
-    if (!gridRef.current) return;
+    if (!gridRef.current) return
     const materials = Array.isArray(gridRef.current.material)
       ? gridRef.current.material
-      : [gridRef.current.material];
+      : [gridRef.current.material]
 
     materials.forEach((material, index) => {
-      material.transparent = true;
-      material.opacity = index === 0 ? Math.min(0.44, GRID_OPACITY * 1.7) : Math.min(0.28, GRID_OPACITY * 0.9);
-      material.depthWrite = false;
-      material.color.set(index === 0 ? 0xb0b0b0 : 0xd2d2d2);
-      material.needsUpdate = true;
-    });
-  }, []);
+      material.transparent = true
+      material.opacity =
+        index === 0 ? Math.min(0.44, GRID_OPACITY * 1.7) : Math.min(0.28, GRID_OPACITY * 0.9)
+      material.depthWrite = false
+      material.color.set(index === 0 ? 0xb0b0b0 : 0xd2d2d2)
+      material.needsUpdate = true
+    })
+  }, [])
 
   return (
     <gridHelper
@@ -375,103 +457,103 @@ function FadedGrid() {
       position={[0, -0.005, 0]}
       renderOrder={-1}
     />
-  );
+  )
 }
 
 function getObjectFocus(objects) {
-  const box = new THREE.Box3();
-  const childBox = new THREE.Box3();
-  let hasBounds = false;
+  const box = new THREE.Box3()
+  const childBox = new THREE.Box3()
+  let hasBounds = false
 
   objects.forEach((object) => {
-    if (!object?.isObject3D) return;
-    object.updateMatrixWorld(true);
+    if (!object?.isObject3D) return
+    object.updateMatrixWorld(true)
     object.traverse((child) => {
-      if (!child.isObject3D || child.userData?.geoType === 'plane_mesh') return;
-      if (!child.isMesh && !child.isLine && !child.isLineSegments) return;
+      if (!child.isObject3D || child.userData?.geoType === 'plane_mesh') return
+      if (!child.isMesh && !child.isLine && !child.isLineSegments) return
 
-      childBox.setFromObject(child);
-      if (childBox.isEmpty()) return;
-      box.union(childBox);
-      hasBounds = true;
-    });
-  });
+      childBox.setFromObject(child)
+      if (childBox.isEmpty()) return
+      box.union(childBox)
+      hasBounds = true
+    })
+  })
 
-  if (!hasBounds) return null;
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-  box.getCenter(center);
-  box.getSize(size);
+  if (!hasBounds) return null
+  const center = new THREE.Vector3()
+  const size = new THREE.Vector3()
+  box.getCenter(center)
+  box.getSize(size)
   return {
     center,
     radius: Math.max(size.x, size.y, size.z, 1) * 0.5,
-  };
+  }
 }
 
 function fmtVec(v) {
-  if (!v) return '[?, ?, ?]';
-  const n = (x) => (Number.isFinite(x) ? +x.toFixed(3) : x);
-  return `[${n(v.x)}, ${n(v.y)}, ${n(v.z)}]`;
+  if (!v) return '[?, ?, ?]'
+  const n = (x) => (Number.isFinite(x) ? +x.toFixed(3) : x)
+  return `[${n(v.x)}, ${n(v.y)}, ${n(v.z)}]`
 }
 
 // Accepts '#rrggbb' or 0xrrggbb and returns an rgba() string at the given alpha.
 function hexToRgba(color, alpha) {
-  const hex = typeof color === 'number' ? color : parseInt(String(color).replace('#', ''), 16);
-  if (!Number.isFinite(hex)) return null;
-  const r = (hex >> 16) & 255;
-  const g = (hex >> 8) & 255;
-  const b = hex & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const hex = typeof color === 'number' ? color : parseInt(String(color).replace('#', ''), 16)
+  if (!Number.isFinite(hex)) return null
+  const r = (hex >> 16) & 255
+  const g = (hex >> 8) & 255
+  const b = hex & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 function resolveAnchor(object3D, anchorName) {
-  const ud = object3D.userData || {};
+  const ud = object3D.userData || {}
 
   if (anchorName === 'origin' && ud.origin) {
-    const { x, y, z } = ud.origin;
-    return [x, y, z];
+    const { x, y, z } = ud.origin
+    return [x, y, z]
   }
   if (anchorName === 'rPoint' && ud.rPoint) {
-    const { x, y, z } = ud.rPoint;
-    return [x, y, z];
+    const { x, y, z } = ud.rPoint
+    return [x, y, z]
   }
 
-  const dict = ud.labelAnchors || {};
-  const entry = dict[anchorName];
-  if (!entry || !entry.position || entry.position.length !== 3) return null;
+  const dict = ud.labelAnchors || {}
+  const entry = dict[anchorName]
+  if (!entry || !entry.position || entry.position.length !== 3) return null
 
-  const v = new THREE.Vector3(entry.position[0], entry.position[1], entry.position[2]);
+  const v = new THREE.Vector3(entry.position[0], entry.position[1], entry.position[2])
   if (entry.type === 'local') {
-    object3D.localToWorld(v);
+    object3D.localToWorld(v)
   }
-  return [v.x, v.y, v.z];
+  return [v.x, v.y, v.z]
 }
 
 // Labels register here so LabelDeclutter can nudge overlapping ones apart
 // each frame. Plain module-level registry, not React context: drei's <Html>
 // mounts children into their own separate ReactDOM root, so context from
 // above <Html> isn't visible inside it.
-const labelRegistry = new Map();
-let labelRegistryRevision = 0;
+const labelRegistry = new Map()
+let labelRegistryRevision = 0
 
 // Labels scale gently with camera distance so they still feel "attached" to
 // their object when you zoom, but the range is clamped tightly so they never
 // shrink to illegible or balloon to distracting sizes.
-const LABEL_SCALE_REF_DISTANCE = 56; // ~ default camera distance, so the initial view sits near scale 1
-const LABEL_SCALE_MIN = 0.6;
-const LABEL_SCALE_MAX = 1.0;
+const LABEL_SCALE_REF_DISTANCE = 56 // ~ default camera distance, so the initial view sits near scale 1
+const LABEL_SCALE_MIN = 0.6
+const LABEL_SCALE_MAX = 1.0
 
 // Mass-spring label declutter constants. Each label is a point mass with a
 // spring pulling it back toward a home position, plus continuous pairwise
 // repulsion against other labels. Hand-tuned by feel -- same spirit as the
 // LABEL_SCALE_* constants above, not derived exactly.
-const SPRING_K = 450; // spring-to-home stiffness -- strong, so a label only drifts from its own anchor
-                       // as much as truly necessary to clear another label, and snaps back close once
-                       // clear (a weak spring let labels settle far from their anchor when two labels'
-                       // homes happened to be close together on screen -- there was nothing pulling the
-                       // pushed-out label back once it escaped the other's overlap zone).
-const DAMPING_RATE = 20; // 1/s; velocity decays as exp(-DAMPING_RATE * t), independent of step size --
-                          // scaled up alongside SPRING_K (roughly sqrt(k)) to stay critically damped
+const SPRING_K = 450 // spring-to-home stiffness -- strong, so a label only drifts from its own anchor
+// as much as truly necessary to clear another label, and snaps back close once
+// clear (a weak spring let labels settle far from their anchor when two labels'
+// homes happened to be close together on screen -- there was nothing pulling the
+// pushed-out label back once it escaped the other's overlap zone).
+const DAMPING_RATE = 20 // 1/s; velocity decays as exp(-DAMPING_RATE * t), independent of step size --
+// scaled up alongside SPRING_K (roughly sqrt(k)) to stay critically damped
 // Repulsion is linear in penetration depth and is exactly 0 the instant rects
 // stop overlapping -- force must be 0 at the overlap/no-overlap boundary from
 // BOTH sides, or the pair oscillates forever across that boundary (a label
@@ -491,18 +573,18 @@ const DAMPING_RATE = 20; // 1/s; velocity decays as exp(-DAMPING_RATE * t), inde
 // REPEL_K_OVERLAP an order of magnitude above SPRING_K pushes that residual
 // penetration down to near-zero without changing the convergence dynamics
 // (still continuous/stable, just resolves overlap "harder").
-const REPEL_K_OVERLAP = 13000; // repulsion per px of penetration once labels' rects truly overlap.
-                               // Needs to stay well above SPRING_K's ~30:1 ratio (not just scaled by
-                               // the same factor) -- a scene with several labels near each other has
-                               // several pairs pulling on one label at once, diluting how much any one
-                               // pair's repulsion can push against the spring; a same-factor bump left
-                               // 3-4-label clusters with a small residual overlap that this ratio clears.
-const MAX_PAIR_FORCE = 15000; // px/s^2 clamp per pair -- bounds single-step impulses (avoids overshoot
-                              // when two labels start out fully coincident, e.g. two labels on one anchor)
-const GAP = 8; // px; visual gap once rects stop overlapping
-const SIGN_SMOOTH = 3; // px; smoothing width for the per-axis push direction's sign (see its comment)
-const AXIS_BLEND = 0.5; // 0..1; how much of the push direction favors the per-axis "cheap axis"
-                         // choice over the plain center-to-center diagonal -- see its comment
+const REPEL_K_OVERLAP = 13000 // repulsion per px of penetration once labels' rects truly overlap.
+// Needs to stay well above SPRING_K's ~30:1 ratio (not just scaled by
+// the same factor) -- a scene with several labels near each other has
+// several pairs pulling on one label at once, diluting how much any one
+// pair's repulsion can push against the spring; a same-factor bump left
+// 3-4-label clusters with a small residual overlap that this ratio clears.
+const MAX_PAIR_FORCE = 15000 // px/s^2 clamp per pair -- bounds single-step impulses (avoids overshoot
+// when two labels start out fully coincident, e.g. two labels on one anchor)
+const GAP = 8 // px; visual gap once rects stop overlapping
+const SIGN_SMOOTH = 3 // px; smoothing width for the per-axis push direction's sign (see its comment)
+const AXIS_BLEND = 0.5 // 0..1; how much of the push direction favors the per-axis "cheap axis"
+// choice over the plain center-to-center diagonal -- see its comment
 // Force is 0 exactly at the overlap/no-overlap boundary (a single point), so
 // sub-pixel float/discretization noise right at that point can flip a label
 // between "just barely overlapping" and "just barely clear" every sub-step,
@@ -510,25 +592,25 @@ const AXIS_BLEND = 0.5; // 0..1; how much of the push direction favors the per-a
 // hover that never fully settles. Shifting the zero-force point outward by a
 // couple px turns that single point into a small band, so noise within it
 // stays force-free and velocity actually decays to a true, unmoving rest.
-const FORCE_DEADZONE = 2; // px
-const MAX_OFFSET = 55; // px; hard cap on how far a label can ever drift from its anchor
-const EMPHASIS_MASS = 2.5; // emphasis labels resist being pushed more, so they "win" contested space
-const MAX_DT = 0.05; // seconds; caps a single frame's step (e.g. after a backgrounded tab regains focus)
+const FORCE_DEADZONE = 2 // px
+const MAX_OFFSET = 55 // px; hard cap on how far a label can ever drift from its anchor
+const EMPHASIS_MASS = 2.5 // emphasis labels resist being pushed more, so they "win" contested space
+const MAX_DT = 0.05 // seconds; caps a single frame's step (e.g. after a backgrounded tab regains focus)
 // Sub-step count is derived from the frame's dt (below), not fixed, so it stays
 // robust across very different refresh rates -- a fixed count tuned for 60fps
 // (small per-frame dt) was too coarse on a slow/throttled display where each
 // frame's dt is much larger, close to MAX_DT, and needs proportionally more
 // subdivision for the same stability.
-const TARGET_SUBSTEP_DT = 0.006; // seconds; each sub-step aims for roughly this duration
-const SLEEP_VELOCITY = 3; // px/s; velocity below this is snapped to 0 so near-equilibrium labels come
-                           // to a true, exact rest instead of perpetually creeping by sub-pixel amounts
-                           // (that creep was invisible in the settle-time numbers but visible on screen
-                           // once labels update every frame instead of every ~50ms).
+const TARGET_SUBSTEP_DT = 0.006 // seconds; each sub-step aims for roughly this duration
+const SLEEP_VELOCITY = 3 // px/s; velocity below this is snapped to 0 so near-equilibrium labels come
+// to a true, exact rest instead of perpetually creeping by sub-pixel amounts
+// (that creep was invisible in the settle-time numbers but visible on screen
+// once labels update every frame instead of every ~50ms).
 // Dense or contradictory layouts (for example many labels sharing one exact
 // anchor) may have no fully static solution inside MAX_OFFSET. Bound each
 // settling burst so an impossible layout cannot keep the tab rendering
 // forever. Camera or label-data changes reset this budget.
-const MAX_LABEL_SETTLE_FRAMES = 180;
+const MAX_LABEL_SETTLE_FRAMES = 180
 
 // A label's spring rests at a small, fixed *screen-space* offset from its raw
 // anchor projection -- never (0,0). A label's world-space authoring offset
@@ -538,23 +620,32 @@ const MAX_LABEL_SETTLE_FRAMES = 180;
 // the object it's labeling. A fixed screen-space offset can't do that: it's
 // applied after projection, so it's the same up-and-right nudge regardless of
 // camera angle, guaranteeing minimum separation from the marker.
-const BASE_OFFSET_DIST = 16; // px
-const BASE_OFFSET_ANGLE = -40 * Math.PI / 180; // up + right (CSS Y grows downward)
-const BASE_OFFSET_X = BASE_OFFSET_DIST * Math.cos(BASE_OFFSET_ANGLE);
-const BASE_OFFSET_Y = BASE_OFFSET_DIST * Math.sin(BASE_OFFSET_ANGLE);
+const BASE_OFFSET_DIST = 16 // px
+const BASE_OFFSET_ANGLE = (-40 * Math.PI) / 180 // up + right (CSS Y grows downward)
+const BASE_OFFSET_X = BASE_OFFSET_DIST * Math.cos(BASE_OFFSET_ANGLE)
+const BASE_OFFSET_Y = BASE_OFFSET_DIST * Math.sin(BASE_OFFSET_ANGLE)
 
 // Exact "just touching" center distance for two axis-aligned rects along a
 // given direction (nx, ny) -- the Minkowski-sum boundary of the two rects is
 // itself a rectangle with these combined half-extents, so the distance to its
 // edge along a ray is whichever axis the ray exits first.
 function minkowskiSafeDist(nx, ny, combinedHalfWidth, combinedHalfHeight) {
-  const tX = Math.abs(nx) > 1e-6 ? combinedHalfWidth / Math.abs(nx) : Infinity;
-  const tY = Math.abs(ny) > 1e-6 ? combinedHalfHeight / Math.abs(ny) : Infinity;
-  return Math.min(tX, tY);
+  const tX = Math.abs(nx) > 1e-6 ? combinedHalfWidth / Math.abs(nx) : Infinity
+  const tY = Math.abs(ny) > 1e-6 ? combinedHalfHeight / Math.abs(ny) : Infinity
+  return Math.min(tX, tY)
 }
 
-function LabelAnchor({ id, visibilityKey, className, color, worldPos, emphasis, onHide, children }) {
-  const bodyRef = useRef(null);
+function LabelAnchor({
+  id,
+  visibilityKey,
+  className,
+  color,
+  worldPos,
+  emphasis,
+  onHide,
+  children,
+}) {
+  const bodyRef = useRef(null)
 
   useEffect(() => {
     const entry = {
@@ -566,30 +657,30 @@ function LabelAnchor({ id, visibilityKey, className, color, worldPos, emphasis, 
       velY: 0,
       appliedScale: 1,
       mass: emphasis ? EMPHASIS_MASS : 1,
-    };
-    labelRegistry.set(id, entry);
-    labelRegistryRevision += 1;
-    applyLabelTransform(entry, 0, 0, 1);
+    }
+    labelRegistry.set(id, entry)
+    labelRegistryRevision += 1
+    applyLabelTransform(entry, 0, 0, 1)
     return () => {
-      labelRegistry.delete(id);
-      labelRegistryRevision += 1;
-    };
-  }, [id]);
+      labelRegistry.delete(id)
+      labelRegistryRevision += 1
+    }
+  }, [id])
 
   useEffect(() => {
-    const entry = labelRegistry.get(id);
-    if (!entry) return;
-    entry.worldPos = worldPos;
-    entry.mass = emphasis ? EMPHASIS_MASS : 1;
-    labelRegistryRevision += 1;
+    const entry = labelRegistry.get(id)
+    if (!entry) return
+    entry.worldPos = worldPos
+    entry.mass = emphasis ? EMPHASIS_MASS : 1
+    labelRegistryRevision += 1
     // Anchor jumped (scene rebuild) -- kill velocity to avoid a flick, but
     // keep offsetX/offsetY as a warm start since the relative clutter
     // situation is usually similar across rebuilds.
-    entry.velX = 0;
-    entry.velY = 0;
-  }, [id, worldPos, emphasis]);
+    entry.velX = 0
+    entry.velY = 0
+  }, [id, worldPos, emphasis])
 
-  const background = color ? hexToRgba(color, 0.55) : undefined;
+  const background = color ? hexToRgba(color, 0.55) : undefined
 
   return (
     <div className="label-anchor">
@@ -602,33 +693,39 @@ function LabelAnchor({ id, visibilityKey, className, color, worldPos, emphasis, 
         {children}
       </div>
     </div>
-  );
+  )
 }
 
 function applyLabelTransform(entry, x, y, scale) {
-  entry.offsetX = x;
-  entry.offsetY = y;
-  entry.appliedScale = scale;
+  entry.offsetX = x
+  entry.offsetY = y
+  entry.appliedScale = scale
   if (entry.bodyRef.current) {
-    const parts = [];
-    if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5) parts.push(`translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`);
-    if (Math.abs(scale - 1) > 0.01) parts.push(`scale(${scale.toFixed(3)})`);
+    const parts = []
+    if (Math.abs(x) > 0.5 || Math.abs(y) > 0.5)
+      parts.push(`translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`)
+    if (Math.abs(scale - 1) > 0.01) parts.push(`scale(${scale.toFixed(3)})`)
     // translate3d must come before scale: a CSS transform list applies right-to-left,
     // so this keeps the translation in true screen pixels, independent of scale.
     // Swapping the order would make MAX_OFFSET/GAP/REPEL_* scale-dependent -- don't "clean it up".
-    entry.bodyRef.current.style.transform = parts.join(' ');
+    entry.bodyRef.current.style.transform = parts.join(' ')
   }
 }
 
 function LabelDeclutter() {
-  const scratchVec = useRef(new THREE.Vector3());
-  const settleFrameRef = useRef(0);
-  const seenRegistryRevisionRef = useRef(-1);
+  const scratchVec = useRef(new THREE.Vector3())
+  const settleFrameRef = useRef(0)
+  const seenRegistryRevisionRef = useRef(-1)
   const cameraStateRef = useRef({
-    px: NaN, py: NaN, pz: NaN,
-    qx: NaN, qy: NaN, qz: NaN, qw: NaN,
+    px: NaN,
+    py: NaN,
+    pz: NaN,
+    qx: NaN,
+    qy: NaN,
+    qz: NaN,
+    qw: NaN,
     zoom: NaN,
-  });
+  })
 
   useFrame(({ camera, invalidate }, delta) => {
     // Runs every rendered frame (not throttled to a fixed tick rate) so label
@@ -636,12 +733,11 @@ function LabelDeclutter() {
     // cadence than the render loop looked stepped/jittery next to everything
     // else moving at full frame rate. Sub-stepping (below) keeps the physics
     // stable regardless of how big or small this frame's dt is.
-    const dt = Math.min(delta, MAX_DT);
+    const dt = Math.min(delta, MAX_DT)
 
-    const entries = Array.from(labelRegistry.values())
-      .filter((e) => e.bodyRef.current);
+    const entries = Array.from(labelRegistry.values()).filter((e) => e.bodyRef.current)
 
-    const previousCamera = cameraStateRef.current;
+    const previousCamera = cameraStateRef.current
     const cameraChanged =
       previousCamera.px !== camera.position.x ||
       previousCamera.py !== camera.position.y ||
@@ -650,47 +746,49 @@ function LabelDeclutter() {
       previousCamera.qy !== camera.quaternion.y ||
       previousCamera.qz !== camera.quaternion.z ||
       previousCamera.qw !== camera.quaternion.w ||
-      previousCamera.zoom !== camera.zoom;
-    const registryChanged = seenRegistryRevisionRef.current !== labelRegistryRevision;
+      previousCamera.zoom !== camera.zoom
+    const registryChanged = seenRegistryRevisionRef.current !== labelRegistryRevision
 
-    if (cameraChanged || registryChanged) settleFrameRef.current = 0;
-    previousCamera.px = camera.position.x;
-    previousCamera.py = camera.position.y;
-    previousCamera.pz = camera.position.z;
-    previousCamera.qx = camera.quaternion.x;
-    previousCamera.qy = camera.quaternion.y;
-    previousCamera.qz = camera.quaternion.z;
-    previousCamera.qw = camera.quaternion.w;
-    previousCamera.zoom = camera.zoom;
-    seenRegistryRevisionRef.current = labelRegistryRevision;
+    if (cameraChanged || registryChanged) settleFrameRef.current = 0
+    previousCamera.px = camera.position.x
+    previousCamera.py = camera.position.y
+    previousCamera.pz = camera.position.z
+    previousCamera.qx = camera.quaternion.x
+    previousCamera.qy = camera.quaternion.y
+    previousCamera.qz = camera.quaternion.z
+    previousCamera.qw = camera.quaternion.w
+    previousCamera.zoom = camera.zoom
+    seenRegistryRevisionRef.current = labelRegistryRevision
 
     // Pass 1: camera-distance scale (unchanged logic, independent of position)
-    let labelsStillMoving = false;
+    let labelsStillMoving = false
     entries.forEach((e) => {
-      if (!e.worldPos) return;
-      const dist = scratchVec.current.set(e.worldPos[0], e.worldPos[1], e.worldPos[2]).distanceTo(camera.position);
-      const rawScale = LABEL_SCALE_REF_DISTANCE / Math.max(dist, 1e-3);
-      const targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale));
-      const scaleDelta = targetScale - e.appliedScale;
+      if (!e.worldPos) return
+      const dist = scratchVec.current
+        .set(e.worldPos[0], e.worldPos[1], e.worldPos[2])
+        .distanceTo(camera.position)
+      const rawScale = LABEL_SCALE_REF_DISTANCE / Math.max(dist, 1e-3)
+      const targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale))
+      const scaleDelta = targetScale - e.appliedScale
       if (Math.abs(scaleDelta) < 0.001) {
-        e.appliedScale = targetScale;
+        e.appliedScale = targetScale
       } else {
-        e.appliedScale += scaleDelta * 0.25;
-        labelsStillMoving = true;
+        e.appliedScale += scaleDelta * 0.25
+        labelsStillMoving = true
       }
-    });
+    })
 
     // Pass 2: read (batch all DOM reads before any writes, avoid layout thrash).
     // Geometry (_cx/_cy/_hw/_hh) is only valid for this outer tick -- offsets
     // move within it below, but rect size/natural-center don't change without
     // a fresh DOM read, so they're computed once per tick, not per sub-step.
     entries.forEach((e) => {
-      const rect = e.bodyRef.current.getBoundingClientRect();
-      e._cx = rect.left + rect.width / 2 - e.offsetX; // natural (un-offset) center
-      e._cy = rect.top + rect.height / 2 - e.offsetY;
-      e._hw = rect.width / 2;
-      e._hh = rect.height / 2;
-    });
+      const rect = e.bodyRef.current.getBoundingClientRect()
+      e._cx = rect.left + rect.width / 2 - e.offsetX // natural (un-offset) center
+      e._cy = rect.top + rect.height / 2 - e.offsetY
+      e._hw = rect.width / 2
+      e._hh = rect.height / 2
+    })
 
     // Passes 3-5: force + integrate, in several small sub-steps rather than
     // one single frame-sized step. A single step can still be too coarse
@@ -700,15 +798,15 @@ function LabelDeclutter() {
     // itself a second source of the flicker, independent of the force
     // continuity fixed by REPEL_K_OVERLAP-only repulsion above. Sub-stepping
     // is the standard fix for a stiff force / coarse-timestep mismatch.
-    const substeps = Math.max(1, Math.ceil(dt / TARGET_SUBSTEP_DT));
-    const subDt = dt / substeps;
-    const velDecay = Math.exp(-DAMPING_RATE * subDt);
+    const substeps = Math.max(1, Math.ceil(dt / TARGET_SUBSTEP_DT))
+    const subDt = dt / substeps
+    const velDecay = Math.exp(-DAMPING_RATE * subDt)
     for (let step = 0; step < substeps; step++) {
       entries.forEach((e) => {
         // Spring-to-home force (home = a fixed screen-space nudge, not (0,0) -- see BASE_OFFSET_*)
-        e._fx = -SPRING_K * (e.offsetX - BASE_OFFSET_X);
-        e._fy = -SPRING_K * (e.offsetY - BASE_OFFSET_Y);
-      });
+        e._fx = -SPRING_K * (e.offsetX - BASE_OFFSET_X)
+        e._fy = -SPRING_K * (e.offsetY - BASE_OFFSET_Y)
+      })
 
       // Pairwise repulsion, O(n^2) -- fine at label counts of a few dozen.
       // Overlap *detection* (below, via minkowskiSafeDist along the raw
@@ -717,35 +815,39 @@ function LabelDeclutter() {
       // the per-axis weighting comment further down.
       for (let i = 0; i < entries.length; i++) {
         for (let j = i + 1; j < entries.length; j++) {
-          const a = entries[i];
-          const b = entries[j];
-          const ax = a._cx + a.offsetX, ay = a._cy + a.offsetY;
-          const bx = b._cx + b.offsetX, by = b._cy + b.offsetY;
-          let dx = ax - bx;
-          let dy = ay - by;
-          let dist = Math.hypot(dx, dy);
+          const a = entries[i]
+          const b = entries[j]
+          const ax = a._cx + a.offsetX,
+            ay = a._cy + a.offsetY
+          const bx = b._cx + b.offsetX,
+            by = b._cy + b.offsetY
+          let dx = ax - bx
+          let dy = ay - by
+          let dist = Math.hypot(dx, dy)
 
           if (dist < 1e-3) {
             // Perfectly coincident (common when multiple labels share one
             // anchor) -- fan out in a deterministic direction per pair instead
             // of an unstable/arbitrary one.
-            const angle = i * 2.399963 + j * 0.618034;
-            dx = Math.cos(angle); dy = Math.sin(angle); dist = 1;
+            const angle = i * 2.399963 + j * 0.618034
+            dx = Math.cos(angle)
+            dy = Math.sin(angle)
+            dist = 1
           }
 
-          const dirX = dx / dist;
-          const dirY = dy / dist;
-          const combinedHW = a._hw + b._hw + GAP;
-          const combinedHH = a._hh + b._hh + GAP;
+          const dirX = dx / dist
+          const dirY = dy / dist
+          const combinedHW = a._hw + b._hw + GAP
+          const combinedHH = a._hh + b._hh + GAP
           // Zero-force point shifted outward by FORCE_DEADZONE -- see its comment.
-          const safeDist = minkowskiSafeDist(dirX, dirY, combinedHW, combinedHH) - FORCE_DEADZONE;
+          const safeDist = minkowskiSafeDist(dirX, dirY, combinedHW, combinedHH) - FORCE_DEADZONE
 
           // Rects truly overlap -- linear in penetration depth, 0 exactly at
           // dist === safeDist (see REPEL_K_OVERLAP comment for why that matters).
-          let mag = dist < safeDist ? REPEL_K_OVERLAP * (safeDist - dist) : 0;
+          let mag = dist < safeDist ? REPEL_K_OVERLAP * (safeDist - dist) : 0
 
           if (mag > 0) {
-            mag = Math.min(mag, MAX_PAIR_FORCE);
+            mag = Math.min(mag, MAX_PAIR_FORCE)
 
             // Per-axis (Manhattan-flavored) push direction: weight each axis
             // inversely to its own overlap depth, so separation happens mostly
@@ -765,17 +867,17 @@ function LabelDeclutter() {
             // settled with a pair still overlapping because of exactly this.
             // The smoothing (SIGN_SMOOTH) keeps it continuous through dx/dy=0
             // instead of a hard sign() flip, same reasoning as FORCE_DEADZONE.
-            const overlapX = Math.max(combinedHW - Math.abs(dx), 0.01);
-            const overlapY = Math.max(combinedHH - Math.abs(dy), 0.01);
-            const wX = overlapY / (overlapX + overlapY);
-            const wY = overlapX / (overlapX + overlapY);
-            const sx = dx / (Math.abs(dx) + SIGN_SMOOTH);
-            const sy = dy / (Math.abs(dy) + SIGN_SMOOTH);
-            const vx = wX * sx;
-            const vy = wY * sy;
-            const vlen = Math.hypot(vx, vy) || 1;
-            const axisNx = vx / vlen;
-            const axisNy = vy / vlen;
+            const overlapX = Math.max(combinedHW - Math.abs(dx), 0.01)
+            const overlapY = Math.max(combinedHH - Math.abs(dy), 0.01)
+            const wX = overlapY / (overlapX + overlapY)
+            const wY = overlapX / (overlapX + overlapY)
+            const sx = dx / (Math.abs(dx) + SIGN_SMOOTH)
+            const sy = dy / (Math.abs(dy) + SIGN_SMOOTH)
+            const vx = wX * sx
+            const vy = wY * sy
+            const vlen = Math.hypot(vx, vy) || 1
+            const axisNx = vx / vlen
+            const axisNy = vy / vlen
 
             // Blend toward the per-axis direction rather than fully committing
             // to it. Fully committing each pair to its own "cheapest axis"
@@ -787,71 +889,93 @@ function LabelDeclutter() {
             // pushing along the same kind of direction) never ran into.
             // AXIS_BLEND trades some of that per-pair efficiency for the
             // robustness of always having a diagonal component to fall back on.
-            const nx = (1 - AXIS_BLEND) * dirX + AXIS_BLEND * axisNx;
-            const ny = (1 - AXIS_BLEND) * dirY + AXIS_BLEND * axisNy;
-            const nlen = Math.hypot(nx, ny) || 1;
+            const nx = (1 - AXIS_BLEND) * dirX + AXIS_BLEND * axisNx
+            const ny = (1 - AXIS_BLEND) * dirY + AXIS_BLEND * axisNy
+            const nlen = Math.hypot(nx, ny) || 1
 
-            a._fx += (nx / nlen) * mag; a._fy += (ny / nlen) * mag;
-            b._fx -= (nx / nlen) * mag; b._fy -= (ny / nlen) * mag;
+            a._fx += (nx / nlen) * mag
+            a._fy += (ny / nlen) * mag
+            b._fx -= (nx / nlen) * mag
+            b._fy -= (ny / nlen) * mag
           }
         }
       }
 
       // Integrate (semi-implicit Euler) + damping + clamp for this sub-step
       entries.forEach((e) => {
-        e.velX = (e.velX + (e._fx / e.mass) * subDt) * velDecay;
-        e.velY = (e.velY + (e._fy / e.mass) * subDt) * velDecay;
-        if (Math.hypot(e.velX, e.velY) < SLEEP_VELOCITY) { e.velX = 0; e.velY = 0; }
-        else labelsStillMoving = true;
-        e.offsetX += e.velX * subDt;
-        e.offsetY += e.velY * subDt;
+        e.velX = (e.velX + (e._fx / e.mass) * subDt) * velDecay
+        e.velY = (e.velY + (e._fy / e.mass) * subDt) * velDecay
+        if (Math.hypot(e.velX, e.velY) < SLEEP_VELOCITY) {
+          e.velX = 0
+          e.velY = 0
+        } else labelsStillMoving = true
+        e.offsetX += e.velX * subDt
+        e.offsetY += e.velY * subDt
 
-        const mag = Math.hypot(e.offsetX, e.offsetY);
+        const mag = Math.hypot(e.offsetX, e.offsetY)
         if (mag > MAX_OFFSET) {
-          const s = MAX_OFFSET / mag;
-          e.offsetX *= s; e.offsetY *= s;
-          e.velX *= 0.5; e.velY *= 0.5; // bleed velocity at the clamp so it doesn't buzz against the wall
+          const s = MAX_OFFSET / mag
+          e.offsetX *= s
+          e.offsetY *= s
+          e.velX *= 0.5
+          e.velY *= 0.5 // bleed velocity at the clamp so it doesn't buzz against the wall
         }
-      });
+      })
     }
 
-    entries.forEach((e) => applyLabelTransform(e, e.offsetX, e.offsetY, e.appliedScale));
+    entries.forEach((e) => applyLabelTransform(e, e.offsetX, e.offsetY, e.appliedScale))
 
     // The canvas renders on demand. Keep ticking only while the label
     // simulation is visibly settling; camera controls and React updates
     // invalidate the canvas themselves when something else changes.
     if (labelsStillMoving && settleFrameRef.current < MAX_LABEL_SETTLE_FRAMES) {
-      settleFrameRef.current += 1;
-      invalidate();
+      settleFrameRef.current += 1
+      invalidate()
     } else if (!labelsStillMoving) {
-      settleFrameRef.current = 0;
+      settleFrameRef.current = 0
     }
-  });
+  })
 
-  return null;
+  return null
 }
 
 function getLabelVisibilityKey(labelIdBase, lbl, index) {
-  return `${labelIdBase}:${lbl.anchor ?? index}:${index}`;
+  return `${labelIdBase}:${lbl.anchor ?? index}:${index}`
 }
 
 function getLabelsForObject(object3D) {
-  const ud = object3D.userData || {};
-  const labels = Array.isArray(ud.labels) ? ud.labels : [];
-  const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line';
+  const ud = object3D.userData || {}
+  const labels = Array.isArray(ud.labels) ? ud.labels : []
+  const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line'
   return needsDefault
     ? [
-      { anchor: 'origin', text: `Pos ${fmtVec(ud.origin)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#2563eb' },
-      ...(ud.rPoint != null && Number.isFinite(ud.t)
-        ? [{ anchor: 'rPoint', text: `r(t=${ud.t}) ${fmtVec(ud.rPoint)}`, distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#ffff00' }]
-        : []),
-    ]
-    : labels;
+        {
+          anchor: 'origin',
+          text: `Pos ${fmtVec(ud.origin)}`,
+          distanceFactor: 8,
+          offset: [0.12, 0.12, 0],
+          color: '#2563eb',
+        },
+        ...(ud.rPoint != null && Number.isFinite(ud.t)
+          ? [
+              {
+                anchor: 'rPoint',
+                text: `r(t=${ud.t}) ${fmtVec(ud.rPoint)}`,
+                distanceFactor: 8,
+                offset: [0.12, 0.12, 0],
+                color: '#ffff00',
+              },
+            ]
+          : []),
+      ]
+    : labels
 }
 
 function getLabelVisibilityKeysForObject(object3D) {
-  const labelIdBase = object3D.userData?.srcBlockId ?? object3D.uuid;
-  return getLabelsForObject(object3D).map((label, index) => getLabelVisibilityKey(labelIdBase, label, index));
+  const labelIdBase = object3D.userData?.srcBlockId ?? object3D.uuid
+  return getLabelsForObject(object3D).map((label, index) =>
+    getLabelVisibilityKey(labelIdBase, label, index),
+  )
 }
 
 // A label describes either a real object's own identity (`name`, plus an
@@ -865,31 +989,29 @@ function formatLabelText(lbl, labelDetail) {
 }
 
 function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
-  const ud = object3D.userData || {};
-  const derived = getLabelsForObject(object3D);
+  const ud = object3D.userData || {}
+  const derived = getLabelsForObject(object3D)
   //srcBlockId stays stable across scene regenerations (uuid doesn't), so
   //labels keep their identity and settled position across edits.
-  const labelIdBase = ud.srcBlockId ?? object3D.uuid;
+  const labelIdBase = ud.srcBlockId ?? object3D.uuid
 
   return (
     <>
       {derived.map((lbl, i) => {
-        const visibilityKey = getLabelVisibilityKey(labelIdBase, lbl, i);
-        if (hiddenLabelKeys?.has(visibilityKey)) return null;
+        const visibilityKey = getLabelVisibilityKey(labelIdBase, lbl, i)
+        if (hiddenLabelKeys?.has(visibilityKey)) return null
 
-        const pos = resolveAnchor(object3D, lbl.anchor);
-        if (!pos) return null;
+        const pos = resolveAnchor(object3D, lbl.anchor)
+        if (!pos) return null
 
-        let text = formatLabelText(lbl, labelDetail);
+        let text = formatLabelText(lbl, labelDetail)
         if (!text) {
           const val =
-            lbl.anchor === 'origin' ? ud.origin :
-              lbl.anchor === 'rPoint' ? ud.rPoint :
-                null;
-          const fmt = lbl.format || 'vec';
-          if (fmt === 'vec' && val) text = fmtVec(val);
-          else if (fmt === 'raw' && val) text = String(val);
-          else text = '';
+            lbl.anchor === 'origin' ? ud.origin : lbl.anchor === 'rPoint' ? ud.rPoint : null
+          const fmt = lbl.format || 'vec'
+          if (fmt === 'vec' && val) text = fmtVec(val)
+          else if (fmt === 'raw' && val) text = String(val)
+          else text = ''
         }
 
         // Deliberately ignore lbl.offset (a small world-space authoring nudge, e.g.
@@ -899,7 +1021,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
         // way off in space from another" bug. BASE_OFFSET_X/Y in LabelDeclutter is
         // the sole, camera-angle-consistent source of separation now; the raw
         // anchor position is what gets projected and sprung away from.
-        const worldPos = pos;
+        const worldPos = pos
 
         return (
           <group key={`lbl-${i}`} position={worldPos}>
@@ -917,10 +1039,10 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
               </LabelAnchor>
             </Html>
           </group>
-        );
+        )
       })}
     </>
-  );
+  )
 }
 
 // Owns all raw pointer routing on the canvas. It NEVER calls stopPropagation
@@ -933,24 +1055,22 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
 //   left click  -> select the hit object's block (empty space clears)
 //   right click -> toggle that object's scene labels (issue #75)
 function ScenePicker({ onSelectBlock, onToggleLabels }) {
-  const { camera, gl, scene } = useThree();
-  const raycaster = useMemo(() => new THREE.Raycaster(), []);
-  const pointer = useMemo(() => new THREE.Vector2(), []);
-  const downRef = useRef(null);
+  const { camera, gl, scene } = useThree()
+  const raycaster = useMemo(() => new THREE.Raycaster(), [])
+  const pointer = useMemo(() => new THREE.Vector2(), [])
+  const downRef = useRef(null)
 
   useEffect(() => {
-    const canvas = gl.domElement;
+    const canvas = gl.domElement
 
     const raycastAt = (event) => {
-      const rect = canvas.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      raycaster.params.Line.threshold = 0.18;
-      return raycaster
-        .intersectObjects(scene.children, true)
-        .filter((hit) => hit.object.visible);
-    };
+      const rect = canvas.getBoundingClientRect()
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      raycaster.params.Line.threshold = 0.18
+      return raycaster.intersectObjects(scene.children, true).filter((hit) => hit.object.visible)
+    }
 
     // The active/most-recent press. Kept alive until the next pointerdown so
     // contextmenu can consult it regardless of whether it fires before or
@@ -958,7 +1078,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
     // during the drag, so a wander-and-return still counts as a drag.
     const handlePointerDown = (event) => {
       // Ignore secondary touch points (pinch-zoom).
-      if (event.pointerType === 'touch' && event.isPrimary === false) return;
+      if (event.pointerType === 'touch' && event.isPrimary === false) return
       downRef.current = {
         clientX: event.clientX,
         clientY: event.clientY,
@@ -966,70 +1086,70 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
         pointerId: event.pointerId,
         button: event.button,
         moved: false,
-      };
-    };
+      }
+    }
 
     const handlePointerMove = (event) => {
-      const down = downRef.current;
-      if (!down || down.moved || event.pointerId !== down.pointerId) return;
+      const down = downRef.current
+      if (!down || down.moved || event.pointerId !== down.pointerId) return
       if (Math.hypot(event.clientX - down.clientX, event.clientY - down.clientY) > CLICK_MAX_DIST) {
-        down.moved = true;
+        down.moved = true
       }
-    };
+    }
 
     // On window, not the canvas: OrbitControls sets pointer capture on the
     // wrapper during a drag, so the canvas child would miss move/up.
     const handlePointerUp = (event) => {
-      const down = downRef.current;
-      if (!down || down.button !== 0 || event.pointerId !== down.pointerId) return;
+      const down = downRef.current
+      if (!down || down.button !== 0 || event.pointerId !== down.pointerId) return
       const up = {
         clientX: event.clientX,
         clientY: event.clientY,
         time: performance.now(),
         pointerId: event.pointerId,
-      };
-      if (down.moved || classifyGesture(down, up) !== 'click') return;
-      onSelectBlock(resolveSelectedBlockId(raycastAt(event)));
-    };
+      }
+      if (down.moved || classifyGesture(down, up) !== 'click') return
+      onSelectBlock(resolveSelectedBlockId(raycastAt(event)))
+    }
 
     const handlePointerCancel = () => {
-      downRef.current = null;
-    };
+      downRef.current = null
+    }
 
     const handleContextMenu = (event) => {
       // A right-drag (OrbitControls pan) also ends with a contextmenu event --
       // leave the native menu alone then, only act on an in-place right-click.
-      if (downRef.current?.moved) return;
+      if (downRef.current?.moved) return
 
-      const hits = raycastAt(event);
-      const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean);
-      const line = marker ? null : hits.map((hit) => findSelectableLine(hit.object)).find(Boolean);
+      const hits = raycastAt(event)
+      const marker = hits.map((hit) => findSelectablePointMarker(hit.object)).find(Boolean)
+      const line = marker ? null : hits.map((hit) => findSelectableLine(hit.object)).find(Boolean)
       const owner = marker
         ? findLabelOwner(marker, getLabelsForObject)
         : line
           ? line
-          : hits.map((hit) => findLabelOwner(hit.object, getLabelsForObject)).find(Boolean);
+          : hits.map((hit) => findLabelOwner(hit.object, getLabelsForObject)).find(Boolean)
 
-      if (!owner) return;
-      event.preventDefault();
-      onToggleLabels(getLabelVisibilityKeysForObject(owner));
-    };
+      if (!owner) return
+      event.preventDefault()
+      onToggleLabels(getLabelVisibilityKeysForObject(owner))
+    }
 
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointercancel', handlePointerCancel);
-    canvas.addEventListener('contextmenu', handleContextMenu);
+    canvas.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerCancel)
+    canvas.addEventListener('contextmenu', handleContextMenu)
     return () => {
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointercancel', handlePointerCancel);
-      canvas.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, [camera, gl, scene, pointer, raycaster, onSelectBlock, onToggleLabels]);
+      canvas.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+      canvas.removeEventListener('contextmenu', handleContextMenu)
+    }
+  }, [camera, gl, scene, pointer, raycaster, onSelectBlock, onToggleLabels])
 
-  return null;
+  return null
 }
 
 const globalThreeObjStore = {}
@@ -1039,12 +1159,12 @@ const globalThreeObjStore = {}
 // it sits in): the inner box's centre must be inside, it must be the smaller
 // box, and most of its volume must overlap.
 function boxMostlyContains(outer, inner) {
-  const s = new THREE.Vector3();
-  const vol = (b) => (b.getSize(s), s.x * s.y * s.z);
-  const innerVol = vol(inner);
-  if (innerVol <= 0 || innerVol >= vol(outer)) return false;
-  if (!outer.containsPoint(inner.getCenter(new THREE.Vector3()))) return false;
-  return vol(inner.clone().intersect(outer)) / innerVol >= 0.6;
+  const s = new THREE.Vector3()
+  const vol = (b) => (b.getSize(s), s.x * s.y * s.z)
+  const innerVol = vol(inner)
+  if (innerVol <= 0 || innerVol >= vol(outer)) return false
+  if (!outer.containsPoint(inner.getCenter(new THREE.Vector3()))) return false
+  return vol(inner.clone().intersect(outer)) / innerVol >= 0.6
 }
 
 // Nested transparent objects have near-coincident bounding centers, so
@@ -1054,32 +1174,32 @@ function boxMostlyContains(outer, inner) {
 // it regardless of viewing angle.
 function computeNestingRenderOrders(objects) {
   const boxes = objects.map((o) => {
-    if (!o?.isObject3D) return null;
-    o.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(o);
-    return box.isEmpty() ? null : box;
-  });
+    if (!o?.isObject3D) return null
+    o.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(o)
+    return box.isEmpty() ? null : box
+  })
 
   return objects.map((_, i) => {
-    if (!boxes[i]) return 0;
-    let containedByCount = 0;
+    if (!boxes[i]) return 0
+    let containedByCount = 0
     boxes.forEach((box, j) => {
-      if (j === i || !box) return;
+      if (j === i || !box) return
       if (boxMostlyContains(box, boxes[i])) {
-        containedByCount += 1;
+        containedByCount += 1
       }
-    });
+    })
     // More containers wrapping this object -> render earlier (further back).
-    return -containedByCount;
-  });
+    return -containedByCount
+  })
 }
 
 // Skips invisible subtrees (e.g. geo_vector_line's hidden glyph-style
 // siblings) so they don't get a scale computation every frame for nothing.
 function traverseVisible(object3D, callback) {
-  if (object3D.visible === false) return;
-  callback(object3D);
-  object3D.children.forEach((child) => traverseVisible(child, callback));
+  if (object3D.visible === false) return
+  callback(object3D)
+  object3D.children.forEach((child) => traverseVisible(child, callback))
 }
 
 // Applies zoom-invariant scaling and/or a size multiplier to meshes tagged
@@ -1089,12 +1209,18 @@ function traverseVisible(object3D, callback) {
 // arrowhead cone) always uses extraThickVectors, whichever way it scales;
 // otherwise extraThick for line/tube glyphs (cross-section-only scaling) or
 // extraLargePoints for point markers (uniform scaling).
-function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraThickVectors, extraLargePoints }) {
-  const worldPos = useMemo(() => new THREE.Vector3(), []);
+function ZoomInvariantScaler({
+  objects,
+  zoomEnabled,
+  extraThick,
+  extraThickVectors,
+  extraLargePoints,
+}) {
+  const worldPos = useMemo(() => new THREE.Vector3(), [])
 
   useFrame(({ camera }) => {
     objects.forEach((o) => {
-      if (!o) return;
+      if (!o) return
 
       // ONE distance -- and so one zoomScale -- per TOP-LEVEL object, not
       // one independently computed per zoom-invariant child. A multi-piece
@@ -1108,59 +1234,59 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraThickVecto
       // userData.segmentMid (their own local-space centre) as a stable
       // single reference point for this; anything else just uses its own
       // world position, which is what already happened per-child before.
-      let zoomScale = 1;
+      let zoomScale = 1
       if (zoomEnabled) {
         if (o.userData?.segmentMid) {
-          o.updateMatrixWorld();
-          worldPos.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
+          o.updateMatrixWorld()
+          worldPos.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld)
         } else {
-          o.getWorldPosition(worldPos);
+          o.getWorldPosition(worldPos)
         }
-        const distance = camera.position.distanceTo(worldPos);
+        const distance = camera.position.distanceTo(worldPos)
         zoomScale = THREE.MathUtils.clamp(
           distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
           ZOOM_INVARIANT_MIN_SCALE,
-          ZOOM_INVARIANT_MAX_SCALE
-        );
+          ZOOM_INVARIANT_MAX_SCALE,
+        )
       }
 
       traverseVisible(o, (child) => {
-        const baseRadius = child.userData?.zoomInvariantRadius;
-        if (!baseRadius) return;
-        const isUniform = !!child.userData.zoomInvariantUniform;
-        const isVector = child.userData.thickenGroup === 'vector';
+        const baseRadius = child.userData?.zoomInvariantRadius
+        if (!baseRadius) return
+        const isUniform = !!child.userData.zoomInvariantUniform
+        const isVector = child.userData.thickenGroup === 'vector'
 
-        let thickMultiplier = 1;
+        let thickMultiplier = 1
         if (isVector) {
-          thickMultiplier = extraThickVectors ? EXTRA_THICK_LINE_MULTIPLIER : 1;
+          thickMultiplier = extraThickVectors ? EXTRA_THICK_LINE_MULTIPLIER : 1
         } else if (isUniform) {
-          thickMultiplier = extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1;
+          thickMultiplier = extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1
         } else {
-          thickMultiplier = extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1;
+          thickMultiplier = extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1
         }
-        let finalScale = zoomScale * thickMultiplier;
+        let finalScale = zoomScale * thickMultiplier
         if (isVector) {
-          finalScale = Math.min(finalScale, VECTOR_ZOOM_MAX_SCALE * thickMultiplier);
+          finalScale = Math.min(finalScale, VECTOR_ZOOM_MAX_SCALE * thickMultiplier)
         } else if (isUniform) {
           finalScale = Math.min(
             finalScale,
-            extraLargePoints ? EXTRA_LARGE_POINT_MAX_SCALE : POINT_ZOOM_MAX_SCALE
-          );
+            extraLargePoints ? EXTRA_LARGE_POINT_MAX_SCALE : POINT_ZOOM_MAX_SCALE,
+          )
         }
         if (!isUniform) {
-          finalScale = Math.max(finalScale, MIN_LINE_WORLD_RADIUS / baseRadius);
+          finalScale = Math.max(finalScale, MIN_LINE_WORLD_RADIUS / baseRadius)
         }
 
         if (isUniform) {
-          child.scale.setScalar(finalScale);
+          child.scale.setScalar(finalScale)
         } else {
-          child.scale.set(finalScale, 1, finalScale);
+          child.scale.set(finalScale, 1, finalScale)
         }
-      });
-    });
-  });
+      })
+    })
+  })
 
-  return null;
+  return null
 }
 
 // Keeps each geo_vector_line's dash/ring collision-accent patterns
@@ -1174,7 +1300,7 @@ function ZoomInvariantScaler({ objects, zoomEnabled, extraThick, extraThickVecto
 // that tuning lives entirely in geoVectorLine.js instead of being split
 // across two files.
 function DashZoomSync({ objects, zoomEnabled }) {
-  const worldMid = useMemo(() => new THREE.Vector3(), []);
+  const worldMid = useMemo(() => new THREE.Vector3(), [])
 
   // Explicit priority -1 (lower runs earlier) so this always runs BEFORE
   // ZoomInvariantScaler in the same frame, not just by JSX/mount-order
@@ -1187,17 +1313,17 @@ function DashZoomSync({ objects, zoomEnabled }) {
   // during a continuous zoom, since rebuilds happen repeatedly as the scale
   // crosses each threshold.
   useFrame(({ camera }) => {
-    if (!zoomEnabled) return;
+    if (!zoomEnabled) return
     objects.forEach((o) => {
-      if (!o?.userData?.updateZoomRatio || !o.userData.segmentMid) return;
-      o.updateMatrixWorld();
-      worldMid.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld);
-      const distance = camera.position.distanceTo(worldMid);
-      o.userData.updateZoomRatio(distance / ZOOM_INVARIANT_REFERENCE_DISTANCE);
-    });
-  }, -1);
+      if (!o?.userData?.updateZoomRatio || !o.userData.segmentMid) return
+      o.updateMatrixWorld()
+      worldMid.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld)
+      const distance = camera.position.distanceTo(worldMid)
+      o.userData.updateZoomRatio(distance / ZOOM_INVARIANT_REFERENCE_DISTANCE)
+    })
+  }, -1)
 
-  return null;
+  return null
 }
 
 // Syncs Line2/LineMaterial glyphs with canvas resolution (for correct pixel
@@ -1207,22 +1333,22 @@ function DashZoomSync({ objects, zoomEnabled }) {
 // keys off extraThickVectors instead of extraThick, so the two toggles stay
 // independent.
 function FatLineSync({ objects, extraThick, extraThickVectors }) {
-  const { size } = useThree();
+  const { size } = useThree()
 
   useEffect(() => {
     objects.forEach((o) => {
-      if (!o) return;
+      if (!o) return
       o.traverse((child) => {
-        if (!child.userData?.isFatLine || !child.material) return;
-        child.material.resolution.set(size.width, size.height);
-        const baseWidth = child.userData.fatLineBaseWidth || 1;
-        const isThick = child.userData.thickenGroup === 'vector' ? extraThickVectors : extraThick;
-        child.material.linewidth = baseWidth * (isThick ? EXTRA_THICK_LINE_MULTIPLIER : 1);
-      });
-    });
-  }, [objects, size.width, size.height, extraThick, extraThickVectors]);
+        if (!child.userData?.isFatLine || !child.material) return
+        child.material.resolution.set(size.width, size.height)
+        const baseWidth = child.userData.fatLineBaseWidth || 1
+        const isThick = child.userData.thickenGroup === 'vector' ? extraThickVectors : extraThick
+        child.material.linewidth = baseWidth * (isThick ? EXTRA_THICK_LINE_MULTIPLIER : 1)
+      })
+    })
+  }, [objects, size.width, size.height, extraThick, extraThickVectors])
 
-  return null;
+  return null
 }
 
 function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
@@ -1230,25 +1356,25 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
 
   useEffect(() => {
     objects.forEach((o) => {
-      if (!o) return;
+      if (!o) return
       o.traverse((child) => {
-        if (child.isMesh) child.receiveShadow = settings.objectsReceiveShadows;
-      });
-    });
-  }, [objects, settings.objectsReceiveShadows]);
+        if (child.isMesh) child.receiveShadow = settings.objectsReceiveShadows
+      })
+    })
+  }, [objects, settings.objectsReceiveShadows])
 
   useEffect(() => {
-    const renderOrders = computeNestingRenderOrders(objects);
+    const renderOrders = computeNestingRenderOrders(objects)
     objects.forEach((o, i) => {
-      if (!o) return;
-      const order = renderOrders[i];
+      if (!o) return
+      const order = renderOrders[i]
       o.traverse((child) => {
         if (child.isMesh || child.isLine || child.isLineSegments) {
-          child.renderOrder = order;
+          child.renderOrder = order
         }
-      });
-    });
-  }, [objects]);
+      })
+    })
+  }, [objects])
 
   return (
     <>
@@ -1259,7 +1385,11 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
         extraThickVectors={settings.extraThickVectors}
         extraLargePoints={settings.extraLargePoints}
       />
-      <FatLineSync objects={objects} extraThick={settings.extraThickLines} extraThickVectors={settings.extraThickVectors} />
+      <FatLineSync
+        objects={objects}
+        extraThick={settings.extraThickLines}
+        extraThickVectors={settings.extraThickVectors}
+      />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
       <AnimationDriver objects={objects} />
@@ -1282,9 +1412,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
         shadow-bias={-0.001}
       />
 
-      {settings.showGrid && (
-        <FadedGrid />
-      )}
+      {settings.showGrid && <FadedGrid />}
 
       {settings.showBox && (
         <BoundingBoxRoom size={40} showFrontWireframe={settings.showBoxFrontWireframe} />
@@ -1300,7 +1428,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       )}
 
       {objects.map((o, i) => {
-        if (!o) return null;
+        if (!o) return null
         return (
           <group key={i}>
             {/* MAKE SURE: The objects you feed into this array have `castShadow`
@@ -1316,10 +1444,10 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
               />
             )}
           </group>
-        );
+        )
       })}
     </>
-  );
+  )
 }
 
 // Placeholder until real dark mode support lands.
@@ -1328,31 +1456,31 @@ const SCENE_BACKGROUND_COLOR = '#ffffff'
 export default function Scene3D({ objects = [] }) {
   const { settings, updateSetting } = useSettingsStore()
   const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId)
-  const controlsRef = useRef(null);
-  const cameraRef = useRef(null);
-  const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 });
-  const didInitialFocusRef = useRef(false);
-  const prevObjectCountRef = useRef(0);
-  const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set());
-  const [haloRawTarget, setHaloRawTarget] = useState(null);
-  const [haloDilatedTarget, setHaloDilatedTarget] = useState(null);
+  const controlsRef = useRef(null)
+  const cameraRef = useRef(null)
+  const focusRef = useRef({ center: new THREE.Vector3(0, 0, 0), radius: 20 })
+  const didInitialFocusRef = useRef(false)
+  const prevObjectCountRef = useRef(0)
+  const [hiddenLabelKeys, setHiddenLabelKeys] = useState(() => new Set())
+  const [haloRawTarget, setHaloRawTarget] = useState(null)
+  const [haloDilatedTarget, setHaloDilatedTarget] = useState(null)
   // cameraRef/controlsRef populate async (R3F's own render loop), after the
   // first `objects` update can already have fired; bump this once they're
   // ready so the auto-frame effect below retries immediately instead of
   // waiting on the next unrelated block edit.
-  const [refsReadyTick, setRefsReadyTick] = useState(0);
+  const [refsReadyTick, setRefsReadyTick] = useState(0)
 
   const handleControlsReady = useCallback((instance) => {
-    if (controlsRef.current === instance) return;
-    controlsRef.current = instance;
-    if (instance) setRefsReadyTick((tick) => tick + 1);
-  }, []);
+    if (controlsRef.current === instance) return
+    controlsRef.current = instance
+    if (instance) setRefsReadyTick((tick) => tick + 1)
+  }, [])
 
   const handleCameraReady = useCallback((camera) => {
-    if (cameraRef.current === camera) return;
-    cameraRef.current = camera;
-    if (camera) setRefsReadyTick((tick) => tick + 1);
-  }, []);
+    if (cameraRef.current === camera) return
+    cameraRef.current = camera
+    if (camera) setRefsReadyTick((tick) => tick + 1)
+  }, [])
 
   useLayoutEffect(() => {
     window.THREE = THREE
@@ -1362,74 +1490,72 @@ export default function Scene3D({ objects = [] }) {
       delete window.THREE
       delete window.threeObjStore
     }
-  }, []);
+  }, [])
 
   // Auto-frame on first load and on new-object-added only (not on move/edit
   // of existing objects), gated behind settings.autoFocusOnNewObject.
   useEffect(() => {
-    if (!settings.autoFocusOnNewObject) return;
+    if (!settings.autoFocusOnNewObject) return
 
-    const focus = getObjectFocus(objects);
-    if (!focus) return;
+    const focus = getObjectFocus(objects)
+    if (!focus) return
 
-    focusRef.current = focus;
+    focusRef.current = focus
 
-    const isNewObjectAdded = objects.length > prevObjectCountRef.current;
-    const isFirstFocus = !didInitialFocusRef.current;
-    prevObjectCountRef.current = objects.length;
+    const isNewObjectAdded = objects.length > prevObjectCountRef.current
+    const isFirstFocus = !didInitialFocusRef.current
+    prevObjectCountRef.current = objects.length
 
-    if (!cameraRef.current || !controlsRef.current) return;
-    if (!isFirstFocus && !isNewObjectAdded) return;
-    didInitialFocusRef.current = true;
+    if (!cameraRef.current || !controlsRef.current) return
+    if (!isFirstFocus && !isNewObjectAdded) return
+    didInitialFocusRef.current = true
 
-    const camera = cameraRef.current;
-    const controls = controlsRef.current;
-    const oldTarget = controls.target.clone();
-    const oldOffset = camera.position.clone().sub(oldTarget);
-    const offset = oldOffset.lengthSq() > 1e-8
-      ? oldOffset
-      : DEFAULT_CAMERA_OFFSET.clone();
-    const minDistance = Math.max(focusRef.current.radius * 2.6, 8);
+    const camera = cameraRef.current
+    const controls = controlsRef.current
+    const oldTarget = controls.target.clone()
+    const oldOffset = camera.position.clone().sub(oldTarget)
+    const offset = oldOffset.lengthSq() > 1e-8 ? oldOffset : DEFAULT_CAMERA_OFFSET.clone()
+    const minDistance = Math.max(focusRef.current.radius * 2.6, 8)
 
-    if (offset.length() < minDistance) offset.setLength(minDistance);
-    controls.target.copy(focusRef.current.center);
-    camera.position.copy(focusRef.current.center).add(offset);
-    controls.update();
-  }, [objects, refsReadyTick, settings.autoFocusOnNewObject]);
+    if (offset.length() < minDistance) offset.setLength(minDistance)
+    controls.target.copy(focusRef.current.center)
+    camera.position.copy(focusRef.current.center).add(offset)
+    controls.update()
+  }, [objects, refsReadyTick, settings.autoFocusOnNewObject])
 
   const resetDefaultView = () => {
-    if (!cameraRef.current || !controlsRef.current) return;
-    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION);
-    cameraRef.current.up.set(0, 1, 0);
-    cameraRef.current.zoom = 1;
-    cameraRef.current.updateProjectionMatrix();
-    controlsRef.current.target.set(0, 0, 0);
-    controlsRef.current.update();
-  };
+    if (!cameraRef.current || !controlsRef.current) return
+    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION)
+    cameraRef.current.up.set(0, 1, 0)
+    cameraRef.current.zoom = 1
+    cameraRef.current.updateProjectionMatrix()
+    controlsRef.current.target.set(0, 0, 0)
+    controlsRef.current.update()
+  }
 
   const handleHideLabel = useCallback((labelKey) => {
     setHiddenLabelKeys((current) => {
-      const next = new Set(current);
-      next.add(labelKey);
-      return next;
-    });
-  }, []);
+      const next = new Set(current)
+      next.add(labelKey)
+      return next
+    })
+  }, [])
 
   // Right-click on an object: hide all its labels if any are showing, else
   // reveal all of them.
   const handleToggleObjectLabels = useCallback((labelKeys) => {
     setHiddenLabelKeys((current) => {
-      const allHidden = labelKeys.every((labelKey) => current.has(labelKey));
-      const next = new Set(current);
-      labelKeys.forEach((labelKey) => (allHidden ? next.delete(labelKey) : next.add(labelKey)));
-      return next;
-    });
-  }, []);
+      const allHidden = labelKeys.every((labelKey) => current.has(labelKey))
+      const next = new Set(current)
+      labelKeys.forEach((labelKey) => (allHidden ? next.delete(labelKey) : next.add(labelKey)))
+      return next
+    })
+  }, [])
 
   const handleSelectBlockFrom3D = useCallback(
     (blockId) => setSelectedBlockId(blockId),
-    [setSelectedBlockId]
-  );
+    [setSelectedBlockId],
+  )
 
   return (
     <div className="editor-body-3d">
@@ -1448,8 +1574,16 @@ export default function Scene3D({ objects = [] }) {
             ref={handleControlsReady}
           />
           <CameraHandle onReady={handleCameraReady} />
-          <ScenePicker onSelectBlock={handleSelectBlockFrom3D} onToggleLabels={handleToggleObjectLabels} />
-          <Scene objects={objects} hiddenLabelKeys={hiddenLabelKeys} controlsRef={controlsRef} onHideLabel={handleHideLabel} />
+          <ScenePicker
+            onSelectBlock={handleSelectBlockFrom3D}
+            onToggleLabels={handleToggleObjectLabels}
+          />
+          <Scene
+            objects={objects}
+            hiddenLabelKeys={hiddenLabelKeys}
+            controlsRef={controlsRef}
+            onHideLabel={handleHideLabel}
+          />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />
           <HaloUniformSync objects={objects} target={haloDilatedTarget} />
@@ -1479,7 +1613,14 @@ export default function Scene3D({ objects = [] }) {
               title={settings.showAxes ? 'Hide axes' : 'Show axes'}
             >
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <path d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           )}
@@ -1492,11 +1633,17 @@ export default function Scene3D({ objects = [] }) {
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
               <circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
               <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-              <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              <path
+                d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
       </div>
     </div>
-  );
+  )
 }

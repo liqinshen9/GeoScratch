@@ -67,7 +67,8 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
     // between an immune pair everywhere, not just near the touch point.
     shader.uniforms.haloImmuneIds = { value: immuneIds }
 
-    shader.fragmentShader = `
+    shader.fragmentShader =
+      `
       uniform sampler2D haloTex;
       uniform vec2 haloResolution;
       uniform float selfHaloId;
@@ -113,7 +114,7 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
         if (otherId > 0.5 && !haloImmune && abs(otherId - selfHaloId) > 0.5 && otherViewZ > selfViewZ + ${DEPTH_BIAS_WORLD_UNITS.toFixed(4)}) {
           discard;
         }
-      }`
+      }`,
     )
 
     material.userData.haloUniforms = shader.uniforms

@@ -67,10 +67,7 @@ function bakedEndpoints(line) {
 function expectedEndpoints(origin, direction) {
   const unit = direction.clone().normalize()
   const [enter, exit] = lineBoxInterval(origin, unit)
-  return [
-    origin.clone().addScaledVector(unit, enter),
-    origin.clone().addScaledVector(unit, exit),
-  ]
+  return [origin.clone().addScaledVector(unit, enter), origin.clone().addScaledVector(unit, exit)]
 }
 
 function expectVectorClose(actual, expected, precision = 5) {
@@ -82,7 +79,9 @@ function expectVectorClose(actual, expected, precision = 5) {
 describe('bakeLineTransformAnimation', () => {
   it('opts the line in, keyed to the line block and the pipelines driving it', () => {
     const line = makeLine(new THREE.Vector3(10, 0, 0), new THREE.Vector3(1, 1, 1))
-    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), ['pipe-1'])
+    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), [
+      'pipe-1',
+    ])
 
     expect(typeof line.userData.animate).toBe('function')
     expect(line.userData.animAliasBlockIds).toEqual(['pipe-1'])
@@ -91,7 +90,9 @@ describe('bakeLineTransformAnimation', () => {
   it('leaves the line untouched at progress 1', () => {
     const line = makeLine(new THREE.Vector3(10, 0, 0), new THREE.Vector3(1, 1, 1))
     const resting = line.matrix.clone()
-    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), ['pipe-1'])
+    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 1, 1), [
+      'pipe-1',
+    ])
 
     line.userData.animate(1)
 
@@ -125,7 +126,7 @@ describe('bakeLineTransformAnimation', () => {
     expectVectorClose(b, expectedB)
   })
 
-  it('carries the build\'s z-fight jitter through the animation, still sub-visual', () => {
+  it("carries the build's z-fight jitter through the animation, still sub-visual", () => {
     const start = { origin: new THREE.Vector3(2, 1, 0), direction: new THREE.Vector3(1, 0, 0) }
     const jitter = new THREE.Vector3(0.001, 0, 0.0005)
     const line = makeLine(new THREE.Vector3(2, 1, 0), new THREE.Vector3(0, 0, 3), { jitter })
@@ -151,7 +152,9 @@ describe('bakeLineTransformAnimation', () => {
       const [a, b] = bakedEndpoints(line)
       // Both ends sit on a wall of the 40-unit room...
       for (const end of [a, b]) {
-        const onWall = ['x', 'y', 'z'].some((axis) => Math.abs(Math.abs(end[axis]) - BOX_HALF_EXTENT) < 1e-3)
+        const onWall = ['x', 'y', 'z'].some(
+          (axis) => Math.abs(Math.abs(end[axis]) - BOX_HALF_EXTENT) < 1e-3,
+        )
         expect(onWall).toBe(true)
       }
       // ...and the segment still runs along the interpolated direction, which
@@ -159,14 +162,19 @@ describe('bakeLineTransformAnimation', () => {
       const dir = b.clone().sub(a).normalize()
       const angleToStart = dir.angleTo(startDirection.clone().normalize())
       const angleToEnd = dir.angleTo(line.userData.direction.clone().normalize())
-      const total = startDirection.clone().normalize().angleTo(line.userData.direction.clone().normalize())
+      const total = startDirection
+        .clone()
+        .normalize()
+        .angleTo(line.userData.direction.clone().normalize())
       expect(angleToStart + angleToEnd).toBeCloseTo(total, 4)
     }
   })
 
   it('never changes the line thickness (the stretch is along the line only)', () => {
     const line = makeLine(new THREE.Vector3(6, 4, 0), new THREE.Vector3(0, 1, 1))
-    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), ['pipe-1'])
+    bakeLineTransformAnimation(line, new THREE.Vector3(0, 0, 0), new THREE.Vector3(1, 0, 0), [
+      'pipe-1',
+    ])
 
     const unit = line.userData.direction.clone().normalize()
     // Two directions across the tube's axis: its cross-section, i.e. how thick

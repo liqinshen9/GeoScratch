@@ -20,7 +20,15 @@ describe('useWorkspaceStore', () => {
   })
 
   it('loads previously persisted user blocks on creation', async () => {
-    const saved = [{ id: 'my-block-1', name: 'Saved Block', xmlText: '<xml/>', source: 'workspace', createdAt: '2026-01-01T00:00:00.000Z' }]
+    const saved = [
+      {
+        id: 'my-block-1',
+        name: 'Saved Block',
+        xmlText: '<xml/>',
+        source: 'workspace',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
 
     const store = await freshStore()
@@ -39,9 +47,15 @@ describe('useWorkspaceStore', () => {
 
   it('adds a user block to state and persists it to localStorage', async () => {
     const store = await freshStore()
-    const added = store.getState().addUserBlock({ name: '  My Vector Block  ', xmlText: '<xml>...</xml>' })
+    const added = store
+      .getState()
+      .addUserBlock({ name: '  My Vector Block  ', xmlText: '<xml>...</xml>' })
 
-    expect(added).toMatchObject({ name: 'My Vector Block', xmlText: '<xml>...</xml>', source: 'workspace' })
+    expect(added).toMatchObject({
+      name: 'My Vector Block',
+      xmlText: '<xml>...</xml>',
+      source: 'workspace',
+    })
     expect(store.getState().userBlocks).toHaveLength(1)
     expect(store.getState().userBlocks[0]).toBe(added)
 

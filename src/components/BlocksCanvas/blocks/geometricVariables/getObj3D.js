@@ -15,10 +15,7 @@ export function initGetObj3DBlock() {
   Blockly.Blocks['variables_get_obj3D'] = {
     init() {
       this.appendDummyInput()
-        .appendField(
-          new Blockly.FieldVariable('item', null, ['obj3D'], 'obj3D'),
-          'VAR'
-        )
+        .appendField(new Blockly.FieldVariable('item', null, ['obj3D'], 'obj3D'), 'VAR')
         .appendField(' (3D Object)')
       this.setOutput(true, 'obj3D')
       this.setStyle(BLOCK_STYLES.OBJECT_VARIABLE)
@@ -27,10 +24,7 @@ export function initGetObj3DBlock() {
   }
 
   // === Generator ===
-  javascriptGenerator.forBlock['variables_get_obj3D'] = function (
-    block,
-    generator
-  ) {
+  javascriptGenerator.forBlock['variables_get_obj3D'] = function (block, generator) {
     const code = generator.getVariableName(block.getFieldValue('VAR'))
     return [code, Order.ATOMIC]
   }

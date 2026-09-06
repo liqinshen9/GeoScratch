@@ -10,7 +10,9 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   const useSettingsStore = window.useSettingsStore
   if (!THREE) return null
   if (!THREE.TeapotGeometry) {
-    console.warn('geo_teapot: THREE.TeapotGeometry is not registered on window.THREE. Load the TeapotGeometry addon module first.')
+    console.warn(
+      'geo_teapot: THREE.TeapotGeometry is not registered on window.THREE. Load the TeapotGeometry addon module first.',
+    )
     return null
   }
 
@@ -35,7 +37,7 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
+    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff }),
   )
   mesh.add(edges)
 
@@ -79,7 +81,9 @@ export function initGeoTeapotBlock() {
 
   Blockly.Blocks.geo_teapot = {
     init() {
-      this.appendDummyInput().appendField('Teapot').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendDummyInput()
+        .appendField('Teapot')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_TEAPOT)
       this.setColour(forInstance('teapot', this.id))
       this.setTooltip('Utah Teapot Object')
@@ -96,7 +100,7 @@ export function initGeoTeapotBlock() {
     },
   }
 
-  javascriptGenerator.forBlock.geo_teapot = function(block, generator) {
+  javascriptGenerator.forBlock.geo_teapot = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
     // Fall back safely to window scope context inside the output execution block string

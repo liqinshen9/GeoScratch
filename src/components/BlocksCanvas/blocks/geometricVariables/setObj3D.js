@@ -23,7 +23,7 @@ export function initSetObj3DBlock() {
             const variables = this.workspace.getVariableMap().getVariablesOfType('obj3D')
             return variables.length ? variables.map((v) => [v.name, v.name]) : [['', '']]
           }),
-          'VAR'
+          'VAR',
         )
         .appendField('to')
       this.setPreviousStatement(true, null)
@@ -34,13 +34,9 @@ export function initSetObj3DBlock() {
   }
 
   // === Generator ===
-  javascriptGenerator.forBlock['variables_set_obj3D'] = function (
-    block,
-    generator
-  ) {
+  javascriptGenerator.forBlock['variables_set_obj3D'] = function (block, generator) {
     const varName = generator.getVariableName(block.getFieldValue('VAR'))
-    const argument0 =
-      generator.valueToCode(block, 'VALUE', Order.NONE) || 'null'
+    const argument0 = generator.valueToCode(block, 'VALUE', Order.NONE) || 'null'
 
     // No manual declaration here: the JavaScript generator's own init()
     // already emits `var <every used workspace variable>;` for every real

@@ -1,5 +1,9 @@
 import { Field } from 'blockly/core'
-import { getDisplayName, subscribeToBlockName, subscribeToNamingChanges } from '@/utils/namingRegistry'
+import {
+  getDisplayName,
+  subscribeToBlockName,
+  subscribeToNamingChanges,
+} from '@/utils/namingRegistry'
 
 const BADGE_FILL = '#11151c'
 const BADGE_BORDER = 'rgba(255, 255, 255, 0.38)'
@@ -61,7 +65,10 @@ export class FieldObjectName extends Field {
       // plugged into it, so it changes when a DIFFERENT block's name (or the
       // connection itself) changes.
       const unsubscribeGlobal = subscribeToNamingChanges(() => this.refresh())
-      this._unsubscribe = () => { unsubscribeBlock(); unsubscribeGlobal() }
+      this._unsubscribe = () => {
+        unsubscribeBlock()
+        unsubscribeGlobal()
+      }
     }
   }
 

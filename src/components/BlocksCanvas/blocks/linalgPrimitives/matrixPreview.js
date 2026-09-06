@@ -103,7 +103,9 @@ class FieldMatrixPreview extends Field {
 
   getButtonColour() {
     const block = this.getSourceBlock()
-    return block?.type === 'transform_pipeline' ? PIPELINE_TOGGLE_COLOUR : TRANSFORM_STEP_TOGGLE_COLOUR
+    return block?.type === 'transform_pipeline'
+      ? PIPELINE_TOGGLE_COLOUR
+      : TRANSFORM_STEP_TOGGLE_COLOUR
   }
 
   applyButtonColour() {
@@ -308,7 +310,11 @@ function bindListeners() {
       syncLayout()
       return
     }
-    if (isPipelineAnchor && event.type === Blockly.Events.BLOCK_CHANGE && event.element === 'field') {
+    if (
+      isPipelineAnchor &&
+      event.type === Blockly.Events.BLOCK_CHANGE &&
+      event.element === 'field'
+    ) {
       refreshContent()
       syncLayout()
     }

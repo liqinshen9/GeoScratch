@@ -8,11 +8,7 @@ export default function AutoRenderToggle() {
       <label htmlFor="auto-render-switch" className="cursor-pointer select-none">
         Auto Render
       </label>
-      <Switch
-        id="auto-render-switch"
-        checked={autoRender}
-        onCheckedChange={setAutoRender}
-      />
+      <Switch id="auto-render-switch" checked={autoRender} onCheckedChange={setAutoRender} />
     </div>
   )
 }

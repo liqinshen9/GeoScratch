@@ -1,10 +1,9 @@
 import * as Blockly from 'blockly/core'
 
-export const blockMoveChangesGeneratedCode = (event) => (
+export const blockMoveChangesGeneratedCode = (event) =>
   event.oldParentId !== event.newParentId ||
   event.oldInputName !== event.newInputName ||
   event.oldNextBlockId !== event.newNextBlockId
-)
 
 export const shouldIgnoreWorkspaceChange = (event) => {
   if (!event || event.type === Blockly.Events.VIEWPORT_CHANGE) return true

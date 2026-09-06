@@ -5,7 +5,11 @@ import { applyTubeCollisions } from './tubeCollision'
 // Matches PLAIN_TUBE_RADIUS / SOLID_INFLATE in tubeCollision.js.
 const TUBE_RADIUS = 0.051
 
-function makeLine({ mid = new THREE.Vector3(0, 0, 0), direction = new THREE.Vector3(1, 0, 0), halfLength = 10 } = {}) {
+function makeLine({
+  mid = new THREE.Vector3(0, 0, 0),
+  direction = new THREE.Vector3(1, 0, 0),
+  halfLength = 10,
+} = {}) {
   const group = new THREE.Group()
   const setCollisionZones = vi.fn()
   group.userData = {
@@ -40,7 +44,11 @@ function makeCube({ position, size = 2 }) {
 // absolute defining point (not a local offset baked into obj.position, so
 // obj itself is left at the identity transform, same as an untransformed
 // plane group at runtime).
-function makePlane({ point = new THREE.Vector3(0, 0, 0), normal = new THREE.Vector3(0, 0, 1), planeSize = 12 } = {}) {
+function makePlane({
+  point = new THREE.Vector3(0, 0, 0),
+  normal = new THREE.Vector3(0, 0, 1),
+  planeSize = 12,
+} = {}) {
   const obj = new THREE.Object3D()
   const normalUnit = normal.clone().normalize()
   obj.userData = {
@@ -129,23 +137,36 @@ describe('applyTubeCollisions', () => {
     it('reports no zone when a line crosses a plane at a single point (not parallel)', () => {
       // Straight through the z=0 plane, perpendicular to its normal.
       const line = makeLine({ direction: new THREE.Vector3(0, 0, 1) })
-      const plane = makePlane({ point: new THREE.Vector3(0, 0, 0), normal: new THREE.Vector3(0, 0, 1) })
+      const plane = makePlane({
+        point: new THREE.Vector3(0, 0, 0),
+        normal: new THREE.Vector3(0, 0, 1),
+      })
       applyTubeCollisions({ line, plane })
       expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
     })
 
     it('reports no zone for a line parallel to but offset away from the plane', () => {
       // Runs along x, parallel to the z=0 plane, but 5 units off it.
-      const line = makeLine({ mid: new THREE.Vector3(0, 0, 5), direction: new THREE.Vector3(1, 0, 0) })
-      const plane = makePlane({ point: new THREE.Vector3(0, 0, 0), normal: new THREE.Vector3(0, 0, 1) })
+      const line = makeLine({
+        mid: new THREE.Vector3(0, 0, 5),
+        direction: new THREE.Vector3(1, 0, 0),
+      })
+      const plane = makePlane({
+        point: new THREE.Vector3(0, 0, 0),
+        normal: new THREE.Vector3(0, 0, 1),
+      })
       applyTubeCollisions({ line, plane })
       expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
     })
 
-    it('finds the zone clipped to the plane\'s finite square when the line lies in it', () => {
+    it("finds the zone clipped to the plane's finite square when the line lies in it", () => {
       // Runs along x, through the z=0 plane's own point, i.e. coincident with it.
       const line = makeLine({ direction: new THREE.Vector3(1, 0, 0), halfLength: 20 })
-      const plane = makePlane({ point: new THREE.Vector3(0, 0, 0), normal: new THREE.Vector3(0, 0, 1), planeSize: 12 })
+      const plane = makePlane({
+        point: new THREE.Vector3(0, 0, 0),
+        normal: new THREE.Vector3(0, 0, 1),
+        planeSize: 12,
+      })
       applyTubeCollisions({ line, plane })
 
       const zones = line.userData.setCollisionZones.mock.calls[0][0]
@@ -154,11 +175,18 @@ describe('applyTubeCollisions', () => {
       expect(zones[0].end).toBeCloseTo(6 + TUBE_RADIUS, 2)
     })
 
-    it('reports no zone when the coincident line runs entirely outside the plane\'s square', () => {
+    it("reports no zone when the coincident line runs entirely outside the plane's square", () => {
       // Still in the z=0 plane and parallel to it, but offset along y well
       // past the plane's own finite extent.
-      const line = makeLine({ mid: new THREE.Vector3(0, 10, 0), direction: new THREE.Vector3(1, 0, 0) })
-      const plane = makePlane({ point: new THREE.Vector3(0, 0, 0), normal: new THREE.Vector3(0, 0, 1), planeSize: 12 })
+      const line = makeLine({
+        mid: new THREE.Vector3(0, 10, 0),
+        direction: new THREE.Vector3(1, 0, 0),
+      })
+      const plane = makePlane({
+        point: new THREE.Vector3(0, 0, 0),
+        normal: new THREE.Vector3(0, 0, 1),
+        planeSize: 12,
+      })
       applyTubeCollisions({ line, plane })
       expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
     })

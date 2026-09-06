@@ -12,9 +12,9 @@ const down = (over = {}) => ({ clientX: 100, clientY: 100, time: 0, pointerId: 1
 
 describe('classifyGesture', () => {
   it('treats a small, quick press-release as a click', () => {
-    expect(
-      classifyGesture(down(), { clientX: 102, clientY: 101, time: 120, pointerId: 1 })
-    ).toBe('click')
+    expect(classifyGesture(down(), { clientX: 102, clientY: 101, time: 120, pointerId: 1 })).toBe(
+      'click',
+    )
   })
 
   it('treats a far-moving release as a drag', () => {
@@ -24,21 +24,23 @@ describe('classifyGesture', () => {
         clientY: 100,
         time: 50,
         pointerId: 1,
-      })
+      }),
     ).toBe('drag')
   })
 
   it('treats a slow release as a drag', () => {
     expect(
-      classifyGesture(down(), { clientX: 100, clientY: 100, time: CLICK_MAX_MS + 1, pointerId: 1 })
+      classifyGesture(down(), { clientX: 100, clientY: 100, time: CLICK_MAX_MS + 1, pointerId: 1 }),
     ).toBe('drag')
   })
 
   it('returns none for a pointer-id mismatch or a missing endpoint', () => {
-    expect(
-      classifyGesture(down(), { clientX: 100, clientY: 100, time: 10, pointerId: 2 })
-    ).toBe('none')
-    expect(classifyGesture(null, { clientX: 100, clientY: 100, time: 10, pointerId: 1 })).toBe('none')
+    expect(classifyGesture(down(), { clientX: 100, clientY: 100, time: 10, pointerId: 2 })).toBe(
+      'none',
+    )
+    expect(classifyGesture(null, { clientX: 100, clientY: 100, time: 10, pointerId: 1 })).toBe(
+      'none',
+    )
   })
 })
 

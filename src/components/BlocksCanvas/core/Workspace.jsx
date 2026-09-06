@@ -1,8 +1,11 @@
-import InitLocale from "./Locale"
+import InitLocale from './Locale'
 import * as en from 'blockly/msg/en'
 import * as Blockly from 'blockly/core'
 import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
-import { flattenCollapsedReferenceEdges, installBlockReferenceLabels } from '@/utils/blockReferenceLabels'
+import {
+  flattenCollapsedReferenceEdges,
+  installBlockReferenceLabels,
+} from '@/utils/blockReferenceLabels'
 import { installNamingRegistry } from '@/utils/namingRegistry'
 import { registerGeoScratchRenderer } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 

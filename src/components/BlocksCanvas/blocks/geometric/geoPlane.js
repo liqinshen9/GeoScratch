@@ -24,10 +24,10 @@ const initGeoPlaneBlock = () => {
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
-    }
+    },
   }
 
-  javascriptGenerator.forBlock['geo_plane'] = function(block, generator) {
+  javascriptGenerator.forBlock['geo_plane'] = function (block, generator) {
     const pos = generator.valueToCode(block, 'pos', Order.FUNCTION_CALL) || 'new THREE.Vector3()'
     const side = generator.valueToCode(block, 'side', Order.FUNCTION_CALL) || '1'
 

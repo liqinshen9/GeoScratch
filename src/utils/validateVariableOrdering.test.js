@@ -80,7 +80,7 @@ function makeReference(ws, refId, lastKnownName) {
 }
 
 describe('validateVariableOrdering', () => {
-  it('warns a get block whose stack precedes its variable\'s set-containing stack', () => {
+  it("warns a get block whose stack precedes its variable's set-containing stack", () => {
     const ws = new Blockly.Workspace()
     const getBlock = makeGetBlock(ws, 'myVar') // top-level stack 0
     const calls = spyOnWarnings(getBlock)

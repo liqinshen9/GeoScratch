@@ -27,7 +27,7 @@ export function initSetScalarVarBlock() {
             const variables = this.workspace.getVariableMap().getVariablesOfType('scalar')
             return variables.length ? variables.map((v) => [v.name, v.name]) : [['', '']]
           }),
-          'VAR'
+          'VAR',
         )
         .appendField('to')
       this.setPreviousStatement(true, null)

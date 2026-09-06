@@ -46,20 +46,22 @@ const DEFAULT_SETTINGS = {
 const useSettingsStore = create((set) => ({
   settings: { ...DEFAULT_SETTINGS },
 
-  updateSetting: (key, value) => set((state) => ({
-    settings: {
-      ...state.settings,
-      [key]: value
-    }
-  })),
+  updateSetting: (key, value) =>
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        [key]: value,
+      },
+    })),
 
-  resetSettings: () => set({
-    settings: { ...DEFAULT_SETTINGS }
-  })
+  resetSettings: () =>
+    set({
+      settings: { ...DEFAULT_SETTINGS },
+    }),
 }))
 
 if (typeof window !== 'undefined') {
-  window.useSettingsStore = useSettingsStore;
+  window.useSettingsStore = useSettingsStore
 }
 
 export default useSettingsStore

@@ -6,14 +6,19 @@ import addCompositeBlockToWorkspace from '@/utils/addCompositeBlockToWorkspace'
 import CategoryToolbox from '@/components/BlocksCanvas/toolbox/CategoryToolbox'
 import BlockPalette from '@/components/BlocksCanvas/palette/BlockPalette'
 import MyBlockDialog from '@/components/BlocksCanvas/MyBlockDialog'
-import { BLOCK_CATEGORIES, flattenCategoryBlocks } from '@/components/BlocksCanvas/catalog/blockCatalog'
+import {
+  BLOCK_CATEGORIES,
+  flattenCategoryBlocks,
+} from '@/components/BlocksCanvas/catalog/blockCatalog'
 import { useBlocksWorkspace } from '@/components/BlocksCanvas/hooks/useBlocksWorkspace'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { shouldIgnoreWorkspaceChange } from '@/utils/blocklyEventFilters'
 import './BlocksCanvas.css'
 
 const BUILT_IN_BLOCK_TYPES = new Set(
-  Object.values(BLOCK_CATEGORIES).flatMap((category) => flattenCategoryBlocks(category).map((block) => block.type)),
+  Object.values(BLOCK_CATEGORIES).flatMap((category) =>
+    flattenCategoryBlocks(category).map((block) => block.type),
+  ),
 )
 
 const IGNORED_DUPLICATE_ATTRIBUTES = new Set(['id', 'x', 'y'])
@@ -119,7 +124,11 @@ function WorkspaceControls({
   }
 
   return (
-    <div className="workspace-controls" aria-label="Workspace controls" onPointerDown={stopWorkspaceGesture}>
+    <div
+      className="workspace-controls"
+      aria-label="Workspace controls"
+      onPointerDown={stopWorkspaceGesture}
+    >
       <div className="workspace-control-group">
         <button
           type="button"
@@ -316,89 +325,106 @@ export default function BlocksCanvas({
     trashIconRef.current?.classList.toggle('is-open', open)
   }, [])
 
-  const isDraggedBlockTouchingTrash = useCallback((blockId) => {
-    if (!workspace || !blockId) return false
-    // The button is small, so drop detection uses a padded version of its box.
-    const buttonRect = trashTargetRef.current?.getBoundingClientRect()
-    if (!buttonRect) return false
-    const trashRect = {
-      left: buttonRect.left - TRASH_DROP_PADDING,
-      right: buttonRect.right + TRASH_DROP_PADDING,
-      top: buttonRect.top - TRASH_DROP_PADDING,
-      bottom: buttonRect.bottom + TRASH_DROP_PADDING,
-    }
+  const isDraggedBlockTouchingTrash = useCallback(
+    (blockId) => {
+      if (!workspace || !blockId) return false
+      // The button is small, so drop detection uses a padded version of its box.
+      const buttonRect = trashTargetRef.current?.getBoundingClientRect()
+      if (!buttonRect) return false
+      const trashRect = {
+        left: buttonRect.left - TRASH_DROP_PADDING,
+        right: buttonRect.right + TRASH_DROP_PADDING,
+        top: buttonRect.top - TRASH_DROP_PADDING,
+        bottom: buttonRect.bottom + TRASH_DROP_PADDING,
+      }
 
-    const block = workspace.getBlockById(blockId)
-    const blockRect = getPrimaryBlockRect(block)
+      const block = workspace.getBlockById(blockId)
+      const blockRect = getPrimaryBlockRect(block)
 
-    return getRectIntersectionArea(blockRect, trashRect) > 0
-  }, [workspace])
+      return getRectIntersectionArea(blockRect, trashRect) > 0
+    },
+    [workspace],
+  )
 
-  const deleteBlockById = useCallback((blockId) => {
-    if (!workspace || !blockId) return
+  const deleteBlockById = useCallback(
+    (blockId) => {
+      if (!workspace || !blockId) return
 
-    const block = workspace.getBlockById(blockId)
-    if (!block?.isDeletable?.()) return
-    const deletedBlock = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      label: getDeletedBlockLabel(block),
-      previewSvg: getBlockPreviewSvg(block),
-      xmlText: Blockly.Xml.domToText(Blockly.Xml.blockToDomWithXY(block, false)),
-    }
+      const block = workspace.getBlockById(blockId)
+      if (!block?.isDeletable?.()) return
+      const deletedBlock = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        label: getDeletedBlockLabel(block),
+        previewSvg: getBlockPreviewSvg(block),
+        xmlText: Blockly.Xml.domToText(Blockly.Xml.blockToDomWithXY(block, false)),
+      }
 
-    Blockly.Events.setGroup(true)
-    try {
-      block.checkAndDelete()
-      lastSelectedBlockIdRef.current = null
-    } finally {
-      Blockly.Events.setGroup(false)
-    }
-    setRecentDeletedBlocks((blocks) => [deletedBlock, ...blocks].slice(0, 8))
-    syncScene(workspace)
-  }, [workspace, syncScene])
+      Blockly.Events.setGroup(true)
+      try {
+        block.checkAndDelete()
+        lastSelectedBlockIdRef.current = null
+      } finally {
+        Blockly.Events.setGroup(false)
+      }
+      setRecentDeletedBlocks((blocks) => [deletedBlock, ...blocks].slice(0, 8))
+      syncScene(workspace)
+    },
+    [workspace, syncScene],
+  )
 
-  const scheduleTrashDelete = useCallback((blockId) => {
-    if (!blockId || pendingTrashDeleteRef.current === blockId) return
+  const scheduleTrashDelete = useCallback(
+    (blockId) => {
+      if (!blockId || pendingTrashDeleteRef.current === blockId) return
 
-    window.cancelAnimationFrame(trashDeleteFrameRef.current)
-    pendingTrashDeleteRef.current = blockId
-    setTrashPanelOpen(false)
-    setTrashOpenVisual(true)
+      window.cancelAnimationFrame(trashDeleteFrameRef.current)
+      pendingTrashDeleteRef.current = blockId
+      setTrashPanelOpen(false)
+      setTrashOpenVisual(true)
 
-    trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
       trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
-        if (pendingTrashDeleteRef.current !== blockId) return
-        pendingTrashDeleteRef.current = null
-        draggingBlockIdRef.current = null
-        dragOverTrashRef.current = false
-        deleteBlockById(blockId)
-        closeTrashSoon()
+        trashDeleteFrameRef.current = window.requestAnimationFrame(() => {
+          if (pendingTrashDeleteRef.current !== blockId) return
+          pendingTrashDeleteRef.current = null
+          draggingBlockIdRef.current = null
+          dragOverTrashRef.current = false
+          deleteBlockById(blockId)
+          closeTrashSoon()
+        })
       })
-    })
-  }, [closeTrashSoon, deleteBlockById, setTrashOpenVisual])
+    },
+    [closeTrashSoon, deleteBlockById, setTrashOpenVisual],
+  )
 
   const handleTrashClick = useCallback(() => {
     if (draggingBlockIdRef.current || pendingTrashDeleteRef.current) return
     setTrashPanelOpen((open) => !open)
   }, [])
 
-  const restoreDeletedBlock = useCallback((deletedBlock, options = {}) => {
-    if (!workspace || !deletedBlock) return false
+  const restoreDeletedBlock = useCallback(
+    (deletedBlock, options = {}) => {
+      if (!workspace || !deletedBlock) return false
 
-    if (addCompositeBlockToWorkspace(workspace, toWorkspaceXmlText(deletedBlock.xmlText), options)) {
-      setRecentDeletedBlocks((blocks) => blocks.filter((block) => block.id !== deletedBlock.id))
-      setTrashPanelOpen(false)
-      syncScene(workspace)
-      return true
-    }
+      if (
+        addCompositeBlockToWorkspace(workspace, toWorkspaceXmlText(deletedBlock.xmlText), options)
+      ) {
+        setRecentDeletedBlocks((blocks) => blocks.filter((block) => block.id !== deletedBlock.id))
+        setTrashPanelOpen(false)
+        syncScene(workspace)
+        return true
+      }
 
-    return false
-  }, [syncScene, workspace])
+      return false
+    },
+    [syncScene, workspace],
+  )
 
-  const handleRestoreDeletedBlock = useCallback((deletedBlockId) => {
-    const deletedBlock = recentDeletedBlocks.find((block) => block.id === deletedBlockId)
-    restoreDeletedBlock(deletedBlock)
-  }, [recentDeletedBlocks, restoreDeletedBlock])
+  const handleRestoreDeletedBlock = useCallback(
+    (deletedBlockId) => {
+      const deletedBlock = recentDeletedBlocks.find((block) => block.id === deletedBlockId)
+      restoreDeletedBlock(deletedBlock)
+    },
+    [recentDeletedBlocks, restoreDeletedBlock],
+  )
 
   const handleDeletedBlockDragStart = useCallback((event, deletedBlock) => {
     event.dataTransfer.setData(TRASH_BLOCK_XML_TRANSFER_TYPE, deletedBlock.xmlText)
@@ -411,10 +437,13 @@ export default function BlocksCanvas({
     onRegisterClear?.(handleClearWorkspace)
   }, [onRegisterClear, handleClearWorkspace])
 
-  useEffect(() => () => {
-    window.clearTimeout(trashAnimationTimeoutRef.current)
-    window.cancelAnimationFrame(trashDeleteFrameRef.current)
-  }, [])
+  useEffect(
+    () => () => {
+      window.clearTimeout(trashAnimationTimeoutRef.current)
+      window.cancelAnimationFrame(trashDeleteFrameRef.current)
+    },
+    [],
+  )
 
   useEffect(() => {
     function handlePointerMove() {
@@ -449,7 +478,11 @@ export default function BlocksCanvas({
       return
     }
 
-    if (topBlocks.length === 1 && allBlocks.length === 1 && BUILT_IN_BLOCK_TYPES.has(topBlocks[0].type)) {
+    if (
+      topBlocks.length === 1 &&
+      allBlocks.length === 1 &&
+      BUILT_IN_BLOCK_TYPES.has(topBlocks[0].type)
+    ) {
       setMyBlockDialog({ type: 'duplicate' })
       return
     }
@@ -457,38 +490,49 @@ export default function BlocksCanvas({
     setMyBlockDialog({ type: 'make' })
   }, [workspace])
 
-  const handleConfirmMakeBlock = useCallback((name) => {
-    if (!workspace || !name?.trim()) return
-    const xmlText = reusableBlockTemplate?.xmlText || Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace))
-    const trimmedName = name.trim()
-    const userBlocks = useWorkspaceStore.getState().userBlocks
-    const normalizedName = trimmedName.toLocaleLowerCase()
+  const handleConfirmMakeBlock = useCallback(
+    (name) => {
+      if (!workspace || !name?.trim()) return
+      const xmlText =
+        reusableBlockTemplate?.xmlText ||
+        Blockly.Xml.domToText(Blockly.Xml.workspaceToDom(workspace))
+      const trimmedName = name.trim()
+      const userBlocks = useWorkspaceStore.getState().userBlocks
+      const normalizedName = trimmedName.toLocaleLowerCase()
 
-    if (userBlocks.some((block) => block.name.trim().toLocaleLowerCase() === normalizedName)) {
-      setMyBlockDialog((dialog) => ({ ...dialog, error: 'Block name already exist.' }))
-      return
-    }
+      if (userBlocks.some((block) => block.name.trim().toLocaleLowerCase() === normalizedName)) {
+        setMyBlockDialog((dialog) => ({ ...dialog, error: 'Block name already exist.' }))
+        return
+      }
 
-    const canonicalXml = canonicalizeWorkspaceXml(xmlText)
-    if (canonicalXml && userBlocks.some((block) => canonicalizeWorkspaceXml(block.xmlText) === canonicalXml)) {
-      setMyBlockDialog({ type: 'duplicate' })
-      return
-    }
+      const canonicalXml = canonicalizeWorkspaceXml(xmlText)
+      if (
+        canonicalXml &&
+        userBlocks.some((block) => canonicalizeWorkspaceXml(block.xmlText) === canonicalXml)
+      ) {
+        setMyBlockDialog({ type: 'duplicate' })
+        return
+      }
 
-    addUserBlock({
-      name: trimmedName,
-      xmlText,
-      source: reusableBlockTemplate?.source || (id?.startsWith('exercise') ? 'exercise' : 'workspace'),
-    })
-    setCategoryId('mybox')
-    setPaletteOpen(true)
-    setMyBlockDialog(null)
-  }, [workspace, reusableBlockTemplate, addUserBlock, id])
+      addUserBlock({
+        name: trimmedName,
+        xmlText,
+        source:
+          reusableBlockTemplate?.source || (id?.startsWith('exercise') ? 'exercise' : 'workspace'),
+      })
+      setCategoryId('mybox')
+      setPaletteOpen(true)
+      setMyBlockDialog(null)
+    },
+    [workspace, reusableBlockTemplate, addUserBlock, id],
+  )
 
   const handleUserBlockSelect = useCallback(
     (blockId, options = {}) => {
       if (!workspace) return
-      const userBlock = useWorkspaceStore.getState().userBlocks.find((block) => block.id === blockId)
+      const userBlock = useWorkspaceStore
+        .getState()
+        .userBlocks.find((block) => block.id === blockId)
       if (!userBlock) return
       if (addCompositeBlockToWorkspace(workspace, userBlock.xmlText, options)) {
         syncScene(workspace)
@@ -663,7 +707,13 @@ export default function BlocksCanvas({
       workspace.removeChangeListener(handleSelectedBlock)
       window.clearTimeout(selectionAfterDeleteTimerRef.current)
     }
-  }, [isDraggedBlockTouchingTrash, scheduleTrashDelete, setSelectedBlockId, setTrashOpenVisual, workspace])
+  }, [
+    isDraggedBlockTouchingTrash,
+    scheduleTrashDelete,
+    setSelectedBlockId,
+    setTrashOpenVisual,
+    workspace,
+  ])
 
   // Store -> workspace: a 3D-scene click (or any other setter) drives the
   // block's selection outline. We manage the outline directly rather than via
@@ -704,13 +754,18 @@ export default function BlocksCanvas({
       <MyBlockDialog
         open={myBlockDialog?.type === 'make'}
         title="Make a Block"
-        description={reusableBlockTemplate?.description || 'Save the current workspace as a reusable block in My Blocks.'}
+        description={
+          reusableBlockTemplate?.description ||
+          'Save the current workspace as a reusable block in My Blocks.'
+        }
         defaultName={reusableBlockTemplate?.defaultName || 'My geometric block'}
         error={myBlockDialog?.error}
         confirmLabel="Save"
         onCancel={() => setMyBlockDialog(null)}
         onConfirm={handleConfirmMakeBlock}
-        onNameChange={() => setMyBlockDialog((dialog) => (dialog ? { ...dialog, error: '' } : dialog))}
+        onNameChange={() =>
+          setMyBlockDialog((dialog) => (dialog ? { ...dialog, error: '' } : dialog))
+        }
       />
       <MyBlockDialog
         open={myBlockDialog?.type === 'duplicate'}
@@ -725,7 +780,10 @@ export default function BlocksCanvas({
       {!workspaceMaximized && (
         <div className="blocks-toolbox-slot">
           <aside className="blocks-col blocks-col--toolbox">
-            <CategoryToolbox selected={paletteOpen ? categoryId : null} onSelect={handleCategorySelect} />
+            <CategoryToolbox
+              selected={paletteOpen ? categoryId : null}
+              onSelect={handleCategorySelect}
+            />
           </aside>
 
           {paletteOpen && (

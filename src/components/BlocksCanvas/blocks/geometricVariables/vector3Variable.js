@@ -31,7 +31,7 @@ export function initSetVector3VarBlock() {
             const variables = this.workspace.getVariableMap().getVariablesOfType('vector3')
             return variables.length ? variables.map((v) => [v.name, v.name]) : [['', '']]
           }),
-          'VAR'
+          'VAR',
         )
         .appendField('to')
       this.setPreviousStatement(true, null)

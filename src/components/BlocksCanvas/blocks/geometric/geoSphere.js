@@ -11,7 +11,8 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   if (!THREE) return null
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const radius = Math.max(0.01, Number(radiusInput) || 1)
-  const formatCenterPoint = (point) => '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']'
+  const formatCenterPoint = (point) =>
+    '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']'
   const geometry = new THREE.SphereGeometry(radius, 32, 16)
   const material = new THREE.MeshStandardMaterial({
     color: window.GeoScratchColors.forInstance('sphere', blockId),
@@ -27,12 +28,12 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   mesh.receiveShadow = true
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
+    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff }),
   )
   mesh.add(edges)
   const centreMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.075, 18, 12),
-    new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.05 })
+    new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.05 }),
   )
   centreMarker.userData.geoType = 'sphere_center_marker'
   centreMarker.userData.srcBlockId = blockId
@@ -78,7 +79,9 @@ export function initGeoSphereBlock() {
   REGISTERED = true
   Blockly.Blocks.geo_sphere = {
     init() {
-      this.appendDummyInput().appendField('Sphere').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendDummyInput()
+        .appendField('Sphere')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_SPHERE)
       this.setColour(forInstance('sphere', this.id))
       this.setTooltip('Geometric Sphere Object')
@@ -89,7 +92,7 @@ export function initGeoSphereBlock() {
       this.appendValueInput('CENTRE').appendField('Centre:').setCheck('vector3')
     },
   }
-  javascriptGenerator.forBlock.geo_sphere = function(block, generator) {
+  javascriptGenerator.forBlock.geo_sphere = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
     // Fall back safely to window scope context inside the output execution block string

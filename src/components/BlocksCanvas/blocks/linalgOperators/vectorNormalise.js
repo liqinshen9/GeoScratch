@@ -22,7 +22,7 @@ export function initNormInplaceBlock() {
   }
 
   javascriptGenerator.forBlock['vector_normalise'] = function (block, g) {
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
     const vVal = ${v};
@@ -93,9 +93,8 @@ export function initNormInplaceBlock() {
       threeObjStore[base]           = group;
     }
     return group;
-  })()`;
+  })()`
 
-    return [code, Order.FUNCTION_CALL];
-  };
-
+    return [code, Order.FUNCTION_CALL]
+  }
 }

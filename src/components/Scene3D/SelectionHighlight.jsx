@@ -150,7 +150,7 @@ function applyBlink(targets) {
           : 1
         seen.set(m.uuid, { m, transparent: m.transparent, opacity: m.opacity, lo, hi })
       })
-    })
+    }),
   )
   const captured = [...seen.values()]
   captured.forEach(({ m }) => {
@@ -212,7 +212,7 @@ function addGlowAt(scene, accent, center, radius, strength, opts = {}) {
       accent,
       GLOW_LIGHT_INTENSITY * strength,
       radius * GLOW_LIGHT_RANGE_FACTOR,
-      0
+      0,
     )
     light.position.copy(center)
     light.castShadow = false
@@ -258,10 +258,13 @@ function collectVectorHeads(targets) {
       const dir = ud.vectorDirection.clone().transformDirection(child.matrixWorld).normalize()
       let visible = true
       for (let node = child; node; node = node.parent) {
-        if (node.visible === false) { visible = false; break }
+        if (node.visible === false) {
+          visible = false
+          break
+        }
       }
       heads.push({ tip, dir, visible })
-    })
+    }),
   )
   return heads
 }
@@ -271,7 +274,7 @@ function collectPlaneMeshes(targets) {
   targets.forEach((t) =>
     t.traverse((child) => {
       if (child.userData?.geoType === 'plane_mesh' && child.geometry) meshes.push(child)
-    })
+    }),
   )
   return meshes
 }
@@ -381,7 +384,11 @@ function applyGlow(targets, scene, size) {
         materialsOf(child).forEach((m) => {
           if (!m || nudged.some((e) => e.m === m)) return
           if (m.emissive?.isColor) {
-            nudged.push({ m, emissive: m.emissive.clone(), emissiveIntensity: m.emissiveIntensity ?? 1 })
+            nudged.push({
+              m,
+              emissive: m.emissive.clone(),
+              emissiveIntensity: m.emissiveIntensity ?? 1,
+            })
             m.emissive.copy(accent)
             m.emissiveIntensity = GLOW_HEAD_EMISSIVE_INTENSITY
           } else if (m.color?.isColor) {
@@ -390,7 +397,7 @@ function applyGlow(targets, scene, size) {
           }
           m.needsUpdate = true
         })
-      })
+      }),
     )
   } else {
     const box = new THREE.Box3()
@@ -422,25 +429,41 @@ function applyGlow(targets, scene, size) {
       t.traverse((child) => {
         materialsOf(child).forEach((m) => {
           if (!m?.emissive?.isColor || nudged.some((e) => e.m === m)) return
-          nudged.push({ m, emissive: m.emissive.clone(), emissiveIntensity: m.emissiveIntensity ?? 1 })
+          nudged.push({
+            m,
+            emissive: m.emissive.clone(),
+            emissiveIntensity: m.emissiveIntensity ?? 1,
+          })
           m.emissive.copy(accent)
           m.emissiveIntensity = GLOW_EMISSIVE_INTENSITY
           m.needsUpdate = true
         })
-      })
+      }),
     )
   }
 
   const moveGlowPart = (part, pos) => {
     let moved = false
-    if (part.light && !part.light.position.equals(pos)) { part.light.position.copy(pos); moved = true }
-    if (part.sprite && !part.sprite.position.equals(pos)) { part.sprite.position.copy(pos); moved = true }
+    if (part.light && !part.light.position.equals(pos)) {
+      part.light.position.copy(pos)
+      moved = true
+    }
+    if (part.sprite && !part.sprite.position.equals(pos)) {
+      part.sprite.position.copy(pos)
+      moved = true
+    }
     return moved
   }
   const setGlowPartVisible = (part, visible) => {
     let changed = false
-    if (part.light && part.light.visible !== visible) { part.light.visible = visible; changed = true }
-    if (part.sprite && part.sprite.visible !== visible) { part.sprite.visible = visible; changed = true }
+    if (part.light && part.light.visible !== visible) {
+      part.light.visible = visible
+      changed = true
+    }
+    if (part.sprite && part.sprite.visible !== visible) {
+      part.sprite.visible = visible
+      changed = true
+    }
     return changed
   }
 
@@ -466,8 +489,13 @@ function applyGlow(targets, scene, size) {
           changed = setGlowPartVisible(head, visible) || changed
           changed = setGlowPartVisible(trail, visible) || changed
           if (!visible) return
-          changed = moveGlowPart(head, tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * 0.4)) || changed
-          changed = moveGlowPart(trail, tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * GLOW_HEAD_TRAIL)) || changed
+          changed =
+            moveGlowPart(head, tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * 0.4)) || changed
+          changed =
+            moveGlowPart(
+              trail,
+              tip.clone().addScaledVector(dir, -GLOW_HEAD_RADIUS * GLOW_HEAD_TRAIL),
+            ) || changed
         })
         return changed
       }
@@ -522,7 +550,7 @@ export default function SelectionHighlight({ objects = [] }) {
   const targets = useMemo(() => {
     if (!selectedBlockId) return []
     return objects.filter(
-      (o) => o?.userData?.srcBlockId != null && String(o.userData.srcBlockId) === selectedBlockId
+      (o) => o?.userData?.srcBlockId != null && String(o.userData.srcBlockId) === selectedBlockId,
     )
   }, [objects, selectedBlockId])
 
@@ -530,7 +558,8 @@ export default function SelectionHighlight({ objects = [] }) {
 
   useEffect(() => {
     activeRef.current?.restore()
-    activeRef.current = targets.length && enabled ? applyHighlight(style, targets, scene, size) : null
+    activeRef.current =
+      targets.length && enabled ? applyHighlight(style, targets, scene, size) : null
     invalidate()
     return () => {
       activeRef.current?.restore()

@@ -10,14 +10,14 @@ export default function SandboxPage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
-  const clearWorkspaceRef = useRef(() => { })
+  const clearWorkspaceRef = useRef(() => {})
 
   const handleObjectsChange = useCallback(
     (objs) => {
       setPendingObjects(objs)
       if (autoRender) setObjects(objs)
     },
-    [autoRender, setPendingObjects, setObjects]
+    [autoRender, setPendingObjects, setObjects],
   )
 
   return (

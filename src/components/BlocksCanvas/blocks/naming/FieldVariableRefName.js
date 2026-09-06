@@ -24,7 +24,9 @@ export class FieldVariableRefName extends FieldDropdown {
   SERIALIZABLE = false
 
   constructor() {
-    super(function () { return this.buildOptions() })
+    super(function () {
+      return this.buildOptions()
+    })
   }
 
   isSerializable() {
@@ -37,7 +39,8 @@ export class FieldVariableRefName extends FieldDropdown {
     const options = [UNSET_OPTION]
 
     if (workspace) {
-      workspace.getAllBlocks(false)
+      workspace
+        .getAllBlocks(false)
         .filter((candidate) => candidate.type === WRAPPER_BLOCK_TYPE)
         .forEach((wrapper) => {
           const refId = getRefId(wrapper)
@@ -105,8 +108,11 @@ export class FieldVariableRefName extends FieldDropdown {
       if (this.synced_) setRefTarget(block, '', current?.lastKnownName)
       return
     }
-    const wrapper = block.workspace?.getAllBlocks(false)
-      .find((candidate) => candidate.type === WRAPPER_BLOCK_TYPE && getRefId(candidate) === newValue)
+    const wrapper = block.workspace
+      ?.getAllBlocks(false)
+      .find(
+        (candidate) => candidate.type === WRAPPER_BLOCK_TYPE && getRefId(candidate) === newValue,
+      )
     setRefTarget(block, newValue, wrapper ? getDisplayName(wrapper) : current?.lastKnownName)
   }
 

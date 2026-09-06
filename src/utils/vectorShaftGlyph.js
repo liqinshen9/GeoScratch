@@ -119,9 +119,20 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
   let ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
 
   // Plain Line shaft
-  const fatLineMat = new THREE.LineMaterial({ color: shaftColor, linewidth: LINE_SHAFT_PX, worldUnits: false })
+  const fatLineMat = new THREE.LineMaterial({
+    color: shaftColor,
+    linewidth: LINE_SHAFT_PX,
+    worldUnits: false,
+  })
   const fatLineGeom = new THREE.LineSegmentsGeometry()
-  fatLineGeom.setPositions([origin.x, origin.y, origin.z, lineLayout.shaftEnd.x, lineLayout.shaftEnd.y, lineLayout.shaftEnd.z])
+  fatLineGeom.setPositions([
+    origin.x,
+    origin.y,
+    origin.z,
+    lineLayout.shaftEnd.x,
+    lineLayout.shaftEnd.y,
+    lineLayout.shaftEnd.z,
+  ])
   const fatLine = new THREE.LineSegments2(fatLineGeom, fatLineMat)
   fatLine.userData.isFatLine = true
   fatLine.userData.fatLineBaseWidth = LINE_SHAFT_PX
@@ -129,8 +140,15 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
   group.add(fatLine)
 
   // Plain Tube shaft
-  const tubeMat = new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.5, metalness: 0.1 })
-  const tube = new THREE.Mesh(new THREE.CylinderGeometry(TUBE_SHAFT_RADIUS, TUBE_SHAFT_RADIUS, tubeLayout.shaftLength, 12), tubeMat)
+  const tubeMat = new THREE.MeshStandardMaterial({
+    color: shaftColor,
+    roughness: 0.5,
+    metalness: 0.1,
+  })
+  const tube = new THREE.Mesh(
+    new THREE.CylinderGeometry(TUBE_SHAFT_RADIUS, TUBE_SHAFT_RADIUS, tubeLayout.shaftLength, 12),
+    tubeMat,
+  )
   orient(tube, tubeLayout.shaftMid, direction, THREE)
   tube.userData.zoomInvariantRadius = TUBE_SHAFT_RADIUS
   tube.userData.thickenGroup = 'vector'
@@ -152,9 +170,9 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
       RINGED_SHAFT_RADIUS,
       ringedLayout.shaftLength,
       RINGED_RADIAL_SEGMENTS,
-      RINGED_HEIGHT_SEGMENTS(ringedLayout.shaftLength)
+      RINGED_HEIGHT_SEGMENTS(ringedLayout.shaftLength),
     ),
-    ringedMat
+    ringedMat,
   )
   orient(ringedTube, ringedLayout.shaftMid, direction, THREE)
   ringedTube.userData.zoomInvariantRadius = RINGED_SHAFT_RADIUS
@@ -180,9 +198,24 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     return mesh
   }
   // Plain Line's cone is unlit to match its own flat, unshaded shaft.
-  const coneLine = makeArrowhead(LINE_HEAD_RADIUS, LINE_HEAD_LENGTH, lineLayout.shaftEnd, new THREE.MeshLambertMaterial({ color: shaftColor }))
-  const coneTube = makeArrowhead(TUBE_HEAD_RADIUS, TUBE_HEAD_LENGTH, tubeLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }))
-  const coneRinged = makeArrowhead(RINGED_HEAD_RADIUS, RINGED_HEAD_LENGTH, ringedLayout.shaftEnd, new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }))
+  const coneLine = makeArrowhead(
+    LINE_HEAD_RADIUS,
+    LINE_HEAD_LENGTH,
+    lineLayout.shaftEnd,
+    new THREE.MeshLambertMaterial({ color: shaftColor }),
+  )
+  const coneTube = makeArrowhead(
+    TUBE_HEAD_RADIUS,
+    TUBE_HEAD_LENGTH,
+    tubeLayout.shaftEnd,
+    new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }),
+  )
+  const coneRinged = makeArrowhead(
+    RINGED_HEAD_RADIUS,
+    RINGED_HEAD_LENGTH,
+    ringedLayout.shaftEnd,
+    new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }),
+  )
 
   const applyVectorStyle = (settings) => {
     const activeStyle = settings.vectorStyle || LINE_STYLES.PLAIN_LINE
@@ -215,10 +248,22 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
     ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
 
-    fatLineGeom.setPositions([origin.x, origin.y, origin.z, lineLayout.shaftEnd.x, lineLayout.shaftEnd.y, lineLayout.shaftEnd.z])
+    fatLineGeom.setPositions([
+      origin.x,
+      origin.y,
+      origin.z,
+      lineLayout.shaftEnd.x,
+      lineLayout.shaftEnd.y,
+      lineLayout.shaftEnd.z,
+    ])
 
     tube.geometry.dispose()
-    tube.geometry = new THREE.CylinderGeometry(TUBE_SHAFT_RADIUS, TUBE_SHAFT_RADIUS, tubeLayout.shaftLength, 12)
+    tube.geometry = new THREE.CylinderGeometry(
+      TUBE_SHAFT_RADIUS,
+      TUBE_SHAFT_RADIUS,
+      tubeLayout.shaftLength,
+      12,
+    )
     orient(tube, tubeLayout.shaftMid, direction, THREE)
 
     ringedTube.geometry.dispose()
@@ -227,7 +272,7 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
       RINGED_SHAFT_RADIUS,
       ringedLayout.shaftLength,
       RINGED_RADIAL_SEGMENTS,
-      RINGED_HEIGHT_SEGMENTS(ringedLayout.shaftLength)
+      RINGED_HEIGHT_SEGMENTS(ringedLayout.shaftLength),
     )
     orient(ringedTube, ringedLayout.shaftMid, direction, THREE)
     setRingTextureRepeat(ringedTexture, ringedLayout.shaftLength, RINGED_RING_PERIOD)

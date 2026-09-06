@@ -28,14 +28,14 @@ export function initTransMatrixBlock() {
           translationMatrix3x3(
             Number(b.getFieldValue('TX')) || 0,
             Number(b.getFieldValue('TY')) || 0,
-            Number(b.getFieldValue('TZ')) || 0
+            Number(b.getFieldValue('TZ')) || 0,
           ),
         (b) =>
           translationMatrix(
             Number(b.getFieldValue('TX')) || 0,
             Number(b.getFieldValue('TY')) || 0,
-            Number(b.getFieldValue('TZ')) || 0
-          )
+            Number(b.getFieldValue('TZ')) || 0,
+          ),
       )
       this.setStyle(BLOCK_STYLES.TRANSFORM_STEPS)
       this.setTooltip('Homogeneous translation by (x,y,z).')

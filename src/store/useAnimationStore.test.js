@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import useAnimationStore from './useAnimationStore'
 
-const reset = () =>
-  useAnimationStore.setState({ playing: false, progress: 1, hasTarget: false })
+const reset = () => useAnimationStore.setState({ playing: false, progress: 1, hasTarget: false })
 
 describe('useAnimationStore', () => {
   beforeEach(reset)

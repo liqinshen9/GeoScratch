@@ -72,8 +72,14 @@ function worldPlaneFrame(obj) {
   const halfSize = (planeSize / 2) * ((worldScale.x + worldScale.y + worldScale.z) / 3)
 
   const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalUnit)
-  const basisU = new THREE.Vector3(1, 0, 0).applyQuaternion(quat).transformDirection(obj.matrixWorld).normalize()
-  const basisV = new THREE.Vector3(0, 1, 0).applyQuaternion(quat).transformDirection(obj.matrixWorld).normalize()
+  const basisU = new THREE.Vector3(1, 0, 0)
+    .applyQuaternion(quat)
+    .transformDirection(obj.matrixWorld)
+    .normalize()
+  const basisV = new THREE.Vector3(0, 1, 0)
+    .applyQuaternion(quat)
+    .transformDirection(obj.matrixWorld)
+    .normalize()
 
   return { point: worldPoint, normal: worldNormal, halfSize, basisU, basisV }
 }
@@ -240,7 +246,11 @@ export function applyTubeCollisions(threeObjStore) {
   const colliders = solids
     .map((obj) => {
       obj.updateMatrixWorld(true)
-      if (obj.userData?.geoType === 'geo_sphere' && obj.userData.centre?.isVector3 && Number.isFinite(obj.userData.radius)) {
+      if (
+        obj.userData?.geoType === 'geo_sphere' &&
+        obj.userData.centre?.isVector3 &&
+        Number.isFinite(obj.userData.radius)
+      ) {
         // obj.userData.centre is the SAME local offset already baked into
         // obj.position (see geoSphere.js) -- it's already part of
         // matrixWorld's translation, so applying matrixWorld to it again
@@ -248,7 +258,7 @@ export function applyTubeCollisions(threeObjStore) {
         // matrixWorld already carries, once.
         const worldCenter = obj.getWorldPosition(new THREE.Vector3())
         const worldScale = obj.getWorldScale(new THREE.Vector3())
-        const worldRadius = obj.userData.radius * (worldScale.x + worldScale.y + worldScale.z) / 3
+        const worldRadius = (obj.userData.radius * (worldScale.x + worldScale.y + worldScale.z)) / 3
         return { type: 'sphere', center: worldCenter, radius: worldRadius }
       }
       if (obj.userData?.geoType === 'point_normal_plane_group') {
@@ -264,11 +274,33 @@ export function applyTubeCollisions(threeObjStore) {
 
   for (const { group, segment } of lineEntries) {
     for (const collider of colliders) {
-      const hit = collider.type === 'sphere'
-        ? raySegmentSphereIntersection(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider.center, collider.radius + SOLID_INFLATE)
-        : collider.type === 'plane'
-          ? findLinePlaneCollisionZone(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider, SOLID_INFLATE)
-          : findBoxTubeCollisionZone(segment.origin, segment.direction, -segment.halfExtent, segment.halfExtent, collider.box, SOLID_INFLATE)
+      const hit =
+        collider.type === 'sphere'
+          ? raySegmentSphereIntersection(
+              segment.origin,
+              segment.direction,
+              -segment.halfExtent,
+              segment.halfExtent,
+              collider.center,
+              collider.radius + SOLID_INFLATE,
+            )
+          : collider.type === 'plane'
+            ? findLinePlaneCollisionZone(
+                segment.origin,
+                segment.direction,
+                -segment.halfExtent,
+                segment.halfExtent,
+                collider,
+                SOLID_INFLATE,
+              )
+            : findBoxTubeCollisionZone(
+                segment.origin,
+                segment.direction,
+                -segment.halfExtent,
+                segment.halfExtent,
+                collider.box,
+                SOLID_INFLATE,
+              )
       if (hit) {
         zonesByLine.get(group).push({
           start: Math.max(-segment.halfExtent, hit.tEntry),

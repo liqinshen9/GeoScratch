@@ -24,8 +24,8 @@ export function initCrossProductBlock() {
   }
 
   javascriptGenerator.forBlock['vector_cross_product'] = function (block, g) {
-    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null';
-    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null';
+    const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
+    const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
 
     const code = `(function(){
     const vectorInfoFromInput = (input, fallbackLabel) => {
@@ -169,8 +169,8 @@ export function initCrossProductBlock() {
       label: crossLabel,
     });
     return resultVector;
-  })()`;
+  })()`
 
-    return [code, Order.FUNCTION_CALL];
-  };
+    return [code, Order.FUNCTION_CALL]
+  }
 }

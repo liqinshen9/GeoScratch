@@ -40,13 +40,13 @@ export function initMat3x3Block() {
   javascriptGenerator.forBlock['linalg_mat3x3'] = function (block, generator) {
     const matString =
       `new THREE.Matrix3(${block.getFieldValue('r1c1')}, ${block.getFieldValue(
-        'r1c2'
+        'r1c2',
       )}, ${block.getFieldValue('r1c3')}, ` +
       `${block.getFieldValue('r2c1')}, ${block.getFieldValue(
-        'r2c2'
+        'r2c2',
       )}, ${block.getFieldValue('r2c3')}, ` +
       `${block.getFieldValue('r3c1')}, ${block.getFieldValue(
-        'r3c2'
+        'r3c2',
       )}, ${block.getFieldValue('r3c3')})`
     return [matString, Order.ATOMIC]
   }

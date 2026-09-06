@@ -10,10 +10,7 @@ export default function GeoScratchLogo({
   showWordmark = false,
   compact = false,
 }) {
-  const markSize =
-    typeof size === 'number' && Number.isFinite(size)
-      ? `${size}px`
-      : null
+  const markSize = typeof size === 'number' && Number.isFinite(size) ? `${size}px` : null
 
   return (
     <span

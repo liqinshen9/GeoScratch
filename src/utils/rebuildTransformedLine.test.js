@@ -44,19 +44,17 @@ beforeAll(() => {
   const noop = () => {}
   const fakeCtx = new Proxy(
     { fillStyle: '', canvas: null },
-    { get: (target, key) => (key in target ? target[key] : noop), set: (target, key, value) => ((target[key] = value), true) },
+    {
+      get: (target, key) => (key in target ? target[key] : noop),
+      set: (target, key, value) => ((target[key] = value), true),
+    },
   )
   HTMLCanvasElement.prototype.getContext = () => fakeCtx
 })
 
 function buildLine(origin, direction, blockId, t) {
   window.threeObjStore[blockId] = undefined
-  return geoVectorLineDefinition(
-    origin.clone(),
-    direction.clone(),
-    t,
-    blockId,
-  )
+  return geoVectorLineDefinition(origin.clone(), direction.clone(), t, blockId)
 }
 
 describe('rebuildTransformedLine', () => {
@@ -89,8 +87,9 @@ describe('rebuildTransformedLine', () => {
 
     // still spans wall-to-wall: endpoints on the 20-unit box faces
     const maxCoord = Math.max(
-      ...['x', 'y', 'z'].map((a) => Math.abs(rebuilt.userData.segmentMid[a]
-        + dir[a] * rebuilt.userData.segmentHalfLength)),
+      ...['x', 'y', 'z'].map((a) =>
+        Math.abs(rebuilt.userData.segmentMid[a] + dir[a] * rebuilt.userData.segmentHalfLength),
+      ),
     )
     expect(maxCoord).toBeCloseTo(20, 4)
   })
@@ -117,8 +116,10 @@ describe('rebuildTransformedLine', () => {
     const rebuilt = rebuildTransformedLine(line, move)
 
     const dir = rebuilt.userData.direction.clone().normalize()
-    const end = (sign) => rebuilt.userData.segmentMid.clone()
-      .addScaledVector(dir, sign * rebuilt.userData.segmentHalfLength)
+    const end = (sign) =>
+      rebuilt.userData.segmentMid
+        .clone()
+        .addScaledVector(dir, sign * rebuilt.userData.segmentHalfLength)
     for (const p of [end(1), end(-1)]) {
       expect(Math.max(Math.abs(p.x), Math.abs(p.y), Math.abs(p.z))).toBeLessThanOrEqual(20 + 1e-6)
     }

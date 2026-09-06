@@ -32,7 +32,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff })
+    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff }),
   )
   mesh.add(edges)
 
@@ -88,7 +88,9 @@ export default function initGeoCubeBlock() {
 
   Blockly.Blocks.geo_cube = {
     init() {
-      this.appendDummyInput().appendField('Cube').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendDummyInput()
+        .appendField('Cube')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.setStyle(BLOCK_STYLES.CREATE_CUBE)
       this.setColour(forInstance('cube', this.id))
       this.setTooltip('Axis-aligned cube defined by centre and side length.')
@@ -100,7 +102,7 @@ export default function initGeoCubeBlock() {
     },
   }
 
-  javascriptGenerator.forBlock.geo_cube = function(block, generator) {
+  javascriptGenerator.forBlock.geo_cube = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
 

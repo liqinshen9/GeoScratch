@@ -1,98 +1,107 @@
-
-
 .scene-view-controls {
-    position: absolute;
-    right: 16px;
-    bottom: 16px;
-    display: grid;
-    gap: 8px;
-    z-index: 10;
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+  z-index: 10;
 }
 
 .scene-view-btn {
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 9999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.86);
-    color: #8a8f98;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-    box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.86);
+  color: #8a8f98;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.18);
 }
 
-
 .scene-view-btn:hover {
-    background: rgba(255, 255, 255, 0.96);
-    color: #6b7280;
+  background: rgba(255, 255, 255, 0.96);
+  color: #6b7280;
 }
 
 .scene-view-btn:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 .scene-view-btn--active {
-    background: rgba(37, 99, 235, 0.14);
-    color: #2563eb;
+  background: rgba(37, 99, 235, 0.14);
+  color: #2563eb;
 }
 
 /* Camera drag-orbit shouldn't leave stray text selection on scene labels. */
 .editor-body-3d {
-    user-select: none;
-    -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .label-anchor {
-    position: relative;
-    pointer-events: none;
+  position: relative;
+  pointer-events: none;
 }
 
 .editor-body-3d .label {
-    color: #ffffff;
-    white-space: nowrap;
-    min-width: max-content;
-    display: inline-block;
-    font: 9px/1.2 ui-monospace, Menlo, Consolas, monospace;
-    padding: 2px 5px;
-    border-radius: 5px;
-    background: rgba(12, 12, 16, 0.55);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-    text-shadow: none;
-    backdrop-filter: blur(2px);
-    will-change: transform;
-    transform-origin: 0 0;
-    user-select: none;
-    -webkit-user-select: none;
-    /* The pill stays clickable (left-click hides it). A drag that starts on a
+  color: #ffffff;
+  white-space: nowrap;
+  min-width: max-content;
+  display: inline-block;
+  font:
+    9px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(12, 12, 16, 0.55);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  text-shadow: none;
+  backdrop-filter: blur(2px);
+  will-change: transform;
+  transform-origin: 0 0;
+  user-select: none;
+  -webkit-user-select: none;
+  /* The pill stays clickable (left-click hides it). A drag that starts on a
        pill still orbits: the pointerdown bubbles past it to the R3F wrapper
        where OrbitControls listens, and no handler here stops it. */
-    pointer-events: auto;
-    cursor: pointer;
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .editor-body-3d .label--emphasis {
-    font-weight: 800;
+  font-weight: 800;
 }
 
 .editor-body-3d .distance-highlight-label {
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #ca8a04;
-    font: 900 16px/1.2 ui-monospace, Menlo, Consolas, monospace;
-    box-shadow: none;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #ca8a04;
+  font:
+    900 16px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  box-shadow: none;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
 }
 
 .editor-body-3d .normal-vector-label {
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #b91c1c;
-    font: 800 14px/1.2 ui-monospace, Menlo, Consolas, monospace;
-    box-shadow: none;
-    text-shadow: none;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #b91c1c;
+  font:
+    800 14px/1.2 ui-monospace,
+    Menlo,
+    Consolas,
+    monospace;
+  box-shadow: none;
+  text-shadow: none;
 }

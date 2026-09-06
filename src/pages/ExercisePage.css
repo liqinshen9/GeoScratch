@@ -16,7 +16,12 @@
   flex-direction: column;
   background: var(--bg-main);
   color: var(--geo-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
 }
 
 .exercise-editor-shell {
@@ -52,7 +57,9 @@
 
 .exercise-task-panel.is-passed {
   background: color-mix(in srgb, #22c55e 8%, var(--bg-main));
-  box-shadow: inset 4px 0 0 #22c55e, inset -1px 0 0 #22c55e;
+  box-shadow:
+    inset 4px 0 0 #22c55e,
+    inset -1px 0 0 #22c55e;
 }
 
 .exercise-task-panel__top {
@@ -156,7 +163,7 @@
   background: var(--geo-panel-muted);
 }
 
-.exercise-line-question section+section {
+.exercise-line-question section + section {
   padding-top: 0.45rem;
   border-top: 1px solid var(--geo-border-light);
 }
@@ -184,7 +191,7 @@
   background: var(--geo-panel-muted);
 }
 
-.exercise-given-values section+section {
+.exercise-given-values section + section {
   padding-top: 0.35rem;
   border-top: 1px solid var(--geo-border-light);
 }
@@ -296,10 +303,7 @@
   bottom: 12%;
   height: 0.3rem;
   border-radius: 999px;
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(0, 46, 166, 0.12),
-      transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 46, 166, 0.12), transparent);
 }
 
 .exercise-target-preview--line-intersection {
@@ -357,7 +361,7 @@
   background: var(--bg-main);
 }
 
-.exercise-task-steps li+li {
+.exercise-task-steps li + li {
   margin-top: 0.28rem;
 }
 
@@ -409,7 +413,6 @@
   background: var(--bg-soft);
   color: var(--geo-text);
 }
-
 
 .exercise-page--editor .category-card.is-active strong {
   color: var(--exercise-blue);

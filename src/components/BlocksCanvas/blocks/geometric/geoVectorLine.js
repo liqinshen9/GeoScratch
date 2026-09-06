@@ -101,10 +101,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   let blockHash = 2166136261
   const blockIdStr = String(blockId)
   for (let i = 0; i < blockIdStr.length; i += 1) {
-    blockHash = (blockHash ^ blockIdStr.charCodeAt(i)) * 16777619 >>> 0
+    blockHash = ((blockHash ^ blockIdStr.charCodeAt(i)) * 16777619) >>> 0
   }
   const jitterAngle = (blockHash % 360) * (Math.PI / 180)
-  const jitterUp = Math.abs(normalised.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
+  const jitterUp =
+    Math.abs(normalised.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
   const jitterA = new THREE.Vector3().crossVectors(normalised, jitterUp).normalize()
   const jitterB = new THREE.Vector3().crossVectors(normalised, jitterA).normalize()
   const Z_FIGHT_JITTER = 0.0015
@@ -137,7 +138,12 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // bumps need to grow in every dimension as the camera pulls back so they
   // don't collapse to sub-pixel, but solid stretches must only grow in
   // cross-section, or neighbouring stretches would visibly gap apart.
-  const computeSegmentPairs = (zones, dashed, dashLen = DASHED_SEGMENT_LENGTH, gapLen = DASHED_GAP_LENGTH) => {
+  const computeSegmentPairs = (
+    zones,
+    dashed,
+    dashLen = DASHED_SEGMENT_LENGTH,
+    gapLen = DASHED_GAP_LENGTH,
+  ) => {
     if (!dashed || zones.length === 0) return [{ start: -halfDist, end: halfDist, isDash: false }]
     const pairs = []
     let cursor = -halfDist
@@ -204,7 +210,14 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // haloEnabled uniform is what makes on/off instant for already-built
   // lines that DO have the wiring.
   const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
-  const haloAvailable = haloSettingEnabled && window.HALO_LAYER != null && window.getHaloId && window.createHaloIdMaterial && window.applyHaloDiscardMaterial && window.registerHaloLine && window.HALO_MAX_IMMUNE_IDS != null
+  const haloAvailable =
+    haloSettingEnabled &&
+    window.HALO_LAYER != null &&
+    window.getHaloId &&
+    window.createHaloIdMaterial &&
+    window.applyHaloDiscardMaterial &&
+    window.registerHaloLine &&
+    window.HALO_MAX_IMMUNE_IDS != null
   // Shared across every material that can end up as the visible glyph, for
   // any line style (cylMat/dashedTubeMat, ringedTubeMat and its dash
   // segments, plainLineThickMat) -- getHaloId is stable per blockId, so
@@ -246,7 +259,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const radius = baseRadius + 0.01
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(radius, radius, distance, 12),
-      window.createHaloIdMaterial(haloId)
+      window.createHaloIdMaterial(haloId),
     )
     mesh.userData.zoomInvariantRadius = radius
     mesh.position.copy(midPoint)
@@ -322,7 +335,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // a real shaded gradient across its curved surface, same as every other
   // solid in the scene (sphere/teapot/cube, ringedTube's base tube).
   const cylGeom = new THREE.CylinderGeometry(0.051, 0.051, distance, 12)
-  const cylMat = new THREE.MeshStandardMaterial({ color: lineColor, roughness: 0.5, metalness: 0.1 })
+  const cylMat = new THREE.MeshStandardMaterial({
+    color: lineColor,
+    roughness: 0.5,
+    metalness: 0.1,
+  })
   const cylinder = new THREE.Mesh(cylGeom, cylMat)
   cylinder.userData.zoomInvariantRadius = 0.051
   cylinder.position.copy(midPoint)
@@ -346,7 +363,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // Same shaded material as the continuous plain tube (cylMat) -- the
   // dashed segments are that same glyph, just chopped up, so they shouldn't
   // suddenly look flat/unlit when the dashed collision style is active.
-  const dashedTubeMat = new THREE.MeshStandardMaterial({ color: lineColor, roughness: 0.5, metalness: 0.1 })
+  const dashedTubeMat = new THREE.MeshStandardMaterial({
+    color: lineColor,
+    roughness: 0.5,
+    metalness: 0.1,
+  })
   // A SEPARATE material from cylMat -- when this line is ALSO the dashed
   // replacement (collision zones, or its own crossing gap), this is what's
   // actually visible, not cylMat. Without wiring it through the discard
@@ -474,7 +495,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // what doesn't. Giving the tube real height segments (one roughly per
   // ring) keeps every individual triangle short, however long the tube
   // itself is, which is the fix -- not the ring size/count itself.
-  const RINGED_TUBE_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED_TUBE_RING_PERIOD) * 2)
+  const RINGED_TUBE_HEIGHT_SEGMENTS = (length) =>
+    Math.max(1, Math.ceil(length / RINGED_TUBE_RING_PERIOD) * 2)
   // A 16-sided cylinder is visibly faceted under a specular highlight --
   // each flat facet catches the light slightly differently, and wherever
   // that per-facet brightness step happens to land on one of the texture's
@@ -509,8 +531,14 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   })
 
   const baseTube = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.085, 0.085, distance, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(distance)),
-    ringedTubeMat
+    new THREE.CylinderGeometry(
+      0.085,
+      0.085,
+      distance,
+      RINGED_TUBE_RADIAL_SEGMENTS,
+      RINGED_TUBE_HEIGHT_SEGMENTS(distance),
+    ),
+    ringedTubeMat,
   )
   baseTube.userData.zoomInvariantRadius = 0.085
   ringedTube.add(baseTube)
@@ -546,7 +574,16 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     // never discards its own occluded fragments even though other lines
     // still gap correctly around it.
     if (haloAvailable) window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds)
-    const segment = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, height, RINGED_TUBE_RADIAL_SEGMENTS, RINGED_TUBE_HEIGHT_SEGMENTS(height)), mat)
+    const segment = new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        0.085,
+        0.085,
+        height,
+        RINGED_TUBE_RADIAL_SEGMENTS,
+        RINGED_TUBE_HEIGHT_SEGMENTS(height),
+      ),
+      mat,
+    )
     segment.userData.zoomInvariantRadius = 0.085
     segment.position.set(0, (start + end) / 2, 0)
     ringedTubeDashedGroup.add(segment)
@@ -585,7 +622,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // glyph underneath shows through in the gaps instead of a second flat
   // color -- this is the overlay, not a whole-tube replacement.
   const collisionRingTexture = makeRingTexture(RING_ACCENT_COLOR, null)
-  const darkTextureMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.85, metalness: 0.05 })
+  const darkTextureMat = new THREE.MeshStandardMaterial({
+    color: 0x18181b,
+    roughness: 0.85,
+    metalness: 0.05,
+  })
 
   // Fixed, same as RINGED_TUBE_RING_PERIOD above -- not zoom-responsive.
   const COLLISION_RING_PERIOD = 0.5
@@ -629,7 +670,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
         roughness: RINGED_TUBE_ROUGHNESS,
         metalness: 0.15,
       })
-      const segment = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, RINGED_TUBE_RADIAL_SEGMENTS), mat)
+      const segment = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, height, RINGED_TUBE_RADIAL_SEGMENTS),
+        mat,
+      )
       segment.userData.zoomInvariantRadius = radius
       segment.position.set(0, (start + end) / 2, 0)
       collisionAccentRinged.add(segment)
@@ -711,7 +755,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     setThickLineSegmentPairs(
       linesNeedDashing
         ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
-        : computeSegmentPairs(currentZones, false)
+        : computeSegmentPairs(currentZones, false),
     )
 
     const useTubeDashedReplacement = isDashed && activeStyle === 'plain_tube'
@@ -777,7 +821,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       plainLineThickMat.color.set(newLineColor)
       cylMat.color.set(newLineColor)
       dashedTubeMat.color.set(newLineColor)
-      if (tSphereRef) tSphereRef.material.color.set(window.GeoScratchColors.forInstanceVariant('point', blockId, 24))
+      if (tSphereRef)
+        tSphereRef.material.color.set(
+          window.GeoScratchColors.forInstanceVariant('point', blockId, 24),
+        )
     })
   }
 
@@ -789,7 +836,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     const rPoint = origin.clone().addScaledVector(direction, tVal)
     const tSphere = new THREE.Mesh(
       sphereGeom,
-      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.4, metalness: 0.1 })
+      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.4, metalness: 0.1 }),
     )
     tSphere.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
     tSphere.userData.zoomInvariantUniform = true
@@ -828,7 +875,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     {
       anchor: 'line',
       name: lineLabel,
-      value: window.vectorNotation.formatVector(origin) + ' + t·' + window.vectorNotation.formatVector(direction),
+      value:
+        window.vectorNotation.formatVector(origin) +
+        ' + t·' +
+        window.vectorNotation.formatVector(direction),
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
       color: lineColor,
@@ -866,11 +916,15 @@ export function initVector3Block() {
 
   Blockly.Blocks.geo_vector = {
     init() {
-      this.appendDummyInput().appendField('Line').appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendDummyInput()
+        .appendField('Line')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('POS').appendField('Position:').setCheck('vector3')
       this.appendValueInput('DIR').appendField('Direction:').setCheck('vector3')
       this.appendValueInput('SCALE').appendField('t:').setCheck('scalar')
-      this.setTooltip('A line in R3 that passes through a specific point and runs parallel to the direction vector')
+      this.setTooltip(
+        'A line in R3 that passes through a specific point and runs parallel to the direction vector',
+      )
       this.setDeletable(true)
       this.setMovable(true)
       this.setOutput(true, 'obj3D')
@@ -879,7 +933,7 @@ export function initVector3Block() {
     },
   }
 
-  javascriptGenerator.forBlock.geo_vector = function(block, generator) {
+  javascriptGenerator.forBlock.geo_vector = function (block, generator) {
     const valueToCode = (name) =>
       block.getInput(name) ? generator.valueToCode(block, name, Order.FUNCTION_CALL) : ''
 
@@ -887,8 +941,8 @@ export function initVector3Block() {
     const vecDir = valueToCode('DIR') || 'new window.THREE.Vector3(1,1,1)'
 
     const scaleInput = block.getInput('SCALE')
-    const hasScaleInput = !!(scaleInput?.connection?.targetConnection)
-    const vecScaleCode = hasScaleInput ? (valueToCode('SCALE') || '0') : 'undefined'
+    const hasScaleInput = !!scaleInput?.connection?.targetConnection
+    const vecScaleCode = hasScaleInput ? valueToCode('SCALE') || '0' : 'undefined'
 
     const blockId = JSON.stringify(block.id)
 

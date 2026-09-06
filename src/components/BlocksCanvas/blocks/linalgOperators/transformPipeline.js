@@ -8,7 +8,7 @@ import {
   matrix4ToRowMajor,
   rowMajor4To3,
 } from '@/utils/sceneHelpers'
-import { appendMatrixPreviewUI } from '../linalgPrimitives/matrixPreview.js'
+import { appendMatrixPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPrimitives/matrixPreview'
 
 let REGISTERED = false
 

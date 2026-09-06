@@ -10,7 +10,12 @@ describe('computeVectorShaftLayout', () => {
     const direction = new THREE.Vector3(1, 0, 0)
     const length = 4
 
-    const { shaftLength, shaftMid, shaftEnd } = computeVectorShaftLayout(origin, direction, length, HEAD_LENGTH)
+    const { shaftLength, shaftMid, shaftEnd } = computeVectorShaftLayout(
+      origin,
+      direction,
+      length,
+      HEAD_LENGTH,
+    )
 
     expect(shaftLength).toBeCloseTo(length - HEAD_LENGTH)
     expect(shaftEnd.x).toBeCloseTo(length - HEAD_LENGTH)
@@ -22,7 +27,12 @@ describe('computeVectorShaftLayout', () => {
     const direction = new THREE.Vector3(0, 0, 1)
     const length = 0.05 // well under HEAD_LENGTH
 
-    const { shaftLength, shaftEnd } = computeVectorShaftLayout(origin, direction, length, HEAD_LENGTH)
+    const { shaftLength, shaftEnd } = computeVectorShaftLayout(
+      origin,
+      direction,
+      length,
+      HEAD_LENGTH,
+    )
 
     expect(shaftLength).toBeGreaterThan(0)
     expect(shaftLength).toBeLessThan(HEAD_LENGTH)

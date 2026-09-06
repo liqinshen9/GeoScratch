@@ -22,7 +22,11 @@
 import { getRefId, getDisplayName } from '@/utils/namingRegistry'
 import { getRefTarget } from '@/utils/variableReference'
 
-const GET_TYPES = Object.freeze(['variables_get_obj3D', 'variables_get_vector3', 'variables_get_scalar'])
+const GET_TYPES = Object.freeze([
+  'variables_get_obj3D',
+  'variables_get_vector3',
+  'variables_get_scalar',
+])
 const SET_TYPES = new Set(['variables_set_obj3D', 'variables_set_vector3', 'variables_set_scalar'])
 const WARNING_ID = 'geoScratchVarOrder'
 
@@ -61,7 +65,12 @@ function describeBlock(workspace, block) {
   if (block.type === 'geo_variable_ref') {
     const target = getRefTarget(block)
     if (!target?.targetRefId) return null
-    return { role: 'get', key: target.targetRefId, label: target.lastKnownName || 'this variable', isRef: true }
+    return {
+      role: 'get',
+      key: target.targetRefId,
+      label: target.lastKnownName || 'this variable',
+      isRef: true,
+    }
   }
   return null
 }

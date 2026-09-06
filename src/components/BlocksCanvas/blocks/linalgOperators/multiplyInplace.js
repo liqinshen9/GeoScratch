@@ -10,10 +10,7 @@ export function initMultiplyInplaceBlock() {
 
   Blockly.Blocks['multiply_inplace'] = {
     init() {
-      this.appendDummyInput().appendField(
-        new Blockly.FieldVariable('Matrix'),
-        'VAR'
-      )
+      this.appendDummyInput().appendField(new Blockly.FieldVariable('Matrix'), 'VAR')
       this.appendValueInput('rhs').appendField('*')
       this.setStyle(BLOCK_STYLES.MATRIX_VALUES)
       this.setTooltip('Multiply two matrices.')
@@ -24,14 +21,10 @@ export function initMultiplyInplaceBlock() {
     },
   }
 
-  javascriptGenerator.forBlock['multiply_inplace'] = function (
-    block,
-    generator
-  ) {
+  javascriptGenerator.forBlock['multiply_inplace'] = function (block, generator) {
     var varName = generator.getVariableName(block.getFieldValue('VAR'))
     const multString =
-      varName +
-      `.multiply(${generator.valueToCode(block, 'rhs', Order.FUNCTION_CALL)});`
+      varName + `.multiply(${generator.valueToCode(block, 'rhs', Order.FUNCTION_CALL)});`
     return [multString, Order.FUNCTION_CALL]
   }
 }

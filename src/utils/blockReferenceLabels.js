@@ -34,7 +34,7 @@ function usedNames(workspace) {
     workspace
       .getAllBlocks(false)
       .map((block) => namingRegistry.getDisplayName(block))
-      .filter(Boolean)
+      .filter(Boolean),
   )
 }
 
@@ -123,14 +123,12 @@ function canCollapseWholeBlock(block) {
   return Boolean(
     block?.outputConnection &&
     !block.isInFlyout &&
-    (
-      namingRegistry.isNameable(block) ||
+    (namingRegistry.isNameable(block) ||
       namingRegistry.getDisplayName(block) ||
       // A variable reference has no naming record of its own (it displays the
       // wrapper's name), but is spawned collapsed -- without this it could be
       // expanded and then never collapsed again.
-      block.type === 'geo_variable_ref'
-    )
+      block.type === 'geo_variable_ref'),
   )
 }
 
@@ -169,20 +167,20 @@ export function installBlockReferenceLabels() {
       const name = namingRegistry.getDisplayName(scope.block)
       return name ? `Collapse to reference (${name})` : 'Collapse to reference'
     },
-    preconditionFn: (scope) => (
-      (canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block)) && !scope.block.isCollapsed()
+    preconditionFn: (scope) =>
+      (canCollapseInput(scope.block) || canCollapseWholeBlock(scope.block)) &&
+      !scope.block.isCollapsed()
         ? 'enabled'
-        : 'hidden'
-    ),
+        : 'hidden',
     callback: (scope) => collapseWithAlias(scope.block),
   })
 
   registerMenuItem('geoScratchExpandReference', {
     weight: 7,
-    displayText: (scope) => `Expand reference (${namingRegistry.getDisplayName(scope.block) || 'unnamed'})`,
-    preconditionFn: (scope) => (
-      canExpandReference(scope.block) && scope.block.isCollapsed() ? 'enabled' : 'hidden'
-    ),
+    displayText: (scope) =>
+      `Expand reference (${namingRegistry.getDisplayName(scope.block) || 'unnamed'})`,
+    preconditionFn: (scope) =>
+      canExpandReference(scope.block) && scope.block.isCollapsed() ? 'enabled' : 'hidden',
     callback: (scope) => expandReference(scope.block),
   })
 
@@ -191,7 +189,8 @@ export function installBlockReferenceLabels() {
   // two don't both show up on the same block.
   registerMenuItem('geoScratchRenameReference', {
     weight: 8,
-    displayText: (scope) => (namingRegistry.getDisplayName(scope.block) ? 'Rename reference' : 'Name reference'),
+    displayText: (scope) =>
+      namingRegistry.getDisplayName(scope.block) ? 'Rename reference' : 'Name reference',
     preconditionFn: (scope) => (canCollapseInput(scope.block) ? 'enabled' : 'hidden'),
     callback: (scope) => renamePooledOperand(scope.block),
   })

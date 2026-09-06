@@ -92,12 +92,7 @@ function MyBlockCard({ block, onSelect, onDelete, onDragStartBlock }) {
   )
 }
 
-function MyBoxPalette({
-  onMakeBlock,
-  onUserBlockSelect,
-  onUserBlockDelete,
-  onUserBlockDragStart,
-}) {
+function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDelete, onUserBlockDragStart }) {
   const userBlocks = useWorkspaceStore((state) => state.userBlocks)
 
   return (

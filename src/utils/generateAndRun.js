@@ -6,7 +6,15 @@ import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
-const THREE = { ...THREEBase, TeapotGeometry, Line2, LineGeometry, LineMaterial, LineSegments2, LineSegmentsGeometry }
+const THREE = {
+  ...THREEBase,
+  TeapotGeometry,
+  Line2,
+  LineGeometry,
+  LineMaterial,
+  LineSegments2,
+  LineSegmentsGeometry,
+}
 import {
   applyWorldMatrix4ToObject,
   collectStatementChain,
@@ -20,7 +28,11 @@ import { HALO_LAYER } from '@/utils/haloLayer'
 import { getHaloId } from '@/utils/haloIdRegistry'
 import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
 import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
-import { registerHaloLine, resetHaloIntersectionRegistry, MAX_IMMUNE_IDS } from '@/utils/haloIntersectionRegistry'
+import {
+  registerHaloLine,
+  resetHaloIntersectionRegistry,
+  MAX_IMMUNE_IDS,
+} from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
 import { bakeLineTransformAnimation } from '@/utils/lineTransformAnimation'
@@ -210,9 +222,10 @@ export function generateAndRun(workspace, options = {}) {
     // undefined into e.g. a vector's "from point:" input throws, and the
     // catch below swallows it -- silently blanking the ENTIRE scene. A
     // type-appropriate fallback degrades to one wrong value instead.
-    window.geoVar = (key, fallback = null) => (
-      Object.prototype.hasOwnProperty.call(window.geoVarStore, key) ? window.geoVarStore[key] : fallback
-    )
+    window.geoVar = (key, fallback = null) =>
+      Object.prototype.hasOwnProperty.call(window.geoVarStore, key)
+        ? window.geoVarStore[key]
+        : fallback
     window.HALO_LAYER = HALO_LAYER
     window.getHaloId = getHaloId
     window.applyHaloDiscardMaterial = applyHaloDiscardMaterial

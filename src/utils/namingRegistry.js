@@ -42,7 +42,9 @@ export const NAMEABLE_KIND_CONFIG = Object.freeze({
 })
 
 const BLOCK_TYPE_TO_KIND = Object.fromEntries(
-  Object.entries(NAMEABLE_KIND_CONFIG).flatMap(([kind, cfg]) => cfg.blockTypes.map((type) => [type, kind]))
+  Object.entries(NAMEABLE_KIND_CONFIG).flatMap(([kind, cfg]) =>
+    cfg.blockTypes.map((type) => [type, kind]),
+  ),
 )
 
 export function kindForBlockType(blockType) {
@@ -154,7 +156,10 @@ function nextFreeNumber(workspace, block, kind) {
     const number = nextNumber(workspace, kind)
     const shortName = formatAutoName(kind, number, 'short')
     const descriptiveName = formatAutoName(kind, number, 'descriptive')
-    if (!isNameTaken(workspace, shortName, block.id) && !isNameTaken(workspace, descriptiveName, block.id)) {
+    if (
+      !isNameTaken(workspace, shortName, block.id) &&
+      !isNameTaken(workspace, descriptiveName, block.id)
+    ) {
       return number
     }
   }
@@ -186,7 +191,8 @@ function ensureAssigned(workspace, block, { resolveConflicts = false } = {}) {
   const kind = kindForBlockType(block.type)
   const existing = readNamingData(block)
   const hasPlausibleRecord = existing?.kind === kind && Number.isFinite(existing.number)
-  const conflicted = hasPlausibleRecord && resolveConflicts && isRecordTaken(workspace, block, existing)
+  const conflicted =
+    hasPlausibleRecord && resolveConflicts && isRecordTaken(workspace, block, existing)
   if (hasPlausibleRecord && !conflicted) return
 
   writeNamingData(block, {
@@ -197,7 +203,7 @@ function ensureAssigned(workspace, block, { resolveConflicts = false } = {}) {
     // references are keyed by refId, so a shared one would let a duplicated
     // wrapper silently hijack the original's references.
     custom: conflicted ? null : (existing?.custom ?? null),
-    refId: conflicted ? genRefId() : (existing?.refId || genRefId()),
+    refId: conflicted ? genRefId() : existing?.refId || genRefId(),
   })
   // Covers FieldObjectName instances whose initial refresh() happened to run
   // before this assignment (creation-order race with initView).
@@ -297,11 +303,10 @@ export function isNameTaken(workspace, name, excludeBlockId) {
   if (!trimmed || !workspace) return false
   return workspace
     .getAllBlocks(false)
-    .some((block) => (
-      block.id !== excludeBlockId &&
-      ownsDisplayName(block) &&
-      getDisplayName(block) === trimmed
-    ))
+    .some(
+      (block) =>
+        block.id !== excludeBlockId && ownsDisplayName(block) && getDisplayName(block) === trimmed,
+    )
 }
 
 // ---------------------------------------------------------------------
@@ -365,9 +370,18 @@ export function notifyAllBlockNamesChanged(workspace) {
 export function setCustomName(block, name) {
   if (!block) return
   if (isNameable(block)) ensureAssigned(block.workspace, block)
-  const existing = readNamingData(block) || { kind: kindForBlockType(block.type), number: null, custom: null, refId: null }
+  const existing = readNamingData(block) || {
+    kind: kindForBlockType(block.type),
+    number: null,
+    custom: null,
+    refId: null,
+  }
   const trimmed = String(name || '').trim()
-  writeNamingData(block, { ...existing, custom: trimmed || null, refId: existing.refId || genRefId() })
+  writeNamingData(block, {
+    ...existing,
+    custom: trimmed || null,
+    refId: existing.refId || genRefId(),
+  })
   notifyBlockNameChanged(block)
 }
 
@@ -386,7 +400,9 @@ export function clearCustomName(block) {
 // one so it can never hijack the original's references.
 export function findBlockByRefId(workspace, refId) {
   if (!workspace || !refId) return null
-  return workspace.getAllBlocks(false).find((block) => readNamingData(block)?.refId === refId) ?? null
+  return (
+    workspace.getAllBlocks(false).find((block) => readNamingData(block)?.refId === refId) ?? null
+  )
 }
 
 export function getRefId(block) {
