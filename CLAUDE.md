@@ -89,14 +89,21 @@ because `defineBlocks()` runs on every workspace mount.
 
 ## Where things live
 
-| Path                           | What                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------- |
-| `components/BlocksCanvas/`     | Blockly host, palette, toolbox, block definitions                         |
-| `components/Scene3D/`          | R3F canvas, labels, halos, selection highlight, per-frame sizing          |
-| `store/`                       | Zustand stores plus the colour / line / naming / animation config modules |
-| `utils/`                       | Pure logic and the generated-code runtime. Nearly all tests live here.    |
-| `pages/`, `layout/`, `router/` | Routing and page shells                                                   |
-| `data/exercises.js`            | Exercise metadata for browsing and navigation                             |
+| Path                           | What                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| `components/BlocksCanvas/`     | Blockly host and block definitions. `hooks/` holds autosave, trash, selection sync.                           |
+| `components/Scene3D/`          | R3F canvas. `labels/` is the label layer and its declutter simulation; `sizing/` the per-frame glyph scaling. |
+| `exercises/`                   | One module per exercise (checker + panels). `shared/` holds what they have in common.                         |
+| `store/`                       | Zustand stores plus the colour / line / naming / animation config modules                                     |
+| `utils/`                       | Pure logic and the generated-code runtime. Most tests live here.                                              |
+| `pages/`, `layout/`, `router/` | Routing and page shells                                                                                       |
+| `data/exercises.js`            | Exercise metadata for browsing and navigation                                                                 |
+
+## Adding an exercise
+
+Add an entry to `data/exercises.js` and a module in `src/exercises/`, then
+register it in `src/exercises/index.js`. That index documents the module
+contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
 
 ## Conventions
 
