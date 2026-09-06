@@ -13,6 +13,7 @@ import { getExerciseModule } from '@/exercises'
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
 
+/** @param {number} n */
 const fixed2 = (n) => n.toFixed(2)
 
 /**
@@ -74,9 +75,8 @@ export default function ExercisePage() {
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const clearWorkspaceRef = useRef(() => {})
 
-  // The URL is the source of truth for which exercise is open (deep-linkable,
-  // shareable, survives reload) -- /exercise with no param defaults to 1,
-  // matching the page's original behaviour before routing was added.
+  // The URL is the source of truth for which exercise is open
+  // /exercise with no param defaults to 1,
   const activeExerciseConfig =
     EXERCISES.find(({ number }) => number === Number(exerciseNumber)) ?? EXERCISES[0]
   const activeExercise = activeExerciseConfig.number
@@ -102,14 +102,11 @@ export default function ExercisePage() {
     [navigate, setObjects, setPendingObjects],
   )
 
-  // Starter/decorative blocks, for the exercises that have them.
+  // Sets up starter blocks for exercises that have seedWorkspace
   useEffect(() => {
-    if (!exercise.seedWorkspace || !workspace) return
-    // React StrictMode double-mounts in dev, disposing the first workspace
-    // instance almost immediately -- skip it silently rather than throwing;
-    // the effect re-runs once the real, settled workspace comes through.
-    if (!workspace.rendered) return
-    exercise.seedWorkspace(workspace)
+    if (exercise.seedWorkspace && workspace && workspace.rendered) {
+      exercise.seedWorkspace(workspace)
+    }
   }, [exercise, workspace])
 
   const handleObjectsChange = useCallback(
