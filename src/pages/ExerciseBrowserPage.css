@@ -1,0 +1,126 @@
+.exercise-browser-page {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--bg-main);
+  color: var(--geo-text);
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.exercise-browser-page__header {
+  max-width: 48rem;
+  margin: 0 auto 2rem;
+  text-align: left;
+}
+
+.exercise-browser-page__header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  color: var(--geo-highlight);
+}
+
+.exercise-browser-page__header p {
+  margin: 0;
+  color: var(--geo-text-muted-on-light);
+}
+
+.exercise-browser-page__groups {
+  max-width: 48rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.exercise-browser-group h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--geo-highlight);
+}
+
+.exercise-browser-group__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exercise-browser-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 46, 166, 0.05);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.exercise-browser-card:hover {
+  border-color: var(--geo-highlight);
+  box-shadow: 0 8px 22px rgba(0, 46, 166, 0.12);
+  transform: translateY(-1px);
+}
+
+.exercise-browser-card__number {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--geo-highlight);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.exercise-browser-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.exercise-browser-card__title {
+  color: var(--geo-text);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.exercise-browser-difficulty {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.exercise-browser-difficulty--easy {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #16a34a;
+}
+
+.exercise-browser-difficulty--medium {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #d97706;
+}
+
+.exercise-browser-difficulty--hard {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #dc2626;
+}
