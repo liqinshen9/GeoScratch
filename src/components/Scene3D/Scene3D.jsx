@@ -23,11 +23,10 @@ import { getObjectFocus } from '@/utils/sceneFocus'
 
 const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
-// Orbit zoom limits -- MIN keeps the camera from clipping through/inside
-// objects when zooming in; MAX keeps the scene from shrinking into an
-// unreadable speck (or disappearing entirely) when zooming out.
-const MIN_CAMERA_DISTANCE = 2
-const MAX_CAMERA_DISTANCE = 300
+
+const MIN_CAMERA_DISTANCE = 4
+const MAX_CAMERA_DISTANCE = 130
+
 const globalThreeObjStore = {}
 
 function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
