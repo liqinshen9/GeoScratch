@@ -10,6 +10,8 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { EXERCISES } from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
+import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
+import useExerciseTracking from '@/hooks/useExerciseTracking'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -76,6 +78,7 @@ export default function ExercisePage() {
   const navigate = useNavigate()
   const { exerciseNumber } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
+  const [perceptualPicked, setPerceptualPicked] = useState(null)
   const clearWorkspaceRef = useRef(() => {})
 
   // The URL is the source of truth for which exercise is open
@@ -95,6 +98,15 @@ export default function ExercisePage() {
     result.incorrect ? ' is-incorrect' : ''
   }`
 
+  // Perceptual exercises have no checker pass -- a correct MCQ pick is the pass.
+  const isPerceptual = exercise.kind === 'perceptual'
+  const passed = result.passed || (isPerceptual && perceptualPicked === exercise.mcq?.correctId)
+
+  const tracking = useExerciseTracking(activeExercise, exercise.kind)
+  useEffect(() => {
+    tracking.reportResult(result)
+  })
+
   const handleSelectExercise = useCallback(
     (number) => {
       navigate(`/exercise/${number}`)
@@ -104,6 +116,11 @@ export default function ExercisePage() {
     },
     [navigate, setObjects, setPendingObjects],
   )
+
+  // Clear a stale MCQ pick when moving between exercises.
+  useEffect(() => {
+    setPerceptualPicked(null)
+  }, [activeExercise])
 
   // Sets up starter blocks for exercises that have seedWorkspace
   useEffect(() => {
@@ -190,9 +207,9 @@ export default function ExercisePage() {
 
         <div className="editor-body-row">
           {!workspaceMaximized && (
-            <aside className={`exercise-task-panel${result.passed ? ' is-passed' : ''}`}>
+            <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {result.passed && (
+                {passed && (
                   <div className="exercise-task-panel__meta-row">
                     <span className="exercise-pass-badge">Passed</span>
                   </div>
@@ -203,10 +220,15 @@ export default function ExercisePage() {
               </div>
 
               <Givens />
-              <Steps steps={result.steps} passed={result.passed} />
-              {exercise.kind !== 'perceptual' && (
-                <AnswerCard result={result} className={answerCardClass} />
+              {isPerceptual && exercise.mcq && (
+                <PerceptualQuestion
+                  mcq={exercise.mcq}
+                  onPick={tracking.recordMcqAnswer}
+                  onPickedChange={setPerceptualPicked}
+                />
               )}
+              <Steps steps={result.steps} passed={passed} />
+              {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
             </aside>
           )}
 

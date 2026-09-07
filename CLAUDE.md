@@ -111,27 +111,52 @@ An exercise module can export `settingsOverrides` to force certain app settings
 `ExercisePage` applies/reverts the active exercise's overrides, and the Settings
 page locks the matching controls.
 
+## Backend / persistence (optional)
+
+An optional Supabase project (managed Postgres + Auth) adds participant accounts
+and per-attempt logging for user studies. It is **off unless
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are set** (`.env.local`): without
+them `isSupabaseConfigured` is false and the app behaves exactly as before, with
+a small "tracking off" badge.
+
+- Identity is anonymous sign-in + a participant code. `ParticipantGate` (in
+  `Layout`) blocks every route until a code is set. A new device is a new user;
+  the code is an analysis join key, not a login.
+- `useExerciseTracking` in `ExercisePage` writes `exercise_attempts` (row per
+  exercise open, updated on pass / MCQ pick / unmount). Pure row builders are in
+  `src/lib/attemptPayload.js`.
+- **Never block render or navigation on a Supabase write.** All writes are
+  fire-and-forget with a `[GeoScratch]` `.catch` log.
+- **RLS is the only security boundary** (`supabase/migrations/0001_init.sql`).
+  The anon key is public; `service_role` never ships to the client.
+- Perceptual exercises (08/09) expose an `mcq` descriptor
+  (`{ prompt, choices, correctId }`); `ExercisePage` renders it via
+  `exercises/shared/PerceptualQuestion` and logs the pick.
+
+Full rationale: `docs/architecture/backend.md`.
+
 ## Deeper docs
 
 Long-form subsystem rationale lives in `docs/architecture/` (index at
 `docs/architecture/README.md`), not in source. A source file with a
 non-obvious mechanism carries a one-line pointer to the relevant section.
 
-| Doc                             | When you need it                                                        |
-| ------------------------------- | ----------------------------------------------------------------------- |
-| `generated-code-runtime.md`     | touching `sceneRuntime.js`, generated code, or a block builder body     |
-| `halos.md`                      | the haloed-line GPU depth-trick (`utils/halo*.js`, `Scene3D/Halo*.jsx`) |
-| `vector-line-glyphs.md`         | `geoVectorLine.js`, `vectorShaftGlyph.js`                               |
-| `glyph-sizing.md`               | `GlyphSizing.jsx`, zoom-invariant scaling, `sceneConstants.js`          |
-| `label-declutter.md`            | `Scene3D/labels/LabelDeclutter.jsx`                                     |
-| `collision.md`                  | `utils/tubeCollision.js`                                                |
-| `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash              |
-| `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`      |
-| `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                          |
-| `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                  |
-| `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference       |
-| `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`          |
-| `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                       |
+| Doc                             | When you need it                                                          |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `generated-code-runtime.md`     | touching `sceneRuntime.js`, generated code, or a block builder body       |
+| `halos.md`                      | the haloed-line GPU depth-trick (`utils/halo*.js`, `Scene3D/Halo*.jsx`)   |
+| `vector-line-glyphs.md`         | `geoVectorLine.js`, `vectorShaftGlyph.js`                                 |
+| `glyph-sizing.md`               | `GlyphSizing.jsx`, zoom-invariant scaling, `sceneConstants.js`            |
+| `label-declutter.md`            | `Scene3D/labels/LabelDeclutter.jsx`                                       |
+| `collision.md`                  | `utils/tubeCollision.js`                                                  |
+| `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash                |
+| `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`        |
+| `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                            |
+| `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                    |
+| `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
+| `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
+| `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                         |
+| `backend.md`                    | Supabase auth/gate, `exercise_attempts`, RLS, workspace snapshots, export |
 
 ## Conventions
 

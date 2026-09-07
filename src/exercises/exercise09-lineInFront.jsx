@@ -1,9 +1,8 @@
 import * as Blockly from 'blockly/core'
-import { useState } from 'react'
 
 // A "look and answer" exercise: two crossing lines are prefilled as real blocks
-// and the student picks which one is in front. Same module contract as every
-// other exercise.
+// and the student picks which one is in front. The choices live in the `mcq`
+// descriptor; ExercisePage renders them via shared/PerceptualQuestion.
 
 const SEED_BLOCK_IDS = ['q9-line-a', 'q9-line-b']
 
@@ -61,36 +60,16 @@ function seedWorkspace(workspace) {
   }
 }
 
+const mcq = {
+  prompt: 'The two lines cross. Which line passes in front of the other?',
+  choices: CHOICES,
+  correctId: CORRECT_ID,
+}
+
+// The question UI is rendered by ExercisePage from `mcq`; Givens/Steps stay as
+// no-op components to keep the shared module contract.
 function Givens() {
-  const [picked, setPicked] = useState(null)
-  return (
-    <div aria-label="Question" style={{ display: 'grid', gap: '0.75rem' }}>
-      <p style={{ fontSize: '0.95rem', lineHeight: 1.4 }}>
-        The two lines cross. Which line passes in front of the other?
-      </p>
-      <div style={{ display: 'grid', gap: '0.4rem' }}>
-        {CHOICES.map((choice) => (
-          <label
-            key={choice.id}
-            style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.95rem' }}
-          >
-            <input
-              type="radio"
-              name="question-9"
-              checked={picked === choice.id}
-              onChange={() => setPicked(choice.id)}
-            />
-            {choice.label}
-          </label>
-        ))}
-      </div>
-      {picked && (
-        <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>
-          {picked === CORRECT_ID ? 'Correct.' : 'Not quite — try looking again.'}
-        </p>
-      )}
-    </div>
-  )
+  return null
 }
 
 function Steps() {
@@ -110,6 +89,7 @@ function evaluate() {
 export default {
   number: 9,
   kind: 'perceptual',
+  mcq,
   Givens,
   Steps,
   evaluate,

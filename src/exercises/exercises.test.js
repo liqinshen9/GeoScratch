@@ -104,6 +104,23 @@ describe('exercise registry', () => {
     })
   })
 
+  it('gives every perceptual exercise a well-formed mcq descriptor', () => {
+    Object.values(EXERCISE_MODULES)
+      .filter((mod) => mod.kind === 'perceptual')
+      .forEach((mod) => {
+        expect(mod.mcq, `exercise ${mod.number} mcq`).toBeTypeOf('object')
+        expect(typeof mod.mcq.prompt).toBe('string')
+        expect(Array.isArray(mod.mcq.choices)).toBe(true)
+        expect(mod.mcq.choices.length).toBeGreaterThanOrEqual(2)
+        mod.mcq.choices.forEach((choice) => {
+          expect(typeof choice.id).toBe('string')
+          expect(typeof choice.label).toBe('string')
+        })
+        const ids = mod.mcq.choices.map((c) => c.id)
+        expect(ids, `exercise ${mod.number} correctId`).toContain(mod.mcq.correctId)
+      })
+  })
+
   it('falls back to exercise 1 for an unknown number', () => {
     expect(getExerciseModule(99).number).toBe(1)
     expect(getExerciseModule(undefined).number).toBe(1)

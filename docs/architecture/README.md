@@ -20,6 +20,7 @@ you" summary; this is the depth.
 | [naming-registry.md](naming-registry.md)                       | `namingRegistry.js` assign-once names, the variable wrapper / refId pairing, variable-ordering warnings, collapse-to-reference                                                             |
 | [color-system.md](color-system.md)                             | The HCT object-color system: per-type families, deterministic per-instance colors, roles, presets                                                                                          |
 | [blockly-integration.md](blockly-integration.md)               | The variable wrapper's block layout, My Block duplicate detection, autosave restore, event filtering                                                                                       |
+| [backend.md](backend.md)                                       | The optional Supabase backend: anonymous auth + participant gate, `exercise_attempts` logging, RLS model, Phase 2 workspace snapshots, study-data export                                   |
 
 ## Recurring bug classes
 
