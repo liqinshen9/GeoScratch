@@ -46,6 +46,27 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.ACCENT]: '#71717a',
       [COLOR_ROLES.DISTANCE]: '#ca8a04',
     },
+    // Dark-mode variant: same family hues, tones lifted so instances read
+    // against the dark scene ground. See docs/architecture/theming.md.
+    dark: {
+      types: {
+        [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [42, 56], toneRange: [40, 58] },
+        [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [46, 60], toneRange: [36, 52] },
+        [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [38, 56] },
+        [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [36, 50], toneRange: [44, 62] },
+        [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [46, 60], toneRange: [44, 62] },
+        [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [42, 56], toneRange: [44, 62] },
+        [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [34, 48], toneRange: [42, 60] },
+      },
+      roles: {
+        [COLOR_ROLES.OPERAND_A]: '#6f9bff',
+        [COLOR_ROLES.OPERAND_B]: '#f26d6d',
+        [COLOR_ROLES.RESULT]: '#b98cf0',
+        [COLOR_ROLES.WARNING]: '#f5d76e',
+        [COLOR_ROLES.ACCENT]: '#a1a1aa',
+        [COLOR_ROLES.DISTANCE]: '#e0a94a',
+      },
+    },
   },
 
   monochrome: {
@@ -68,6 +89,27 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.ACCENT]: '#4b5563',
       [COLOR_ROLES.DISTANCE]: '#57534e',
     },
+    // Dark-mode variant: the light preset's cap existed because light tones
+    // washed out on the light background; on dark the ramp runs high instead.
+    dark: {
+      types: {
+        [OBJECT_TYPES.POINT]: { hue: 0, chromaRange: [0, 0], toneRange: [44, 52] },
+        [OBJECT_TYPES.VECTOR]: { hue: 0, chromaRange: [0, 0], toneRange: [50, 58] },
+        [OBJECT_TYPES.LINE]: { hue: 0, chromaRange: [0, 0], toneRange: [62, 72] },
+        [OBJECT_TYPES.PLANE]: { hue: 0, chromaRange: [0, 0], toneRange: [38, 46] },
+        [OBJECT_TYPES.SPHERE]: { hue: 0, chromaRange: [0, 0], toneRange: [56, 64] },
+        [OBJECT_TYPES.CUBE]: { hue: 0, chromaRange: [0, 0], toneRange: [34, 42] },
+        [OBJECT_TYPES.TEAPOT]: { hue: 0, chromaRange: [0, 0], toneRange: [66, 74] },
+      },
+      roles: {
+        [COLOR_ROLES.OPERAND_A]: '#d1d5db',
+        [COLOR_ROLES.OPERAND_B]: '#9ca3af',
+        [COLOR_ROLES.RESULT]: '#f3f4f6',
+        [COLOR_ROLES.WARNING]: '#9ca3af',
+        [COLOR_ROLES.ACCENT]: '#b0b6c0',
+        [COLOR_ROLES.DISTANCE]: '#c4beb6',
+      },
+    },
   },
 
   highContrast: {
@@ -88,6 +130,25 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.WARNING]: '#eab308',
       [COLOR_ROLES.ACCENT]: '#52525b',
       [COLOR_ROLES.DISTANCE]: '#b45309',
+    },
+    dark: {
+      types: {
+        [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [72, 92], toneRange: [42, 66] },
+        [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [78, 98], toneRange: [40, 62] },
+        [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [46, 70] },
+        [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [68, 88], toneRange: [44, 70] },
+        [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [78, 98], toneRange: [44, 70] },
+        [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [72, 92], toneRange: [44, 70] },
+        [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [64, 84], toneRange: [42, 66] },
+      },
+      roles: {
+        [COLOR_ROLES.OPERAND_A]: '#3b82f6',
+        [COLOR_ROLES.OPERAND_B]: '#f87171',
+        [COLOR_ROLES.RESULT]: '#a78bfa',
+        [COLOR_ROLES.WARNING]: '#facc15',
+        [COLOR_ROLES.ACCENT]: '#a1a1aa',
+        [COLOR_ROLES.DISTANCE]: '#fb923c',
+      },
     },
   },
 })

@@ -5,6 +5,13 @@ import { COLOR_PRESETS } from '../store/colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
+import { THEMES } from '../store/themeConfig'
+
+const THEME_LABELS = {
+  [THEMES.LIGHT]: 'Light',
+  [THEMES.DARK]: 'Dark',
+  [THEMES.SYSTEM]: 'System (follow device)',
+}
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
@@ -91,6 +98,22 @@ export default function SettingsPage() {
 
         <main className="settings-layout">
           <div className="settings-stack">
+            <SettingsSection title="Appearance">
+              <SelectField
+                label="Theme"
+                description="Light, dark, or follow your device's appearance setting. Applies to the whole app, including the 3D scene and blocks. Saved on this device."
+                value={settings.theme}
+                settingKey="theme"
+                onChange={(e) => updateSetting('theme', e.target.value)}
+              >
+                {Object.values(THEMES).map((value) => (
+                  <option key={value} value={value}>
+                    {THEME_LABELS[value]}
+                  </option>
+                ))}
+              </SelectField>
+            </SettingsSection>
+
             <SettingsSection title="Scene">
               <ToggleRow
                 label="Show Grid"

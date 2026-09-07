@@ -4,9 +4,11 @@ import { DEFAULT_COLOR_PRESET } from './colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 import { ANIMATION_EASINGS, DEFAULT_ANIMATION_DURATION_MS } from './animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from './namingConfig'
+import { DEFAULT_THEME, THEMES, THEME_STORAGE_KEY, resolveTheme } from './themeConfig'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
+  theme: DEFAULT_THEME,
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
   colorPreset: DEFAULT_COLOR_PRESET,
@@ -45,6 +47,27 @@ const DEFAULT_SETTINGS = {
 
 export const SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_SETTINGS))
 
+// `theme` is the one setting that persists across reloads (the rest are
+// intentionally session-only). See docs/architecture/theming.md.
+function loadPersistedTheme() {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
+    return Object.values(THEMES).includes(stored) ? stored : null
+  } catch {
+    return null
+  }
+}
+
+function persistTheme(theme) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  } catch {
+    // storage unavailable (private mode, quota) -- theme just won't stick
+  }
+}
+
 // `settings` (the surface every consumer reads) is three layers merged, with
 // the active exercise's overrides on top -- an exercise locks a setting via its
 // `settingsOverrides` export (see src/exercises/index.js).
@@ -68,23 +91,38 @@ function pickValidOverrides(overrides) {
   return clean
 }
 
+const persistedTheme = loadPersistedTheme()
+const initialUserSettings = persistedTheme ? { theme: persistedTheme } : {}
+
 const useSettingsStore = create((set, get) => ({
   // Keys the user explicitly changed (updateSetting writes here).
-  userSettings: {},
+  userSettings: initialUserSettings,
   // Keys forced by the currently open exercise -- these win.
   exerciseOverrides: {},
   // Derived read surface: DEFAULT_SETTINGS < userSettings < exerciseOverrides.
-  settings: { ...DEFAULT_SETTINGS },
+  settings: mergeSettings(initialUserSettings, {}),
+  // The concrete scheme currently painted ('light' | 'dark'). `theme: 'system'`
+  // resolves here via the OS preference; kept in sync by useThemeSync so
+  // non-React code (colorSystem, Blockly) can read it off the store.
+  resolvedTheme: resolveTheme(mergeSettings(initialUserSettings, {}).theme),
 
   updateSetting: (key, value) =>
     set((state) => {
       const userSettings = { ...state.userSettings, [key]: value }
+      if (key === 'theme') persistTheme(value)
       return { userSettings, settings: mergeSettings(userSettings, state.exerciseOverrides) }
     }),
 
-  // Reset the user's own choices; an exercise's lock stays in place.
+  // Reset the user's own choices; an exercise's lock stays in place. `theme`
+  // is a persisted preference, not a scene tweak, so it survives the reset.
   resetSettings: () =>
-    set((state) => ({ userSettings: {}, settings: mergeSettings({}, state.exerciseOverrides) })),
+    set((state) => {
+      const keptTheme = { theme: state.userSettings.theme ?? DEFAULT_SETTINGS.theme }
+      return {
+        userSettings: keptTheme,
+        settings: mergeSettings(keptTheme, state.exerciseOverrides),
+      }
+    }),
 
   setExerciseOverrides: (overrides) =>
     set((state) => {
@@ -96,6 +134,10 @@ const useSettingsStore = create((set, get) => ({
     set((state) => ({ exerciseOverrides: {}, settings: mergeSettings(state.userSettings, {}) })),
 
   isSettingLocked: (key) => Object.hasOwn(get().exerciseOverrides, key),
+
+  // Called by useThemeSync whenever the effective scheme changes.
+  setResolvedTheme: (resolvedTheme) =>
+    set((state) => (state.resolvedTheme === resolvedTheme ? state : { resolvedTheme })),
 }))
 
 if (typeof window !== 'undefined') {

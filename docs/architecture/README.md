@@ -19,6 +19,7 @@ you" summary; this is the depth.
 | [render-order.md](render-order.md)                             | #29: the transparent-sort flicker bug class, `computeNestingRenderOrders`, axis / grid fixed `renderOrder`                                                                                 |
 | [naming-registry.md](naming-registry.md)                       | `namingRegistry.js` assign-once names, the variable wrapper / refId pairing, variable-ordering warnings, collapse-to-reference                                                             |
 | [color-system.md](color-system.md)                             | The HCT object-color system: per-type families, deterministic per-instance colors, roles, presets                                                                                          |
+| [theming.md](theming.md)                                       | App-wide light/dark mode: the `theme` setting, `resolveTheme`, `useThemeSync`, `data-theme` CSS tokens, and how the 3D scene and Blockly pick it up                                        |
 | [blockly-integration.md](blockly-integration.md)               | The variable wrapper's block layout, My Block duplicate detection, autosave restore, event filtering                                                                                       |
 
 ## Recurring bug classes

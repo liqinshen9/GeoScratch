@@ -117,21 +117,22 @@ Long-form subsystem rationale lives in `docs/architecture/` (index at
 `docs/architecture/README.md`), not in source. A source file with a
 non-obvious mechanism carries a one-line pointer to the relevant section.
 
-| Doc                             | When you need it                                                        |
-| ------------------------------- | ----------------------------------------------------------------------- |
-| `generated-code-runtime.md`     | touching `sceneRuntime.js`, generated code, or a block builder body     |
-| `halos.md`                      | the haloed-line GPU depth-trick (`utils/halo*.js`, `Scene3D/Halo*.jsx`) |
-| `vector-line-glyphs.md`         | `geoVectorLine.js`, `vectorShaftGlyph.js`                               |
-| `glyph-sizing.md`               | `GlyphSizing.jsx`, zoom-invariant scaling, `sceneConstants.js`          |
-| `label-declutter.md`            | `Scene3D/labels/LabelDeclutter.jsx`                                     |
-| `collision.md`                  | `utils/tubeCollision.js`                                                |
-| `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash              |
-| `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`      |
-| `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                          |
-| `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                  |
-| `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference       |
-| `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`          |
-| `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                       |
+| Doc                             | When you need it                                                          |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `generated-code-runtime.md`     | touching `sceneRuntime.js`, generated code, or a block builder body       |
+| `halos.md`                      | the haloed-line GPU depth-trick (`utils/halo*.js`, `Scene3D/Halo*.jsx`)   |
+| `vector-line-glyphs.md`         | `geoVectorLine.js`, `vectorShaftGlyph.js`                                 |
+| `glyph-sizing.md`               | `GlyphSizing.jsx`, zoom-invariant scaling, `sceneConstants.js`            |
+| `label-declutter.md`            | `Scene3D/labels/LabelDeclutter.jsx`                                       |
+| `collision.md`                  | `utils/tubeCollision.js`                                                  |
+| `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash                |
+| `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`        |
+| `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                            |
+| `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                    |
+| `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
+| `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
+| `theming.md`                    | light/dark mode: `themeConfig.js`, `useThemeSync.js`, `data-theme` tokens |
+| `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                         |
 
 ## Conventions
 

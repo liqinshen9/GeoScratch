@@ -2,7 +2,23 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, Billboard } from '@react-three/drei'
 import THREE from '@/utils/three'
-import { AXIS_COLORS, AXIS_SHAFT_RADIUS, DESMOS_TICK_COLOR } from './sceneConstants'
+import {
+  AXIS_COLORS,
+  AXIS_SHAFT_RADIUS,
+  DESMOS_TICK_COLOR,
+  getAxisColors,
+  getTickColor,
+} from './sceneConstants'
+
+const ROOM_COLORS = {
+  light: { wall: '#ffffff', edge: '#a3a3a3' },
+  dark: { wall: '#161c28', edge: '#3a4255' },
+}
+
+const GRID_COLORS = {
+  light: { center: 0xb0b0b0, line: 0xd2d2d2 },
+  dark: { center: 0x3a4255, line: 0x2a3140 },
+}
 
 // BackSide walls cull the near ones. An edge hides only when BOTH its faces
 // are culled. See docs/architecture/render-order.md#boundingboxroom-edge-culling.
@@ -39,10 +55,11 @@ function openFaces(cameraPosition, half) {
   }
 }
 
-function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
+function BoundingBoxRoom({ size = 40, showFrontWireframe = true, theme = 'light' }) {
   const half = size / 2
   const edges = useMemo(() => cubeEdges(half), [half])
   const edgeRefs = useRef([])
+  const room = ROOM_COLORS[theme] || ROOM_COLORS.light
 
   useFrame(({ camera }) => {
     const open = showFrontWireframe ? null : openFaces(camera.position, half)
@@ -58,7 +75,7 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
     <group>
       <mesh position={[0, 0, 0]} receiveShadow>
         <boxGeometry args={[size, size, size]} />
-        <meshStandardMaterial color="#ffffff" side={THREE.BackSide} roughness={1} />
+        <meshStandardMaterial color={room.wall} side={THREE.BackSide} roughness={1} />
       </mesh>
       {edges.map((edge, i) => (
         <line
@@ -73,7 +90,7 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true }) {
               args={[new Float32Array([...edge.a, ...edge.b]), 3]}
             />
           </bufferGeometry>
-          <lineBasicMaterial color="#a3a3a3" transparent opacity={0.42} depthWrite={false} />
+          <lineBasicMaterial color={room.edge} transparent opacity={0.42} depthWrite={false} />
         </line>
       ))}
     </group>
@@ -223,27 +240,30 @@ function Axes({
   showOriginLabel = false,
   showScaleLabels = true,
   showEndLabels = true,
+  theme = 'light',
 }) {
+  const axisColors = getAxisColors(theme)
+  const tickColor = getTickColor(theme)
   return (
     <group>
-      <OriginMarker showLabel={showOriginLabel} />
+      <OriginMarker color={tickColor} showLabel={showOriginLabel} />
       <AxisArrow
         dir={[1, 0, 0]}
-        color={AXIS_COLORS.x}
+        color={axisColors.x}
         length={length}
         opacity={0.82}
         showLabel={showEndLabels}
       />
       <AxisArrow
         dir={[0, 1, 0]}
-        color={AXIS_COLORS.y}
+        color={axisColors.y}
         length={length}
         opacity={0.82}
         showLabel={showEndLabels}
       />
       <AxisArrow
         dir={[0, 0, 1]}
-        color={AXIS_COLORS.z}
+        color={axisColors.z}
         length={length}
         opacity={0.82}
         showLabel={showEndLabels}
@@ -252,21 +272,21 @@ function Axes({
         <>
           <AxisTicks
             dir={[1, 0, 0]}
-            color={AXIS_COLORS.x}
+            color={axisColors.x}
             length={length}
             step={tickStep}
             showLabels={showScaleLabels}
           />
           <AxisTicks
             dir={[0, 1, 0]}
-            color={AXIS_COLORS.y}
+            color={axisColors.y}
             length={length}
             step={tickStep}
             showLabels={showScaleLabels}
           />
           <AxisTicks
             dir={[0, 0, 1]}
-            color={AXIS_COLORS.z}
+            color={axisColors.z}
             length={length}
             step={tickStep}
             showLabels={showScaleLabels}
@@ -279,8 +299,9 @@ function Axes({
 
 const GRID_OPACITY = 0.18
 
-function FadedGrid() {
+function FadedGrid({ theme = 'light' }) {
   const gridRef = useRef(null)
+  const grid = GRID_COLORS[theme] || GRID_COLORS.light
 
   useLayoutEffect(() => {
     if (!gridRef.current) return
@@ -293,15 +314,16 @@ function FadedGrid() {
       material.opacity =
         index === 0 ? Math.min(0.44, GRID_OPACITY * 1.7) : Math.min(0.28, GRID_OPACITY * 0.9)
       material.depthWrite = false
-      material.color.set(index === 0 ? 0xb0b0b0 : 0xd2d2d2)
+      material.color.set(index === 0 ? grid.center : grid.line)
       material.needsUpdate = true
     })
-  }, [])
+  }, [grid])
 
   return (
     <gridHelper
+      key={theme}
       ref={gridRef}
-      args={[40, 40, 0xb0b0b0, 0xd2d2d2]}
+      args={[40, 40, grid.center, grid.line]}
       position={[0, -0.005, 0]}
       renderOrder={-1}
     />

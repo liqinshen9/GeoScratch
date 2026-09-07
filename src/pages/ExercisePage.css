@@ -56,10 +56,10 @@
 }
 
 .exercise-task-panel.is-passed {
-  background: color-mix(in srgb, #22c55e 8%, var(--bg-main));
+  background: color-mix(in srgb, var(--state-pass-accent) 8%, var(--bg-main));
   box-shadow:
-    inset 4px 0 0 #22c55e,
-    inset -1px 0 0 #22c55e;
+    inset 4px 0 0 var(--state-pass-accent),
+    inset -1px 0 0 var(--state-pass-accent);
 }
 
 .exercise-task-panel__top {
@@ -77,10 +77,10 @@
 .exercise-pass-badge {
   width: max-content;
   padding: 0.3rem 0.55rem;
-  border: 1px solid #16a34a;
+  border: 1px solid var(--state-pass-border);
   border-radius: 0.45rem;
-  background: #dcfce7;
-  color: #166534;
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
   font-size: 0.75rem;
   font-weight: 800;
 }
@@ -222,25 +222,25 @@
 }
 
 .exercise-answer-card.is-correct {
-  border-color: #22c55e;
-  background: #dcfce7;
+  border-color: var(--state-pass-accent);
+  background: var(--state-pass-bg);
 }
 
 .exercise-answer-card.is-correct span,
 .exercise-answer-card.is-correct strong,
 .exercise-answer-card.is-correct p {
-  color: #166534;
+  color: var(--state-pass-fg);
 }
 
 .exercise-answer-card.is-incorrect {
-  border-color: #ef4444;
-  background: #fee2e2;
+  border-color: var(--state-fail-accent);
+  background: var(--state-fail-bg);
 }
 
 .exercise-answer-card.is-incorrect span,
 .exercise-answer-card.is-incorrect strong,
 .exercise-answer-card.is-incorrect p {
-  color: #991b1b;
+  color: var(--state-fail-fg);
 }
 
 .exercise-target-preview {
@@ -382,13 +382,13 @@
 }
 
 .exercise-task-steps li.is-complete {
-  border-color: #22c55e;
-  background: #dcfce7;
-  color: #166534;
+  border-color: var(--state-pass-accent);
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
 }
 
 .exercise-task-steps li.is-complete::before {
-  background: #22c55e;
+  background: var(--state-pass-accent);
   color: #ffffff;
 }
 
@@ -457,4 +457,18 @@
     min-width: 78rem;
     min-height: 42rem;
   }
+}
+
+:root[data-theme='dark'] .exercise-page--editor .palette-block-preview {
+  background: var(--geo-block-card);
+}
+
+:root[data-theme='dark'] .exercise-page--editor .palette-group-label {
+  color: var(--geo-text-muted-on-light);
+}
+
+:root[data-theme='dark'] .exercise-pass-badge {
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
+  border-color: var(--state-pass-border);
 }

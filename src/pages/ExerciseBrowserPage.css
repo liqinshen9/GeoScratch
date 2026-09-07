@@ -58,8 +58,8 @@
   padding: 0.85rem 1.1rem;
   border: 1px solid var(--geo-border-light);
   border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 0 6px 18px rgba(0, 46, 166, 0.05);
+  background: var(--geo-block-card);
+  box-shadow: 0 6px 18px var(--card-shadow, rgba(0, 46, 166, 0.05));
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -71,7 +71,7 @@
 
 .exercise-browser-card:hover {
   border-color: var(--geo-highlight);
-  box-shadow: 0 8px 22px rgba(0, 46, 166, 0.12);
+  box-shadow: 0 8px 22px var(--card-shadow-hover, rgba(0, 46, 166, 0.12));
   transform: translateY(-1px);
 }
 
@@ -116,19 +116,19 @@
 }
 
 .exercise-browser-difficulty--easy {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #16a34a;
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
+  border-color: var(--state-pass-border);
 }
 
 .exercise-browser-difficulty--medium {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #d97706;
+  background: var(--state-warn-bg);
+  color: var(--state-warn-fg);
+  border-color: var(--state-warn-border);
 }
 
 .exercise-browser-difficulty--hard {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #dc2626;
+  background: var(--state-fail-bg);
+  color: var(--state-fail-fg);
+  border-color: var(--state-fail-border);
 }

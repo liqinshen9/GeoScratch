@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import useSettingsStore from './useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from './lineStyles'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
+import { THEMES } from './themeConfig'
 
 describe('useSettingsStore', () => {
   beforeEach(() => {
@@ -36,6 +37,41 @@ describe('useSettingsStore', () => {
     const { settings } = useSettingsStore.getState()
     expect(settings.showLabels).toBe(true)
     expect(settings.haloEnabled).toBe(true)
+  })
+
+  describe('theme', () => {
+    beforeEach(() => {
+      useSettingsStore.getState().updateSetting('theme', THEMES.LIGHT)
+    })
+
+    it('defaults to light', () => {
+      // resetSettings (outer beforeEach) keeps whatever theme was last set;
+      // this inner beforeEach puts it back to the documented default.
+      expect(useSettingsStore.getState().settings.theme).toBe(THEMES.LIGHT)
+      expect(THEMES.SYSTEM).toBe('system') // still an available choice in Settings
+    })
+
+    it('updateSetting switches the theme', () => {
+      useSettingsStore.getState().updateSetting('theme', THEMES.DARK)
+      expect(useSettingsStore.getState().settings.theme).toBe(THEMES.DARK)
+      useSettingsStore.getState().updateSetting('theme', THEMES.SYSTEM)
+      expect(useSettingsStore.getState().settings.theme).toBe(THEMES.SYSTEM)
+    })
+
+    it('resetSettings keeps the chosen theme (it is a persisted preference)', () => {
+      useSettingsStore.getState().updateSetting('theme', THEMES.DARK)
+      useSettingsStore.getState().updateSetting('showLabels', false)
+
+      useSettingsStore.getState().resetSettings()
+
+      expect(useSettingsStore.getState().settings.showLabels).toBe(true)
+      expect(useSettingsStore.getState().settings.theme).toBe(THEMES.DARK)
+    })
+
+    it('setResolvedTheme updates the derived scheme', () => {
+      useSettingsStore.getState().setResolvedTheme('dark')
+      expect(useSettingsStore.getState().resolvedTheme).toBe('dark')
+    })
   })
 
   describe('exercise overrides', () => {

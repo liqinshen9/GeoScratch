@@ -6,10 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GeoScratch</title>
     <script>
+      // Set the theme before first paint so a dark-mode reload doesn't flash
+      // white. Kept in sync afterwards by src/hooks/useThemeSync.js.
+      ;(() => {
+        try {
+          const stored = localStorage.getItem('geoscratch:theme')
+          const theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          document.documentElement.dataset.theme = theme
+        } catch {
+          document.documentElement.dataset.theme = 'light'
+        }
+      })()
+    </script>
+    <script>
       ;(() => {
         const fallbackVersion = '19.1.1'
         const patchHook = (hook) => {
-          if (!hook || hook.__geoScratchVersionPatch || typeof hook.inject !== 'function') return hook
+          if (!hook || hook.__geoScratchVersionPatch || typeof hook.inject !== 'function')
+            return hook
           const inject = hook.inject
           hook.inject = function patchedInject(renderer) {
             if (renderer && renderer.version === '') renderer.version = fallbackVersion

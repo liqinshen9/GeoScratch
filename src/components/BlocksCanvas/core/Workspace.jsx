@@ -1,7 +1,8 @@
 import InitLocale from './Locale'
 import * as en from 'blockly/msg/en'
 import * as Blockly from 'blockly/core'
-import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
+import { getBlockTheme } from '@/components/BlocksCanvas/blocks/blockColours'
+import useSettingsStore from '@/store/useSettingsStore'
 import {
   flattenCollapsedReferenceEdges,
   installBlockReferenceLabels,
@@ -26,12 +27,17 @@ const Workspace = (hostElement) => {
   InitLocale(en)
   configureContextMenu()
 
+  const resolvedTheme = useSettingsStore.getState().resolvedTheme
+
   const workspace = Blockly.inject(hostElement, {
     renderer: registerGeoScratchRenderer(),
+    // Colour here is the pre-CSS first-paint value (the original light grey);
+    // the live per-theme colour comes from CSS -- see the
+    // .blocklyGridPattern rule in BlocksCanvas.css.
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
     zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
     trashcan: false,
-    theme: GEO_SCRATCH_BLOCK_THEME,
+    theme: getBlockTheme(resolvedTheme),
     // Blockly ties drag-to-pan to `scrollbars` internally -- if scrollbars is
     // false, drag silently collapses to false too, no matter what it's set to
     // here. Scrollbars must stay "on" for panning to work; the scrollbar DOM

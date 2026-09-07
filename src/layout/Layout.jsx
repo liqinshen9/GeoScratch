@@ -1,7 +1,10 @@
 import { Outlet } from 'react-router-dom'
 import Header from '@/components/Header/Header'
+import useThemeSync from '@/hooks/useThemeSync'
 
 export default function Layout() {
+  useThemeSync()
+
   return (
     <div className="app-container flex flex-col min-h-screen">
       <Header />
