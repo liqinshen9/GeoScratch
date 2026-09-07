@@ -5,6 +5,8 @@ import exercise04 from './exercise04-translate'
 import exercise05 from './exercise05-pointPlane'
 import exercise06 from './exercise06-skewLines'
 import exercise07 from './exercise07-spheres'
+import exercise08 from './exercise08-closerObject'
+import exercise09 from './exercise09-lineInFront'
 
 /**
  * One module per exercise, keyed by the number in its URL (/exercise/:n) and in
@@ -13,8 +15,10 @@ import exercise07 from './exercise07-spheres'
  * Each module default-exports:
  *
  *   number    Matches its key here and its entry in data/exercises.js.
- *   kind      'transform' or 'distance' -- picks which answer card the page shows.
- *   Givens    Component: the "Given values" panel.
+ *   kind      'transform' / 'distance' picks the answer card; 'perceptual' is a
+ *             look-and-answer question -- the scene is prefilled by seedWorkspace
+ *             and the choices live in the Givens component (see exercise08/09).
+ *   Givens    Component: the "Given values" panel (or a question + its choices).
  *   Steps     Component: ({ steps, passed }) => the numbered task list.
  *   evaluate  ({ objects, workspace }) => { passed, incorrect, steps, answer, target? }
  *
@@ -45,6 +49,8 @@ export const EXERCISE_MODULES = {
   5: exercise05,
   6: exercise06,
   7: exercise07,
+  8: exercise08,
+  9: exercise09,
 }
 
 /** The module for an exercise number, falling back to the first exercise. */

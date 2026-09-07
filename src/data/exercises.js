@@ -24,7 +24,11 @@ export const DIFFICULTY_LABELS = Object.freeze({
 })
 
 // Rendered in this order wherever exercises are grouped by category.
-export const CATEGORIES = Object.freeze(['Transformations', 'Distances & Projections'])
+export const CATEGORIES = Object.freeze([
+  'Transformations',
+  'Distances & Projections',
+  'Perception',
+])
 
 export const EXERCISES = Object.freeze([
   {
@@ -68,6 +72,18 @@ export const EXERCISES = Object.freeze([
     title: 'Calculate the distance between two spheres',
     category: 'Distances & Projections',
     difficulty: DIFFICULTIES.MEDIUM,
+  },
+  {
+    number: 8,
+    title: 'Which object is closer to the camera?',
+    category: 'Perception',
+    difficulty: DIFFICULTIES.EASY,
+  },
+  {
+    number: 9,
+    title: 'Which line is in front?',
+    category: 'Perception',
+    difficulty: DIFFICULTIES.EASY,
   },
 ])
 

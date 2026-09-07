@@ -204,7 +204,9 @@ export default function ExercisePage() {
 
               <Givens />
               <Steps steps={result.steps} passed={result.passed} />
-              <AnswerCard result={result} className={answerCardClass} />
+              {exercise.kind !== 'perceptual' && (
+                <AnswerCard result={result} className={answerCardClass} />
+              )}
             </aside>
           )}
 
