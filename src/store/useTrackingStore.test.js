@@ -53,7 +53,9 @@ describe('useTrackingStore', () => {
 
   it('inserts one attempt row on open and keeps the returned id', async () => {
     const store = await freshStore()
-    await store.getState().startAttempt({ exerciseNumber: 3, exerciseKind: 'transform' })
+    await store
+      .getState()
+      .startAttempt({ openId: 'o1', exerciseNumber: 3, exerciseKind: 'transform' })
 
     expect(calls.inserts).toHaveLength(1)
     expect(calls.inserts[0].row).toMatchObject({
@@ -65,9 +67,16 @@ describe('useTrackingStore', () => {
     expect(store.getState().attemptId).toBe('attempt-1')
   })
 
+  it('ignores a repeat startAttempt with the same openId (StrictMode double-fire)', async () => {
+    const store = await freshStore()
+    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
+    expect(calls.inserts).toHaveLength(1)
+  })
+
   it('completes the attempt exactly once', async () => {
     const store = await freshStore()
-    await store.getState().startAttempt({ exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
 
     const result = { passed: true, steps: { a: true, b: false } }
     store.getState().completeAttempt(result)
@@ -81,13 +90,15 @@ describe('useTrackingStore', () => {
   it('does nothing when auth is not ready', async () => {
     authState = { status: 'signing-in', userId: null }
     const store = await freshStore()
-    await store.getState().startAttempt({ exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
     expect(calls.inserts).toHaveLength(0)
   })
 
   it('records an MCQ answer against the attempt', async () => {
     const store = await freshStore()
-    await store.getState().startAttempt({ exerciseNumber: 8, exerciseKind: 'perceptual' })
+    await store
+      .getState()
+      .startAttempt({ openId: 'o8', exerciseNumber: 8, exerciseKind: 'perceptual' })
     store.getState().recordMcq({ answer: 'cube', correctId: 'cube' })
 
     const mcqWrite = calls.updates.find((u) => 'mcq_answer' in u.values)

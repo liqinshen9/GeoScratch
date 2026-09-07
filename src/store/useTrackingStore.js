@@ -33,15 +33,16 @@ const useTrackingStore = create((set, get) => ({
   exerciseNumber: null,
   startedPerf: null,
   completed: false,
-  // Bumped on every open so a slow insert that resolves after the user has
-  // moved on does not attach its id to the wrong exercise.
-  generation: 0,
+  // The id of the current logical "exercise open". The hook generates one per
+  // open and passes it on every call; a repeat (React StrictMode double-invokes
+  // effects in dev, and the effect also re-runs when auth settles) is ignored.
+  openId: null,
 
   /** Insert a fresh attempt row for a newly opened exercise. */
-  startAttempt: async ({ exerciseNumber, exerciseKind }) => {
-    const generation = get().generation + 1
+  startAttempt: async ({ openId, exerciseNumber, exerciseKind }) => {
+    if (get().openId === openId) return // already handled this open
     set({
-      generation,
+      openId,
       attemptId: null,
       exerciseNumber,
       startedPerf: performance.now(),
@@ -75,7 +76,8 @@ const useTrackingStore = create((set, get) => ({
         .single()
       if (error) throw error
 
-      if (get().generation === generation) set({ attemptId: data.id })
+      // Only attach the id if this open is still the current one.
+      if (get().openId === openId) set({ attemptId: data.id })
     } catch (err) {
       console.error('[GeoScratch] Failed to start attempt:', err)
     }

@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import useTrackingStore from '@/store/useTrackingStore'
 import useAuthStore from '@/store/useAuthStore'
+
+function newOpenId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return `open-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 /**
  * Wires ExercisePage into the attempt log. Starts a new attempt when the
@@ -25,9 +30,16 @@ export function useExerciseTracking(exerciseNumber, exerciseKind) {
   const resultRef = useRef(null)
   const wasPassed = useRef(false)
 
+  // One id per logical "exercise open". Regenerated when the exercise changes or
+  // auth settles; stable across a StrictMode double-mount, so the store can
+  // ignore the duplicate startAttempt call.
+  const authSettled = authStatus === 'ready' || authStatus === 'offline' || authStatus === 'error'
+  const openId = useMemo(newOpenId, [exerciseNumber, exerciseKind, authSettled])
+
   useEffect(() => {
     wasPassed.current = false
-    startAttempt({ exerciseNumber, exerciseKind })
+    if (!authSettled) return // wait for sign-in; a new openId fires this again
+    startAttempt({ openId, exerciseNumber, exerciseKind })
 
     const onHide = () => {
       if (document.visibilityState === 'hidden') saveProgress(resultRef.current)
@@ -40,9 +52,7 @@ export function useExerciseTracking(exerciseNumber, exerciseKind) {
       window.removeEventListener('pagehide', onHide)
       if (!wasPassed.current) saveProgress(resultRef.current)
     }
-    // authStatus is included so an attempt row is created once auth becomes
-    // ready, even if the exercise was opened before sign-in finished.
-  }, [exerciseNumber, exerciseKind, authStatus, startAttempt, saveProgress])
+  }, [openId, authSettled, exerciseNumber, exerciseKind, startAttempt, saveProgress])
 
   const reportResult = useCallback(
     (result) => {

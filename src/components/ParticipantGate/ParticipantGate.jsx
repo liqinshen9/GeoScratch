@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 /**
- * Wraps the routed app. Until a participant code is set, nothing else renders.
- * When the backend is not configured the app runs untracked with a small
- * indicator. See docs/architecture/backend.md.
+ * Wraps the whole app shell (header included). Until a participant code is set,
+ * only the gate screen renders -- no nav -- so a participant cannot route away
+ * from it. When the backend is not configured the app runs untracked with a
+ * small indicator. See docs/architecture/backend.md.
  */
 export default function ParticipantGate({ children }) {
   const status = useAuthStore((s) => s.status)
@@ -35,13 +36,17 @@ export default function ParticipantGate({ children }) {
   }
 
   if (status === 'idle' || status === 'signing-in') {
-    return <FullScreen>Connecting…</FullScreen>
+    return (
+      <FullScreen>
+        <p className="text-base text-muted-foreground">Connecting…</p>
+      </FullScreen>
+    )
   }
 
   if (status === 'error') {
     return (
       <FullScreen>
-        <p className="max-w-sm text-center text-sm text-muted-foreground">
+        <p className="max-w-md text-center text-base text-muted-foreground">
           Could not reach the study server. Reload to try again; your work is not lost.
         </p>
       </FullScreen>
@@ -66,22 +71,30 @@ export default function ParticipantGate({ children }) {
 
   return (
     <FullScreen>
-      <form onSubmit={submit} className="flex w-full max-w-sm flex-col gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold">Welcome to GeoScratch</h1>
-          <p className="text-sm text-muted-foreground">Enter your participant code to begin.</p>
+      <form
+        onSubmit={submit}
+        className="flex w-full max-w-md flex-col gap-5 rounded-xl border bg-background p-8 shadow-sm"
+      >
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome to GeoScratch</h1>
+          <p className="text-base text-muted-foreground">Enter your participant code to begin.</p>
         </div>
-        <Label htmlFor="participant-code">Participant code</Label>
-        <Input
-          id="participant-code"
-          autoFocus
-          autoComplete="off"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          aria-invalid={Boolean(error)}
-        />
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="participant-code" className="text-base">
+            Participant code
+          </Label>
+          <Input
+            id="participant-code"
+            autoFocus
+            autoComplete="off"
+            className="h-11 text-base md:text-base"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" disabled={busy} className="h-11 text-base">
           {busy ? 'Saving…' : 'Start'}
         </Button>
       </form>
@@ -90,5 +103,5 @@ export default function ParticipantGate({ children }) {
 }
 
 function FullScreen({ children }) {
-  return <div className="flex min-h-[60vh] flex-1 items-center justify-center p-6">{children}</div>
+  return <div className="flex min-h-screen flex-1 items-center justify-center p-6">{children}</div>
 }
