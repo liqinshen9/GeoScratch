@@ -17,13 +17,17 @@ import exercise09 from './exercise09-lineInFront'
  *   number    Matches its key here and its entry in data/exercises.js.
  *   kind      'transform' / 'distance' picks the answer card; 'perceptual' is a
  *             look-and-answer question -- the scene is prefilled by seedWorkspace
- *             and the choices live in the Givens component (see exercise08/09).
+ *             and the choices come from the `mcq` descriptor (see exercise08/09).
  *   Givens    Component: the "Given values" panel (or a question + its choices).
  *   Steps     Component: ({ steps, passed }) => the numbered task list.
  *   evaluate  ({ objects, workspace }) => { passed, incorrect, steps, answer, target? }
  *
  * and optionally:
  *
+ *   mcq                              { prompt, choices: [{id, label}], correctId }
+ *                                     for a 'perceptual' exercise. ExercisePage
+ *                                     renders it via shared/PerceptualQuestion
+ *                                     and logs the pick to exercise_attempts.
  *   seedWorkspace(workspace)          Drops starter/decorative blocks in on entry.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.
