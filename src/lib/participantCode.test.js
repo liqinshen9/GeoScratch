@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeParticipantCode, isValidParticipantCode } from './participantCode'
+import {
+  normalizeParticipantCode,
+  isValidParticipantCode,
+  normalizeCohort,
+} from './participantCode'
 
 describe('normalizeParticipantCode', () => {
   it('trims, collapses inner whitespace, and uppercases', () => {
@@ -26,5 +30,22 @@ describe('isValidParticipantCode', () => {
     expect(isValidParticipantCode('a')).toBe(false)
     expect(isValidParticipantCode('')).toBe(false)
     expect(isValidParticipantCode('a'.repeat(65))).toBe(false)
+  })
+})
+
+describe('normalizeCohort', () => {
+  it('lowercases, trims, and strips disallowed characters', () => {
+    expect(normalizeCohort('  Study-Oct 2026! ')).toBe('study-oct2026')
+    expect(normalizeCohort('pilot_1.a')).toBe('pilot_1.a')
+  })
+
+  it('returns an empty string for non-strings or all-stripped input', () => {
+    expect(normalizeCohort(null)).toBe('')
+    expect(normalizeCohort(undefined)).toBe('')
+    expect(normalizeCohort('  @@@  ')).toBe('')
+  })
+
+  it('caps length at 64', () => {
+    expect(normalizeCohort('a'.repeat(100))).toHaveLength(64)
   })
 })

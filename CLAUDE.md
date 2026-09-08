@@ -132,6 +132,9 @@ a small "tracking off" badge.
 - Perceptual exercises (08/09) expose an `mcq` descriptor
   (`{ prompt, choices, correctId }`); `ExercisePage` renders it via
   `exercises/shared/PerceptualQuestion` and logs the pick.
+- Study participants get a `?c=<cohort>` link; `bootstrap()` stores it on
+  `profiles.cohort`. A plain dev URL leaves `cohort` null, so exports filter dev
+  data out with `where cohort = '<name>'`.
 
 Full rationale: `docs/architecture/backend.md`.
 

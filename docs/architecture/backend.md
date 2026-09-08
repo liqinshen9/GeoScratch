@@ -59,17 +59,30 @@ Rules for anything that touches the backend:
 `profiles` rows are created by the `on_auth_user_created` trigger. RLS restricts
 every table to `auth.uid() = profile_id`. No delete policies exist.
 
+### Cohort tagging (`?c=` link)
+
+Local dev and the deployed site share one Supabase project, so test rows and
+study rows land in the same tables. To separate them, hand participants a link
+with a cohort tag: `https://<site>/?c=study-oct`. On load, `bootstrap()` reads
+`?c=`, normalises it (`normalizeCohort` in `src/lib/participantCode.js`: lower
+case, `[a-z0-9._-]`, 64 max), stores it in `localStorage['geoscratch:cohort']`,
+and writes it to `profiles.cohort`. It survives in-app navigation (which drops
+the query string) via localStorage.
+
+A plain dev URL has no `?c=`, so those profiles keep `cohort = NULL` -- that is
+how dev data is excluded at export time.
+
 ## Client pieces
 
-| File                               | Role                                                        |
-| ---------------------------------- | ----------------------------------------------------------- |
-| `src/lib/supabaseClient.js`        | the client + `isSupabaseConfigured`                         |
-| `src/store/useAuthStore.js`        | `bootstrap()` (anon sign-in), `setParticipantCode()`        |
-| `src/components/ParticipantGate/`  | blocks all routes until a code is set; "tracking off" badge |
-| `src/store/useTrackingStore.js`    | writes `exercise_attempts`                                  |
-| `src/hooks/useExerciseTracking.js` | drives the store from `ExercisePage`                        |
-| `src/lib/attemptPayload.js`        | pure row builders (unit-tested)                             |
-| `src/lib/workspaceSync.js`         | Phase 2 snapshot pull/push                                  |
+| File                               | Role                                                               |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| `src/lib/supabaseClient.js`        | the client + `isSupabaseConfigured`                                |
+| `src/store/useAuthStore.js`        | `bootstrap()` (anon sign-in, `?c=` cohort), `setParticipantCode()` |
+| `src/components/ParticipantGate/`  | blocks all routes until a code is set; "tracking off" badge        |
+| `src/store/useTrackingStore.js`    | writes `exercise_attempts`                                         |
+| `src/hooks/useExerciseTracking.js` | drives the store from `ExercisePage`                               |
+| `src/lib/attemptPayload.js`        | pure row builders (unit-tested)                                    |
+| `src/lib/workspaceSync.js`         | Phase 2 snapshot pull/push                                         |
 
 `Layout.jsx` calls `bootstrap()` once on mount and wraps `<Outlet />` in
 `<ParticipantGate>`.
@@ -105,8 +118,10 @@ Kill switch: remove the `workspace_snapshots` grants, or gate the calls.
 Un-pause the project first. Export immediately after each session.
 
 - **Quick**: Table editor -> `exercise_attempts` -> filter -> Export CSV.
-- **Analysis**: SQL editor -> `select * from study_export` -> Download CSV.
-  `study_export` joins attempts to `profiles` (participant_code, cohort, ...).
+- **Analysis**: SQL editor -> `select * from study_export where cohort = 'study-oct'`
+  -> Download CSV. `study_export` joins attempts to `profiles` (participant_code,
+  cohort, ...). Filtering on `cohort` drops dev/test rows (which have
+  `cohort NULL`).
 - **Backup**:
   `pg_dump "$SUPABASE_DB_URL" --schema=public --data-only -t exercise_attempts -t profiles -t workspace_snapshots > session_YYYYMMDD.sql`
 - **Repeatable**: a `scripts/export-study-data.mjs` using the `service_role`

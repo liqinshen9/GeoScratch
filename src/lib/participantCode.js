@@ -16,3 +16,20 @@ export function isValidParticipantCode(raw) {
   const code = normalizeParticipantCode(raw)
   return code.length >= 2 && code.length <= 64
 }
+
+/**
+ * A cohort tag comes from the `?c=` link parameter, never typed. It separates
+ * study runs (and study data from dev data -- a plain URL leaves it blank).
+ * Lowercased, restricted to url-safe characters, capped at 64.
+ *
+ * @param {unknown} raw
+ * @returns {string} the normalised cohort, or '' if nothing usable was given
+ */
+export function normalizeCohort(raw) {
+  if (typeof raw !== 'string') return ''
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, '')
+    .slice(0, 64)
+}

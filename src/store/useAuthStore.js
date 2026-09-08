@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
-import { normalizeParticipantCode } from '@/lib/participantCode'
+import { normalizeParticipantCode, normalizeCohort } from '@/lib/participantCode'
 
 // Anonymous-only auth: on first load we sign in an anonymous user (a real
 // auth.users row with a normal auth.uid(), so RLS works) and attach a
@@ -9,25 +9,40 @@ import { normalizeParticipantCode } from '@/lib/participantCode'
 // docs/architecture/backend.md.
 
 const CODE_STORAGE_KEY = 'geoscratch:participantCode'
+const COHORT_STORAGE_KEY = 'geoscratch:cohort'
 
-function loadStoredCode() {
+function loadStored(key, label) {
   if (typeof window === 'undefined') return null
   try {
-    return window.localStorage.getItem(CODE_STORAGE_KEY) || null
+    return window.localStorage.getItem(key) || null
   } catch (err) {
-    console.error('[GeoScratch] Failed to read participant code:', err)
+    console.error(`[GeoScratch] Failed to read ${label}:`, err)
     return null
   }
 }
 
-function storeCode(code) {
+function persistStored(key, value, label) {
   if (typeof window === 'undefined') return
   try {
-    if (code) window.localStorage.setItem(CODE_STORAGE_KEY, code)
-    else window.localStorage.removeItem(CODE_STORAGE_KEY)
+    if (value) window.localStorage.setItem(key, value)
+    else window.localStorage.removeItem(key)
   } catch (err) {
-    console.error('[GeoScratch] Failed to persist participant code:', err)
+    console.error(`[GeoScratch] Failed to persist ${label}:`, err)
   }
+}
+
+const loadStoredCode = () => loadStored(CODE_STORAGE_KEY, 'participant code')
+const storeCode = (code) => persistStored(CODE_STORAGE_KEY, code, 'participant code')
+const loadStoredCohort = () => loadStored(COHORT_STORAGE_KEY, 'cohort')
+const storeCohort = (cohort) => persistStored(COHORT_STORAGE_KEY, cohort, 'cohort')
+
+/** The `?c=` link parameter, normalised. Falls back to the stored value. */
+function resolveCohort() {
+  let fromUrl = ''
+  if (typeof window !== 'undefined') {
+    fromUrl = normalizeCohort(new URLSearchParams(window.location.search).get('c') || '')
+  }
+  return fromUrl || normalizeCohort(loadStoredCohort() || '') || null
 }
 
 async function fetchProfile(userId) {
@@ -50,6 +65,7 @@ const useAuthStore = create((set, get) => ({
   userId: null,
   profile: null,
   participantCode: loadStoredCode(),
+  cohort: loadStoredCohort(),
 
   /** Idempotent. Safe to call from Layout's mount effect. */
   bootstrap: async () => {
@@ -78,16 +94,29 @@ const useAuthStore = create((set, get) => ({
       const userId = session?.user?.id ?? null
       const profile = userId ? await fetchProfile(userId) : null
 
-      // Record the browser once, for study bookkeeping.
+      // Cohort comes from the `?c=` link param (or a prior visit's stored value).
+      // A plain dev URL leaves it null, which is how test data stays separable.
+      const cohort = resolveCohort()
+      if (cohort) storeCohort(cohort)
+
+      // One-time / drift writes back to the profile row.
+      const patch = {}
       if (profile && !profile.user_agent && typeof navigator !== 'undefined') {
-        await supabase.from('profiles').update({ user_agent: navigator.userAgent }).eq('id', userId)
+        patch.user_agent = navigator.userAgent
+      }
+      if (profile && cohort && profile.cohort !== cohort) {
+        patch.cohort = cohort
+      }
+      if (userId && Object.keys(patch).length > 0) {
+        await supabase.from('profiles').update(patch).eq('id', userId)
       }
 
       set({
         session,
         userId,
-        profile,
+        profile: profile ? { ...profile, ...patch } : profile,
         participantCode: profile?.participant_code ?? get().participantCode,
+        cohort: cohort ?? profile?.cohort ?? get().cohort,
         status: 'ready',
       })
     } catch (err) {

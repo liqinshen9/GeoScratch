@@ -58,8 +58,9 @@ async function freshStore() {
 describe('useAuthStore', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    window.history.replaceState({}, '', '/')
     state.session = null
-    state.profile = { id: 'anon-1', participant_code: null, user_agent: null }
+    state.profile = { id: 'anon-1', participant_code: null, user_agent: null, cohort: null }
     state.updateError = null
     state.supabase = makeSupabase()
   })
@@ -78,6 +79,24 @@ describe('useAuthStore', () => {
     await store.getState().bootstrap()
     const uaWrite = state.profileUpdates.find((u) => 'user_agent' in u.values)
     expect(uaWrite).toBeTruthy()
+  })
+
+  it('captures a ?c= cohort param onto the profile and localStorage', async () => {
+    window.history.replaceState({}, '', '/?c=Study-1')
+    const store = await freshStore()
+    await store.getState().bootstrap()
+
+    expect(store.getState().cohort).toBe('study-1')
+    expect(window.localStorage.getItem('geoscratch:cohort')).toBe('study-1')
+    expect(state.profileUpdates.some((u) => u.values.cohort === 'study-1')).toBe(true)
+  })
+
+  it('writes no cohort when there is no param and none stored', async () => {
+    const store = await freshStore()
+    await store.getState().bootstrap()
+
+    expect(store.getState().cohort).toBeNull()
+    expect(state.profileUpdates.some((u) => 'cohort' in u.values)).toBe(false)
   })
 
   it('is idempotent', async () => {
