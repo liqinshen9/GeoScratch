@@ -46,6 +46,35 @@ const DEFAULT_SETTINGS = {
 
 export const SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_SETTINGS))
 
+// The user's own setting choices persist per-device in localStorage, the same
+// local-convenience tier as exercise progress. Exercise overrides are never
+// stored -- they're transient state owned by the open exercise.
+const STORAGE_KEY = 'geoscratch:user-settings'
+
+function loadUserSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    const clean = {}
+    for (const [key, value] of Object.entries(parsed || {})) {
+      if (Object.hasOwn(DEFAULT_SETTINGS, key) && value !== undefined) clean[key] = value
+    }
+    return clean
+  } catch {
+    // No storage (private mode, disabled, SSR): start from defaults.
+    return {}
+  }
+}
+
+function saveUserSettings(userSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userSettings))
+  } catch {
+    // Storage unavailable -- choices just won't persist across sessions.
+  }
+}
+
 // `settings` (the surface every consumer reads) is three layers merged, with
 // the active exercise's overrides on top -- an exercise locks a setting via its
 // `settingsOverrides` export (see src/exercises/index.js).
@@ -69,23 +98,30 @@ function pickValidOverrides(overrides) {
   return clean
 }
 
+const INITIAL_USER_SETTINGS = loadUserSettings()
+
 const useSettingsStore = create((set, get) => ({
-  // Keys the user explicitly changed (updateSetting writes here).
-  userSettings: {},
+  // Keys the user explicitly changed (updateSetting writes here), rehydrated
+  // from localStorage on load.
+  userSettings: INITIAL_USER_SETTINGS,
   // Keys forced by the currently open exercise -- these win.
   exerciseOverrides: {},
   // Derived read surface: DEFAULT_SETTINGS < userSettings < exerciseOverrides.
-  settings: { ...DEFAULT_SETTINGS },
+  settings: mergeSettings(INITIAL_USER_SETTINGS, {}),
 
   updateSetting: (key, value) =>
     set((state) => {
       const userSettings = { ...state.userSettings, [key]: value }
+      saveUserSettings(userSettings)
       return { userSettings, settings: mergeSettings(userSettings, state.exerciseOverrides) }
     }),
 
   // Reset the user's own choices; an exercise's lock stays in place.
   resetSettings: () =>
-    set((state) => ({ userSettings: {}, settings: mergeSettings({}, state.exerciseOverrides) })),
+    set((state) => {
+      saveUserSettings({})
+      return { userSettings: {}, settings: mergeSettings({}, state.exerciseOverrides) }
+    }),
 
   setExerciseOverrides: (overrides) =>
     set((state) => {
