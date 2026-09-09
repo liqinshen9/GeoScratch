@@ -46,6 +46,7 @@ describe('installSceneRuntime', () => {
         'HALO_MAX_IMMUNE_IDS',
         'makeStagedVectorReveal',
         'registerHaloLine',
+        'registerVectorGlyph',
         'threeObjStore',
         'vectorNotation',
       ].sort(),

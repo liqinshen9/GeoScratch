@@ -132,25 +132,27 @@ export function initVectorArithmeticBlock() {
       (value.userData?.anchor && value.userData.anchor.isVector3)
         ? value.userData.anchor.clone()
         : origin.clone();
-    // Collinear operands (a + a, or any parallel pair) put both arrows AND the
-    // result on the same ray from the origin, so all three interpenetrate and
-    // z-fight. Nudge the two operands perpendicular by a visible amount -- big
-    // enough to clear the shaft, so you can see there really are two of them --
-    // and leave the result on the true axis. Non-parallel operands get nothing.
-    const unitOf = (value) => (value.lengthSq() > 1e-12 ? value.clone().normalize() : null);
-    const uUnit = unitOf(uVal);
-    const vUnit = unitOf(vVal);
-    const COLLINEAR_SEPARATION = 0.14;
-    const separation = new THREE.Vector3();
-    if (uUnit && vUnit && Math.abs(uUnit.dot(vUnit)) > 0.999) {
-      const up = Math.abs(uUnit.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
-      separation.crossVectors(uUnit, up).normalize().multiplyScalar(COLLINEAR_SEPARATION);
-    }
-    const uAnchor = anchorOf(uVal).add(separation);
-    const vAnchor = anchorOf(vVal).sub(separation);
-    // Parallel operands sit as three near-touching arrows; halo gaps between
-    // them read as damage, so this block's glyphs opt out of haloing.
-    const glyphOptions = { halo: separation.lengthSq() === 0 };
+    const uAnchor = anchorOf(uVal);
+    const vAnchor = anchorOf(vVal);
+
+    // Two identical operands (a + a) would draw two arrows occupying exactly the
+    // same space -- coincident surfaces the depth test can't order, which shows
+    // up as speckling. Draw one arrow and label it with both names instead.
+    const operandsIdentical =
+      uVal.distanceToSquared(vVal) < 1e-12 && uAnchor.distanceToSquared(vAnchor) < 1e-12;
+
+    // The result of a collinear sum lies along the operands, so its shaft
+    // overlaps theirs; halo gaps between parts of one composite picture read as
+    // damage rather than depth.
+    const uUnit = lenU > 1e-6 ? uVal.clone().normalize() : null;
+    const vUnit = lenV > 1e-6 ? vVal.clone().normalize() : null;
+    const operandsParallel = !!(uUnit && vUnit && Math.abs(uUnit.dot(vUnit)) > 0.999);
+    const glyphOptions = { halo: !operandsParallel };
+    // A collinear sum's result runs straight through its operands. Bias the
+    // result away from the camera so the operand wins the shared stretch
+    // cleanly and the result shows beyond its tip, instead of the two
+    // speckling against each other.
+    const resultGlyphOptions = { halo: !operandsParallel, depthBias: operandsParallel ? 2 : 0 };
 
     const arrowU = window.buildVectorShaftGlyph(
       THREE, baseId + '_u', uAnchor.clone(),
@@ -158,7 +160,7 @@ export function initVectorArithmeticBlock() {
       safeLen(lenU), operandAColor, glyphOptions
     );
 
-    const arrowV = window.buildVectorShaftGlyph(
+    const arrowV = operandsIdentical ? null : window.buildVectorShaftGlyph(
       THREE, baseId + '_v', vAnchor.clone(),
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       safeLen(lenV), operandBColor, glyphOptions
@@ -191,7 +193,7 @@ export function initVectorArithmeticBlock() {
       resObj = window.buildVectorShaftGlyph(
         THREE, baseId + '_r', resultOrigin.clone(), res.clone().normalize(), safeLen(lenR),
         isPointDifference ? window.GeoScratchColors.forInstance('vector', baseId) : window.GeoScratchColors.forRole('result'),
-        glyphOptions
+        resultGlyphOptions
       );
     } else {
       resObj = new THREE.Mesh(
@@ -208,14 +210,15 @@ export function initVectorArithmeticBlock() {
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    tag(arrowU); tag(arrowV); tag(resObj);
+    tag(arrowU); if (arrowV) tag(arrowV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
     if (isPointDifference) {
       group.add(resObj);
     } else {
-      group.add(arrowU, arrowV, resObj);
+      group.add(arrowU, resObj);
+      if (arrowV) group.add(arrowV);
     }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
@@ -240,7 +243,8 @@ export function initVectorArithmeticBlock() {
       : showOperandLabels
         ? [
         { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+        // Identical operands share a tip, so stack the second label below it.
+        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor },
         { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
         : [
@@ -255,7 +259,7 @@ export function initVectorArithmeticBlock() {
         ? [{ obj: resObj, full: safeLen(lenR) }]
         : [
           { obj: arrowU, full: safeLen(lenU) },
-          { obj: arrowV, full: safeLen(lenV) },
+          ...(arrowV ? [{ obj: arrowV, full: safeLen(lenV) }] : []),
           { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 },
         ]
     );
@@ -265,7 +269,7 @@ export function initVectorArithmeticBlock() {
       const base = ${JSON.stringify(block.id)};
       if (!isPointDifference) {
         threeObjStore[base + '_u'] = arrowU;
-        threeObjStore[base + '_v'] = arrowV;
+        if (arrowV) threeObjStore[base + '_v'] = arrowV;
       }
       threeObjStore[base + '_r'] = resObj;
       threeObjStore[base]        = group;

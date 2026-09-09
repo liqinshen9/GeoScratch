@@ -301,9 +301,23 @@ export function buildVectorShaftGlyph(
     : null
   const haloCompanionTube = haloAvailable ? buildHaloCompanion(TUBE_SHAFT_RADIUS) : null
   const haloCompanionRinged = haloAvailable ? buildHaloCompanion(RINGED_SHAFT_RADIUS) : null
+  const glyphMaterials = [fatLineMat, tubeMat, ringedMat, coneLineMat, coneTubeMat, coneRingedMat]
   if (haloAvailable) {
-    for (const mat of [fatLineMat, tubeMat, ringedMat, coneLineMat, coneTubeMat, coneRingedMat]) {
+    for (const mat of glyphMaterials) {
       window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds, 1)
+    }
+  }
+
+  // `options.depthBias` breaks the depth-buffer tie between two glyphs that
+  // genuinely occupy the same space (a collinear sum: the result's shaft runs
+  // right through its operands'). A positive bias pushes this glyph away from
+  // the camera so the other one wins consistently, instead of the two speckling
+  // against each other per-pixel.
+  if (options.depthBias) {
+    for (const mat of glyphMaterials) {
+      mat.polygonOffset = true
+      mat.polygonOffsetFactor = options.depthBias
+      mat.polygonOffsetUnits = options.depthBias
     }
   }
 
