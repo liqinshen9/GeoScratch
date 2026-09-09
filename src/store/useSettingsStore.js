@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS = {
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
   showVectorOriginPoint: false,
+  showUnscaledVector: true,
   showPlanePointNormal: true,
   objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,

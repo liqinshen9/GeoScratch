@@ -215,6 +215,13 @@ export default function SettingsPage() {
                   onChange={(v) => updateSetting('extraThickVectors', v)}
                 />
                 <ToggleRow
+                  label="Show Unscaled Vector"
+                  description="On a Scale Vector block, also draw the original v alongside the scaled k*v"
+                  checked={settings.showUnscaledVector}
+                  settingKey="showUnscaledVector"
+                  onChange={(v) => updateSetting('showUnscaledVector', v)}
+                />
+                <ToggleRow
                   label="Show Tail Point"
                   description="Draw a point marker at the tail of a vector that has a block plugged into its origin socket"
                   checked={settings.showVectorOriginPoint}

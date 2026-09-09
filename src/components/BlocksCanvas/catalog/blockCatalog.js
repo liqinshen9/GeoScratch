@@ -84,6 +84,7 @@ export const BLOCK_CATEGORIES = {
         label: 'Vector operations',
         blocks: [
           { type: 'vector_arithmetic', label: 'Vector arithmetic' },
+          { type: 'vector_scale', label: 'Scale vector' },
           { type: 'scalar_arithmetic', label: 'Scalar arithmetic' },
           { type: 'vector_cross_product', label: 'Cross product' },
           { type: 'vector_dot_product', label: 'Dot product' },

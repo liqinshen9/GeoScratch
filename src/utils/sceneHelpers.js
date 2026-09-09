@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { resolveRefTargetBlock } from '@/utils/variableReference'
 
 const PLANE_EXTENT = 2000
 
@@ -90,6 +91,22 @@ export function scalarValueFromBlock(block, fallback = 0) {
 export function vector3FromBlock(block) {
   if (!block) return null
 
+  // A variable wrapper is transparent; a reference resolves to its wrapper.
+  // See docs/architecture/naming-registry.md.
+  if (block.type === 'geo_variable') {
+    return vector3FromBlock(block.getInputTargetBlock('VALUE'))
+  }
+  if (block.type === 'geo_variable_ref') {
+    return vector3FromBlock(resolveRefTargetBlock(block))
+  }
+
+  if (block.type === 'vector_scale') {
+    const v = vector3FromBlock(block.getInputTargetBlock('V'))
+    if (!v) return null
+    const k = getScalarInputValue(block, 'K', null, 1)
+    return Number.isFinite(k) ? v.clone().multiplyScalar(k) : null
+  }
+
   const num = (name) => {
     const v = Number(block.getFieldValue(name))
     return Number.isFinite(v) ? v : 0
@@ -111,6 +128,34 @@ export function vector3FromBlock(block) {
   }
 
   return null
+}
+
+// The name a vector-producing block should be labelled with, mirroring what the
+// generated code stamps on the value at runtime. Keeps the block-side previews
+// (vector_arithmetic's drawer) reading the same as the 3D scene labels.
+export function vectorLabelFromBlock(block) {
+  if (!block) return ''
+
+  const ownName = block.getField?.('GEOSCRATCH_NAME')?.getText?.()
+  if (typeof ownName === 'string' && ownName.trim()) return ownName.trim()
+
+  if (block.type === 'geo_variable') return vectorLabelFromBlock(block.getInputTargetBlock('VALUE'))
+  if (block.type === 'geo_variable_ref') return vectorLabelFromBlock(resolveRefTargetBlock(block))
+
+  if (block.type === 'vector_scale') {
+    const inner = vectorLabelFromBlock(block.getInputTargetBlock('V'))
+    if (!inner) return ''
+    return `${getScalarInputValue(block, 'K', null, 1)}\u00b7${inner}`
+  }
+
+  if (block.type === 'vector_arithmetic') {
+    const a = vectorLabelFromBlock(block.getInputTargetBlock('U'))
+    const b = vectorLabelFromBlock(block.getInputTargetBlock('V'))
+    if (!a || !b) return ''
+    return `${a} ${block.getFieldValue('OP') === 'subtract' ? '\u2212' : '+'} ${b}`
+  }
+
+  return ''
 }
 
 export function getScalarInputValue(block, inputName, fieldName, fallback) {

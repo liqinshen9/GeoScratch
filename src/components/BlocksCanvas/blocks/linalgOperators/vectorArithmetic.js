@@ -1,7 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
-import { vector3FromBlock } from '@/utils/sceneHelpers'
+import { vector3FromBlock, vectorLabelFromBlock } from '@/utils/sceneHelpers'
 import { appendVectorPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPrimitives/matrixPreview'
 
 let REGISTERED = false
@@ -23,12 +23,10 @@ function columnVec(name, vec) {
   return `<span class="vec-drawer-term">${tag}<span class="vec-drawer-col">${rows}</span></span>`
 }
 
-// The connected operand block's own variable name (V1, V2, ...), if any.
+// The name this operand should carry -- a plain vector's own name, or the
+// expression that produced it ("3\u00b7V2"), seeing through variable wrappers.
 function operandName(block, inputName) {
-  const target = block.getInputTargetBlock(inputName)
-  const raw =
-    target?.getField('GEOSCRATCH_NAME')?.getText?.() || target?.getFieldValue?.('GEOSCRATCH_NAME')
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : ''
+  return vectorLabelFromBlock(block.getInputTargetBlock(inputName))
 }
 
 // The connected operand's own instance colour, as a runtime expression. Plugging
@@ -118,8 +116,16 @@ export function initVectorArithmeticBlock() {
     const lenU = uVal.length();
     const lenV = vVal.length();
 
-    const operandAColor = ${uColorExpr};
-    const operandBColor = ${vColorExpr};
+    // A plain vector block keeps its own colour, but an operand that is itself a
+    // computed vector (Scale Vector's "3\u00b7V2") stays the result colour rather
+    // than being repainted as somebody's operand.
+    const isComputed = (value) => value?.userData?.geoType === 'named_vector_expression';
+    const operandAColor = isComputed(uVal)
+      ? window.GeoScratchColors.forRole('result')
+      : ${uColorExpr};
+    const operandBColor = isComputed(vVal)
+      ? window.GeoScratchColors.forRole('result')
+      : ${vColorExpr};
 
     // Vector arithmetic is anchor-agnostic: each operand is drawn from the
     // origin, so a + b and a - b read as free vectors. The exception is an
@@ -179,9 +185,11 @@ export function initVectorArithmeticBlock() {
     );
     const pointLabel = vVal.userData?.label || 'Q';
     const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
-    const genericResultLabel = showOperandLabels
-      ? 'result'
-      : vectorNotation.binaryLabel(uVal, '${op === 'add' ? '+' : '-'}', vVal);
+    // Name the result by its expression ("a + b"), never a generic "result" --
+    // Scale Vector labels its result "3\u00b7a", and the two should read alike.
+    const genericResultLabel = vectorNotation.binaryLabel(
+      uVal, '${op === 'add' ? '+' : '\u2212'}', vVal, ${uFallback}, ${vFallback}
+    );
     const resultOrigin = isPointDifference ? vVal.clone() : origin.clone();
     const resultTip = isPointDifference ? uVal.clone() : res.clone();
     const resultLabelPosition = isPointDifference
