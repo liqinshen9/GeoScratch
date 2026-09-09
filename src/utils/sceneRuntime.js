@@ -13,7 +13,7 @@ import {
   MAX_IMMUNE_IDS,
 } from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
-import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
+import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorReveal'
 
 /**
  * The runtime API available to block builder functions. Builders are
@@ -38,6 +38,7 @@ import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
  * @property {number} HALO_MAX_IMMUNE_IDS
  * @property {Function} buildVectorShaftGlyph
  * @property {Function} makeStagedVectorReveal
+ * @property {Function} orderRevealParts
  */
 
 /**
@@ -100,6 +101,7 @@ export function installSceneRuntime(workspace, options = {}) {
   window.buildVectorShaftGlyph = buildVectorShaftGlyph
   window.registerVectorGlyph = registerVectorGlyph
   window.makeStagedVectorReveal = makeStagedVectorReveal
+  window.orderRevealParts = orderRevealParts
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()

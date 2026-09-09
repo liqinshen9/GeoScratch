@@ -141,6 +141,21 @@ export function initVectorArithmeticBlock() {
     const uAnchor = anchorOf(uVal);
     const vAnchor = anchorOf(vVal);
 
+    // The block that produced an operand may already be drawing that exact
+    // arrow from that exact tail (a standalone vector block, Scale Vector's
+    // k\u00b7v). A second coincident copy can't be depth-ordered, so we draw
+    // none: the reveal below grows the owner's arrow instead, and the owner
+    // keeps the label. Same rule as duplicateVectorRegistry.js, across blocks.
+    // Returns the owner's glyphs to animate (possibly []), or null when this
+    // operand is ours to draw.
+    const ownerGlyphs = (value, anchor) => {
+      const glyph = value.userData?.glyph;
+      if (!glyph?.anchor?.isVector3 || glyph.anchor.distanceToSquared(anchor) >= 1e-12) return null;
+      return Array.isArray(glyph.objs) ? glyph.objs.filter(Boolean) : [];
+    };
+    const uOwnerGlyphs = ownerGlyphs(uVal, uAnchor);
+    const vOwnerGlyphs = ownerGlyphs(vVal, vAnchor);
+
     // Two identical operands (a + a) would draw two arrows occupying exactly the
     // same space -- coincident surfaces the depth test can't order, which shows
     // up as speckling. Draw one arrow and label it with both names instead.
@@ -160,13 +175,13 @@ export function initVectorArithmeticBlock() {
     // speckling against each other.
     const resultGlyphOptions = { halo: !operandsParallel, depthBias: operandsParallel ? 2 : 0 };
 
-    const arrowU = window.buildVectorShaftGlyph(
+    const arrowU = uOwnerGlyphs ? null : window.buildVectorShaftGlyph(
       THREE, baseId + '_u', uAnchor.clone(),
       (lenU > 0 ? uVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       safeLen(lenU), operandAColor, glyphOptions
     );
 
-    const arrowV = operandsIdentical ? null : window.buildVectorShaftGlyph(
+    const arrowV = (operandsIdentical || vOwnerGlyphs) ? null : window.buildVectorShaftGlyph(
       THREE, baseId + '_v', vAnchor.clone(),
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
       safeLen(lenV), operandBColor, glyphOptions
@@ -218,14 +233,15 @@ export function initVectorArithmeticBlock() {
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    tag(arrowU); if (arrowV) tag(arrowV); tag(resObj);
+    if (arrowU) tag(arrowU); if (arrowV) tag(arrowV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
     if (isPointDifference) {
       group.add(resObj);
     } else {
-      group.add(arrowU, resObj);
+      if (arrowU) group.add(arrowU);
+      group.add(resObj);
       if (arrowV) group.add(arrowV);
     }
     group.userData.geoType='geo_vector_group';
@@ -250,33 +266,55 @@ export function initVectorArithmeticBlock() {
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
+        // An operand we left to its owner is already labelled by it.
+        ...(uOwnerGlyphs ? [] : [{ anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor }]),
         // Identical operands share a tip, so stack the second label below it.
-        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor },
+        ...(vOwnerGlyphs ? [] : [{ anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor }]),
         { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
         : [
         { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ];
 
-    // Staged reveal for the play/scrub transport (AnimationDriver): grow a from
-    // its anchor, then b from its anchor, then the result -- exactly the
-    // arrangement drawn above, uncovered in sequence.
+    // Staged reveal for the play/scrub transport (AnimationDriver): grow the
+    // operands from their anchors, then the result -- exactly the arrangement
+    // drawn above, uncovered in sequence. Socket order is not reveal order: an
+    // operand carrying a "from point:" tail hangs off the other one's tip, and
+    // has to grow after it rather than out of a point in mid-air.
+    // See docs/architecture/animation.md#reveal-order-follows-the-tails.
+    const orderParts = window.orderRevealParts || ((p) => p);
+    // An operand we left to its owner still gets its stage. Where the owner
+    // knows how to reveal itself (Scale Vector: v, then k\u00b7v) the slot is
+    // handed to that closure, so its whole picture builds inside this one --
+    // otherwise the slot just grows the owner's arrow. Either way the scene
+    // starts empty and builds from the origin out.
+    const ownerReveal = (value) => {
+      const owner = window.threeObjStore?.[value.userData?.glyph?.blockId];
+      const animate = owner?.userData?.animate;
+      return typeof animate === 'function' ? animate : null;
+    };
+    const operandStage = (arrow, ownerObjs, value, anchor, full) => {
+      const where = { anchor: anchor.toArray(), tip: anchor.clone().add(value).toArray() };
+      if (arrow) return [{ obj: arrow, full, ...where }];
+      const animate = ownerReveal(value);
+      if (animate) return [{ animate, ...where }];
+      return ownerObjs?.length ? [{ objs: ownerObjs, full, ...where }] : [];
+    };
+    const operandParts = orderParts([
+      ...operandStage(arrowU, uOwnerGlyphs, uVal, uAnchor, safeLen(lenU)),
+      ...operandStage(arrowV, vOwnerGlyphs, vVal, vAnchor, safeLen(lenV)),
+    ]);
     group.userData.animate = window.makeStagedVectorReveal(
       isPointDifference
         ? [{ obj: resObj, full: safeLen(lenR) }]
-        : [
-          { obj: arrowU, full: safeLen(lenU) },
-          ...(arrowV ? [{ obj: arrowV, full: safeLen(lenV) }] : []),
-          { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 },
-        ]
+        : [...operandParts, { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 }]
     );
 
     // Register
     if (typeof threeObjStore==='object' && threeObjStore) {
       const base = ${JSON.stringify(block.id)};
       if (!isPointDifference) {
-        threeObjStore[base + '_u'] = arrowU;
+        if (arrowU) threeObjStore[base + '_u'] = arrowU;
         if (arrowV) threeObjStore[base + '_v'] = arrowV;
       }
       threeObjStore[base + '_r'] = resObj;

@@ -174,6 +174,9 @@ export function initVec3Block() {
       }
       visual.userData.geoType = 'geo_vector';
       visual.userData.srcBlockId = ${blockId};
+      // The shaft itself, before the tail-marker wrapper below replaces
+      // visual with a group -- a group can't be grown, this can.
+      const shaftGlyph = visual;
       visual.userData.labelAnchors = { tip: { type: 'world', position: [tip.x, tip.y, tip.z] } };
       visual.userData.labels = [
         { anchor: 'tip', name: label, value: vectorNotation.formatVector(vec), distanceFactor: 8, offset: [0.12, 0.12, 0], color: vectorColor },
@@ -245,6 +248,24 @@ export function initVec3Block() {
         });
       } else if (typeof threeObjStore === 'object' && threeObjStore) {
         threeObjStore[${blockId}] = visual;
+      }
+      // Provenance: this exact arrow is already on screen, from this tail, so
+      // an operator downstream draws no coincident copy of it (and its reveal
+      // skips a stage that could only grow underneath this one).
+      // See vectorArithmetic.js's ownerGlyphs.
+      if (len > 1e-8) {
+        const ownerShaft = duplicateOwnerId
+          ? window.threeObjStore?.[duplicateOwnerId]
+          : shaftGlyph;
+        vec.userData = {
+          ...(vec.userData || {}),
+          glyph: {
+            blockId: duplicateOwnerId || ${blockId},
+            anchor: origin.clone(),
+            // What a consumer's staged reveal grows in place of a copy.
+            objs: ownerShaft?.userData?.setVectorLength ? [ownerShaft] : [],
+          },
+        };
       }
       `
           : ''
