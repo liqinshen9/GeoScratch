@@ -93,10 +93,38 @@ function resolveVectorColor(blockId, color) {
 // Builds a vector's shaft in all 3 styles + arrowhead cones, live-reacting to
 // settings. Not shared with geoVectorLine.js.
 // See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
-export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length, color) {
+export function buildVectorShaftGlyph(
+  THREE,
+  blockId,
+  origin,
+  direction,
+  length,
+  color,
+  options = {},
+) {
   const group = new THREE.Group()
   const shaftColor = resolveVectorColor(blockId, color)
   const { bandA, bandB } = deriveRingBandColors(THREE, shaftColor)
+
+  // Tiny deterministic per-glyph perpendicular nudge, so two coincident vectors
+  // (Vector Arithmetic with the same vector in both sockets, where the operand
+  // glyphs are "<id>_u" and "<id>_v") don't z-fight. Same technique and
+  // magnitude as geoVectorLine.js -- see
+  // docs/architecture/vector-line-glyphs.md#z-fight-jitter.
+  let blockHash = 2166136261
+  const blockIdStr = String(blockId)
+  for (let i = 0; i < blockIdStr.length; i += 1) {
+    blockHash = ((blockHash ^ blockIdStr.charCodeAt(i)) * 16777619) >>> 0
+  }
+  const jitterAngle = (blockHash % 360) * (Math.PI / 180)
+  const jitterUp =
+    Math.abs(direction.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
+  const jitterA = new THREE.Vector3().crossVectors(direction, jitterUp).normalize()
+  const jitterB = new THREE.Vector3().crossVectors(direction, jitterA).normalize()
+  const Z_FIGHT_JITTER = 0.0015
+  group.position
+    .addScaledVector(jitterA, Math.cos(jitterAngle) * Z_FIGHT_JITTER)
+    .addScaledVector(jitterB, Math.sin(jitterAngle) * Z_FIGHT_JITTER)
 
   let lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
   let tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
@@ -226,7 +254,12 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
   // gap on the farther glyph -- resolved per-pixel by the halo passes, no
   // pairwise math. The Halos setting only gates NEW glyphs.
   // See docs/architecture/halos.md.
-  const haloSettingEnabled = useSettingsStore?.getState().settings?.haloEnabled !== false
+  // `options.halo: false` opts a glyph out entirely -- used where several
+  // near-parallel glyphs belong to one composite picture (vector_arithmetic's
+  // operands + result when the operands are parallel) and gapping them against
+  // each other reads as damage rather than depth.
+  const haloSettingEnabled =
+    options.halo !== false && useSettingsStore?.getState().settings?.haloEnabled !== false
   const haloAvailable =
     haloSettingEnabled &&
     window.HALO_LAYER != null &&

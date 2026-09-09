@@ -83,6 +83,36 @@ export function scalarValueFromBlock(block, fallback = 0) {
   return fallback
 }
 
+// Block-side evaluator for a vector-producing block, mirroring how
+// computePipelineMatrix* walks transform steps for the matrix preview. Returns
+// null for anything it can't evaluate statically (arbitrary operators, missing
+// operands) so callers can show a placeholder.
+export function vector3FromBlock(block) {
+  if (!block) return null
+
+  const num = (name) => {
+    const v = Number(block.getFieldValue(name))
+    return Number.isFinite(v) ? v : 0
+  }
+
+  if (block.type === 'linalg_vec3' || block.type === 'linalg_point') {
+    return new THREE.Vector3(num('X'), num('Y'), num('Z'))
+  }
+
+  if (block.type === 'linalg_vec4') {
+    return new THREE.Vector3(num('X'), num('Y'), num('Z'))
+  }
+
+  if (block.type === 'vector_arithmetic') {
+    const u = vector3FromBlock(block.getInputTargetBlock('U'))
+    const v = vector3FromBlock(block.getInputTargetBlock('V'))
+    if (!u || !v) return null
+    return block.getFieldValue('OP') === 'subtract' ? u.clone().sub(v) : u.clone().add(v)
+  }
+
+  return null
+}
+
 export function getScalarInputValue(block, inputName, fieldName, fallback) {
   const connected = block?.getInputTargetBlock?.(inputName)
   if (connected) return scalarValueFromBlock(connected, fallback)

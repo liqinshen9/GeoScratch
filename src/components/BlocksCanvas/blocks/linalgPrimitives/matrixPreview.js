@@ -3,15 +3,18 @@ import { Field } from 'blockly/core'
 import { blockMoveChangesGeneratedCode } from '@/utils/blocklyEventFilters'
 import { formatMatrixHtml } from './homogeneousMatrix.js'
 
+/** @typedef {(block: Block) => string} RenderHtmlFn */
+
 /** @typedef {import('blockly/core').BlockSvg} BlockSvg */
 /** @typedef {import('blockly/core').WorkspaceSvg} WorkspaceSvg */
 /** @typedef {import('blockly/core').Block} Block */
 /** @typedef {'3x3' | '4x4'} MatrixPreviewMode */
 /** @typedef {(block: Block) => number[][]} ComputeMatrixFn */
 
-const MATRIX_FIELD_NAMES = ['MATRIX_3X3', 'MATRIX_4X4']
+const DRAWER_BUTTON_FIELD_NAMES = ['MATRIX_3X3', 'MATRIX_4X4', 'VECTOR_PREVIEW']
 const PIPELINE_TOGGLE_COLOUR = '#5dd979'
 const TRANSFORM_STEP_TOGGLE_COLOUR = '#ff914d'
+const VECTOR_TOGGLE_COLOUR = '#5dd979'
 const TOGGLE_TEXT_COLOUR = '#111827'
 
 /** @type {HTMLDivElement | null} */
@@ -23,8 +26,8 @@ let inner = null
  *   workspace: WorkspaceSvg
  *   blockId: string
  *   field: Field
- *   mode: MatrixPreviewMode
- *   computeMatrix: ComputeMatrixFn
+ *   mode: MatrixPreviewMode | 'vector'
+ *   renderHtml: RenderHtmlFn
  * } | null} */
 let anchor = null
 
@@ -73,22 +76,25 @@ export class FieldMatrixSpacer extends Field {
   }
 }
 
-class FieldMatrixPreview extends Field {
-  /** @type {MatrixPreviewMode} */
+// Shared base for the little coloured drawer-toggle buttons (matrix preview,
+// vector-arithmetic preview). Subclasses supply a `mode` tag and an
+// html-builder for the drawer body.
+class FieldDrawerButton extends Field {
+  /** @type {MatrixPreviewMode | 'vector'} */
   mode_
-  /** @type {ComputeMatrixFn} */
-  computeMatrix_
+  /** @type {RenderHtmlFn} */
+  renderHtml_
   /** @type {boolean} */
   isOpen_ = false
 
   EDITABLE = false
   SERIALIZABLE = false
 
-  /** @param {string} label @param {MatrixPreviewMode} mode @param {ComputeMatrixFn} computeMatrix */
-  constructor(label, mode, computeMatrix) {
+  /** @param {string} label @param {MatrixPreviewMode | 'vector'} mode @param {RenderHtmlFn} renderHtml */
+  constructor(label, mode, renderHtml) {
     super(label, null)
     this.mode_ = mode
-    this.computeMatrix_ = computeMatrix
+    this.renderHtml_ = renderHtml
   }
 
   isSerializable() {
@@ -102,10 +108,7 @@ class FieldMatrixPreview extends Field {
   }
 
   getButtonColour() {
-    const block = this.getSourceBlock()
-    return block?.type === 'transform_pipeline'
-      ? PIPELINE_TOGGLE_COLOUR
-      : TRANSFORM_STEP_TOGGLE_COLOUR
+    return PIPELINE_TOGGLE_COLOUR
   }
 
   applyButtonColour() {
@@ -136,12 +139,26 @@ class FieldMatrixPreview extends Field {
     const block = /** @type {BlockSvg | null} */ (this.getSourceBlock())
     const workspace = /** @type {WorkspaceSvg | null} */ (block?.workspace)
     if (!block || !workspace || workspace.isFlyout || workspace.options.readOnly) return
-    toggleDrawer(workspace, block, this, this.mode_, this.computeMatrix_)
+    toggleDrawer(workspace, block, this, this.mode_, this.renderHtml_)
   }
 
   dispose() {
     if (anchor?.field === this) closeDrawer()
     super.dispose()
+  }
+}
+
+class FieldMatrixPreview extends FieldDrawerButton {
+  getButtonColour() {
+    return this.getSourceBlock()?.type === 'transform_pipeline'
+      ? PIPELINE_TOGGLE_COLOUR
+      : TRANSFORM_STEP_TOGGLE_COLOUR
+  }
+}
+
+class FieldVectorPreview extends FieldDrawerButton {
+  getButtonColour() {
+    return VECTOR_TOGGLE_COLOUR
   }
 }
 
@@ -152,13 +169,12 @@ function getBlock() {
 
 function setButtonHighlights(block) {
   if (!block) return
-  for (const name of MATRIX_FIELD_NAMES) {
+  for (const name of DRAWER_BUTTON_FIELD_NAMES) {
     const f = block.getField(name)
-    if (f instanceof FieldMatrixPreview) f.setActive(false)
+    if (f instanceof FieldDrawerButton) f.setActive(false)
   }
   if (!anchor || anchor.blockId !== block.id) return
-  const active = block.getField(anchor.mode === '3x3' ? 'MATRIX_3X3' : 'MATRIX_4X4')
-  if (active instanceof FieldMatrixPreview) active.setActive(true)
+  if (anchor.field instanceof FieldDrawerButton) anchor.field.setActive(true)
 }
 
 function ensureShell() {
@@ -182,10 +198,15 @@ function refreshContent() {
     closeDrawer()
     return
   }
-  const title = anchor.mode === '3x3' ? '3x3 matrix' : '4x4 homogeneous matrix'
-  inner.innerHTML = `
+  inner.innerHTML = anchor.renderHtml(block)
+}
+
+/** @param {MatrixPreviewMode} mode @param {ComputeMatrixFn} computeMatrix @returns {RenderHtmlFn} */
+function matrixRenderHtml(mode, computeMatrix) {
+  const title = mode === '3x3' ? '3x3 matrix' : '4x4 homogeneous matrix'
+  return (block) => `
     <div class="matrix-drawer-title">${title}</div>
-    <div class="matrix-drawer-table-wrap">${formatMatrixHtml(anchor.computeMatrix(block))}</div>
+    <div class="matrix-drawer-table-wrap">${formatMatrixHtml(computeMatrix(block))}</div>
   `
 }
 
@@ -225,20 +246,67 @@ function syncLayout() {
     closeDrawer()
     return
   }
-  const rect = block.getSvgRoot().getBoundingClientRect()
-  const isPipeline = block.type === 'transform_pipeline'
-  const h = isPipeline ? 132 : getSingleBlockHeight(block)
+  // Left/top/bottom come from the block group's rect (the true visual edge --
+  // the block's own <path> bbox sits inset from it by the output-tab width, and
+  // that inset was the gap on the drawer's left). Width comes from the path
+  // bbox so a pipeline's connected step blocks don't stretch the drawer.
+  const groupRect = block.getSvgRoot().getBoundingClientRect()
+  const svgPath = block.pathObject?.svgPath
+  const pathRect = svgPath?.getBoundingClientRect()
+  // A value block's outline starts at "m <TAB_WIDTH>,0" -- local x=0 is the
+  // output tab's tip, x=TAB_WIDTH is the body's left edge. Anchoring to the
+  // bbox left put the drawer out at the tab tip, overhanging the block by the
+  // tab width times the workspace zoom.
+  const tabMatch = /^\s*m\s+(-?[\d.]+)/i.exec(svgPath?.getAttribute('d') || '')
+  const bodyInset = tabMatch ? parseFloat(tabMatch[1]) * (block.workspace?.scale || 1) : 0
+  const rect = {
+    left: groupRect.left + bodyInset,
+    top: groupRect.top,
+    right: groupRect.right,
+    bottom: pathRect?.bottom || groupRect.bottom,
+    width: (pathRect?.width || groupRect.width) - bodyInset,
+  }
+  // Both the pipeline and vector_arithmetic drop the drawer below the block,
+  // spanning the block's own width; matrix primitives slide it out to the right.
+  const isBelow = anchor.mode === 'vector' || block.type === 'transform_pipeline'
 
-  shell.classList.toggle('matrix-drawer-shell--below', isPipeline)
+  shell.classList.toggle('matrix-drawer-shell--below', isBelow)
 
-  shell.style.top = isPipeline ? `${rect.bottom - 2}px` : `${rect.top}px`
-  shell.style.left = isPipeline ? `${rect.left}px` : `${rect.right}px`
-  shell.style.width = isPipeline ? `${rect.width}px` : ''
-  shell.style.height = `${h}px`
+  // Clear any previous scaling before measuring intrinsic content size.
+  if (inner) {
+    inner.style.transform = ''
+    inner.style.width = ''
+  }
+
+  shell.style.top = isBelow ? `${rect.bottom - 2}px` : `${rect.top}px`
+  shell.style.left = isBelow ? `${rect.left}px` : `${rect.right}px`
+  shell.style.width = isBelow ? `${rect.width}px` : ''
+  shell.style.minWidth = ''
   shell.style.minHeight = ''
   shell.style.transform = ''
   shell.style.transformOrigin = 'top left'
-  fitContent()
+
+  if (!isBelow) {
+    shell.style.height = `${getSingleBlockHeight(block)}px`
+    fitContent()
+    return
+  }
+
+  // The drawer is exactly the block's width, always. If the expression doesn't
+  // fit that width it is scaled down to fit -- the drawer never grows past the
+  // block and never spills content past its own edge. PANEL_CHROME is the
+  // panel's own padding + border.
+  const PANEL_CHROME = 20
+  const availWidth = Math.max(1, rect.width - PANEL_CHROME)
+  const needWidth = inner ? inner.scrollWidth : 0
+  const scale = needWidth > availWidth ? Math.max(0.4, availWidth / needWidth) : 1
+  const needHeight = inner ? inner.scrollHeight : 0
+  shell.style.height = `${Math.max(40, needHeight * scale + 10)}px`
+  if (scale < 1 && inner) {
+    inner.style.transformOrigin = 'top left'
+    inner.style.transform = `scale(${scale})`
+    inner.style.width = `${100 / scale}%`
+  }
 }
 
 function stopTracking() {
@@ -275,7 +343,10 @@ function bindListeners() {
   workspaceListener = (event) => {
     if (!anchor) return
     const anchorBlock = getBlock()
-    const isPipelineAnchor = anchorBlock?.type === 'transform_pipeline'
+    // Anchors whose drawer contents depend on descendant blocks (nested steps,
+    // plugged-in operands): refresh on any move/field change, not just the
+    // anchor block's own.
+    const isPipelineAnchor = anchorBlock?.type === 'transform_pipeline' || anchor.mode === 'vector'
     if (event.type === Blockly.Events.BLOCK_DELETE && event.blockId === anchor.blockId) {
       closeDrawer()
       return
@@ -348,9 +419,9 @@ function closeDrawer() {
   anchor = null
 }
 
-function openDrawer(workspace, block, field, mode, computeMatrix) {
+function openDrawer(workspace, block, field, mode, renderHtml) {
   ensureShell()
-  anchor = { workspace, blockId: block.id, field, mode, computeMatrix }
+  anchor = { workspace, blockId: block.id, field, mode, renderHtml }
   refreshContent()
   syncLayout()
   shell.classList.add('open')
@@ -360,7 +431,7 @@ function openDrawer(workspace, block, field, mode, computeMatrix) {
   requestAnimationFrame(syncLayout)
 }
 
-function toggleDrawer(workspace, block, field, mode, computeMatrix) {
+function toggleDrawer(workspace, block, field, mode, renderHtml) {
   if (anchor?.field === field && shell?.classList.contains('open')) {
     closeDrawer()
     return
@@ -368,14 +439,14 @@ function toggleDrawer(workspace, block, field, mode, computeMatrix) {
   if (anchor?.blockId === block.id && shell?.classList.contains('open')) {
     anchor.field = field
     anchor.mode = mode
-    anchor.computeMatrix = computeMatrix
+    anchor.renderHtml = renderHtml
     refreshContent()
     syncLayout()
     setButtonHighlights(block)
     return
   }
   if (shell?.classList.contains('open')) closeDrawer()
-  openDrawer(workspace, block, field, mode, computeMatrix)
+  openDrawer(workspace, block, field, mode, renderHtml)
 }
 
 /**
@@ -394,6 +465,28 @@ export function appendMatrixPreviewUI(block, mat3, mat4, options = {}) {
   block
     .appendDummyInput('MATRIX_PREVIEW')
     .setAlign(Blockly.inputs.Align.RIGHT)
-    .appendField(new FieldMatrixPreview('3x3', '3x3', mat3), 'MATRIX_3X3')
-    .appendField(new FieldMatrixPreview('4x4', '4x4', mat4), 'MATRIX_4X4')
+    .appendField(new FieldMatrixPreview('3x3', '3x3', matrixRenderHtml('3x3', mat3)), 'MATRIX_3X3')
+    .appendField(new FieldMatrixPreview('4x4', '4x4', matrixRenderHtml('4x4', mat4)), 'MATRIX_4X4')
+}
+
+/**
+ * A single preview button that opens the shared drawer with arbitrary HTML.
+ * Used by vector_arithmetic to show its operands and result.
+ * @param {Block} block
+ * @param {RenderHtmlFn} renderHtml
+ */
+export function appendVectorPreviewUI(block, renderHtml, options = {}) {
+  const spacerHeight = options.spacerHeight ?? 0
+  // Force the button onto its own row below the (inline) operand inputs so the
+  // block doesn't grow wide.
+  if (block.appendEndRowInput) block.appendEndRowInput('VECTOR_PREVIEW_BREAK')
+  if (spacerHeight > 0) {
+    block
+      .appendDummyInput('MATRIX_MIN_SPACER')
+      .appendField(new FieldMatrixSpacer(spacerHeight), 'MIN_SPACER')
+  }
+  block
+    .appendDummyInput('VECTOR_PREVIEW_ROW')
+    .setAlign(Blockly.inputs.Align.RIGHT)
+    .appendField(new FieldVectorPreview('show', 'vector', renderHtml), 'VECTOR_PREVIEW')
 }
