@@ -5,9 +5,9 @@
 **Implemented and shipped for line-x-line crossings on all three line styles**
 (`plain_tube`: commits `db5383b`, `3a92b76`, `371c15d`; `plain_line`/`ringed_tube`:
 this round). `illuminated_line` was removed from the project entirely (no longer
-a style to support). All vector glyphs (#46) still render crossings with no halo
-treatment at all -- see "Remaining scope" below. #44/#45/#46 are still open on
-GitHub; the line-x-line slice of #45 is done, its line-x-vector half is not.
+a style to support). Vector glyphs (#46) are now wired too, including
+line-x-vector crossings behind their own `haloLineVectorEnabled` setting -- see
+"Vectors (#46) -- built" below. #44/#45/#46 are still open on GitHub.
 
 ## Context
 
@@ -69,10 +69,38 @@ needed this):
   `haloPerspectiveDepthToViewZ` copy in the injected shader code instead of
   depending on the chunk being present.
 
+## Vectors (#46) -- built
+
+`utils/vectorShaftGlyph.js` (the single vector glyph factory) now wires the same
+depth-trick as `geoVectorLine.js`: one inflated companion cylinder per style
+spanning the whole vector, `applyHaloDiscardMaterial` on all six real materials
+(3 shafts + 3 heads, including the flat head's `MeshBasicMaterial`), and
+`registerHaloLine` so a genuine 3D touch -- e.g. two vectors drawn from a shared
+tail -- marks the pair mutually immune. Companions resize/reposition in the
+in-place `setVectorLength` path.
+
+### line-x-vector gating
+
+The intersection registry is shared, so vector companions and line companions
+land in the same prepass target -- line-x-vector crossings gap automatically
+once vectors are wired. That pairing is put behind its own setting
+(`haloLineVectorEnabled`, default on) rather than always-on:
+
+- `haloIdMaterial.js` tags each companion with a **kind** in the blue channel
+  (0 = line, 1 = vector).
+- `haloDilateShader.js` carries the winning texel's kind through to the dilated
+  target's B channel.
+- `haloDiscardShader.js` takes a `selfKind` arg and a `haloCrossTypeEnabled`
+  uniform; when that uniform is off it skips the discard for any pair whose
+  kinds differ. Same-kind crossings (line-line, vector-vector) are never
+  affected by it.
+- `HaloUniformSync.jsx` pushes `haloCrossTypeEnabled` from
+  `settings.haloLineVectorEnabled` every frame.
+
 ## Remaining scope (not built)
 
-- **Vectors (#46), entirely untouched**: no halo wiring anywhere in `linalgPrimitives/vector3.js`'s `ArrowHelper`/sphere glyph, nor in `linalgOperators/vectorArithmetic.js`, `vectorCross.js`, `vectorNormalise.js`, `vectorProject.js`, or `dotProductVisualCodegen.js`. A vector crossing a line, or another vector, currently just z-fights/occludes normally with no gap. The detection/rendering infra (`haloIntersectionRegistry.js`, `haloDiscardShader.js`, the companion-mesh pattern) is reusable as-is -- this is wiring work, not new architecture.
-- **Near-coincident/parallel vector pairs**: #46 flags this as "not yet confirmed whether it reproduces the pre-#21 z-fighting bug" -- unchecked.
+- **Near-coincident/parallel vector pairs**: #46 flags this as "not yet
+  confirmed whether it reproduces the pre-#21 z-fighting bug" -- unchecked.
 
 ## Manual verification (established this round)
 

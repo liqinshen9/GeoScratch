@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   extraLargePoints: false,
   mattePoints: false,
   haloEnabled: true,
+  haloLineVectorEnabled: true,
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
   showVectorOriginPoint: false,

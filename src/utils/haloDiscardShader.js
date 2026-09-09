@@ -8,16 +8,20 @@ const DEPTH_BIAS_WORLD_UNITS = 0.01
 // occluded fragment discards before any shading. Reads HaloDilatePass's
 // combined ID+depth target. `immuneIds` is shared by reference with
 // haloIntersectionRegistry.js. See docs/architecture/halos.md.
-export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
+export function applyHaloDiscardMaterial(material, selfId, immuneIds, selfKind = 0) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.haloTex = { value: null }
     // Must be a real THREE.Vector2, not a plain object.
     // See docs/architecture/halos.md#vector2-uniform.
     shader.uniforms.haloResolution = { value: new THREE.Vector2(1, 1) }
     shader.uniforms.selfHaloId = { value: selfId }
+    shader.uniforms.selfHaloKind = { value: selfKind }
     shader.uniforms.haloCameraNear = { value: 0.1 }
     shader.uniforms.haloCameraFar = { value: 5000 }
     shader.uniforms.haloEnabled = { value: 1.0 }
+    // Gates crossings between different kinds (line vs vector) only; same-kind
+    // crossings are unaffected. Pushed from settings.haloLineVectorEnabled.
+    shader.uniforms.haloCrossTypeEnabled = { value: 1.0 }
     shader.uniforms.haloImmuneIds = { value: immuneIds }
 
     shader.fragmentShader =
@@ -25,9 +29,11 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
       uniform sampler2D haloTex;
       uniform vec2 haloResolution;
       uniform float selfHaloId;
+      uniform float selfHaloKind;
       uniform float haloCameraNear;
       uniform float haloCameraFar;
       uniform float haloEnabled;
+      uniform float haloCrossTypeEnabled;
       uniform float haloImmuneIds[${MAX_IMMUNE_IDS}];
       // Local copy of three's <packing> perspectiveDepthToViewZ -- LineMaterial
       // omits that chunk. See docs/architecture/halos.md#packing-chunk.
@@ -44,6 +50,10 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
         vec4 haloSample = texture2D(haloTex, haloUv);
         float otherId = floor(haloSample.r * 255.0 + 0.5);
         float otherDepth = haloSample.g;
+        float otherKind = haloSample.b;
+        // Line-x-vector crossing, and that pairing is toggled off: leave it be.
+        bool crossTypeSuppressed =
+          haloCrossTypeEnabled < 0.5 && abs(otherKind - selfHaloKind) > 0.5;
         // Linear view-space Z (negative; closer to 0 = nearer camera), so
         // the comparison holds at any distance.
         // See docs/architecture/halos.md#linear-depth.
@@ -55,7 +65,7 @@ export function applyHaloDiscardMaterial(material, selfId, immuneIds) {
         }
         // otherId > 0.5 skips background; the selfHaloId check is the
         // self-occlusion guard. See docs/architecture/halos.md#self-occlusion.
-        if (otherId > 0.5 && !haloImmune && abs(otherId - selfHaloId) > 0.5 && otherViewZ > selfViewZ + ${DEPTH_BIAS_WORLD_UNITS.toFixed(4)}) {
+        if (otherId > 0.5 && !haloImmune && !crossTypeSuppressed && abs(otherId - selfHaloId) > 0.5 && otherViewZ > selfViewZ + ${DEPTH_BIAS_WORLD_UNITS.toFixed(4)}) {
           discard;
         }
       }`,

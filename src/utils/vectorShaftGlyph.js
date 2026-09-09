@@ -252,7 +252,8 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     const radius = baseRadius + 0.01
     const mesh = new THREE.Mesh(
       new THREE.CylinderGeometry(radius, radius, haloCompanionLength(), 12),
-      window.createHaloIdMaterial(haloId),
+      // kind 1 = vector, so the discard shader can gate line-x-vector gaps.
+      window.createHaloIdMaterial(haloId, 1),
     )
     mesh.userData.zoomInvariantRadius = radius
     mesh.userData.thickenGroup = 'vector'
@@ -269,7 +270,7 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
   const haloCompanionRinged = haloAvailable ? buildHaloCompanion(RINGED_SHAFT_RADIUS) : null
   if (haloAvailable) {
     for (const mat of [fatLineMat, tubeMat, ringedMat, coneLineMat, coneTubeMat, coneRingedMat]) {
-      window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds)
+      window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds, 1)
     }
   }
 

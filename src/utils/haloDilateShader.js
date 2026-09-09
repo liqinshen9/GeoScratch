@@ -30,20 +30,24 @@ export function createHaloDilateMaterial() {
       void main() {
         float bestId = 0.0;
         float bestDepth = 1.0;
+        float bestKind = 0.0;
         for (int dx = -${KERNEL_RADIUS}; dx <= ${KERNEL_RADIUS}; dx++) {
           for (int dy = -${KERNEL_RADIUS}; dy <= ${KERNEL_RADIUS}; dy++) {
             vec2 uv = vUv + vec2(float(dx), float(dy)) * texelSize;
-            float id = floor(texture2D(srcIdTex, uv).r * 255.0 + 0.5);
+            vec4 src = texture2D(srcIdTex, uv);
+            float id = floor(src.r * 255.0 + 0.5);
             float depth = texture2D(srcDepthTex, uv).r;
             if (id > 0.5 && depth < bestDepth) {
               bestDepth = depth;
               bestId = id;
+              bestKind = src.b;
             }
           }
         }
         // R: winning id (id/255, same encoding as the raw pass). G: its raw
-        // depth (HalfFloat storage keeps full precision).
-        gl_FragColor = vec4(bestId / 255.0, bestDepth, 0.0, 1.0);
+        // depth (HalfFloat storage keeps full precision). B: its kind tag
+        // (0 = line, 1 = vector).
+        gl_FragColor = vec4(bestId / 255.0, bestDepth, bestKind, 1.0);
       }
     `,
   })
