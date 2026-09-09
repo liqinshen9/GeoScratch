@@ -35,17 +35,18 @@
 }
 
 :root[data-theme='dark'] .landing-page {
-  --bg-main: #101521;
-  --bg-soft: #1b2333;
-  --accent: #6f9bff;
-  --accent-hover: #8fb3ff;
-  --text-main: #e7ecf7;
-  --text-secondary: #cdd8ee;
-  --text-muted: #9db0d4;
-  --border: rgba(120, 150, 220, 0.16);
-  --border-light: rgba(120, 150, 220, 0.32);
-  --landing-welcome-kia: #4fd1c5;
-  --landing-welcome-text: #f0a56b;
+  --bg-main: #0b111b;
+  --bg-soft: #243244;
+  --accent: #b8cce3;
+  --accent-hover: #d0deed;
+  --text-main: #e0e6ed;
+  --text-secondary: #c5d0dc;
+  --text-muted: #a5b3c3;
+  --text-on-accent: #0b111b;
+  --border: rgba(160, 181, 204, 0.14);
+  --border-light: rgba(160, 181, 204, 0.24);
+  --landing-welcome-kia: #b8cce3;
+  --landing-welcome-text: #e0e6ed;
 }
 
 .landing-nav {

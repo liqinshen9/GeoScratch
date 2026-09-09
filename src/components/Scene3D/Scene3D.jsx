@@ -135,7 +135,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
   )
 }
 
-const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0d1017' }
+const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0b111b' }
 
 export default function Scene3D({ objects = [] }) {
   const { settings, updateSetting } = useSettingsStore()

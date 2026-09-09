@@ -12,12 +12,12 @@ import {
 
 const ROOM_COLORS = {
   light: { wall: '#ffffff', edge: '#a3a3a3' },
-  dark: { wall: '#161c28', edge: '#3a4255' },
+  dark: { wall: '#1c2834', edge: '#405267' },
 }
 
 const GRID_COLORS = {
   light: { center: 0xb0b0b0, line: 0xd2d2d2 },
-  dark: { center: 0x3a4255, line: 0x2a3140 },
+  dark: { center: 0x405267, line: 0x2b3b4c },
 }
 
 // BackSide walls cull the near ones. An edge hides only when BOTH its faces
