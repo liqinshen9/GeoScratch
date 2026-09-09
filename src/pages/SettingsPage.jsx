@@ -8,6 +8,13 @@ import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
 import { Button } from '@/components/ui/button'
 import './SettingsPage.css'
 
+// Vector-specific labels for the shared LINE_STYLES values.
+const VECTOR_STYLE_LABELS = {
+  [LINE_STYLES.PLAIN_LINE]: 'flat vector',
+  [LINE_STYLES.PLAIN_TUBE]: 'tube vector',
+  [LINE_STYLES.RINGED_TUBE]: 'ringed vector',
+}
+
 // True when the currently open exercise has locked this setting.
 function useSettingLocked(settingKey) {
   return useSettingsStore((s) =>
@@ -316,7 +323,7 @@ export default function SettingsPage() {
                 >
                   {Object.entries(LINE_STYLES).map(([key, value]) => (
                     <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
+                      {VECTOR_STYLE_LABELS[value] || key.replace(/_/g, ' ').toLowerCase()}
                     </option>
                   ))}
                 </SelectField>

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 // On-screen margin is ~KERNEL_RADIUS / HALO_TARGET_SCALE canvas pixels.
 // Paired with HALO_TARGET_SCALE (see docs/architecture/halos.md#target-scale).
-const KERNEL_RADIUS = 8
+const KERNEL_RADIUS = 4
 
 // Fullscreen morphological dilate of the raw ID+depth target: per output
 // texel, keep the sample nearest the camera. This is what produces the
