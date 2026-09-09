@@ -266,12 +266,46 @@ function evaluate({ objects, workspace }) {
   }
 }
 
+function decorateObjects(objects, workspace) {
+  const hasDistanceIllustration = objects.some(
+    (object) =>
+      object?.userData?.geoType === 'point_plane_distance_dot' ||
+      object?.userData?.geoType === 'point_plane_distance_projection_magnitude',
+  )
+  if (!hasDistanceIllustration || !hasValidSkewDistanceComputation(workspace)) return objects
+
+  const crossProductIds = new Set(
+    workspace
+      .getBlocksByType('vector_cross_product', false)
+      .filter(isSkewCrossProductBlock)
+      .map((block) => block.id),
+  )
+  const planeIds = new Set(
+    workspace
+      .getBlocksByType('parametric_plane', false)
+      .filter(isSkewPlaneBlock)
+      .map((block) => block.id),
+  )
+  const isPlaneNormal = (object) =>
+    object.userData?.geoType === 'parametric_plane_normal_arrow' &&
+    planeIds.has(object.userData.srcBlockId)
+
+  return objects.filter((object) => {
+    if (crossProductIds.has(object?.userData?.srcBlockId) || isPlaneNormal(object)) return false
+    object.traverse((child) => {
+      if (isPlaneNormal(child)) child.visible = false
+    })
+    return true
+  })
+}
+
 export default {
-  number: 6,
+  id: 'skew-lines-distance',
   kind: 'distance',
   Givens,
   Steps,
   evaluate,
+  decorateObjects,
   reusableBlockTemplate: {
     defaultName: 'Intersect 3D lines',
     description: 'Save a reusable Intersect 3D block with open inputs for any two vector lines.',

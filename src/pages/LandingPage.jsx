@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 import GeoScratchLogo from '@/components/Brand/GeoScratchLogo.jsx'
+import { orderedExercises } from '@/data/exercises'
 import './LandingPage.css'
 
 export default function LandingPage() {
+  const firstExercise = orderedExercises()[0]
+
   return (
     <div className="landing-page">
       {/* Absolute backdrop block creating the background swoop */}
@@ -16,7 +19,7 @@ export default function LandingPage() {
           </h1>
 
           <div className="landing-hero__actions">
-            <Link to="/exercise/1" className="landing-btn landing-btn--primary">
+            <Link to={`/exercise/${firstExercise.id}`} className="landing-btn landing-btn--primary">
               Open exercise
             </Link>
             <Link to="/exercises" className="landing-btn landing-btn--secondary">

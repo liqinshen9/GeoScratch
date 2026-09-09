@@ -4,7 +4,7 @@ import { DEFAULT_COLOR_PRESET } from './colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 import { ANIMATION_EASINGS, DEFAULT_ANIMATION_DURATION_MS } from './animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from './namingConfig'
-import { DEFAULT_THEME, THEMES, THEME_STORAGE_KEY, resolveTheme } from './themeConfig'
+import { THEMES, DEFAULT_THEME, resolveTheme, THEME_STORAGE_KEY } from './themeConfig'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
@@ -32,9 +32,11 @@ const DEFAULT_SETTINGS = {
   extraLargePoints: false,
   mattePoints: false,
   haloEnabled: true,
+  haloLineVectorEnabled: true,
   vectorStyle: LINE_STYLES.PLAIN_TUBE,
   extraThickVectors: false,
   showVectorOriginPoint: false,
+  showUnscaledVector: true,
   showPlanePointNormal: true,
   objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
@@ -47,24 +49,43 @@ const DEFAULT_SETTINGS = {
 
 export const SETTING_KEYS = Object.freeze(Object.keys(DEFAULT_SETTINGS))
 
-// `theme` is the one setting that persists across reloads (the rest are
-// intentionally session-only). See docs/architecture/theming.md.
-function loadPersistedTheme() {
-  if (typeof window === 'undefined') return null
+// The user's own setting choices persist per-device in localStorage, the same
+// local-convenience tier as exercise progress. Exercise overrides are never
+// stored -- they're transient state owned by the open exercise.
+const STORAGE_KEY = 'geoscratch:user-settings'
+
+function loadUserSettings() {
   try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return Object.values(THEMES).includes(stored) ? stored : null
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    const clean = {}
+    for (const [key, value] of Object.entries(parsed || {})) {
+      if (Object.hasOwn(DEFAULT_SETTINGS, key) && value !== undefined) clean[key] = value
+    }
+    return clean
   } catch {
-    return null
+    // No storage (private mode, disabled, SSR): start from defaults.
+    return {}
   }
 }
 
-function persistTheme(theme) {
-  if (typeof window === 'undefined') return
+function loadLegacyTheme() {
   try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+    const theme = localStorage.getItem(THEME_STORAGE_KEY)
+    return Object.values(THEMES).includes(theme) ? { theme } : {}
   } catch {
-    // storage unavailable (private mode, quota) -- theme just won't stick
+    return {}
+  }
+}
+
+function saveUserSettings(userSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userSettings))
+    // Keep the pre-paint theme cache in step with main's saved settings.
+    localStorage.setItem(THEME_STORAGE_KEY, userSettings.theme ?? DEFAULT_THEME)
+  } catch {
+    // Storage unavailable -- choices just won't persist across sessions.
   }
 }
 
@@ -91,37 +112,30 @@ function pickValidOverrides(overrides) {
   return clean
 }
 
-const persistedTheme = loadPersistedTheme()
-const initialUserSettings = persistedTheme ? { theme: persistedTheme } : {}
+const INITIAL_USER_SETTINGS = { ...loadLegacyTheme(), ...loadUserSettings() }
 
 const useSettingsStore = create((set, get) => ({
-  // Keys the user explicitly changed (updateSetting writes here).
-  userSettings: initialUserSettings,
+  // Keys the user explicitly changed (updateSetting writes here), rehydrated
+  // from localStorage on load.
+  userSettings: INITIAL_USER_SETTINGS,
   // Keys forced by the currently open exercise -- these win.
   exerciseOverrides: {},
   // Derived read surface: DEFAULT_SETTINGS < userSettings < exerciseOverrides.
-  settings: mergeSettings(initialUserSettings, {}),
-  // The concrete scheme currently painted ('light' | 'dark'). `theme: 'system'`
-  // resolves here via the OS preference; kept in sync by useThemeSync so
-  // non-React code (colorSystem, Blockly) can read it off the store.
-  resolvedTheme: resolveTheme(mergeSettings(initialUserSettings, {}).theme),
+  settings: mergeSettings(INITIAL_USER_SETTINGS, {}),
+  resolvedTheme: resolveTheme(mergeSettings(INITIAL_USER_SETTINGS, {}).theme),
 
   updateSetting: (key, value) =>
     set((state) => {
       const userSettings = { ...state.userSettings, [key]: value }
-      if (key === 'theme') persistTheme(value)
+      saveUserSettings(userSettings)
       return { userSettings, settings: mergeSettings(userSettings, state.exerciseOverrides) }
     }),
 
-  // Reset the user's own choices; an exercise's lock stays in place. `theme`
-  // is a persisted preference, not a scene tweak, so it survives the reset.
+  // Reset the user's own choices; an exercise's lock stays in place.
   resetSettings: () =>
     set((state) => {
-      const keptTheme = { theme: state.userSettings.theme ?? DEFAULT_SETTINGS.theme }
-      return {
-        userSettings: keptTheme,
-        settings: mergeSettings(keptTheme, state.exerciseOverrides),
-      }
+      saveUserSettings({})
+      return { userSettings: {}, settings: mergeSettings({}, state.exerciseOverrides) }
     }),
 
   setExerciseOverrides: (overrides) =>
@@ -133,11 +147,9 @@ const useSettingsStore = create((set, get) => ({
   clearExerciseOverrides: () =>
     set((state) => ({ exerciseOverrides: {}, settings: mergeSettings(state.userSettings, {}) })),
 
-  isSettingLocked: (key) => Object.hasOwn(get().exerciseOverrides, key),
+  setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
 
-  // Called by useThemeSync whenever the effective scheme changes.
-  setResolvedTheme: (resolvedTheme) =>
-    set((state) => (state.resolvedTheme === resolvedTheme ? state : { resolvedTheme })),
+  isSettingLocked: (key) => Object.hasOwn(get().exerciseOverrides, key),
 }))
 
 if (typeof window !== 'undefined') {

@@ -4,9 +4,10 @@ import { LINE_STYLES } from '@/store/lineStyles'
 // Every size below is an eyeballed per-style number, no formula.
 // See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
 
-// Plain Line: a flat GL line (constant pixel width)
+// Plain Line: a flat GL line (constant pixel width) with a flat 2D arrowhead
+// (a single double-sided triangle) to match its unshaded look.
 const LINE_SHAFT_PX = 4.6
-const LINE_HEAD_RADIUS = 0.2
+const LINE_HEAD_HALF_WIDTH = 0.2
 const LINE_HEAD_LENGTH = 0.35
 
 // Plain Tube: a solid cylinder
@@ -24,6 +25,10 @@ const RINGED_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED
 
 // Never let a very short vector produce a negative/zero shaft length.
 const MIN_SHAFT_LENGTH = 0.001
+
+// Plain Line has no true 3D radius; its halo companion uses the same thin
+// nominal size geoVectorLine.js picks for this style.
+const HALO_PLAIN_LINE_NOMINAL_RADIUS = 0.035
 
 // Defensive default only -- reached if `color` is omitted and GeoScratchColors
 // isn't loaded.
@@ -88,10 +93,38 @@ function resolveVectorColor(blockId, color) {
 // Builds a vector's shaft in all 3 styles + arrowhead cones, live-reacting to
 // settings. Not shared with geoVectorLine.js.
 // See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
-export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length, color) {
+export function buildVectorShaftGlyph(
+  THREE,
+  blockId,
+  origin,
+  direction,
+  length,
+  color,
+  options = {},
+) {
   const group = new THREE.Group()
   const shaftColor = resolveVectorColor(blockId, color)
   const { bandA, bandB } = deriveRingBandColors(THREE, shaftColor)
+
+  // Tiny deterministic per-glyph perpendicular nudge, so two coincident vectors
+  // (Vector Arithmetic with the same vector in both sockets, where the operand
+  // glyphs are "<id>_u" and "<id>_v") don't z-fight. Same technique and
+  // magnitude as geoVectorLine.js -- see
+  // docs/architecture/vector-line-glyphs.md#z-fight-jitter.
+  let blockHash = 2166136261
+  const blockIdStr = String(blockId)
+  for (let i = 0; i < blockIdStr.length; i += 1) {
+    blockHash = ((blockHash ^ blockIdStr.charCodeAt(i)) * 16777619) >>> 0
+  }
+  const jitterAngle = (blockHash % 360) * (Math.PI / 180)
+  const jitterUp =
+    Math.abs(direction.y) < 0.999 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0)
+  const jitterA = new THREE.Vector3().crossVectors(direction, jitterUp).normalize()
+  const jitterB = new THREE.Vector3().crossVectors(direction, jitterA).normalize()
+  const Z_FIGHT_JITTER = 0.0015
+  group.position
+    .addScaledVector(jitterA, Math.cos(jitterAngle) * Z_FIGHT_JITTER)
+    .addScaledVector(jitterB, Math.sin(jitterAngle) * Z_FIGHT_JITTER)
 
   let lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
   let tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
@@ -170,31 +203,136 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     group.add(mesh)
     return mesh
   }
-  // Plain Line's cone is unlit to match its own flat, unshaded shaft.
-  const coneLine = makeArrowhead(
-    LINE_HEAD_RADIUS,
+  // Plain Line gets a FLAT head, not a cone: a single double-sided triangle,
+  // unlit, matching the flat unshaded fat-line shaft. One blade, not crossed --
+  // a "+" of two blades reads as confusing clutter to a newcomer.
+  const makeFlatArrowhead = (halfWidth, headLength, shaftEnd, mat) => {
+    const geom = new THREE.BufferGeometry()
+    geom.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute([0, headLength, 0, -halfWidth, 0, 0, halfWidth, 0, 0], 3),
+    )
+    const mesh = new THREE.Mesh(geom, mat)
+    mesh.userData.zoomInvariantRadius = halfWidth
+    mesh.userData.thickenGroup = 'vector'
+    orient(mesh, shaftEnd, direction, THREE)
+    group.add(mesh)
+    return mesh
+  }
+  const coneLineMat = new THREE.MeshBasicMaterial({ color: shaftColor, side: THREE.DoubleSide })
+  const coneTubeMat = new THREE.MeshStandardMaterial({
+    color: shaftColor,
+    roughness: 0.4,
+    metalness: 0.1,
+  })
+  const coneRingedMat = new THREE.MeshStandardMaterial({
+    color: shaftColor,
+    roughness: 0.4,
+    metalness: 0.1,
+  })
+  const coneLine = makeFlatArrowhead(
+    LINE_HEAD_HALF_WIDTH,
     LINE_HEAD_LENGTH,
     lineLayout.shaftEnd,
-    new THREE.MeshLambertMaterial({ color: shaftColor }),
+    coneLineMat,
   )
   const coneTube = makeArrowhead(
     TUBE_HEAD_RADIUS,
     TUBE_HEAD_LENGTH,
     tubeLayout.shaftEnd,
-    new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }),
+    coneTubeMat,
   )
   const coneRinged = makeArrowhead(
     RINGED_HEAD_RADIUS,
     RINGED_HEAD_LENGTH,
     ringedLayout.shaftEnd,
-    new THREE.MeshStandardMaterial({ color: shaftColor, roughness: 0.4, metalness: 0.1 }),
+    coneRingedMat,
   )
+
+  // Halo depth-trick: one inflated companion cylinder per style, spanning the
+  // whole vector, so a vector crossing another vector (or a line) gets a clean
+  // gap on the farther glyph -- resolved per-pixel by the halo passes, no
+  // pairwise math. The Halos setting only gates NEW glyphs.
+  // See docs/architecture/halos.md.
+  // `options.halo: false` opts a glyph out entirely -- used where several
+  // near-parallel glyphs belong to one composite picture (vector_arithmetic's
+  // operands + result when the operands are parallel) and gapping them against
+  // each other reads as damage rather than depth.
+  const haloSettingEnabled =
+    options.halo !== false && useSettingsStore?.getState().settings?.haloEnabled !== false
+  const haloAvailable =
+    haloSettingEnabled &&
+    window.HALO_LAYER != null &&
+    window.getHaloId &&
+    window.createHaloIdMaterial &&
+    window.applyHaloDiscardMaterial &&
+    window.registerHaloLine &&
+    window.HALO_MAX_IMMUNE_IDS != null
+  const haloId = haloAvailable ? window.getHaloId(blockId) : null
+  const haloImmuneIds = haloAvailable ? new Array(window.HALO_MAX_IMMUNE_IDS).fill(-1) : null
+  if (haloAvailable) {
+    // Registered as an infinite line through (origin, direction): a genuine 3D
+    // touch (e.g. two vectors drawn from a shared tail) marks the pair mutually
+    // immune, so there is no false gap where they actually meet.
+    window.registerHaloLine(blockId, origin, direction, (partnerId) => {
+      const slot = haloImmuneIds.indexOf(-1)
+      if (slot !== -1) haloImmuneIds[slot] = partnerId
+    })
+  }
+
+  const haloCompanionLength = () => Math.max(length, MIN_SHAFT_LENGTH)
+  const buildHaloCompanion = (baseRadius) => {
+    const radius = baseRadius + 0.01
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, haloCompanionLength(), 12),
+      // kind 1 = vector, so the discard shader can gate line-x-vector gaps.
+      window.createHaloIdMaterial(haloId, 1),
+    )
+    mesh.userData.zoomInvariantRadius = radius
+    mesh.userData.thickenGroup = 'vector'
+    orient(mesh, origin.clone().addScaledVector(direction, length / 2), direction, THREE)
+    mesh.layers.set(window.HALO_LAYER)
+    mesh.visible = false
+    group.add(mesh)
+    return mesh
+  }
+  const haloCompanionLine = haloAvailable
+    ? buildHaloCompanion(HALO_PLAIN_LINE_NOMINAL_RADIUS)
+    : null
+  const haloCompanionTube = haloAvailable ? buildHaloCompanion(TUBE_SHAFT_RADIUS) : null
+  const haloCompanionRinged = haloAvailable ? buildHaloCompanion(RINGED_SHAFT_RADIUS) : null
+  const glyphMaterials = [fatLineMat, tubeMat, ringedMat, coneLineMat, coneTubeMat, coneRingedMat]
+  if (haloAvailable) {
+    for (const mat of glyphMaterials) {
+      window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds, 1)
+    }
+  }
+
+  // `options.depthBias` breaks the depth-buffer tie between two glyphs that
+  // genuinely occupy the same space (a collinear sum: the result's shaft runs
+  // right through its operands'). A positive bias pushes this glyph away from
+  // the camera so the other one wins consistently, instead of the two speckling
+  // against each other per-pixel.
+  if (options.depthBias) {
+    for (const mat of glyphMaterials) {
+      mat.polygonOffset = true
+      mat.polygonOffsetFactor = options.depthBias
+      mat.polygonOffsetUnits = options.depthBias
+    }
+  }
 
   const applyVectorStyle = (settings) => {
     const activeStyle = settings.vectorStyle || LINE_STYLES.PLAIN_LINE
     fatLine.visible = coneLine.visible = activeStyle === LINE_STYLES.PLAIN_LINE
     tube.visible = coneTube.visible = activeStyle === LINE_STYLES.PLAIN_TUBE
     ringedTube.visible = coneRinged.visible = activeStyle === LINE_STYLES.RINGED_TUBE
+    // Only the active style's companion on HALO_LAYER at once -- three
+    // differently-sized footprints would fight in the depth prepass.
+    if (haloAvailable) {
+      haloCompanionLine.visible = activeStyle === LINE_STYLES.PLAIN_LINE
+      haloCompanionTube.visible = activeStyle === LINE_STYLES.PLAIN_TUBE
+      haloCompanionRinged.visible = activeStyle === LINE_STYLES.RINGED_TUBE
+    }
   }
 
   applyVectorStyle(useSettingsStore?.getState().settings || {})
@@ -249,6 +387,18 @@ export function buildVectorShaftGlyph(THREE, blockId, origin, direction, length,
     orient(coneLine, lineLayout.shaftEnd, direction, THREE)
     orient(coneTube, tubeLayout.shaftEnd, direction, THREE)
     orient(coneRinged, ringedLayout.shaftEnd, direction, THREE)
+
+    for (const [companion, baseRadius] of [
+      [haloCompanionLine, HALO_PLAIN_LINE_NOMINAL_RADIUS],
+      [haloCompanionTube, TUBE_SHAFT_RADIUS],
+      [haloCompanionRinged, RINGED_SHAFT_RADIUS],
+    ]) {
+      if (!companion) continue
+      const radius = baseRadius + 0.01
+      companion.geometry.dispose()
+      companion.geometry = new THREE.CylinderGeometry(radius, radius, haloCompanionLength(), 12)
+      orient(companion, origin.clone().addScaledVector(direction, length / 2), direction, THREE)
+    }
 
     group.userData.vectorLength = length
   }

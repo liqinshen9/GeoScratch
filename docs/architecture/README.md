@@ -21,6 +21,7 @@ you" summary; this is the depth.
 | [color-system.md](color-system.md)                             | The HCT object-color system: per-type families, deterministic per-instance colors, roles, presets                                                                                          |
 | [theming.md](theming.md)                                       | App-wide light/dark mode: the `theme` setting, `resolveTheme`, `useThemeSync`, `data-theme` CSS tokens, and how the 3D scene and Blockly pick it up                                        |
 | [blockly-integration.md](blockly-integration.md)               | The variable wrapper's block layout, My Block duplicate detection, autosave restore, event filtering                                                                                       |
+| [backend.md](backend.md)                                       | The optional Supabase backend: anonymous auth + participant gate, `exercise_attempts` logging, RLS model, Phase 2 workspace snapshots, study-data export                                   |
 
 ## Recurring bug classes
 

@@ -1,8 +1,61 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { vector3FromBlock, vectorLabelFromBlock } from '@/utils/sceneHelpers'
+import { appendVectorPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPrimitives/matrixPreview'
 
 let REGISTERED = false
+
+const fmt = (n) => (Number.isFinite(n) ? String(Math.round(n * 1e4) / 1e4) : '—')
+
+const esc = (s) =>
+  String(s).replace(
+    /[&<>"]/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+  )
+
+// A named, bracketed 3x1 column vector.
+function columnVec(name, vec) {
+  const rows = (vec ? [vec.x, vec.y, vec.z] : ['—', '—', '—'])
+    .map((n) => `<span>${typeof n === 'number' ? fmt(n) : n}</span>`)
+    .join('')
+  const tag = name ? `<span class="vec-drawer-name">${esc(name)}</span>` : ''
+  return `<span class="vec-drawer-term">${tag}<span class="vec-drawer-col">${rows}</span></span>`
+}
+
+// The name this operand should carry -- a plain vector's own name, or the
+// expression that produced it ("3\u00b7V2"), seeing through variable wrappers.
+function operandName(block, inputName) {
+  return vectorLabelFromBlock(block.getInputTargetBlock(inputName))
+}
+
+// The connected operand's own instance colour, as a runtime expression. Plugging
+// a vector into this block shouldn't repaint it in the scene, so the generic
+// operandA/operandB role colour is only the fallback for an empty socket.
+function operandColorExpr(block, inputName, role) {
+  const target = block.getInputTargetBlock(inputName)
+  if (!target) return `window.GeoScratchColors.forRole(${JSON.stringify(role)})`
+  const objectType = target.type === 'linalg_point' ? 'point' : 'vector'
+  return `window.GeoScratchColors.forInstance(${JSON.stringify(objectType)}, ${JSON.stringify(target.id)})`
+}
+
+// Runs on the block-editor thread, so it walks the blocks directly rather than
+// touching the generated-code runtime.
+function renderVectorArithmeticHtml(block) {
+  const a = vector3FromBlock(block.getInputTargetBlock('U'))
+  const b = vector3FromBlock(block.getInputTargetBlock('V'))
+  const subtract = block.getFieldValue('OP') === 'subtract'
+  const result = a && b ? (subtract ? a.clone().sub(b) : a.clone().add(b)) : null
+  return `
+    <div class="vec-drawer-expr">
+      ${columnVec(operandName(block, 'U'), a)}
+      <span class="vec-drawer-op">${subtract ? '−' : '+'}</span>
+      ${columnVec(operandName(block, 'V'), b)}
+      <span class="vec-drawer-op">=</span>
+      ${columnVec('', result)}
+    </div>
+  `
+}
 
 export function initVectorArithmeticBlock() {
   if (REGISTERED) return
@@ -16,8 +69,8 @@ export function initVectorArithmeticBlock() {
         .setCheck('vector3')
         .appendField(
           new Blockly.FieldDropdown([
-            ['a + b', 'add'],
-            ['a - b', 'subtract'],
+            ['+', 'add'],
+            ['−', 'subtract'],
           ]),
           'OP',
         )
@@ -29,6 +82,7 @@ export function initVectorArithmeticBlock() {
       this.setTooltip('Compute u +/- v, show the arrows, and return the result vector.')
       this.setDeletable(true)
       this.setMovable(true)
+      appendVectorPreviewUI(this, renderVectorArithmeticHtml)
     },
   }
 
@@ -36,6 +90,13 @@ export function initVectorArithmeticBlock() {
     const op = block.getFieldValue('OP') || 'add'
     const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
+    // Scene labels: the connected operand's own variable name, baked in at
+    // code-gen time (the operand Vector3 doesn't carry its name when it's not
+    // standalone). Falls back to a/b only when there's no named block.
+    const uFallback = JSON.stringify(operandName(block, 'U') || 'a')
+    const vFallback = JSON.stringify(operandName(block, 'V') || 'b')
+    const uColorExpr = operandColorExpr(block, 'U', 'operandA')
+    const vColorExpr = operandColorExpr(block, 'V', 'operandB')
 
     const code = `(function(){
     const uVal = ${u};
@@ -46,8 +107,8 @@ export function initVectorArithmeticBlock() {
     const origin = new THREE.Vector3();
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
-    const uLabel = vectorNotation.getLabel(uVal, 'a');
-    const vLabel = vectorNotation.getLabel(vVal, 'b');
+    const uLabel = vectorNotation.getLabel(uVal, ${uFallback});
+    const vLabel = vectorNotation.getLabel(vVal, ${vFallback});
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const baseId = ${JSON.stringify(block.id)};
 
@@ -55,8 +116,16 @@ export function initVectorArithmeticBlock() {
     const lenU = uVal.length();
     const lenV = vVal.length();
 
-    const operandAColor = window.GeoScratchColors.forRole('operandA');
-    const operandBColor = window.GeoScratchColors.forRole('operandB');
+    // A plain vector block keeps its own colour, but an operand that is itself a
+    // computed vector (Scale Vector's "3\u00b7V2") stays the result colour rather
+    // than being repainted as somebody's operand.
+    const isComputed = (value) => value?.userData?.geoType === 'named_vector_expression';
+    const operandAColor = isComputed(uVal)
+      ? window.GeoScratchColors.forRole('result')
+      : ${uColorExpr};
+    const operandBColor = isComputed(vVal)
+      ? window.GeoScratchColors.forRole('result')
+      : ${vColorExpr};
 
     // Vector arithmetic is anchor-agnostic: each operand is drawn from the
     // origin, so a + b and a - b read as free vectors. The exception is an
@@ -72,16 +141,35 @@ export function initVectorArithmeticBlock() {
     const uAnchor = anchorOf(uVal);
     const vAnchor = anchorOf(vVal);
 
+    // Two identical operands (a + a) would draw two arrows occupying exactly the
+    // same space -- coincident surfaces the depth test can't order, which shows
+    // up as speckling. Draw one arrow and label it with both names instead.
+    const operandsIdentical =
+      uVal.distanceToSquared(vVal) < 1e-12 && uAnchor.distanceToSquared(vAnchor) < 1e-12;
+
+    // The result of a collinear sum lies along the operands, so its shaft
+    // overlaps theirs; halo gaps between parts of one composite picture read as
+    // damage rather than depth.
+    const uUnit = lenU > 1e-6 ? uVal.clone().normalize() : null;
+    const vUnit = lenV > 1e-6 ? vVal.clone().normalize() : null;
+    const operandsParallel = !!(uUnit && vUnit && Math.abs(uUnit.dot(vUnit)) > 0.999);
+    const glyphOptions = { halo: !operandsParallel };
+    // A collinear sum's result runs straight through its operands. Bias the
+    // result away from the camera so the operand wins the shared stretch
+    // cleanly and the result shows beyond its tip, instead of the two
+    // speckling against each other.
+    const resultGlyphOptions = { halo: !operandsParallel, depthBias: operandsParallel ? 2 : 0 };
+
     const arrowU = window.buildVectorShaftGlyph(
       THREE, baseId + '_u', uAnchor.clone(),
       (lenU > 0 ? uVal.clone().normalize() : new THREE.Vector3(1,0,0)),
-      safeLen(lenU), operandAColor
+      safeLen(lenU), operandAColor, glyphOptions
     );
 
-    const arrowV = window.buildVectorShaftGlyph(
+    const arrowV = operandsIdentical ? null : window.buildVectorShaftGlyph(
       THREE, baseId + '_v', vAnchor.clone(),
       (lenV > 0 ? vVal.clone().normalize() : new THREE.Vector3(1,0,0)),
-      safeLen(lenV), operandBColor
+      safeLen(lenV), operandBColor, glyphOptions
     );
 
     // Compute result
@@ -97,9 +185,11 @@ export function initVectorArithmeticBlock() {
     );
     const pointLabel = vVal.userData?.label || 'Q';
     const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
-    const genericResultLabel = showOperandLabels
-      ? 'result'
-      : vectorNotation.binaryLabel(uVal, '${op === 'add' ? '+' : '-'}', vVal);
+    // Name the result by its expression ("a + b"), never a generic "result" --
+    // Scale Vector labels its result "3\u00b7a", and the two should read alike.
+    const genericResultLabel = vectorNotation.binaryLabel(
+      uVal, '${op === 'add' ? '+' : '\u2212'}', vVal, ${uFallback}, ${vFallback}
+    );
     const resultOrigin = isPointDifference ? vVal.clone() : origin.clone();
     const resultTip = isPointDifference ? uVal.clone() : res.clone();
     const resultLabelPosition = isPointDifference
@@ -110,7 +200,8 @@ export function initVectorArithmeticBlock() {
     if (lenR > 1e-8) {
       resObj = window.buildVectorShaftGlyph(
         THREE, baseId + '_r', resultOrigin.clone(), res.clone().normalize(), safeLen(lenR),
-        isPointDifference ? window.GeoScratchColors.forInstance('vector', baseId) : window.GeoScratchColors.forRole('result')
+        isPointDifference ? window.GeoScratchColors.forInstance('vector', baseId) : window.GeoScratchColors.forRole('result'),
+        resultGlyphOptions
       );
     } else {
       resObj = new THREE.Mesh(
@@ -127,14 +218,15 @@ export function initVectorArithmeticBlock() {
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    tag(arrowU); tag(arrowV); tag(resObj);
+    tag(arrowU); if (arrowV) tag(arrowV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
     if (isPointDifference) {
       group.add(resObj);
     } else {
-      group.add(arrowU, arrowV, resObj);
+      group.add(arrowU, resObj);
+      if (arrowV) group.add(arrowV);
     }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
@@ -159,7 +251,8 @@ export function initVectorArithmeticBlock() {
       : showOperandLabels
         ? [
         { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
+        // Identical operands share a tip, so stack the second label below it.
+        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor },
         { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
       ]
         : [
@@ -174,7 +267,7 @@ export function initVectorArithmeticBlock() {
         ? [{ obj: resObj, full: safeLen(lenR) }]
         : [
           { obj: arrowU, full: safeLen(lenU) },
-          { obj: arrowV, full: safeLen(lenV) },
+          ...(arrowV ? [{ obj: arrowV, full: safeLen(lenV) }] : []),
           { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 },
         ]
     );
@@ -184,7 +277,7 @@ export function initVectorArithmeticBlock() {
       const base = ${JSON.stringify(block.id)};
       if (!isPointDifference) {
         threeObjStore[base + '_u'] = arrowU;
-        threeObjStore[base + '_v'] = arrowV;
+        if (arrowV) threeObjStore[base + '_v'] = arrowV;
       }
       threeObjStore[base + '_r'] = resObj;
       threeObjStore[base]        = group;

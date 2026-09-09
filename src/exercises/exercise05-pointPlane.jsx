@@ -236,7 +236,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 5,
+  id: 'point-plane-distance',
   kind: 'distance',
   Givens,
   Steps,

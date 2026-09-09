@@ -2,6 +2,7 @@ import { initObjectTransformBlock } from './objectTransform'
 import { initTransformPipelineBlock } from './transformPipeline'
 import { initVectorTransformBlock } from './vectorTransform'
 import { initVectorArithmeticBlock } from './vectorArithmetic'
+import { initVectorScaleBlock } from './vectorScale.js'
 import { initScalarArithmeticBlock } from './scalarArithmetic.js'
 import { initDotProductBlock } from './dotProduct'
 import { initCrossProductBlock } from './vectorCross.js'
@@ -20,6 +21,7 @@ export function initLinalgOperatorsBlocks() {
   initObjectTransformBlock()
   initVectorTransformBlock()
   initVectorArithmeticBlock()
+  initVectorScaleBlock()
   initScalarArithmeticBlock()
   initDotProductBlock()
   initCrossProductBlock()

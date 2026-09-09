@@ -5,15 +5,16 @@ import { COLOR_PRESETS } from '../store/colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
-import { THEMES } from '../store/themeConfig'
-
-const THEME_LABELS = {
-  [THEMES.LIGHT]: 'Light',
-  [THEMES.DARK]: 'Dark',
-  [THEMES.SYSTEM]: 'System (follow device)',
-}
 import { Button } from '@/components/ui/button'
+import { THEMES } from '@/store/themeConfig'
 import './SettingsPage.css'
+
+// Vector-specific labels for the shared LINE_STYLES values.
+const VECTOR_STYLE_LABELS = {
+  [LINE_STYLES.PLAIN_LINE]: 'flat vector',
+  [LINE_STYLES.PLAIN_TUBE]: 'tube vector',
+  [LINE_STYLES.RINGED_TUBE]: 'ringed vector',
+}
 
 // True when the currently open exercise has locked this setting.
 function useSettingLocked(settingKey) {
@@ -97,109 +98,279 @@ export default function SettingsPage() {
         </header>
 
         <main className="settings-layout">
-          <div className="settings-stack">
-            <SettingsSection title="Appearance">
-              <SelectField
-                label="Theme"
-                description="Light, dark, or follow your device's appearance setting. Applies to the whole app, including the 3D scene and blocks. Saved on this device."
-                value={settings.theme}
-                settingKey="theme"
-                onChange={(e) => updateSetting('theme', e.target.value)}
-              >
-                {Object.values(THEMES).map((value) => (
-                  <option key={value} value={value}>
-                    {THEME_LABELS[value]}
-                  </option>
-                ))}
-              </SelectField>
-            </SettingsSection>
+          <SettingsSection title="General" className="settings-card--wide">
+            <SelectField
+              label="Theme"
+              value={settings.theme}
+              settingKey="theme"
+              onChange={(e) => updateSetting('theme', e.target.value)}
+            >
+              <option value={THEMES.LIGHT}>Light</option>
+              <option value={THEMES.DARK}>Dark</option>
+              <option value={THEMES.SYSTEM}>System</option>
+            </SelectField>
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Scene">
+                <ToggleRow
+                  label="Show Grid"
+                  description="Display the ground grid in the viewport"
+                  checked={settings.showGrid}
+                  settingKey="showGrid"
+                  onChange={(v) => updateSetting('showGrid', v)}
+                />
+                <ToggleRow
+                  label="Show Box"
+                  description="Display the bounding box in the viewport"
+                  checked={settings.showBox}
+                  settingKey="showBox"
+                  onChange={(v) => updateSetting('showBox', v)}
+                />
+                <ToggleRow
+                  label="Show Box Front Wireframe"
+                  description="Display the wireframe on whichever box wall is currently facing the camera"
+                  checked={settings.showBoxFrontWireframe}
+                  settingKey="showBoxFrontWireframe"
+                  onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
+                />
+                <ToggleRow
+                  label="Zoom-Invariant Line & Point Sizing"
+                  description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
+                  checked={settings.zoomInvariantSizing}
+                  settingKey="zoomInvariantSizing"
+                  onChange={(v) => updateSetting('zoomInvariantSizing', v)}
+                />
+              </GeometryTile>
 
-            <SettingsSection title="Scene">
-              <ToggleRow
-                label="Show Grid"
-                description="Display the ground grid in the viewport"
-                checked={settings.showGrid}
-                settingKey="showGrid"
-                onChange={(v) => updateSetting('showGrid', v)}
-              />
-              <ToggleRow
-                label="Show Box"
-                description="Display the bounding box in the viewport"
-                checked={settings.showBox}
-                settingKey="showBox"
-                onChange={(v) => updateSetting('showBox', v)}
-              />
-              <ToggleRow
-                label="Show Box Front Wireframe"
-                description="Display the wireframe on whichever box wall is currently facing the camera"
-                checked={settings.showBoxFrontWireframe}
-                settingKey="showBoxFrontWireframe"
-                onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
-              />
-              <ToggleRow
-                label="Zoom-Invariant Line & Point Sizing"
-                description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
-                checked={settings.zoomInvariantSizing}
-                settingKey="zoomInvariantSizing"
-                onChange={(v) => updateSetting('zoomInvariantSizing', v)}
-              />
-            </SettingsSection>
-          </div>
+              <GeometryTile title="Camera">
+                <ToggleRow
+                  label="Auto-Frame Camera"
+                  description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
+                  checked={settings.autoFocusOnNewObject}
+                  settingKey="autoFocusOnNewObject"
+                  onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
+                />
+              </GeometryTile>
 
-          <div className="settings-compact-group">
-            <SettingsSection title="Shadows">
-              <ToggleRow
-                label="Object Shadows"
-                description="Let objects receive shadows cast by other objects"
-                checked={settings.objectsReceiveShadows}
-                settingKey="objectsReceiveShadows"
-                onChange={(v) => updateSetting('objectsReceiveShadows', v)}
-              />
-              <ToggleRow
-                label="Camera Shadows"
-                description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
-                checked={settings.cameraShadowsEnabled}
-                settingKey="cameraShadowsEnabled"
-                onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
-              />
-            </SettingsSection>
+              <GeometryTile title="Axis">
+                <ToggleRow
+                  label="Show Axis Toggle in Scene"
+                  description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
+                  checked={settings.showAxisToggleButton}
+                  settingKey="showAxisToggleButton"
+                  onChange={(v) => updateSetting('showAxisToggleButton', v)}
+                />
+                <ToggleRow
+                  label="Show Origin Label"
+                  description="Label the origin with a small 'O' next to its marker"
+                  checked={settings.showOriginLabel}
+                  settingKey="showOriginLabel"
+                  onChange={(v) => updateSetting('showOriginLabel', v)}
+                />
+                <ToggleRow
+                  label="Show Scale Labels"
+                  description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
+                  checked={settings.showAxisScaleLabels}
+                  settingKey="showAxisScaleLabels"
+                  onChange={(v) => updateSetting('showAxisScaleLabels', v)}
+                />
+                <ToggleRow
+                  label="Show Axis Gizmo"
+                  description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
+                  checked={settings.showAxisGizmo}
+                  settingKey="showAxisGizmo"
+                  onChange={(v) => updateSetting('showAxisGizmo', v)}
+                />
+              </GeometryTile>
+            </div>
+          </SettingsSection>
 
-            <SettingsSection title="Colors">
-              <SelectField
-                label="Color Preset"
-                description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
-                value={settings.colorPreset}
-                settingKey="colorPreset"
-                onChange={(e) => updateSetting('colorPreset', e.target.value)}
-              >
-                {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.label}
-                  </option>
-                ))}
-              </SelectField>
-            </SettingsSection>
+          <SettingsSection title="Objects & Geometry" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Point">
+                <ToggleRow
+                  label="Extra Large Points"
+                  description={
+                    'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'
+                  }
+                  checked={settings.extraLargePoints}
+                  settingKey="extraLargePoints"
+                  onChange={(v) => updateSetting('extraLargePoints', v)}
+                />
+                <ToggleRow
+                  label="Matte Points"
+                  description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
+                  checked={settings.mattePoints}
+                  settingKey="mattePoints"
+                  onChange={(v) => updateSetting('mattePoints', v)}
+                />
+              </GeometryTile>
 
-            <SettingsSection title="Camera">
-              <ToggleRow
-                label="Auto-Frame Camera"
-                description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
-                checked={settings.autoFocusOnNewObject}
-                settingKey="autoFocusOnNewObject"
-                onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
-              />
-            </SettingsSection>
+              <GeometryTile title="Vector">
+                <SelectField
+                  label="Vector Style"
+                  value={settings.vectorStyle}
+                  settingKey="vectorStyle"
+                  onChange={(e) => updateSetting('vectorStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {VECTOR_STYLE_LABELS[value] || key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Extra Thick Vectors"
+                  description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
+                  checked={settings.extraThickVectors}
+                  settingKey="extraThickVectors"
+                  onChange={(v) => updateSetting('extraThickVectors', v)}
+                />
+                <ToggleRow
+                  label="Show Unscaled Vector"
+                  description="On a Scale Vector block, also draw the original v alongside the scaled k*v"
+                  checked={settings.showUnscaledVector}
+                  settingKey="showUnscaledVector"
+                  onChange={(v) => updateSetting('showUnscaledVector', v)}
+                />
+                <ToggleRow
+                  label="Show Tail Point"
+                  description="Draw a point marker at the tail of a vector that has a block plugged into its origin socket"
+                  checked={settings.showVectorOriginPoint}
+                  settingKey="showVectorOriginPoint"
+                  onChange={(v) => updateSetting('showVectorOriginPoint', v)}
+                />
+              </GeometryTile>
 
-            <SettingsSection title="Halos">
-              <ToggleRow
-                label="Enable Halos"
-                description="When a line passes in front of another line, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line styles; vectors not yet supported."
-                checked={settings.haloEnabled}
-                settingKey="haloEnabled"
-                onChange={(v) => updateSetting('haloEnabled', v)}
-              />
-            </SettingsSection>
-          </div>
+              <GeometryTile title="Line">
+                <SelectField
+                  label="Line Style"
+                  value={settings.lineStyle}
+                  settingKey="lineStyle"
+                  onChange={(e) => updateSetting('lineStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  label="Collision Style"
+                  description="How a line visually indicates passing through a solid object"
+                  value={settings.lineCollisionStyle}
+                  settingKey="lineCollisionStyle"
+                  onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
+                >
+                  {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Extra Thick Lines"
+                  description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
+                  checked={settings.extraThickLines}
+                  settingKey="extraThickLines"
+                  onChange={(v) => updateSetting('extraThickLines', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Plane">
+                <ToggleRow
+                  label="Show Point & Normal"
+                  description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
+                  checked={settings.showPlanePointNormal}
+                  settingKey="showPlanePointNormal"
+                  onChange={(v) => updateSetting('showPlanePointNormal', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Teapot">
+                <ToggleRow
+                  label="Show Gridlines"
+                  description="Display mesh edge lines on teapot objects"
+                  checked={settings.teapotShowGridlines}
+                  settingKey="teapotShowGridlines"
+                  onChange={(v) => updateSetting('teapotShowGridlines', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Sphere">
+                <ToggleRow
+                  label="Show Gridlines"
+                  description="Display latitude/longitude edge lines on sphere objects"
+                  checked={settings.sphereShowGridlines}
+                  settingKey="sphereShowGridlines"
+                  onChange={(v) => updateSetting('sphereShowGridlines', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Cube">
+                <ToggleRow
+                  label="Outline Edges"
+                  description="Draw the 12 edge lines around cube objects"
+                  checked={settings.cubeShowEdges}
+                  settingKey="cubeShowEdges"
+                  onChange={(v) => updateSetting('cubeShowEdges', v)}
+                />
+              </GeometryTile>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection title="Rendering" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Shadows">
+                <ToggleRow
+                  label="Object Shadows"
+                  description="Let objects receive shadows cast by other objects"
+                  checked={settings.objectsReceiveShadows}
+                  settingKey="objectsReceiveShadows"
+                  onChange={(v) => updateSetting('objectsReceiveShadows', v)}
+                />
+                <ToggleRow
+                  label="Camera Shadows"
+                  description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
+                  checked={settings.cameraShadowsEnabled}
+                  settingKey="cameraShadowsEnabled"
+                  onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Colors">
+                <SelectField
+                  label="Color Preset"
+                  description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
+                  value={settings.colorPreset}
+                  settingKey="colorPreset"
+                  onChange={(e) => updateSetting('colorPreset', e.target.value)}
+                >
+                  {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
+                    <option key={key} value={key}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+
+              <GeometryTile title="Halos">
+                <ToggleRow
+                  label="Enable Halos"
+                  description="When a line or vector passes in front of another one, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line and vector styles."
+                  checked={settings.haloEnabled}
+                  settingKey="haloEnabled"
+                  onChange={(v) => updateSetting('haloEnabled', v)}
+                />
+                <ToggleRow
+                  label="Halo line/vector crossings"
+                  description="Also cut the gap where a line and a vector cross (not just line-line and vector-vector). Requires Enable Halos."
+                  checked={settings.haloLineVectorEnabled}
+                  settingKey="haloLineVectorEnabled"
+                  onChange={(v) => updateSetting('haloLineVectorEnabled', v)}
+                />
+              </GeometryTile>
+            </div>
+          </SettingsSection>
 
           <SettingsSection title="Animation & Highlighting" className="settings-card--wide">
             <div className="settings-geometry-grid">
@@ -307,164 +478,6 @@ export default function SettingsPage() {
                 </SelectField>
               </GeometryTile>
             </div>
-          </SettingsSection>
-
-          <SettingsSection title="Objects & Geometry" className="settings-card--wide">
-            <div className="settings-geometry-grid">
-              <GeometryTile title="Point">
-                <ToggleRow
-                  label="Extra Large Points"
-                  description={
-                    'Render point markers (Point blocks, "show point on object", etc.) 1.6x larger'
-                  }
-                  checked={settings.extraLargePoints}
-                  settingKey="extraLargePoints"
-                  onChange={(v) => updateSetting('extraLargePoints', v)}
-                />
-                <ToggleRow
-                  label="Matte Points"
-                  description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
-                  checked={settings.mattePoints}
-                  settingKey="mattePoints"
-                  onChange={(v) => updateSetting('mattePoints', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Vector">
-                <SelectField
-                  label="Vector Style"
-                  value={settings.vectorStyle}
-                  settingKey="vectorStyle"
-                  onChange={(e) => updateSetting('vectorStyle', e.target.value)}
-                >
-                  {Object.entries(LINE_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
-                    </option>
-                  ))}
-                </SelectField>
-                <ToggleRow
-                  label="Extra Thick Vectors"
-                  description="Render vector shafts (Plain Tube, Ringed Tube, thick Plain Line) at 2.7x their normal thickness"
-                  checked={settings.extraThickVectors}
-                  settingKey="extraThickVectors"
-                  onChange={(v) => updateSetting('extraThickVectors', v)}
-                />
-                <ToggleRow
-                  label="Show Tail Point"
-                  description="Draw a point marker at the tail of a vector that has a block plugged into its origin socket"
-                  checked={settings.showVectorOriginPoint}
-                  settingKey="showVectorOriginPoint"
-                  onChange={(v) => updateSetting('showVectorOriginPoint', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Line">
-                <SelectField
-                  label="Line Style"
-                  value={settings.lineStyle}
-                  settingKey="lineStyle"
-                  onChange={(e) => updateSetting('lineStyle', e.target.value)}
-                >
-                  {Object.entries(LINE_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
-                    </option>
-                  ))}
-                </SelectField>
-                <SelectField
-                  label="Collision Style"
-                  description="How a line visually indicates passing through a solid object"
-                  value={settings.lineCollisionStyle}
-                  settingKey="lineCollisionStyle"
-                  onChange={(e) => updateSetting('lineCollisionStyle', e.target.value)}
-                >
-                  {Object.entries(LINE_COLLISION_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
-                    </option>
-                  ))}
-                </SelectField>
-                <ToggleRow
-                  label="Extra Thick Lines"
-                  description="Render all tube-based line styles (Plain Tube, Ringed Tube, thick Plain Line, collision accents) at 2.7x their normal thickness"
-                  checked={settings.extraThickLines}
-                  settingKey="extraThickLines"
-                  onChange={(v) => updateSetting('extraThickLines', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Plane">
-                <ToggleRow
-                  label="Show Point & Normal"
-                  description="Display the point and normal vector that define a point-normal plane, alongside the plane itself"
-                  checked={settings.showPlanePointNormal}
-                  settingKey="showPlanePointNormal"
-                  onChange={(v) => updateSetting('showPlanePointNormal', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Teapot">
-                <ToggleRow
-                  label="Show Gridlines"
-                  description="Display mesh edge lines on teapot objects"
-                  checked={settings.teapotShowGridlines}
-                  settingKey="teapotShowGridlines"
-                  onChange={(v) => updateSetting('teapotShowGridlines', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Sphere">
-                <ToggleRow
-                  label="Show Gridlines"
-                  description="Display latitude/longitude edge lines on sphere objects"
-                  checked={settings.sphereShowGridlines}
-                  settingKey="sphereShowGridlines"
-                  onChange={(v) => updateSetting('sphereShowGridlines', v)}
-                />
-              </GeometryTile>
-
-              <GeometryTile title="Cube">
-                <ToggleRow
-                  label="Outline Edges"
-                  description="Draw the 12 edge lines around cube objects"
-                  checked={settings.cubeShowEdges}
-                  settingKey="cubeShowEdges"
-                  onChange={(v) => updateSetting('cubeShowEdges', v)}
-                />
-              </GeometryTile>
-            </div>
-          </SettingsSection>
-
-          <SettingsSection title="Axis" className="settings-card--wide">
-            <ToggleRow
-              label="Show Axis Toggle in Scene"
-              description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
-              checked={settings.showAxisToggleButton}
-              settingKey="showAxisToggleButton"
-              onChange={(v) => updateSetting('showAxisToggleButton', v)}
-            />
-            <ToggleRow
-              label="Show Origin Label"
-              description="Label the origin with a small 'O' next to its marker"
-              checked={settings.showOriginLabel}
-              settingKey="showOriginLabel"
-              onChange={(v) => updateSetting('showOriginLabel', v)}
-            />
-            <ToggleRow
-              label="Show Scale Labels"
-              description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
-              checked={settings.showAxisScaleLabels}
-              settingKey="showAxisScaleLabels"
-              onChange={(v) => updateSetting('showAxisScaleLabels', v)}
-            />
-            <ToggleRow
-              label="Show Axis Gizmo"
-              description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
-              checked={settings.showAxisGizmo}
-              settingKey="showAxisGizmo"
-              onChange={(v) => updateSetting('showAxisGizmo', v)}
-            />
           </SettingsSection>
 
           <div className="settings-actions">

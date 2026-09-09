@@ -213,7 +213,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 7,
+  id: 'sphere-distance',
   kind: 'distance',
   Givens,
   Steps,

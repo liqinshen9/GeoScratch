@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const STORAGE_KEY = 'geoscratch:userBlocks'
+const XML_STORAGE_KEY = 'geoscratch:workspace-xml'
 
 async function freshStore() {
   vi.resetModules()
@@ -69,6 +70,28 @@ describe('useWorkspaceStore', () => {
     expect(store.getState().addUserBlock({ name: 'Fine Name', xmlText: '' })).toBeNull()
     expect(store.getState().userBlocks).toEqual([])
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull()
+  })
+
+  it('persists saved workspace XML and reloads it on creation', async () => {
+    const store = await freshStore()
+    store.getState().saveWorkspaceXml('exercise-scale-object', '<xml>solution</xml>')
+    store.getState().saveWorkspaceXml('sandbox', '<xml>play</xml>')
+
+    expect(JSON.parse(window.localStorage.getItem(XML_STORAGE_KEY))).toEqual({
+      'exercise-scale-object': '<xml>solution</xml>',
+      sandbox: '<xml>play</xml>',
+    })
+
+    const reloaded = await freshStore()
+    expect(reloaded.getState().savedXml['exercise-scale-object']).toBe('<xml>solution</xml>')
+  })
+
+  it('starts with an empty savedXml map when storage is malformed', async () => {
+    window.localStorage.setItem(XML_STORAGE_KEY, '[not an object')
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = await freshStore()
+    expect(store.getState().savedXml).toEqual({})
+    consoleError.mockRestore()
   })
 
   it('deletes a user block from state and localStorage', async () => {

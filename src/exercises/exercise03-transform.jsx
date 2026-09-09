@@ -7,7 +7,7 @@ import {
   rotationMatches,
   scaleMatches,
 } from './shared/transformChecks'
-import * as Blockly from 'blockly/core'
+import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 
 const COMBINED_SCALE_FACTOR = 2
 const COMBINED_ROTATE_AXIS = 'Y'
@@ -90,23 +90,8 @@ const EXERCISE_BACKGROUND_XML = `<xml xmlns="https://developers.google.com/block
   </block>
 </xml>`
 
-/**
- * Drops the decorative "given" blocks straight into the student's workspace.
- *
- * Re-entering the exercise restores previously-saved workspace XML, which may
- * hold an older copy of these blocks at outdated positions -- remove those by
- * id first, then reseed, so a layout change here always reaches an
- * already-saved workspace instead of silently keeping the stale positions.
- */
 function seedWorkspace(workspace) {
-  try {
-    EXERCISE_BACKGROUND_BLOCK_IDS.map((id) => workspace.getBlockById(id))
-      .filter(Boolean)
-      .forEach((block) => block.dispose())
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(EXERCISE_BACKGROUND_XML), workspace)
-  } catch (err) {
-    console.error('[GeoScratch] Failed to seed exercise background blocks:', err)
-  }
+  seedBackgroundBlocks(workspace, EXERCISE_BACKGROUND_BLOCK_IDS, EXERCISE_BACKGROUND_XML)
 }
 
 function Givens() {
@@ -175,7 +160,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 3,
+  id: 'transform-object',
   kind: 'transform',
   Givens,
   Steps,

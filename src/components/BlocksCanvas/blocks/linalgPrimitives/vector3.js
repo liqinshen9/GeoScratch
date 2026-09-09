@@ -218,7 +218,34 @@ export function initVec3Block() {
       `
           : ''
       }
-      if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = visual;
+      // Another block is already drawing this exact vector: two coincident
+      // glyphs can't be depth-ordered (speckling) and one label hides the
+      // other. Hand our label to the owner and drop our own glyph.
+      // See src/utils/duplicateVectorRegistry.js.
+      const duplicateOwnerId = window.registerVectorGlyph
+        ? window.registerVectorGlyph(${blockId}, origin, vec)
+        : null;
+      if (duplicateOwnerId) {
+        const owner = window.threeObjStore?.[duplicateOwnerId];
+        const ownerAnchor = Object.keys(owner?.userData?.labelAnchors || {})[0];
+        if (owner?.userData?.labels && ownerAnchor) {
+          owner.userData.labels.push({
+            anchor: ownerAnchor,
+            name: label,
+            value: vectorNotation.formatVector(vec),
+            distanceFactor: 8,
+            offset: [0.12, 0.12 - owner.userData.labels.length * 0.3, 0],
+            color: vectorColor,
+          });
+        }
+        visual.traverse((child) => {
+          child.geometry?.dispose?.();
+          const mats = Array.isArray(child.material) ? child.material : [child.material];
+          mats.forEach((m) => m?.dispose?.());
+        });
+      } else if (typeof threeObjStore === 'object' && threeObjStore) {
+        threeObjStore[${blockId}] = visual;
+      }
       `
           : ''
       }

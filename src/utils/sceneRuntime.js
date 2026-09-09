@@ -6,6 +6,7 @@ import { HALO_LAYER } from '@/utils/haloLayer'
 import { getHaloId } from '@/utils/haloIdRegistry'
 import { applyHaloDiscardMaterial } from '@/utils/haloDiscardShader'
 import { createHaloIdMaterial } from '@/utils/haloIdMaterial'
+import { resetDuplicateVectorRegistry, registerVectorGlyph } from '@/utils/duplicateVectorRegistry'
 import {
   registerHaloLine,
   resetHaloIntersectionRegistry,
@@ -33,6 +34,7 @@ import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
  * @property {Function} applyHaloDiscardMaterial
  * @property {Function} createHaloIdMaterial
  * @property {Function} registerHaloLine
+ * @property {Function} registerVectorGlyph
  * @property {number} HALO_MAX_IMMUNE_IDS
  * @property {Function} buildVectorShaftGlyph
  * @property {Function} makeStagedVectorReveal
@@ -96,10 +98,12 @@ export function installSceneRuntime(workspace, options = {}) {
   window.registerHaloLine = registerHaloLine
   window.HALO_MAX_IMMUNE_IDS = MAX_IMMUNE_IDS
   window.buildVectorShaftGlyph = buildVectorShaftGlyph
+  window.registerVectorGlyph = registerVectorGlyph
   window.makeStagedVectorReveal = makeStagedVectorReveal
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()
+  resetDuplicateVectorRegistry()
 
   return [
     THREE,

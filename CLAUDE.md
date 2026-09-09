@@ -101,15 +101,59 @@ because `defineBlocks()` runs on every workspace mount.
 
 ## Adding an exercise
 
-Add an entry to `data/exercises.js` and a module in `src/exercises/`, then
-register it in `src/exercises/index.js`. That index documents the module
-contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
+Add an entry to `EXERCISES` in `data/exercises.js` (a slug `id`, title,
+difficulty), add that `id` to a section in `UNITS` in the same file, and add a
+module in `src/exercises/` keyed by the same `id` in `src/exercises/index.js`.
+That index documents the module contract; `src/exercises/exercises.test.js`
+fails if the lists drift apart or an exercise is not placed in exactly one unit
+section. The `id` appears only in the URL (`/exercise/<id>`), never in the UI.
+
+Each `UNITS` entry carries a paragraph-length `description`, shown in the unit
+page's "About this unit" card. The in-exercise prev/next arrows walk only the
+exercises inside the current unit (`getAdjacentExercises`); a unit is a
+self-contained track and the browser is the way to cross between units.
+
+Solved exercises are remembered per-device in `localStorage`
+(`utils/exerciseProgress.js`): `ExercisePage` calls `markExerciseSolved` when
+the checker passes and `unmarkExerciseSolved` if the workspace is later edited
+into an actively incorrect state (`result.incorrect`, or a wrong perceptual
+pick -- not merely an empty/loading canvas). `UnitPage` reads
+`getSolvedExerciseIds` to tick off links and show section/unit progress. This is
+a local convenience only -- `exercise_attempts` is still the authoritative log
+when the backend is on.
 
 An exercise module can export `settingsOverrides` to force certain app settings
 (e.g. `{ haloEnabled: false }`) while it is open. `settings` in
 `useSettingsStore` is `DEFAULT_SETTINGS < userSettings < exerciseOverrides`;
 `ExercisePage` applies/reverts the active exercise's overrides, and the Settings
 page locks the matching controls.
+
+## Backend / persistence (optional)
+
+An optional Supabase project (managed Postgres + Auth) adds participant accounts
+and per-attempt logging for user studies. It is **off unless
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` are set** (`.env.local`): without
+them `isSupabaseConfigured` is false and the app behaves exactly as before, with
+a small "tracking off" badge.
+
+- Identity is anonymous sign-in + a participant code. `ParticipantGate` (in
+  `Layout`) blocks every route until a code is set. A new device is a new user;
+  the code is an analysis join key, not a login.
+- `useExerciseTracking` in `ExercisePage` writes `exercise_attempts` (row per
+  exercise open, updated on pass / MCQ pick / unmount). Pure row builders are in
+  `src/lib/attemptPayload.js`.
+- **Never block render or navigation on a Supabase write.** All writes are
+  fire-and-forget with a `[GeoScratch]` `.catch` log.
+- **RLS is the only security boundary** (`supabase/migrations/0001_init.sql`).
+  The anon key is public; `service_role` never ships to the client.
+- Perceptual exercises (08/09) expose an `mcq` descriptor
+  (`{ prompt, choices, correctId }`); `ExercisePage` renders it via
+  `exercises/shared/PerceptualQuestion` and logs the pick.
+- Study participants get a `?c=<cohort>` link; `bootstrap()` stores it on
+  `profiles.cohort`. A plain dev URL leaves `cohort` null, so exports filter dev
+  data out with `where cohort = '<name>'`.
+
+Full rationale: `docs/architecture/backend.md`.
 
 ## Deeper docs
 
@@ -133,6 +177,7 @@ non-obvious mechanism carries a one-line pointer to the relevant section.
 | `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
 | `theming.md`                    | light/dark mode: `themeConfig.js`, `useThemeSync.js`, `data-theme` tokens |
 | `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                         |
+| `backend.md`                    | Supabase auth/gate, `exercise_attempts`, RLS, workspace snapshots, export |
 
 ## Conventions
 

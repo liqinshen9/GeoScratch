@@ -8,6 +8,7 @@ import useSettingsStore from '@/store/useSettingsStore'
 export default function HaloUniformSync({ objects, target }) {
   const { camera } = useThree()
   const haloEnabled = useSettingsStore((s) => s.settings.haloEnabled)
+  const haloLineVectorEnabled = useSettingsStore((s) => s.settings.haloLineVectorEnabled)
 
   useFrame(() => {
     if (!target) return
@@ -23,6 +24,9 @@ export default function HaloUniformSync({ objects, target }) {
         uniforms.haloCameraNear.value = camera.near
         uniforms.haloCameraFar.value = camera.far
         uniforms.haloEnabled.value = haloEnabled ? 1.0 : 0.0
+        if (uniforms.haloCrossTypeEnabled) {
+          uniforms.haloCrossTypeEnabled.value = haloLineVectorEnabled === false ? 0.0 : 1.0
+        }
       })
     })
   })

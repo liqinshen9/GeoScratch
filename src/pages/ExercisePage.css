@@ -44,8 +44,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.65rem;
+  gap: 0.9rem;
+  padding: 0.75rem 0.85rem;
   /* No border-right: the divider to the toolbox is .editor-shell's background
      showing through its 1px column-gap (see editor-shell.css). A border here
      would sit next to that gap and paint the seam 2px wide, thicker than every
@@ -56,49 +56,68 @@
 }
 
 .exercise-task-panel.is-passed {
-  background: color-mix(in srgb, var(--state-pass-accent) 8%, var(--bg-main));
-  box-shadow:
-    inset 4px 0 0 var(--state-pass-accent),
-    inset -1px 0 0 var(--state-pass-accent);
+  background: color-mix(in srgb, #22c55e 4%, var(--bg-main));
+  box-shadow: inset 4px 0 0 #22c55e;
 }
 
-.exercise-task-panel__top {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.exercise-task-panel__meta-row {
+/* Full-width success strip pinned to the foot of the panel once the checker
+   passes, so it never shifts the task content when it appears. */
+.exercise-pass-banner {
+  margin-top: auto;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.exercise-pass-badge {
-  width: max-content;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--state-pass-border);
-  border-radius: 0.45rem;
-  background: var(--state-pass-bg);
-  color: var(--state-pass-fg);
-  font-size: 0.75rem;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.9rem;
   font-weight: 800;
 }
 
+/* The task panel opens with the same header shape as the exercise browser's
+   rail: a small uppercase unit/section crumb over the bold title, closed by a
+   hairline. The crumb wraps rather than truncating. */
+.exercise-task-panel__top {
+  display: grid;
+  gap: 0.3rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--geo-border-light);
+}
+
+.exercise-task-panel__crumb {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--geo-text-muted-on-light);
+}
+
+/* "Exercise" (sized to match the exercise browser's "Exercises" rail heading)
+   with the Browse / prev / next controls beside it. The button group wraps
+   under the title when the panel is too narrow to hold both on one line. */
 .exercise-column-heading {
   width: 100%;
   min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.4rem 0.6rem;
 }
 
-.exercise-column-heading__actions {
+.exercise-column-heading h2 {
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.exercise-column-heading__nav {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  flex-shrink: 0;
 }
 
 .exercise-nav-button {
@@ -181,38 +200,52 @@
   line-height: 1.35;
 }
 
-.exercise-given-values,
-.exercise-answer-card {
+/* Givens read as a plain labelled list (hairline between sections), matching
+   the unit browser's section style rather than a boxed card. */
+.exercise-given-values {
   display: grid;
-  gap: 0.35rem;
-  padding: 0.5rem;
-  border: 1px solid var(--geo-border-light);
-  border-radius: 8px;
-  background: var(--geo-panel-muted);
+  gap: 0.45rem;
+  padding: 0.1rem;
 }
 
 .exercise-given-values section + section {
-  padding-top: 0.35rem;
+  padding-top: 0.5rem;
   border-top: 1px solid var(--geo-border-light);
 }
 
-.exercise-given-values h3,
-.exercise-answer-card span {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 800;
+.exercise-given-values h3 {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--geo-text-muted-on-light);
 }
 
-.exercise-given-values p,
-.exercise-answer-card p {
-  color: var(--geo-text-muted-on-light);
+.exercise-given-values p {
+  margin: 0;
+  color: var(--geo-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.82rem;
-  line-height: 1.25;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .exercise-answer-card {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 10px;
   background: var(--bg-main);
+}
+
+.exercise-answer-card span {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--geo-text-muted-on-light);
 }
 
 .exercise-answer-card strong {
@@ -222,25 +255,25 @@
 }
 
 .exercise-answer-card.is-correct {
-  border-color: var(--state-pass-accent);
-  background: var(--state-pass-bg);
+  border-color: #22c55e;
+  background: #dcfce7;
 }
 
 .exercise-answer-card.is-correct span,
 .exercise-answer-card.is-correct strong,
 .exercise-answer-card.is-correct p {
-  color: var(--state-pass-fg);
+  color: #166534;
 }
 
 .exercise-answer-card.is-incorrect {
-  border-color: var(--state-fail-accent);
-  background: var(--state-fail-bg);
+  border-color: #ef4444;
+  background: #fee2e2;
 }
 
 .exercise-answer-card.is-incorrect span,
 .exercise-answer-card.is-incorrect strong,
 .exercise-answer-card.is-incorrect p {
-  color: var(--state-fail-fg);
+  color: #991b1b;
 }
 
 .exercise-target-preview {
@@ -342,53 +375,65 @@
   transform: translate(-50%, -50%);
 }
 
+/* Steps are a hairline-divided list (no per-step boxes); a completed step
+   turns green with a filled number, matching the browser's link list. */
 .exercise-task-steps {
   margin: 0;
   padding: 0;
   list-style: none;
   counter-reset: exercise-step;
   color: var(--geo-text);
-  font-size: 0.82rem;
-  line-height: 1.28;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.exercise-task-steps::before {
+  content: 'Steps';
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--geo-text-muted-on-light);
 }
 
 .exercise-task-steps li {
   counter-increment: exercise-step;
   position: relative;
-  padding: 0.36rem 0.45rem 0.36rem 1.8rem;
-  border: 1px solid var(--geo-border-light);
-  border-radius: 8px;
-  background: var(--bg-main);
+  padding: 0.5rem 0.1rem 0.5rem 1.7rem;
+}
+
+.exercise-task-steps li:first-of-type {
+  border-top: 1px solid var(--geo-border-light);
 }
 
 .exercise-task-steps li + li {
-  margin-top: 0.28rem;
+  border-top: 1px solid var(--geo-border-light);
 }
 
 .exercise-task-steps li::before {
   content: counter(exercise-step);
   position: absolute;
-  left: 0.42rem;
-  top: 0.36rem;
-  width: 1rem;
-  height: 1rem;
+  left: 0.1rem;
+  top: 0.5rem;
+  width: 1.15rem;
+  height: 1.15rem;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--geo-panel-muted);
-  color: var(--geo-text-muted-on-light);
-  font-size: 0.74rem;
+  background: color-mix(in srgb, var(--geo-highlight) 10%, var(--bg-main));
+  color: var(--geo-highlight);
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
 .exercise-task-steps li.is-complete {
-  border-color: var(--state-pass-accent);
-  background: var(--state-pass-bg);
-  color: var(--state-pass-fg);
+  color: #166534;
 }
 
 .exercise-task-steps li.is-complete::before {
-  background: var(--state-pass-accent);
+  background: #22c55e;
   color: #ffffff;
 }
 
@@ -459,16 +504,47 @@
   }
 }
 
+:root[data-theme='dark'] .exercise-task-panel.is-passed {
+  background: color-mix(in srgb, var(--state-pass-accent) 4%, var(--bg-main));
+  box-shadow: inset 4px 0 0 var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-pass-banner,
+:root[data-theme='dark'] .exercise-answer-card.is-correct {
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-correct {
+  border-color: var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-correct span,
+:root[data-theme='dark'] .exercise-answer-card.is-correct strong,
+:root[data-theme='dark'] .exercise-answer-card.is-correct p,
+:root[data-theme='dark'] .exercise-task-steps li.is-complete {
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .exercise-task-steps li.is-complete::before {
+  background: var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect {
+  border-color: var(--state-fail-accent);
+  background: var(--state-fail-bg);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect span,
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect strong,
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect p {
+  color: var(--state-fail-fg);
+}
+
 :root[data-theme='dark'] .exercise-page--editor .palette-block-preview {
   background: var(--geo-block-card);
 }
 
 :root[data-theme='dark'] .exercise-page--editor .palette-group-label {
   color: var(--geo-text-muted-on-light);
-}
-
-:root[data-theme='dark'] .exercise-pass-badge {
-  background: var(--state-pass-bg);
-  color: var(--state-pass-fg);
-  border-color: var(--state-pass-border);
 }

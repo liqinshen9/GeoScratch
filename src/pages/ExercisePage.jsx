@@ -4,12 +4,20 @@ import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
-import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
+import { ArrowLeft, ArrowRight, AllApplication, CheckOne } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
-import { EXERCISES } from '@/data/exercises'
+import {
+  getExercise,
+  orderedExercises,
+  getAdjacentExercises,
+  getSectionForExercise,
+} from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
+import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
+import useExerciseTracking from '@/hooks/useExerciseTracking'
+import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -74,19 +82,20 @@ export default function ExercisePage() {
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
   const clearExerciseOverrides = useSettingsStore((s) => s.clearExerciseOverrides)
   const navigate = useNavigate()
-  const { exerciseNumber } = useParams()
+  const { exerciseId } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
+  const [perceptualPicked, setPerceptualPicked] = useState(null)
   const clearWorkspaceRef = useRef(() => {})
 
-  // The URL is the source of truth for which exercise is open
-  // /exercise with no param defaults to 1,
-  const activeExerciseConfig =
-    EXERCISES.find(({ number }) => number === Number(exerciseNumber)) ?? EXERCISES[0]
-  const activeExercise = activeExerciseConfig.number
+  // The URL is the source of truth for which exercise is open;
+  // /exercise with no param (or an unknown id) defaults to the first one.
+  const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
+  const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
-  const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExercise)
-  const nextExercise = EXERCISES.find(({ number }) => number > activeExercise)
+  const { previous: previousExercise, next: nextExercise } = getAdjacentExercises(activeExercise)
+  const placement = getSectionForExercise(activeExercise)
+  const unit = placement?.unit
 
   // Everything the page needs to know about progress comes from one call into
   // the exercise's own checker.
@@ -95,15 +104,47 @@ export default function ExercisePage() {
     result.incorrect ? ' is-incorrect' : ''
   }`
 
+  // Perceptual exercises have no checker pass -- a correct MCQ pick is the pass.
+  const isPerceptual = exercise.kind === 'perceptual'
+  const passed = result.passed || (isPerceptual && perceptualPicked === exercise.mcq?.correctId)
+
+  const tracking = useExerciseTracking(activeExercise, exercise.kind)
+  useEffect(() => {
+    tracking.reportResult(result)
+  })
+
+  // Mirror the solve state into localStorage so the exercise browser shows
+  // progress. A pass records it. It comes back off once we've seen this
+  // exercise pass on this visit and it then stops passing -- so editing a
+  // solved workspace so it no longer works un-ticks it, while merely opening it
+  // (empty/still-restoring, never passed yet this visit) leaves the tick alone.
+  const sawPassThisVisit = useRef(false)
+  useEffect(() => {
+    sawPassThisVisit.current = false
+  }, [activeExercise])
+  useEffect(() => {
+    if (passed) {
+      sawPassThisVisit.current = true
+      markExerciseSolved(activeExercise)
+    } else if (sawPassThisVisit.current || (isPerceptual && perceptualPicked != null)) {
+      unmarkExerciseSolved(activeExercise)
+    }
+  }, [passed, activeExercise, isPerceptual, perceptualPicked])
+
   const handleSelectExercise = useCallback(
-    (number) => {
-      navigate(`/exercise/${number}`)
+    (id) => {
+      navigate(`/exercise/${id}`)
       setWorkspaceMaximized(false)
       setPendingObjects([])
       setObjects([])
     },
     [navigate, setObjects, setPendingObjects],
   )
+
+  // Clear a stale MCQ pick when moving between exercises.
+  useEffect(() => {
+    setPerceptualPicked(null)
+  }, [activeExercise])
 
   // Sets up starter blocks for exercises that have seedWorkspace
   useEffect(() => {
@@ -143,11 +184,11 @@ export default function ExercisePage() {
           leadingHeader={
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
-              <div className="exercise-column-heading__actions" aria-label="Exercise navigation">
+              <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                 <button
                   type="button"
                   className="exercise-nav-button exercise-nav-button--wide"
-                  onClick={() => navigate('/exercises')}
+                  onClick={() => navigate(unit ? `/exercises/${unit.id}` : '/exercises')}
                   title="Browse all exercises"
                   aria-label="Browse all exercises"
                 >
@@ -162,7 +203,7 @@ export default function ExercisePage() {
                 <button
                   type="button"
                   className="exercise-nav-button"
-                  onClick={() => previousExercise && handleSelectExercise(previousExercise.number)}
+                  onClick={() => previousExercise && handleSelectExercise(previousExercise.id)}
                   disabled={!previousExercise}
                   title="Previous exercise"
                   aria-label="Previous exercise"
@@ -172,7 +213,7 @@ export default function ExercisePage() {
                 <button
                   type="button"
                   className="exercise-nav-button"
-                  onClick={() => nextExercise && handleSelectExercise(nextExercise.number)}
+                  onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
                   disabled={!nextExercise}
                   title="Next exercise"
                   aria-label="Next exercise"
@@ -190,22 +231,33 @@ export default function ExercisePage() {
 
         <div className="editor-body-row">
           {!workspaceMaximized && (
-            <aside className={`exercise-task-panel${result.passed ? ' is-passed' : ''}`}>
+            <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {result.passed && (
-                  <div className="exercise-task-panel__meta-row">
-                    <span className="exercise-pass-badge">Passed</span>
-                  </div>
+                {placement && (
+                  <p className="exercise-task-panel__crumb">
+                    {placement.unit.title} · {placement.section.title}
+                  </p>
                 )}
                 <h1>
-                  {activeExerciseConfig.number}: <strong>{activeExerciseConfig.title}</strong>
+                  <strong>{activeExerciseConfig.title}</strong>
                 </h1>
               </div>
 
               <Givens />
-              <Steps steps={result.steps} passed={result.passed} />
-              {exercise.kind !== 'perceptual' && (
-                <AnswerCard result={result} className={answerCardClass} />
+              {isPerceptual && exercise.mcq && (
+                <PerceptualQuestion
+                  mcq={exercise.mcq}
+                  onPick={tracking.recordMcqAnswer}
+                  onPickedChange={setPerceptualPicked}
+                />
+              )}
+              <Steps steps={result.steps} passed={passed} />
+              {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
+              {passed && (
+                <div className="exercise-pass-banner" role="status">
+                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                  <span>Passed</span>
+                </div>
               )}
             </aside>
           )}

@@ -29,7 +29,8 @@ export function systemPrefersDark() {
  */
 export function resolveTheme(theme, prefersDark = systemPrefersDark()) {
   if (theme === THEMES.LIGHT || theme === THEMES.DARK) return theme
-  return prefersDark ? THEMES.LIGHT : THEMES.DARK
+  if (theme === THEMES.SYSTEM) return prefersDark ? THEMES.DARK : THEMES.LIGHT
+  return DEFAULT_THEME
 }
 
 /** Subscribe to OS light/dark changes. Returns an unsubscribe function. */

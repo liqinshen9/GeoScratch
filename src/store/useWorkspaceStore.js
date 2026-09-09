@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 const USER_BLOCKS_STORAGE_KEY = 'geoscratch:userBlocks'
+const SAVED_XML_STORAGE_KEY = 'geoscratch:workspace-xml'
 
 function loadUserBlocks() {
   if (typeof window === 'undefined') return []
@@ -22,6 +23,30 @@ function persistUserBlocks(userBlocks) {
   }
 }
 
+// Per-workspace serialized XML ({ [workspaceId]: xmlText }), persisted so that
+// the sandbox and each exercise keep the blocks you built across reloads and
+// sessions -- not just while the tab stays open. The optional cloud snapshot
+// (workspace_snapshots) still wins on restore when the backend is enabled.
+function loadSavedXml() {
+  if (typeof window === 'undefined') return {}
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SAVED_XML_STORAGE_KEY) || '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch (err) {
+    console.error('[GeoScratch] Failed to load saved workspaces:', err)
+    return {}
+  }
+}
+
+function persistSavedXml(savedXml) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(SAVED_XML_STORAGE_KEY, JSON.stringify(savedXml))
+  } catch (err) {
+    console.error('[GeoScratch] Failed to save workspace state:', err)
+  }
+}
+
 const useWorkspaceStore = create((set) => ({
   // Blockly workspace instance (current active one)
   workspace: null,
@@ -32,8 +57,9 @@ const useWorkspaceStore = create((set) => ({
   // Title Status
   title: 'GeoScratch',
 
-  // NEW: Memory bank for serialized workspace data
-  savedXml: {},
+  // Memory bank for serialized workspace data, keyed by workspace id and
+  // persisted to localStorage (see loadSavedXml).
+  savedXml: loadSavedXml(),
   userBlocks: loadUserBlocks(),
 
   // Block id shared between the Blockly workspace and the 3D scene: selecting
@@ -50,9 +76,13 @@ const useWorkspaceStore = create((set) => ({
   setTitle: (newTitle) => set({ title: newTitle }),
   clearExampleXml: () => set({ exampleXml: null }),
 
-  // NEW: Save the XML string for a specific page ID
+  // Save the XML string for a specific workspace id (persisted).
   saveWorkspaceXml: (id, xmlText) =>
-    set((state) => ({ savedXml: { ...state.savedXml, [id]: xmlText } })),
+    set((state) => {
+      const savedXml = { ...state.savedXml, [id]: xmlText }
+      persistSavedXml(savedXml)
+      return { savedXml }
+    }),
   addUserBlock: ({ name, xmlText, source = 'workspace' }) => {
     const trimmedName = String(name || '').trim()
     if (!trimmedName || !xmlText) return null

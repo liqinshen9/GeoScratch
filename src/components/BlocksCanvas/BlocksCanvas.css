@@ -768,7 +768,10 @@
 }
 
 .matrix-drawer-panel {
-  pointer-events: auto;
+  /* Only the OPEN drawer takes clicks. A closed drawer stays in the DOM at its
+     last position with opacity 0; leaving pointer-events on made that invisible
+     panel swallow clicks on the bottom of the block it was anchored to. */
+  pointer-events: none;
   height: 100%;
   background: var(--geo-surface);
   border: 2px solid var(--geo-highlight);
@@ -793,6 +796,7 @@
 }
 
 .matrix-drawer-shell.open .matrix-drawer-panel {
+  pointer-events: auto;
   opacity: 1;
   transform: translateX(0);
 }
@@ -874,4 +878,71 @@
 
 :root[data-theme='dark'] .my-block-dialog__button--primary {
   color: #0b0f18;
+}
+
+.vec-drawer-expr {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* max-content keeps the row's intrinsic width measurable (syncLayout reads
+     inner.scrollWidth to stop the expression overflowing a narrow block) */
+  width: max-content;
+  gap: 8px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.vec-drawer-term {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.vec-drawer-op,
+.vec-drawer-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--geo-text-on-light);
+}
+
+.vec-drawer-name {
+  font-style: italic;
+}
+
+/* Square-bracket column vector: the ::before / ::after are the [ and ] serifs. */
+.vec-drawer-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 3px 14px;
+}
+
+.vec-drawer-col::before,
+.vec-drawer-col::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  border: 2px solid var(--geo-text-on-light);
+}
+
+.vec-drawer-col::before {
+  left: 0;
+  border-right: none;
+}
+
+.vec-drawer-col::after {
+  right: 0;
+  border-left: none;
+}
+
+.vec-drawer-col span {
+  display: block;
+  text-align: center;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
 }

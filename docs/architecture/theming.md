@@ -11,10 +11,11 @@ colors).
 
 `settings.theme` is one of `light | dark | system` (`THEMES` in
 `themeConfig.js`), default `light`. The header button is a plain light/dark
-switch; `system` (follow the OS) is an opt-in choice from Settings. It is the
-**only** setting that persists
-across reloads -- `useSettingsStore` seeds it from `localStorage['geoscratch:theme']`
-at creation and writes it back on every change. `resetSettings()` keeps it.
+switch; `system` (follow the OS) is an opt-in choice from Settings. The theme is
+saved alongside the other user settings in `localStorage['geoscratch:user-settings']`.
+The earlier `geoscratch:theme` preference is read as a fallback and kept in sync
+as a pre-paint cache. The combined settings take precedence. `resetSettings()`
+restores all settings, including the theme, to their defaults.
 
 `resolveTheme(theme, prefersDark)` collapses that to the concrete scheme to
 paint: `'light'` or `'dark'`. `system` follows

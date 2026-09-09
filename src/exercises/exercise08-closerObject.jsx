@@ -1,10 +1,9 @@
-import * as Blockly from 'blockly/core'
-import { useState } from 'react'
+import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 
 // A "look and answer" exercise: the scene is prefilled with real blocks and the
-// student picks an answer instead of building. Everything here uses the same
-// module contract as every other exercise (seedWorkspace + Givens + Steps +
-// evaluate).
+// student picks an answer instead of building. The choices live in the `mcq`
+// descriptor; ExercisePage renders them via shared/PerceptualQuestion and logs
+// the pick. Same module contract as every other exercise otherwise.
 
 const SEED_BLOCK_IDS = ['q8-cube', 'q8-sphere']
 
@@ -49,44 +48,19 @@ const SEED_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
 </xml>`
 
 function seedWorkspace(workspace) {
-  try {
-    SEED_BLOCK_IDS.map((id) => workspace.getBlockById(id))
-      .filter(Boolean)
-      .forEach((block) => block.dispose())
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(SEED_XML), workspace)
-  } catch (err) {
-    console.error('[GeoScratch] Failed to seed question blocks:', err)
-  }
+  seedBackgroundBlocks(workspace, SEED_BLOCK_IDS, SEED_XML)
 }
 
+const mcq = {
+  prompt: 'Which object is closer to the camera?',
+  choices: CHOICES,
+  correctId: CORRECT_ID,
+}
+
+// The question UI is rendered by ExercisePage from `mcq`; Givens/Steps stay as
+// no-op components to keep the shared module contract.
 function Givens() {
-  const [picked, setPicked] = useState(null)
-  return (
-    <div aria-label="Question" style={{ display: 'grid', gap: '0.75rem' }}>
-      <p style={{ fontSize: '0.95rem', lineHeight: 1.4 }}>Which object is closer to the camera?</p>
-      <div style={{ display: 'grid', gap: '0.4rem' }}>
-        {CHOICES.map((choice) => (
-          <label
-            key={choice.id}
-            style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.95rem' }}
-          >
-            <input
-              type="radio"
-              name="question-8"
-              checked={picked === choice.id}
-              onChange={() => setPicked(choice.id)}
-            />
-            {choice.label}
-          </label>
-        ))}
-      </div>
-      {picked && (
-        <p style={{ fontSize: '0.95rem', fontWeight: 600 }}>
-          {picked === CORRECT_ID ? 'Correct.' : 'Not quite — try looking again.'}
-        </p>
-      )}
-    </div>
-  )
+  return null
 }
 
 function Steps() {
@@ -104,8 +78,9 @@ function evaluate() {
 }
 
 export default {
-  number: 8,
+  id: 'closer-object',
   kind: 'perceptual',
+  mcq,
   Givens,
   Steps,
   evaluate,

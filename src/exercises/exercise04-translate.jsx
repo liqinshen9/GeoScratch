@@ -65,7 +65,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 4,
+  id: 'translate-object',
   kind: 'transform',
   Givens,
   Steps,

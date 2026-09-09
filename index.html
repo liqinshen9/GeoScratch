@@ -10,11 +10,12 @@
       // white. Kept in sync afterwards by src/hooks/useThemeSync.js.
       ;(() => {
         try {
-          const stored = localStorage.getItem('geoscratch:theme')
+          const settings = JSON.parse(localStorage.getItem('geoscratch:user-settings') || '{}')
+          const stored = settings?.theme ?? localStorage.getItem('geoscratch:theme') ?? 'light'
           const theme =
             stored === 'light' || stored === 'dark'
               ? stored
-              : window.matchMedia('(prefers-color-scheme: dark)').matches
+              : stored === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches
                 ? 'dark'
                 : 'light'
           document.documentElement.dataset.theme = theme
