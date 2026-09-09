@@ -227,6 +227,11 @@
   color: var(--accent-hover);
 }
 
+:root[data-theme='dark'] .landing-btn--secondary:hover {
+  background: #364152;
+  color: var(--text-main);
+}
+
 @media (max-width: 768px) {
   .landing-nav {
     --landing-nav-curve-depth: 3.5rem;
