@@ -97,205 +97,78 @@ export default function SettingsPage() {
         </header>
 
         <main className="settings-layout">
-          <div className="settings-stack">
-            <SettingsSection title="Scene">
-              <ToggleRow
-                label="Show Grid"
-                description="Display the ground grid in the viewport"
-                checked={settings.showGrid}
-                settingKey="showGrid"
-                onChange={(v) => updateSetting('showGrid', v)}
-              />
-              <ToggleRow
-                label="Show Box"
-                description="Display the bounding box in the viewport"
-                checked={settings.showBox}
-                settingKey="showBox"
-                onChange={(v) => updateSetting('showBox', v)}
-              />
-              <ToggleRow
-                label="Show Box Front Wireframe"
-                description="Display the wireframe on whichever box wall is currently facing the camera"
-                checked={settings.showBoxFrontWireframe}
-                settingKey="showBoxFrontWireframe"
-                onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
-              />
-              <ToggleRow
-                label="Zoom-Invariant Line & Point Sizing"
-                description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
-                checked={settings.zoomInvariantSizing}
-                settingKey="zoomInvariantSizing"
-                onChange={(v) => updateSetting('zoomInvariantSizing', v)}
-              />
-            </SettingsSection>
-          </div>
-
-          <div className="settings-compact-group">
-            <SettingsSection title="Shadows">
-              <ToggleRow
-                label="Object Shadows"
-                description="Let objects receive shadows cast by other objects"
-                checked={settings.objectsReceiveShadows}
-                settingKey="objectsReceiveShadows"
-                onChange={(v) => updateSetting('objectsReceiveShadows', v)}
-              />
-              <ToggleRow
-                label="Camera Shadows"
-                description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
-                checked={settings.cameraShadowsEnabled}
-                settingKey="cameraShadowsEnabled"
-                onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
-              />
-            </SettingsSection>
-
-            <SettingsSection title="Colors">
-              <SelectField
-                label="Color Preset"
-                description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
-                value={settings.colorPreset}
-                settingKey="colorPreset"
-                onChange={(e) => updateSetting('colorPreset', e.target.value)}
-              >
-                {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
-                  <option key={key} value={key}>
-                    {preset.label}
-                  </option>
-                ))}
-              </SelectField>
-            </SettingsSection>
-
-            <SettingsSection title="Camera">
-              <ToggleRow
-                label="Auto-Frame Camera"
-                description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
-                checked={settings.autoFocusOnNewObject}
-                settingKey="autoFocusOnNewObject"
-                onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
-              />
-            </SettingsSection>
-
-            <SettingsSection title="Halos">
-              <ToggleRow
-                label="Enable Halos"
-                description="When a line or vector passes in front of another one, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line and vector styles."
-                checked={settings.haloEnabled}
-                settingKey="haloEnabled"
-                onChange={(v) => updateSetting('haloEnabled', v)}
-              />
-              <ToggleRow
-                label="Halo line/vector crossings"
-                description="Also cut the gap where a line and a vector cross (not just line-line and vector-vector). Requires Enable Halos."
-                checked={settings.haloLineVectorEnabled}
-                settingKey="haloLineVectorEnabled"
-                onChange={(v) => updateSetting('haloLineVectorEnabled', v)}
-              />
-            </SettingsSection>
-          </div>
-
-          <SettingsSection title="Animation & Highlighting" className="settings-card--wide">
+          <SettingsSection title="General" className="settings-card--wide">
             <div className="settings-geometry-grid">
-              <GeometryTile title="Animation">
-                <SelectField
-                  label="Speed"
-                  description="How long a full play-through of a transform-pipeline animation takes. Also set by the transport bar above the 3D view."
-                  value={settings.animationDurationMs}
-                  settingKey="animationDurationMs"
-                  onChange={(e) => updateSetting('animationDurationMs', Number(e.target.value))}
-                >
-                  {ANIMATION_SPEED_PRESETS.map((preset) => (
-                    <option key={preset.label} value={preset.ms}>
-                      {preset.label}
-                    </option>
-                  ))}
-                </SelectField>
-                <SelectField
-                  label="Easing"
-                  description="The acceleration curve the animation follows between its start and end pose."
-                  value={settings.animationEasing}
-                  settingKey="animationEasing"
-                  onChange={(e) => updateSetting('animationEasing', e.target.value)}
-                >
-                  {Object.entries(ANIMATION_EASINGS).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </SelectField>
+              <GeometryTile title="Scene">
                 <ToggleRow
-                  label="Loop"
-                  description="Repeat the animation from the start instead of stopping once it reaches the end."
-                  checked={settings.animationLoop}
-                  settingKey="animationLoop"
-                  onChange={(v) => updateSetting('animationLoop', v)}
+                  label="Show Grid"
+                  description="Display the ground grid in the viewport"
+                  checked={settings.showGrid}
+                  settingKey="showGrid"
+                  onChange={(v) => updateSetting('showGrid', v)}
+                />
+                <ToggleRow
+                  label="Show Box"
+                  description="Display the bounding box in the viewport"
+                  checked={settings.showBox}
+                  settingKey="showBox"
+                  onChange={(v) => updateSetting('showBox', v)}
+                />
+                <ToggleRow
+                  label="Show Box Front Wireframe"
+                  description="Display the wireframe on whichever box wall is currently facing the camera"
+                  checked={settings.showBoxFrontWireframe}
+                  settingKey="showBoxFrontWireframe"
+                  onChange={(v) => updateSetting('showBoxFrontWireframe', v)}
+                />
+                <ToggleRow
+                  label="Zoom-Invariant Line & Point Sizing"
+                  description="Keep lines, tubes, and point markers a consistent apparent size on screen as you zoom in or out, instead of shrinking to invisible or ballooning in world space"
+                  checked={settings.zoomInvariantSizing}
+                  settingKey="zoomInvariantSizing"
+                  onChange={(v) => updateSetting('zoomInvariantSizing', v)}
                 />
               </GeometryTile>
 
-              <GeometryTile title="Highlighting">
+              <GeometryTile title="Camera">
                 <ToggleRow
-                  label="Highlight the selected object"
-                  description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
-                  checked={settings.objectHighlightEnabled}
-                  settingKey="objectHighlightEnabled"
-                  onChange={(v) => updateSetting('objectHighlightEnabled', v)}
+                  label="Auto-Frame Camera"
+                  description="Move the camera to frame the scene on load and whenever a new object is added. When off, only your mouse (and the reset-view button) ever moves the camera."
+                  checked={settings.autoFocusOnNewObject}
+                  settingKey="autoFocusOnNewObject"
+                  onChange={(v) => updateSetting('autoFocusOnNewObject', v)}
                 />
-                <SelectField
-                  label="Highlight style"
-                  description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
-                  value={settings.objectHighlightStyle}
-                  settingKey="objectHighlightStyle"
-                  onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
-                >
-                  {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key.replace(/_/g, ' ').toLowerCase()}
-                    </option>
-                  ))}
-                </SelectField>
-              </GeometryTile>
-            </div>
-          </SettingsSection>
-
-          <SettingsSection title="Labels & Naming" className="settings-card--wide">
-            <div className="settings-geometry-grid">
-              <GeometryTile title="Naming">
-                <SelectField
-                  label="Auto-name style"
-                  description="How newly created objects are named by default (e.g. L1 vs Line1). Applies instantly to every object that hasn't been given a custom name, on both its block and its 3D label."
-                  value={settings.namingStyle}
-                  settingKey="namingStyle"
-                  onChange={(e) => updateSetting('namingStyle', e.target.value)}
-                >
-                  {Object.entries(NAMING_STYLES).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key === 'SHORT'
-                        ? 'Short codes (L1, V1, P1)'
-                        : 'Descriptive (Line1, Vector1, Point1)'}
-                    </option>
-                  ))}
-                </SelectField>
               </GeometryTile>
 
-              <GeometryTile title="3D Labels">
+              <GeometryTile title="Axis">
                 <ToggleRow
-                  label="Show 3D Labels"
-                  description="Display names of elements in the viewport"
-                  checked={settings.showLabels}
-                  settingKey="showLabels"
-                  onChange={(v) => updateSetting('showLabels', v)}
+                  label="Show Axis Toggle in Scene"
+                  description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
+                  checked={settings.showAxisToggleButton}
+                  settingKey="showAxisToggleButton"
+                  onChange={(v) => updateSetting('showAxisToggleButton', v)}
                 />
-                <SelectField
-                  label="Label detail"
-                  description="Show just an object's name, or its name plus its current value, on every 3D-scene label."
-                  value={settings.labelDetail}
-                  settingKey="labelDetail"
-                  onChange={(e) => updateSetting('labelDetail', e.target.value)}
-                >
-                  {Object.entries(LABEL_DETAIL_LEVELS).map(([key, value]) => (
-                    <option key={key} value={value}>
-                      {key === 'NAME_ONLY' ? 'Name only (L1)' : 'Name and value (L1 = (1, 2, 3))'}
-                    </option>
-                  ))}
-                </SelectField>
+                <ToggleRow
+                  label="Show Origin Label"
+                  description="Label the origin with a small 'O' next to its marker"
+                  checked={settings.showOriginLabel}
+                  settingKey="showOriginLabel"
+                  onChange={(v) => updateSetting('showOriginLabel', v)}
+                />
+                <ToggleRow
+                  label="Show Scale Labels"
+                  description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
+                  checked={settings.showAxisScaleLabels}
+                  settingKey="showAxisScaleLabels"
+                  onChange={(v) => updateSetting('showAxisScaleLabels', v)}
+                />
+                <ToggleRow
+                  label="Show Axis Gizmo"
+                  description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
+                  checked={settings.showAxisGizmo}
+                  settingKey="showAxisGizmo"
+                  onChange={(v) => updateSetting('showAxisGizmo', v)}
+                />
               </GeometryTile>
             </div>
           </SettingsSection>
@@ -427,35 +300,166 @@ export default function SettingsPage() {
             </div>
           </SettingsSection>
 
-          <SettingsSection title="Axis" className="settings-card--wide">
-            <ToggleRow
-              label="Show Axis Toggle in Scene"
-              description="Show a quick on/off button for the axes in the 3D view's controls, next to Reset View"
-              checked={settings.showAxisToggleButton}
-              settingKey="showAxisToggleButton"
-              onChange={(v) => updateSetting('showAxisToggleButton', v)}
-            />
-            <ToggleRow
-              label="Show Origin Label"
-              description="Label the origin with a small 'O' next to its marker"
-              checked={settings.showOriginLabel}
-              settingKey="showOriginLabel"
-              onChange={(v) => updateSetting('showOriginLabel', v)}
-            />
-            <ToggleRow
-              label="Show Scale Labels"
-              description="Show numeric labels (5, 10, 15...) at the tick marks along each axis"
-              checked={settings.showAxisScaleLabels}
-              settingKey="showAxisScaleLabels"
-              onChange={(v) => updateSetting('showAxisScaleLabels', v)}
-            />
-            <ToggleRow
-              label="Show Axis Gizmo"
-              description="Show a small always-visible orientation compass in the corner of the 3D view, independent of whether the in-scene axes are shown"
-              checked={settings.showAxisGizmo}
-              settingKey="showAxisGizmo"
-              onChange={(v) => updateSetting('showAxisGizmo', v)}
-            />
+          <SettingsSection title="Rendering" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Shadows">
+                <ToggleRow
+                  label="Object Shadows"
+                  description="Let objects receive shadows cast by other objects"
+                  checked={settings.objectsReceiveShadows}
+                  settingKey="objectsReceiveShadows"
+                  onChange={(v) => updateSetting('objectsReceiveShadows', v)}
+                />
+                <ToggleRow
+                  label="Camera Shadows"
+                  description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
+                  checked={settings.cameraShadowsEnabled}
+                  settingKey="cameraShadowsEnabled"
+                  onChange={(v) => updateSetting('cameraShadowsEnabled', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Colors">
+                <SelectField
+                  label="Color Preset"
+                  description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
+                  value={settings.colorPreset}
+                  settingKey="colorPreset"
+                  onChange={(e) => updateSetting('colorPreset', e.target.value)}
+                >
+                  {Object.entries(COLOR_PRESETS).map(([key, preset]) => (
+                    <option key={key} value={key}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+
+              <GeometryTile title="Halos">
+                <ToggleRow
+                  label="Enable Halos"
+                  description="When a line or vector passes in front of another one, cut a small gap in the farther one right at the crossing, so it reads clearly as passing behind. All three line and vector styles."
+                  checked={settings.haloEnabled}
+                  settingKey="haloEnabled"
+                  onChange={(v) => updateSetting('haloEnabled', v)}
+                />
+                <ToggleRow
+                  label="Halo line/vector crossings"
+                  description="Also cut the gap where a line and a vector cross (not just line-line and vector-vector). Requires Enable Halos."
+                  checked={settings.haloLineVectorEnabled}
+                  settingKey="haloLineVectorEnabled"
+                  onChange={(v) => updateSetting('haloLineVectorEnabled', v)}
+                />
+              </GeometryTile>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection title="Animation & Highlighting" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Animation">
+                <SelectField
+                  label="Speed"
+                  description="How long a full play-through of a transform-pipeline animation takes. Also set by the transport bar above the 3D view."
+                  value={settings.animationDurationMs}
+                  settingKey="animationDurationMs"
+                  onChange={(e) => updateSetting('animationDurationMs', Number(e.target.value))}
+                >
+                  {ANIMATION_SPEED_PRESETS.map((preset) => (
+                    <option key={preset.label} value={preset.ms}>
+                      {preset.label}
+                    </option>
+                  ))}
+                </SelectField>
+                <SelectField
+                  label="Easing"
+                  description="The acceleration curve the animation follows between its start and end pose."
+                  value={settings.animationEasing}
+                  settingKey="animationEasing"
+                  onChange={(e) => updateSetting('animationEasing', e.target.value)}
+                >
+                  {Object.entries(ANIMATION_EASINGS).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </SelectField>
+                <ToggleRow
+                  label="Loop"
+                  description="Repeat the animation from the start instead of stopping once it reaches the end."
+                  checked={settings.animationLoop}
+                  settingKey="animationLoop"
+                  onChange={(v) => updateSetting('animationLoop', v)}
+                />
+              </GeometryTile>
+
+              <GeometryTile title="Highlighting">
+                <ToggleRow
+                  label="Highlight the selected object"
+                  description="Draw attention to a 3D object when you click it or select its block, using a pre-attentive visual cue."
+                  checked={settings.objectHighlightEnabled}
+                  settingKey="objectHighlightEnabled"
+                  onChange={(v) => updateSetting('objectHighlightEnabled', v)}
+                />
+                <SelectField
+                  label="Highlight style"
+                  description="Blink gently pulses the object's opacity; Glow lights it up with a soft amber halo."
+                  value={settings.objectHighlightStyle}
+                  settingKey="objectHighlightStyle"
+                  onChange={(e) => updateSetting('objectHighlightStyle', e.target.value)}
+                >
+                  {Object.entries(OBJECT_HIGHLIGHT_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+            </div>
+          </SettingsSection>
+
+          <SettingsSection title="Labels & Naming" className="settings-card--wide">
+            <div className="settings-geometry-grid">
+              <GeometryTile title="Naming">
+                <SelectField
+                  label="Auto-name style"
+                  description="How newly created objects are named by default (e.g. L1 vs Line1). Applies instantly to every object that hasn't been given a custom name, on both its block and its 3D label."
+                  value={settings.namingStyle}
+                  settingKey="namingStyle"
+                  onChange={(e) => updateSetting('namingStyle', e.target.value)}
+                >
+                  {Object.entries(NAMING_STYLES).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key === 'SHORT'
+                        ? 'Short codes (L1, V1, P1)'
+                        : 'Descriptive (Line1, Vector1, Point1)'}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+
+              <GeometryTile title="3D Labels">
+                <ToggleRow
+                  label="Show 3D Labels"
+                  description="Display names of elements in the viewport"
+                  checked={settings.showLabels}
+                  settingKey="showLabels"
+                  onChange={(v) => updateSetting('showLabels', v)}
+                />
+                <SelectField
+                  label="Label detail"
+                  description="Show just an object's name, or its name plus its current value, on every 3D-scene label."
+                  value={settings.labelDetail}
+                  settingKey="labelDetail"
+                  onChange={(e) => updateSetting('labelDetail', e.target.value)}
+                >
+                  {Object.entries(LABEL_DETAIL_LEVELS).map(([key, value]) => (
+                    <option key={key} value={value}>
+                      {key === 'NAME_ONLY' ? 'Name only (L1)' : 'Name and value (L1 = (1, 2, 3))'}
+                    </option>
+                  ))}
+                </SelectField>
+              </GeometryTile>
+            </div>
           </SettingsSection>
 
           <div className="settings-actions">

@@ -1,24 +1,24 @@
 .settings-page {
   height: calc(100dvh - var(--app-nav-height));
   overflow-y: auto;
-  background: #f6f8fc;
+  background: var(--bg-main);
   color: #102a6b;
 }
 
 .settings-page__inner {
-  width: min(100%, 1280px);
+  width: min(100%, 1200px);
   margin: 0 auto;
-  padding: 24px;
+  padding: 16px;
 }
 
 .settings-page__header {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .settings-page__title {
   margin: 0;
   color: var(--geo-highlight);
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -26,43 +26,18 @@
 .settings-layout {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
   align-items: start;
-  padding-bottom: 24px;
+  padding-bottom: 16px;
 }
 
 .settings-card {
   grid-column: span 4;
   overflow: hidden;
-  border: 1px solid rgba(0, 46, 166, 0.12);
+  border: 1px solid rgba(0, 46, 166, 0.16);
   border-radius: 8px;
   background: #ffffff;
-  box-shadow: 0 10px 26px rgba(0, 46, 166, 0.06);
-}
-
-.settings-layout > .settings-card:first-child {
-  grid-column: span 4;
-}
-
-.settings-stack {
-  grid-column: span 4;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.settings-compact-group {
-  grid-column: span 8;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.settings-compact-group .settings-card {
-  grid-column: auto;
-  height: 100%;
+  box-shadow: 0 6px 18px rgba(0, 46, 166, 0.05);
 }
 
 .settings-card--wide,
@@ -72,11 +47,11 @@
 
 .settings-card__title {
   margin: 0;
-  padding: 12px 14px;
+  padding: 8px 11px;
   border-bottom: 1px solid rgba(0, 46, 166, 0.1);
   background: #fbfcff;
   color: var(--geo-highlight);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -87,15 +62,15 @@
 
 .settings-row,
 .settings-field {
-  min-height: 58px;
-  padding: 12px 14px;
+  min-height: 40px;
+  padding: 8px 11px;
 }
 
 .settings-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
 }
 
 .settings-row + .settings-row,
@@ -112,15 +87,15 @@
 .settings-label {
   display: block;
   color: #102a6b;
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 750;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 .settings-description {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   color: #516fa9;
-  font-size: 12px;
+  font-size: 10.5px;
   line-height: 1.35;
 }
 
@@ -143,8 +118,9 @@
 
 .settings-switch {
   flex: 0 0 auto;
-  width: 42px;
-  height: 23px;
+  width: 34px;
+  height: 19px;
+  margin-top: 0;
   appearance: none;
   cursor: pointer;
   border: 1px solid rgba(0, 46, 166, 0.22);
@@ -160,8 +136,8 @@
 .settings-switch::before {
   content: '';
   display: block;
-  width: 17px;
-  height: 17px;
+  width: 13px;
+  height: 13px;
   margin: 2px;
   border-radius: 999px;
   background: #ffffff;
@@ -176,7 +152,7 @@
 }
 
 .settings-switch:checked::before {
-  transform: translateX(19px);
+  transform: translateX(15px);
 }
 
 .settings-switch:focus-visible,
@@ -187,22 +163,22 @@
 
 .settings-select {
   width: 100%;
-  min-height: 38px;
-  margin-top: 8px;
-  padding: 8px 10px;
+  min-height: 31px;
+  margin-top: 5px;
+  padding: 5px 8px;
   border: 1px solid rgba(0, 46, 166, 0.18);
   border-radius: 8px;
   background: #ffffff;
   color: #102a6b;
-  font-size: 13px;
+  font-size: 11.5px;
   outline: none;
 }
 
 .settings-geometry-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px;
 }
 
 .settings-geometry-tile {
@@ -214,10 +190,10 @@
 
 .settings-geometry-tile__title {
   margin: 0;
-  padding: 10px 12px;
+  padding: 7px 9px;
   border-bottom: 1px solid rgba(0, 46, 166, 0.08);
   color: var(--geo-highlight);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -272,19 +248,9 @@
     grid-column: span 6;
   }
 
-  .settings-layout > .settings-card:first-child,
-  .settings-stack,
-  .settings-compact-group {
-    grid-column: 1 / -1;
-  }
-
   .settings-card--wide,
   .settings-actions {
     grid-column: 1 / -1;
-  }
-
-  .settings-compact-group {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .settings-geometry-grid {
@@ -299,14 +265,8 @@
 
   .settings-card,
   .settings-card--wide,
-  .settings-stack,
-  .settings-compact-group,
   .settings-actions {
     grid-column: 1 / -1;
-  }
-
-  .settings-compact-group {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .settings-geometry-grid {
