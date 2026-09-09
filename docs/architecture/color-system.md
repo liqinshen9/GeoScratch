@@ -24,8 +24,17 @@ fallback seed is used.
 warning, accent, distance) for auto-generated teaching illustrations - not
 varied per instance, so "Operand A" always means the same color.
 
-`subscribeToPreset` fires only on `colorPreset` changes. `GeoScratchColors` is
-also published as `window.GeoScratchColors` for builders.
+`subscribeToPreset` fires on a change to `colorPreset` **or** `resolvedTheme`
+(the light/dark presets differ). `GeoScratchColors` is also published as
+`window.GeoScratchColors` for builders.
+
+## Dark mode
+
+Each preset has an optional `dark` sub-object (`{ types, roles }`) with the same
+family hues but tone ranges lifted so instances read on the dark scene ground.
+`activePreset()` returns `{ label, ...preset.dark }` when the store's
+`resolvedTheme` is `dark`, so `forInstance` / `forRole` need no changes at the
+call site. See `docs/architecture/theming.md`.
 
 ## Preset hex comments
 

@@ -5,6 +5,66 @@
   color: #102a6b;
 }
 
+:root[data-theme='dark'] .settings-page {
+  background: var(--bg-main);
+  color: var(--geo-text);
+}
+
+:root[data-theme='dark'] .settings-card,
+:root[data-theme='dark'] .settings-geometry-tile,
+:root[data-theme='dark'] .settings-select,
+:root[data-theme='dark'] .settings-reset-button {
+  background: var(--geo-surface) !important;
+  border-color: var(--geo-border) !important;
+  color: var(--geo-text);
+}
+
+:root[data-theme='dark'] .settings-card__title {
+  background: var(--geo-panel-muted);
+  border-color: var(--geo-border);
+}
+
+:root[data-theme='dark'] .settings-label {
+  color: var(--geo-text);
+}
+
+:root[data-theme='dark'] .settings-description,
+:root[data-theme='dark'] .settings-locked-hint {
+  color: var(--geo-text-muted-on-light);
+}
+
+:root[data-theme='dark'] .settings-locked-hint {
+  background: var(--geo-tint-weak);
+}
+
+:root[data-theme='dark'] .settings-row + .settings-row,
+:root[data-theme='dark'] .settings-field + .settings-row,
+:root[data-theme='dark'] .settings-row + .settings-field,
+:root[data-theme='dark'] .settings-field + .settings-field,
+:root[data-theme='dark'] .settings-geometry-tile__title {
+  border-color: var(--geo-border);
+}
+
+:root[data-theme='dark'] .settings-switch {
+  background: #34465b;
+  border-color: var(--geo-border);
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .settings-switch::before {
+  background: #e0e6ed;
+}
+
+:root[data-theme='dark'] .settings-switch:checked::before {
+  background: #1c2834;
+}
+
+:root[data-theme='dark'] .settings-switch:checked {
+  background: var(--geo-highlight);
+  border-color: var(--geo-highlight);
+  box-shadow: 0 0 0 3px var(--geo-tint-weak);
+}
+
 .settings-page__inner {
   width: min(100%, 1200px);
   margin: 0 auto;

@@ -38,9 +38,9 @@ export default function EditorColumnHeaders({
             aria-pressed={workspaceMaximized}
           >
             {workspaceMaximized ? (
-              <OffScreenOne theme="outline" size="24" fill="#333" />
+              <OffScreenOne theme="outline" size="24" fill="currentColor" />
             ) : (
-              <FullScreenOne theme="outline" size="24" fill="#333" />
+              <FullScreenOne theme="outline" size="24" fill="currentColor" />
             )}
           </Button>
           <Button

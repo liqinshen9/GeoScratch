@@ -34,6 +34,21 @@
     sans-serif;
 }
 
+:root[data-theme='dark'] .landing-page {
+  --bg-main: #0b111b;
+  --bg-soft: #243244;
+  --accent: #b8cce3;
+  --accent-hover: #d0deed;
+  --text-main: #e0e6ed;
+  --text-secondary: #c5d0dc;
+  --text-muted: #a5b3c3;
+  --text-on-accent: #0b111b;
+  --border: rgba(160, 181, 204, 0.14);
+  --border-light: rgba(160, 181, 204, 0.24);
+  --landing-welcome-kia: #b8cce3;
+  --landing-welcome-text: #e0e6ed;
+}
+
 .landing-nav {
   box-sizing: border-box;
   display: flex;
@@ -43,7 +58,7 @@
   min-height: calc(var(--landing-nav-height) + var(--landing-nav-curve-depth));
   padding: 1.125rem var(--landing-gutter) calc(0.75rem + var(--landing-nav-curve-depth));
   border-radius: 0 0 65% 65% / 0 0 var(--landing-nav-curve-depth) var(--landing-nav-curve-depth);
-  background: var(--accent);
+  background: var(--nav-bg);
   color: var(--nav-fg);
 }
 
@@ -257,7 +272,7 @@
   left: 0;
   width: 100%;
   height: calc(1.5rem + var(--landing-nav-curve-depth));
-  background: var(--accent);
+  background: var(--nav-bg);
   border-radius: 0 0 65% 65% / 0 0 var(--landing-nav-curve-depth) var(--landing-nav-curve-depth);
   z-index: 0;
   pointer-events: none;

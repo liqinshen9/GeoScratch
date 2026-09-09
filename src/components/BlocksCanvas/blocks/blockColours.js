@@ -63,57 +63,83 @@ function roleStyle(role) {
   return { colourPrimary: colour, colourSecondary: colour, colourTertiary: colour }
 }
 
-export const BLOCK_COLOUR_STYLES = Object.freeze({
-  [BLOCK_STYLES.CREATE_POINT]: typeStyle(OBJECT_TYPES.POINT),
-  [BLOCK_STYLES.CREATE_VECTOR]: typeStyle(OBJECT_TYPES.VECTOR),
-  [BLOCK_STYLES.CREATE_LINE]: typeStyle(OBJECT_TYPES.LINE),
-  [BLOCK_STYLES.CREATE_PLANE]: typeStyle(OBJECT_TYPES.PLANE),
-  [BLOCK_STYLES.CREATE_SPHERE]: typeStyle(OBJECT_TYPES.SPHERE),
-  [BLOCK_STYLES.CREATE_CUBE]: typeStyle(OBJECT_TYPES.CUBE),
-  [BLOCK_STYLES.CREATE_TEAPOT]: typeStyle(OBJECT_TYPES.TEAPOT),
+function flat(colour) {
+  return { colourPrimary: colour, colourSecondary: colour, colourTertiary: colour }
+}
 
-  [BLOCK_STYLES.VALUE_PRIMITIVES]: roleStyle(COLOR_ROLES.ACCENT),
-
-  [BLOCK_STYLES.TRANSFORM_PIPELINE]: {
-    colourPrimary: '#ff914d',
-    colourSecondary: '#ff914d',
-    colourTertiary: '#ff914d',
+// The styles that sit deliberately outside the object-color system. Per theme,
+// so pipeline/steps/etc. stay legible on the dark workspace.
+// See docs/architecture/theming.md.
+const FIXED_STYLE_COLOURS = {
+  light: {
+    [BLOCK_STYLES.TRANSFORM_PIPELINE]: '#ff914d',
+    [BLOCK_STYLES.TRANSFORM_STEPS]: '#5dd979',
+    [BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]: '#b17ff0',
+    [BLOCK_STYLES.MATRIX_VALUES]: '#49a1ff',
+    [BLOCK_STYLES.OBJECT_VARIABLE]: '#36cbb4',
+    [BLOCK_STYLES.WORKSPACE_VARIABLE]: '#2b2f38',
   },
-
-  [BLOCK_STYLES.TRANSFORM_STEPS]: {
-    colourPrimary: '#5dd979',
-    colourSecondary: '#5dd979',
-    colourTertiary: '#5dd979',
+  dark: {
+    [BLOCK_STYLES.TRANSFORM_PIPELINE]: '#e07d3c',
+    [BLOCK_STYLES.TRANSFORM_STEPS]: '#3fa85e',
+    [BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]: '#8f5fc9',
+    [BLOCK_STYLES.MATRIX_VALUES]: '#3a7fd0',
+    [BLOCK_STYLES.OBJECT_VARIABLE]: '#2aa593',
+    [BLOCK_STYLES.WORKSPACE_VARIABLE]: '#5a6172',
   },
+}
 
-  [BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]: {
-    colourPrimary: '#b17ff0',
-    colourSecondary: '#b17ff0',
-    colourTertiary: '#b17ff0',
+// The object-family and role styles read `forInstance` / `forRole` live, so
+// they already reflect the active theme (colorSystem picks the preset's `dark`
+// block when the store's resolvedTheme is dark).
+function buildBlockColourStyles(mode) {
+  const fixed = FIXED_STYLE_COLOURS[mode] || FIXED_STYLE_COLOURS.light
+  return {
+    [BLOCK_STYLES.CREATE_POINT]: typeStyle(OBJECT_TYPES.POINT),
+    [BLOCK_STYLES.CREATE_VECTOR]: typeStyle(OBJECT_TYPES.VECTOR),
+    [BLOCK_STYLES.CREATE_LINE]: typeStyle(OBJECT_TYPES.LINE),
+    [BLOCK_STYLES.CREATE_PLANE]: typeStyle(OBJECT_TYPES.PLANE),
+    [BLOCK_STYLES.CREATE_SPHERE]: typeStyle(OBJECT_TYPES.SPHERE),
+    [BLOCK_STYLES.CREATE_CUBE]: typeStyle(OBJECT_TYPES.CUBE),
+    [BLOCK_STYLES.CREATE_TEAPOT]: typeStyle(OBJECT_TYPES.TEAPOT),
+    [BLOCK_STYLES.VALUE_PRIMITIVES]: roleStyle(COLOR_ROLES.ACCENT),
+    [BLOCK_STYLES.TRANSFORM_PIPELINE]: flat(fixed[BLOCK_STYLES.TRANSFORM_PIPELINE]),
+    [BLOCK_STYLES.TRANSFORM_STEPS]: flat(fixed[BLOCK_STYLES.TRANSFORM_STEPS]),
+    [BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]: flat(fixed[BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS]),
+    [BLOCK_STYLES.MATRIX_VALUES]: flat(fixed[BLOCK_STYLES.MATRIX_VALUES]),
+    [BLOCK_STYLES.OBJECT_VARIABLE]: flat(fixed[BLOCK_STYLES.OBJECT_VARIABLE]),
+    [BLOCK_STYLES.WORKSPACE_VARIABLE]: flat(fixed[BLOCK_STYLES.WORKSPACE_VARIABLE]),
+  }
+}
+
+// Backgrounds are deliberately NOT set here -- they come from CSS
+// (`.blocklySvg` / `.blocklyFlyoutBackground` bound to --geo-workspace /
+// --geo-surface) so they track the app theme live and can't get stuck on a
+// stale value when the workspace was injected under a different theme. Only
+// the marker colours (which CSS can't reach) are themed here.
+const COMPONENT_STYLES = {
+  light: {},
+  dark: {
+    insertionMarkerColour: '#9db0d4',
+    insertionMarkerOpacity: 0.4,
+    markerColour: '#9db0d4',
   },
+}
 
-  [BLOCK_STYLES.MATRIX_VALUES]: {
-    colourPrimary: '#49a1ff',
-    colourSecondary: '#49a1ff',
-    colourTertiary: '#49a1ff',
-  },
+const themeCache = {}
 
-  [BLOCK_STYLES.OBJECT_VARIABLE]: {
-    colourPrimary: '#36cbb4',
-    colourSecondary: '#36cbb4',
-    colourTertiary: '#36cbb4',
-  },
+/** Blockly theme for the resolved app theme ('light' | 'dark'). Memoized. */
+export function getBlockTheme(mode = 'light') {
+  const key = mode === 'dark' ? 'dark' : 'light'
+  if (themeCache[key]) return themeCache[key]
+  themeCache[key] = Blockly.Theme.defineTheme(key === 'dark' ? 'geoscratch-dark' : 'geoscratch', {
+    base: Blockly.Themes.Classic,
+    blockStyles: buildBlockColourStyles(key),
+    componentStyles: COMPONENT_STYLES[key],
+  })
+  return themeCache[key]
+}
 
-  // Deliberately outside the object color system -- draws nothing in 3D, so
-  // near-black rather than a color implying an object family.
-  [BLOCK_STYLES.WORKSPACE_VARIABLE]: {
-    colourPrimary: '#2b2f38',
-    colourSecondary: '#2b2f38',
-    colourTertiary: '#2b2f38',
-  },
-})
-
-export const GEO_SCRATCH_BLOCK_THEME = Blockly.Theme.defineTheme('geoscratch', {
-  base: Blockly.Themes.Classic,
-  blockStyles: BLOCK_COLOUR_STYLES,
-})
+// Back-compat: the light theme as a plain export.
+export const GEO_SCRATCH_BLOCK_THEME = getBlockTheme('light')
+export const BLOCK_COLOUR_STYLES = Object.freeze(buildBlockColourStyles('light'))

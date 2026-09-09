@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef } from 'react'
 import * as Blockly from 'blockly/core'
 import { getCategory } from '@/components/BlocksCanvas/catalog/blockCatalog'
-import { GEO_SCRATCH_BLOCK_THEME } from '@/components/BlocksCanvas/blocks/blockColours'
+import { getBlockTheme } from '@/components/BlocksCanvas/blocks/blockColours'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import useSettingsStore from '@/store/useSettingsStore'
 import { registerGeoScratchRenderer } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 
 const PALETTE_WS_OPTIONS = {
@@ -11,17 +12,20 @@ const PALETTE_WS_OPTIONS = {
   zoom: { controls: false, wheel: false, startScale: 0.72 },
   move: { scrollbars: false, drag: false, wheel: false },
   renderer: registerGeoScratchRenderer(),
-  theme: GEO_SCRATCH_BLOCK_THEME,
 }
 
 function BlockPreview({ type, onSelect, onDragStartBlock }) {
   const hostRef = useRef(null)
+  const resolvedTheme = useSettingsStore((s) => s.resolvedTheme)
 
   useLayoutEffect(() => {
     const host = hostRef.current
     if (!host || !Blockly.Blocks[type]) return
 
-    const ws = Blockly.inject(host, PALETTE_WS_OPTIONS)
+    const ws = Blockly.inject(host, {
+      ...PALETTE_WS_OPTIONS,
+      theme: getBlockTheme(resolvedTheme),
+    })
     const block = ws.newBlock(type)
     block.initSvg()
     block.render()
@@ -37,7 +41,7 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
       ws.dispose()
       host.innerHTML = ''
     }
-  }, [type])
+  }, [type, resolvedTheme])
 
   const handleDragStart = (event) => {
     if (!event.dataTransfer) return

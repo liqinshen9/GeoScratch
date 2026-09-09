@@ -2,9 +2,12 @@ import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import Header from '@/components/Header/Header'
 import ParticipantGate from '@/components/ParticipantGate/ParticipantGate'
+import useThemeSync from '@/hooks/useThemeSync'
 import useAuthStore from '@/store/useAuthStore'
 
 export default function Layout() {
+  useThemeSync()
+
   useEffect(() => {
     useAuthStore.getState().bootstrap()
   }, [])

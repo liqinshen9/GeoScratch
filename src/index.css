@@ -47,11 +47,44 @@
   --geo-text-on-light: #002ea6;
   --geo-text-muted-on-light: #4a6bb8;
 
+  /* Tinted overlays -- brand blue at low alpha over a surface. Dark mode
+     redefines these to a light tint so hover/active states stay visible. */
+  --geo-tint-weak: rgba(0, 46, 166, 0.08);
+  --geo-tint-medium: rgba(0, 46, 166, 0.14);
+  --geo-tint-ring: rgba(0, 46, 166, 0.28);
+
+  /* Semantic state colors (exercise pass/fail, difficulty pills, warnings) */
+  --state-pass-bg: #dcfce7;
+  --state-pass-fg: #166534;
+  --state-pass-border: #16a34a;
+  --state-pass-accent: #22c55e;
+  --state-fail-bg: #fee2e2;
+  --state-fail-fg: #991b1b;
+  --state-fail-border: #dc2626;
+  --state-fail-accent: #ef4444;
+  --state-warn-bg: #fef3c7;
+  --state-warn-fg: #92400e;
+  --state-warn-border: #d97706;
+
+  /* Blockly workspace dot grid */
+  --workspace-grid-colour: #e2e8f0;
+
+  /* Scene overlay chrome (label pills, 3D-view buttons) */
+  --scene-overlay-btn-bg: rgba(255, 255, 255, 0.86);
+  --scene-overlay-btn-bg-hover: rgba(255, 255, 255, 0.96);
+  --scene-overlay-btn-fg: #8a8f98;
+  --scene-overlay-btn-fg-hover: #6b7280;
+  --scene-overlay-btn-active-bg: rgba(37, 99, 235, 0.14);
+  --scene-overlay-btn-active-fg: #2563eb;
+  --scene-label-bg: rgba(12, 12, 16, 0.55);
+  --scene-label-fg: #ffffff;
+
   /* Shared app chrome */
   --app-nav-height: 3.5rem;
   --app-nav-title-size: 1.875rem;
   --app-nav-logo-mark-size: 2.25rem;
   --app-nav-gutter: clamp(1rem, 4vw, 2rem);
+  --nav-bg: #002ea6;
 
   /* Tailwind / shadcn tokens */
   --background: var(--bg-main);
@@ -69,6 +102,67 @@
   --ring: var(--geo-highlight);
 }
 
+:root[data-theme='dark'] {
+  /* Muted blue-gray surfaces with soft, cool foregrounds. */
+  --accent: #a9bfd9;
+  --nav-fg: #e3e8ee;
+  --border-light: rgba(160, 181, 204, 0.24);
+
+  --bg-main: #0b111b;
+  --bg-soft: #243244;
+  --brand-yellow: #ffe76f;
+  --brand-yellow-deep: #ffd84a;
+  --geo-highlight: #b8cce3;
+  --geo-surface: #1c2834;
+  --geo-panel-muted: #202d3c;
+  --geo-workspace: #101923;
+  --geo-block-card: #243244;
+  --geo-border: rgba(160, 181, 204, 0.14);
+  --geo-border-light: rgba(160, 181, 204, 0.14);
+  --geo-text: #e0e6ed;
+  --geo-text-on-light: #e0e6ed;
+  --geo-text-muted-on-light: #a5b3c3;
+
+  --geo-tint-weak: rgba(171, 194, 218, 0.08);
+  --geo-tint-medium: rgba(171, 194, 218, 0.15);
+  --geo-tint-ring: rgba(171, 194, 218, 0.35);
+
+  --workspace-grid-colour: #2b3b4c;
+
+  --panel-btn-hover-bg: rgba(171, 194, 218, 0.15);
+
+  /* Card drop shadows -- light mode leaves these unset and keeps its inline
+     brand-blue rgba fallbacks. */
+  --card-shadow: rgba(0, 0, 0, 0.4);
+  --card-shadow-hover: rgba(0, 0, 0, 0.5);
+
+  --state-pass-bg: #123123;
+  --state-pass-fg: #7ee2a8;
+  --state-pass-border: #2f7d54;
+  --state-pass-accent: #34d17f;
+  --state-fail-bg: #3a1a1d;
+  --state-fail-fg: #f6a5a5;
+  --state-fail-border: #b3474f;
+  --state-fail-accent: #f06a6a;
+  --state-warn-bg: #3a2f13;
+  --state-warn-fg: #f2c97f;
+  --state-warn-border: #b3862f;
+
+  --scene-overlay-btn-bg: rgba(28, 40, 52, 0.9);
+  --scene-overlay-btn-bg-hover: rgba(36, 50, 68, 0.96);
+  --scene-overlay-btn-fg: #a5b3c3;
+  --scene-overlay-btn-fg-hover: #e0e6ed;
+  --scene-overlay-btn-active-bg: rgba(171, 194, 218, 0.18);
+  --scene-overlay-btn-active-fg: #c6d6e8;
+  --scene-label-bg: rgba(11, 17, 27, 0.8);
+  --scene-label-fg: #e0e6ed;
+  --nav-bg: #243244;
+
+  --primary-foreground: #0b0f18;
+  --accent-foreground: #0b0f18;
+  --destructive: oklch(0.65 0.19 25);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -78,12 +172,34 @@
   }
 }
 
+/* Dark-mode scrollbars (native OS bars read as light otherwise). */
+:root[data-theme='dark'] {
+  scrollbar-color: #405267 transparent;
+}
+:root[data-theme='dark'] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+:root[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: #405267;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: #536981;
+  background-clip: content-box;
+}
+
 .app-nav {
   box-sizing: border-box;
   display: flex;
   align-items: center;
   border-bottom: none;
-  background: var(--accent);
+  background: var(--nav-bg);
   color: var(--nav-fg);
   height: var(--app-nav-height);
   min-height: var(--app-nav-height);
@@ -103,12 +219,12 @@
 }
 
 .recenter-btn {
-  background: rgba(0, 46, 166, 0.08);
+  background: var(--geo-tint-weak);
   color: var(--geo-text);
 }
 
 .recenter-btn:hover {
-  background: rgba(0, 46, 166, 0.14);
+  background: var(--geo-tint-medium);
 }
 
 .panel-column-header {

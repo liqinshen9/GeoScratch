@@ -175,6 +175,7 @@ non-obvious mechanism carries a one-line pointer to the relevant section.
 | `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                    |
 | `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
 | `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
+| `theming.md`                    | light/dark mode: `themeConfig.js`, `useThemeSync.js`, `data-theme` tokens |
 | `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                         |
 | `backend.md`                    | Supabase auth/gate, `exercise_attempts`, RLS, workspace snapshots, export |
 

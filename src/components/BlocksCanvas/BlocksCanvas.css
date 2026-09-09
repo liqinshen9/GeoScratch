@@ -470,7 +470,7 @@
 .workspace-panel-header [data-slot='button']:active,
 .workspace-panel-header [data-slot='button']:focus-visible,
 .workspace-panel-header [data-slot='button'][aria-pressed='true'] {
-  background: var(--bg-soft) !important;
+  background: var(--panel-btn-hover-bg, var(--bg-soft)) !important;
   color: var(--geo-text-on-light) !important;
 }
 
@@ -719,6 +719,32 @@
   stroke: transparent !important;
 }
 
+/* Single source of truth for the dot-grid colour, per theme, live on toggle.
+   Blockly names the grid <pattern> `id="blocklyGridPattern<wsId>"` (no class)
+   and writes the inject-time `grid.colour` as an inline stroke on its child
+   <line> elements; this overrides that. */
+#blocks-canvas [id^='blocklyGridPattern'] line {
+  stroke: var(--workspace-grid-colour) !important;
+}
+
+/* The workspace background, both themes, from one place. Blockly injects its
+   own `.blocklySvg { background-color:#fff }` and (with a grid) fills
+   blocklyMainBackground with the grid pattern, transparent between dots -- so
+   this SVG colour is what shows through. Driving it from --geo-workspace here
+   (rather than the Blockly theme) keeps it correct live on toggle and immune
+   to the workspace having been injected under a stale theme. */
+#blocks-canvas .workspace-host .blocklySvg,
+#blocks-canvas .workspace-host .injectionDiv {
+  background-color: var(--geo-workspace) !important;
+}
+
+/* Flyout previews stay transparent so the card colour shows through. */
+.palette-block-preview .blocklySvg,
+.palette-block-preview .blocklyMainBackground {
+  background-color: transparent !important;
+  fill: transparent !important;
+}
+
 #blocks-canvas .blocklyFlyoutBackground {
   fill: var(--geo-surface) !important;
 }
@@ -803,6 +829,55 @@
   padding: 2px 6px;
   text-align: right;
   border: 1px solid var(--geo-border-light);
+}
+
+:root[data-theme='dark'] .category-card.is-active {
+  background: var(--geo-tint-weak);
+  box-shadow: 0 0 0 1px var(--geo-tint-ring);
+}
+
+:root[data-theme='dark'] .palette-block-preview {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme='dark'] .palette-block-preview:hover {
+  background: var(--geo-tint-weak);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+:root[data-theme='dark'] .make-block-button:hover {
+  background: var(--geo-tint-weak);
+}
+
+:root[data-theme='dark'] .my-block-dialog,
+:root[data-theme='dark'] .my-block-dialog__body,
+:root[data-theme='dark'] .my-block-dialog__footer,
+:root[data-theme='dark'] .my-block-dialog__button {
+  background: var(--geo-surface);
+  color: var(--geo-text);
+}
+
+:root[data-theme='dark'] .my-block-dialog__body {
+  color: var(--geo-text-muted-on-light);
+}
+
+:root[data-theme='dark'] .my-block-dialog__button {
+  border-color: var(--geo-border);
+}
+
+:root[data-theme='dark'] .my-block-dialog__field span {
+  color: var(--geo-text-muted-on-light);
+}
+
+:root[data-theme='dark'] .my-block-dialog__field input {
+  background: var(--geo-workspace);
+  border-color: var(--geo-border);
+  color: var(--geo-text);
+}
+
+:root[data-theme='dark'] .my-block-dialog__button--primary {
+  color: #0b0f18;
 }
 
 .vec-drawer-expr {

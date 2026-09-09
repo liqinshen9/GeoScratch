@@ -279,3 +279,19 @@
     overflow-y: visible;
   }
 }
+
+:root[data-theme='dark'] .unit-page__rail-item-check,
+:root[data-theme='dark'] .unit-page__section-progress,
+:root[data-theme='dark'] .unit-page__link-icon--solved,
+:root[data-theme='dark'] .unit-page__link--solved .unit-page__link-title,
+:root[data-theme='dark'] .unit-page__link-difficulty--easy {
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .unit-page__link-difficulty--medium {
+  color: var(--state-warn-fg);
+}
+
+:root[data-theme='dark'] .unit-page__link-difficulty--hard {
+  color: var(--state-fail-fg);
+}

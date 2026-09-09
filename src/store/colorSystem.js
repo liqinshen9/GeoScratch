@@ -20,13 +20,27 @@ function lerp([min, max], t) {
   return min + (max - min) * t
 }
 
-function activePresetName() {
-  const settingsStore = typeof window !== 'undefined' ? window.useSettingsStore : null
-  return settingsStore?.getState().settings.colorPreset || DEFAULT_COLOR_PRESET
+function settingsStore() {
+  return typeof window !== 'undefined' ? window.useSettingsStore : null
 }
 
+function activePresetName() {
+  return settingsStore()?.getState().settings.colorPreset || DEFAULT_COLOR_PRESET
+}
+
+// 'light' | 'dark' -- kept on the store by useThemeSync.
+function activeMode() {
+  return settingsStore()?.getState().resolvedTheme === 'dark' ? 'dark' : 'light'
+}
+
+// The preset for the active color-preset name AND theme. A preset's optional
+// `dark` block overrides its `types`/`roles` when the theme is dark.
 function activePreset() {
-  return COLOR_PRESETS[activePresetName()] || COLOR_PRESETS[DEFAULT_COLOR_PRESET]
+  const preset = COLOR_PRESETS[activePresetName()] || COLOR_PRESETS[DEFAULT_COLOR_PRESET]
+  if (activeMode() === 'dark' && preset.dark) {
+    return { label: preset.label, ...preset.dark }
+  }
+  return preset
 }
 
 function instanceHct(type, blockId) {
@@ -64,16 +78,19 @@ function forRole(role) {
   return preset.roles[role] || preset.roles[COLOR_ROLES.WARNING]
 }
 
-// Subscribe to color-preset changes only (ignores unrelated setting changes).
-// Returns an unsubscribe function.
+// Subscribe to anything that changes the active palette: the color-preset name
+// or the resolved theme (light/dark presets differ). Ignores unrelated setting
+// changes. Returns an unsubscribe function.
 function subscribeToPreset(callback) {
-  const settingsStore = typeof window !== 'undefined' ? window.useSettingsStore : null
-  if (!settingsStore) return () => {}
-  let prev = settingsStore.getState().settings.colorPreset
-  return settingsStore.subscribe((state) => {
-    if (state.settings.colorPreset !== prev) {
-      prev = state.settings.colorPreset
-      callback(prev)
+  const store = settingsStore()
+  if (!store) return () => {}
+  let prevPreset = store.getState().settings.colorPreset
+  let prevTheme = store.getState().resolvedTheme
+  return store.subscribe((state) => {
+    if (state.settings.colorPreset !== prevPreset || state.resolvedTheme !== prevTheme) {
+      prevPreset = state.settings.colorPreset
+      prevTheme = state.resolvedTheme
+      callback(prevPreset)
     }
   })
 }

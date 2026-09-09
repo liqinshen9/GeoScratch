@@ -11,7 +11,8 @@ import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
 import SelectionHighlight from './SelectionHighlight'
 import AnimationDriver from './AnimationDriver'
-import { AXIS_COLORS } from './sceneConstants'
+import { getAxisColors } from './sceneConstants'
+import { useResolvedTheme } from '@/hooks/useThemeSync'
 import { CameraHandle, HeadLight } from './HeadLight'
 import { BoundingBoxRoom, Axes, FadedGrid } from './SceneFurniture'
 import ScenePicker from './ScenePicker'
@@ -29,8 +30,9 @@ const MAX_CAMERA_DISTANCE = 130
 
 const globalThreeObjStore = {}
 
-function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
+function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme }) {
   const { settings } = useSettingsStore()
+  const isDark = theme === 'dark'
 
   useEffect(() => {
     objects.forEach((o) => {
@@ -72,7 +74,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       <SelectionHighlight objects={objects} />
       <AnimationDriver objects={objects} />
       <LabelDeclutter />
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={isDark ? 0.6 : 0.4} />
 
       {/* 1. The Headlight (Camera Light) */}
       <HeadLight controlsRef={controlsRef} castShadow={settings.cameraShadowsEnabled} />
@@ -81,7 +83,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
       <pointLight
         position={[8, 18, 0]}
         color="#fff4e0"
-        intensity={2.5}
+        intensity={isDark ? 3 : 2.5}
         decay={0}
         distance={100}
         castShadow
@@ -90,10 +92,14 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
         shadow-bias={-0.001}
       />
 
-      {settings.showGrid && <FadedGrid />}
+      {settings.showGrid && <FadedGrid theme={theme} />}
 
       {settings.showBox && (
-        <BoundingBoxRoom size={40} showFrontWireframe={settings.showBoxFrontWireframe} />
+        <BoundingBoxRoom
+          size={40}
+          showFrontWireframe={settings.showBoxFrontWireframe}
+          theme={theme}
+        />
       )}
 
       {settings.showAxes && (
@@ -102,6 +108,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
           showOriginLabel={settings.showOriginLabel}
           showScaleLabels={settings.showAxisScaleLabels}
           showEndLabels={!settings.showAxisGizmo}
+          theme={theme}
         />
       )}
 
@@ -128,11 +135,13 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel }) {
   )
 }
 
-// Placeholder until real dark mode support lands.
-const SCENE_BACKGROUND_COLOR = '#ffffff'
+const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0b111b' }
 
 export default function Scene3D({ objects = [] }) {
   const { settings, updateSetting } = useSettingsStore()
+  const resolvedTheme = useResolvedTheme()
+  const backgroundColor = SCENE_BACKGROUND_COLOR[resolvedTheme] || SCENE_BACKGROUND_COLOR.light
+  const gizmoAxisColors = getAxisColors(resolvedTheme)
   const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId)
   const controlsRef = useRef(null)
   const cameraRef = useRef(null)
@@ -261,19 +270,22 @@ export default function Scene3D({ objects = [] }) {
             hiddenLabelKeys={hiddenLabelKeys}
             controlsRef={controlsRef}
             onHideLabel={handleHideLabel}
+            theme={resolvedTheme}
           />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />
           <HaloUniformSync objects={objects} target={haloDilatedTarget} />
-          <color attach="background" args={[SCENE_BACKGROUND_COLOR]} />
+          <color attach="background" args={[backgroundColor]} />
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
           {settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
-                axisColors={[AXIS_COLORS.x, AXIS_COLORS.y, AXIS_COLORS.z]}
-                labelColor="black"
+                axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
+                /* The axis-head discs are always a light colour, so the label
+                   text stays dark in both themes. */
+                labelColor="#1a1a1a"
                 scale={28}
                 axisHeadScale={0.85}
               />

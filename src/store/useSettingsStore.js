@@ -4,9 +4,11 @@ import { DEFAULT_COLOR_PRESET } from './colorPresets'
 import { OBJECT_HIGHLIGHT_STYLES } from './highlightStyles'
 import { ANIMATION_EASINGS, DEFAULT_ANIMATION_DURATION_MS } from './animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from './namingConfig'
+import { THEMES, DEFAULT_THEME, resolveTheme, THEME_STORAGE_KEY } from './themeConfig'
 
 // Extract defaults so you only have to maintain them in one place
 const DEFAULT_SETTINGS = {
+  theme: DEFAULT_THEME,
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
   colorPreset: DEFAULT_COLOR_PRESET,
@@ -68,9 +70,20 @@ function loadUserSettings() {
   }
 }
 
+function loadLegacyTheme() {
+  try {
+    const theme = localStorage.getItem(THEME_STORAGE_KEY)
+    return Object.values(THEMES).includes(theme) ? { theme } : {}
+  } catch {
+    return {}
+  }
+}
+
 function saveUserSettings(userSettings) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userSettings))
+    // Keep the pre-paint theme cache in step with main's saved settings.
+    localStorage.setItem(THEME_STORAGE_KEY, userSettings.theme ?? DEFAULT_THEME)
   } catch {
     // Storage unavailable -- choices just won't persist across sessions.
   }
@@ -99,7 +112,7 @@ function pickValidOverrides(overrides) {
   return clean
 }
 
-const INITIAL_USER_SETTINGS = loadUserSettings()
+const INITIAL_USER_SETTINGS = { ...loadLegacyTheme(), ...loadUserSettings() }
 
 const useSettingsStore = create((set, get) => ({
   // Keys the user explicitly changed (updateSetting writes here), rehydrated
@@ -109,6 +122,7 @@ const useSettingsStore = create((set, get) => ({
   exerciseOverrides: {},
   // Derived read surface: DEFAULT_SETTINGS < userSettings < exerciseOverrides.
   settings: mergeSettings(INITIAL_USER_SETTINGS, {}),
+  resolvedTheme: resolveTheme(mergeSettings(INITIAL_USER_SETTINGS, {}).theme),
 
   updateSetting: (key, value) =>
     set((state) => {
@@ -132,6 +146,8 @@ const useSettingsStore = create((set, get) => ({
 
   clearExerciseOverrides: () =>
     set((state) => ({ exerciseOverrides: {}, settings: mergeSettings(state.userSettings, {}) })),
+
+  setResolvedTheme: (resolvedTheme) => set({ resolvedTheme }),
 
   isSettingLocked: (key) => Object.hasOwn(get().exerciseOverrides, key),
 }))

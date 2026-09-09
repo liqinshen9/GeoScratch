@@ -6,6 +6,7 @@ import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
 import { Button } from '@/components/ui/button'
+import { THEMES } from '@/store/themeConfig'
 import './SettingsPage.css'
 
 // Vector-specific labels for the shared LINE_STYLES values.
@@ -98,6 +99,16 @@ export default function SettingsPage() {
 
         <main className="settings-layout">
           <SettingsSection title="General" className="settings-card--wide">
+            <SelectField
+              label="Theme"
+              value={settings.theme}
+              settingKey="theme"
+              onChange={(e) => updateSetting('theme', e.target.value)}
+            >
+              <option value={THEMES.LIGHT}>Light</option>
+              <option value={THEMES.DARK}>Dark</option>
+              <option value={THEMES.SYSTEM}>System</option>
+            </SelectField>
             <div className="settings-geometry-grid">
               <GeometryTile title="Scene">
                 <ToggleRow

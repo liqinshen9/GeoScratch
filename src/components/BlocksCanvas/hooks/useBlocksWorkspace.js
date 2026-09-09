@@ -5,6 +5,7 @@ import { BlockRegistry } from '@/components/BlocksCanvas/state/BlockRegistry'
 import {
   BLOCK_TYPE_OBJECT_TYPES,
   BLOCK_TYPE_ROLES,
+  getBlockTheme,
 } from '@/components/BlocksCanvas/blocks/blockColours'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useThreeStore from '@/store/useThreeStore'
@@ -80,6 +81,22 @@ export function useBlocksWorkspace({
     const frameId = requestAnimationFrame(() => Blockly.svgResize(workspace))
     return () => cancelAnimationFrame(frameId)
   }, [workspaceMaximized, workspace])
+
+  // Swap the whole Blockly theme (component styles + the flat, non-object
+  // block styles like transform pipeline/steps) when the app theme flips.
+  // The object-family and value-primitive blocks are handled by the
+  // subscribeToPreset loop below (which also fires on a theme change).
+  useEffect(() => {
+    if (!workspace) return
+    let prev = useSettingsStore.getState().resolvedTheme
+    workspace.setTheme(getBlockTheme(prev))
+    return useSettingsStore.subscribe((state) => {
+      if (state.resolvedTheme !== prev) {
+        prev = state.resolvedTheme
+        workspace.setTheme(getBlockTheme(prev))
+      }
+    })
+  }, [workspace])
 
   // Recolors every existing block of the 7 primary creation types, plus any
   // non-renderable value-primitive blocks (Scalar, Vector4, ...), when the

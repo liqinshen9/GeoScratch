@@ -503,3 +503,48 @@
     min-height: 42rem;
   }
 }
+
+:root[data-theme='dark'] .exercise-task-panel.is-passed {
+  background: color-mix(in srgb, var(--state-pass-accent) 4%, var(--bg-main));
+  box-shadow: inset 4px 0 0 var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-pass-banner,
+:root[data-theme='dark'] .exercise-answer-card.is-correct {
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-correct {
+  border-color: var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-correct span,
+:root[data-theme='dark'] .exercise-answer-card.is-correct strong,
+:root[data-theme='dark'] .exercise-answer-card.is-correct p,
+:root[data-theme='dark'] .exercise-task-steps li.is-complete {
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .exercise-task-steps li.is-complete::before {
+  background: var(--state-pass-accent);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect {
+  border-color: var(--state-fail-accent);
+  background: var(--state-fail-bg);
+}
+
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect span,
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect strong,
+:root[data-theme='dark'] .exercise-answer-card.is-incorrect p {
+  color: var(--state-fail-fg);
+}
+
+:root[data-theme='dark'] .exercise-page--editor .palette-block-preview {
+  background: var(--geo-block-card);
+}
+
+:root[data-theme='dark'] .exercise-page--editor .palette-group-label {
+  color: var(--geo-text-muted-on-light);
+}
