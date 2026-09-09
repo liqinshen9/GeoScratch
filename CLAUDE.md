@@ -101,9 +101,12 @@ because `defineBlocks()` runs on every workspace mount.
 
 ## Adding an exercise
 
-Add an entry to `data/exercises.js` and a module in `src/exercises/`, then
-register it in `src/exercises/index.js`. That index documents the module
-contract; `src/exercises/exercises.test.js` fails if the two lists drift apart.
+Add an entry to `EXERCISES` in `data/exercises.js` (a slug `id`, title,
+difficulty), add that `id` to a section in `UNITS` in the same file, and add a
+module in `src/exercises/` keyed by the same `id` in `src/exercises/index.js`.
+That index documents the module contract; `src/exercises/exercises.test.js`
+fails if the lists drift apart or an exercise is not placed in exactly one unit
+section. The `id` appears only in the URL (`/exercise/<id>`), never in the UI.
 
 An exercise module can export `settingsOverrides` to force certain app settings
 (e.g. `{ haloEnabled: false }`) while it is open. `settings` in

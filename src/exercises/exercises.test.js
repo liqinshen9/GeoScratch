@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
 import { getExerciseModule, EXERCISE_MODULES } from './index'
-import { EXERCISES } from '@/data/exercises'
+import { EXERCISES, UNITS, getExercise } from '@/data/exercises'
 import { SETTING_KEYS } from '@/store/useSettingsStore'
 
 /**
@@ -77,14 +77,25 @@ function pipelineTo(target, steps) {
 
 describe('exercise registry', () => {
   it('has a module for every exercise listed in data/exercises.js', () => {
-    EXERCISES.forEach(({ number }) => {
-      expect(EXERCISE_MODULES[number], `exercise ${number}`).toBeDefined()
+    EXERCISES.forEach(({ id }) => {
+      expect(EXERCISE_MODULES[id], `exercise ${id}`).toBeDefined()
     })
+  })
+
+  it('places every exercise in exactly one UNITS section', () => {
+    const placements = UNITS.flatMap((unit) =>
+      unit.sections.flatMap((section) => section.exerciseIds),
+    )
+    // No unknown or duplicated ids.
+    placements.forEach((id) => expect(getExercise(id), `section id ${id}`).toBeDefined())
+    expect(new Set(placements).size).toBe(placements.length)
+    // Every exercise is placed.
+    expect(new Set(placements)).toEqual(new Set(EXERCISES.map((e) => e.id)))
   })
 
   it('gives every module the shape ExercisePage relies on', () => {
     Object.entries(EXERCISE_MODULES).forEach(([key, mod]) => {
-      expect(mod.number, `exercise ${key} number`).toBe(Number(key))
+      expect(mod.id, `exercise ${key} id`).toBe(key)
       expect(mod.Givens).toBeTypeOf('function')
       expect(mod.Steps).toBeTypeOf('function')
       expect(mod.evaluate).toBeTypeOf('function')
@@ -95,11 +106,11 @@ describe('exercise registry', () => {
     Object.values(EXERCISE_MODULES).forEach((mod) => {
       if (mod.settingsOverrides === undefined) return
       const overrides = mod.settingsOverrides
-      expect(overrides, `exercise ${mod.number}`).toBeTypeOf('object')
+      expect(overrides, `exercise ${mod.id}`).toBeTypeOf('object')
       expect(Array.isArray(overrides)).toBe(false)
       Object.entries(overrides).forEach(([k, v]) => {
-        expect(SETTING_KEYS, `exercise ${mod.number} override "${k}"`).toContain(k)
-        expect(v, `exercise ${mod.number} override "${k}"`).not.toBeUndefined()
+        expect(SETTING_KEYS, `exercise ${mod.id} override "${k}"`).toContain(k)
+        expect(v, `exercise ${mod.id} override "${k}"`).not.toBeUndefined()
       })
     })
   })
@@ -108,7 +119,7 @@ describe('exercise registry', () => {
     Object.values(EXERCISE_MODULES)
       .filter((mod) => mod.kind === 'perceptual')
       .forEach((mod) => {
-        expect(mod.mcq, `exercise ${mod.number} mcq`).toBeTypeOf('object')
+        expect(mod.mcq, `exercise ${mod.id} mcq`).toBeTypeOf('object')
         expect(typeof mod.mcq.prompt).toBe('string')
         expect(Array.isArray(mod.mcq.choices)).toBe(true)
         expect(mod.mcq.choices.length).toBeGreaterThanOrEqual(2)
@@ -117,13 +128,13 @@ describe('exercise registry', () => {
           expect(typeof choice.label).toBe('string')
         })
         const ids = mod.mcq.choices.map((c) => c.id)
-        expect(ids, `exercise ${mod.number} correctId`).toContain(mod.mcq.correctId)
+        expect(ids, `exercise ${mod.id} correctId`).toContain(mod.mcq.correctId)
       })
   })
 
-  it('falls back to exercise 1 for an unknown number', () => {
-    expect(getExerciseModule(99).number).toBe(1)
-    expect(getExerciseModule(undefined).number).toBe(1)
+  it('falls back to the first exercise for an unknown id', () => {
+    expect(getExerciseModule('does-not-exist').id).toBe('scale-object')
+    expect(getExerciseModule(undefined).id).toBe('scale-object')
   })
 
   it('returns a non-passing result for an empty workspace', () => {
@@ -131,7 +142,7 @@ describe('exercise registry', () => {
     // before any workspace exists.
     Object.values(EXERCISE_MODULES).forEach((mod) => {
       const result = mod.evaluate({ objects: [], workspace: null })
-      expect(result.passed, `exercise ${mod.number}`).toBe(false)
+      expect(result.passed, `exercise ${mod.id}`).toBe(false)
       expect(result.steps).toBeTypeOf('object')
       expect(result.answer).toBeTypeOf('object')
     })
@@ -139,7 +150,7 @@ describe('exercise registry', () => {
 })
 
 describe('exercise 1 (scale by 3)', () => {
-  const mod = EXERCISE_MODULES[1]
+  const mod = EXERCISE_MODULES['scale-object']
 
   it('passes when the teapot is scaled by 3 via a pipeline step', () => {
     const teapot = teapotBlock()
@@ -181,7 +192,7 @@ describe('exercise 1 (scale by 3)', () => {
 })
 
 describe('exercise 2 (rotate 90 about Z)', () => {
-  const mod = EXERCISE_MODULES[2]
+  const mod = EXERCISE_MODULES['rotate-object']
 
   it('passes for a 90 degree Z rotation', () => {
     const workspace = fakeWorkspace([
@@ -203,7 +214,7 @@ describe('exercise 2 (rotate 90 about Z)', () => {
 })
 
 describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
-  const mod = EXERCISE_MODULES[3]
+  const mod = EXERCISE_MODULES['transform-object']
 
   const bothSteps = () => [
     fakeBlock('scale_matrix', { SX: 2, SY: 2, SZ: 2 }),
@@ -243,7 +254,7 @@ describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
 })
 
 describe('exercise 4 (translate by (3,0,0))', () => {
-  const mod = EXERCISE_MODULES[4]
+  const mod = EXERCISE_MODULES['translate-object']
 
   it('passes for the target translation', () => {
     const workspace = fakeWorkspace([
@@ -265,7 +276,7 @@ describe('exercise 4 (translate by (3,0,0))', () => {
 })
 
 describe('exercise 7 (distance between spheres)', () => {
-  const mod = EXERCISE_MODULES[7]
+  const mod = EXERCISE_MODULES['sphere-distance']
 
   // |B - A| = |(7, -3, 5)| = sqrt(83); minus radii 1.3 and 0.9.
   const EXPECTED = Math.sqrt(83) - 1.3 - 0.9
@@ -336,7 +347,7 @@ describe('exercise 7 (distance between spheres)', () => {
 })
 
 describe('exercise 5 (point to plane)', () => {
-  const mod = EXERCISE_MODULES[5]
+  const mod = EXERCISE_MODULES['point-plane-distance']
 
   it('recognises the point P vector in the workspace', () => {
     const workspace = fakeWorkspace([vec3(3, 4, 5)])
@@ -354,7 +365,7 @@ describe('exercise 5 (point to plane)', () => {
 })
 
 describe('exercise 6 (skew lines)', () => {
-  const mod = EXERCISE_MODULES[6]
+  const mod = EXERCISE_MODULES['skew-lines-distance']
 
   it('recognises both given lines', () => {
     const line1 = fakeBlock('geo_vector', {}, { POS: point(1, 2, 0), DIR: vec3(1, 2, 3) })

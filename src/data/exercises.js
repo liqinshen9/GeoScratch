@@ -1,15 +1,15 @@
-// Exercise metadata only -- title/category/difficulty for navigation and
-// browsing, used by ExerciseBrowserPage and for the prev/next controls.
+// Exercise metadata only -- title/difficulty for each exercise plus the
+// unit/section hierarchy that browsing and the prev/next controls walk.
 //
 // Each exercise's instructions, given values, starter blocks and pass/fail
 // checking live in its own module under src/exercises/, keyed by the same
-// `number`. They are deliberately NOT expressed as data here: the seven
+// string `id`. They are deliberately NOT expressed as data here: the seven
 // verification strategies are genuinely heterogeneous, and forcing them into a
 // generic checker schema would obscure them rather than clarify them.
 //
-// Adding an exercise means adding an entry here AND a module in src/exercises/
-// (registered in its index.js). The test in src/exercises/exercises.test.js
-// fails if the two lists drift apart.
+// Adding an exercise means adding an entry here (and its id to a UNITS section)
+// AND a module in src/exercises/ (registered in its index.js). The test in
+// src/exercises/exercises.test.js fails if the lists drift apart.
 
 export const DIFFICULTIES = Object.freeze({
   EASY: 'easy',
@@ -23,77 +23,142 @@ export const DIFFICULTY_LABELS = Object.freeze({
   [DIFFICULTIES.HARD]: 'Hard',
 })
 
-// Rendered in this order wherever exercises are grouped by category.
-export const CATEGORIES = Object.freeze([
-  'Transformations',
-  'Distances & Projections',
-  'Perception',
-])
-
 export const EXERCISES = Object.freeze([
   {
-    number: 1,
+    id: 'scale-object',
     title: 'Scale this object by 3',
-    category: 'Transformations',
     difficulty: DIFFICULTIES.EASY,
   },
   {
-    number: 2,
+    id: 'rotate-object',
     title: 'Rotate this object',
-    category: 'Transformations',
     difficulty: DIFFICULTIES.EASY,
   },
   {
-    number: 3,
+    id: 'transform-object',
     title: 'Transform this object',
-    category: 'Transformations',
     difficulty: DIFFICULTIES.MEDIUM,
   },
   {
-    number: 4,
+    id: 'translate-object',
     title: 'Translate this object',
-    category: 'Transformations',
     difficulty: DIFFICULTIES.EASY,
   },
   {
-    number: 5,
+    id: 'point-plane-distance',
     title: 'Calculate distance from point P to a plane',
-    category: 'Distances & Projections',
     difficulty: DIFFICULTIES.MEDIUM,
   },
   {
-    number: 6,
+    id: 'skew-lines-distance',
     title: 'Calculate the shortest distance between two skew lines',
-    category: 'Distances & Projections',
     difficulty: DIFFICULTIES.HARD,
   },
   {
-    number: 7,
+    id: 'sphere-distance',
     title: 'Calculate the distance between two spheres',
-    category: 'Distances & Projections',
     difficulty: DIFFICULTIES.MEDIUM,
   },
   {
-    number: 8,
+    id: 'closer-object',
     title: 'Which object is closer to the camera?',
-    category: 'Perception',
     difficulty: DIFFICULTIES.EASY,
   },
   {
-    number: 9,
+    id: 'line-in-front',
     title: 'Which line is in front?',
-    category: 'Perception',
     difficulty: DIFFICULTIES.EASY,
   },
 ])
 
-export function getExercise(number) {
-  return EXERCISES.find((exercise) => exercise.number === Number(number))
+// The browsing hierarchy. Units render in this order; within a unit, sections
+// render in order; within a section, exercises render in `exerciseIds` order.
+// This traversal is also the canonical prev/next sequence (orderedExercises).
+// Every EXERCISES id must appear in exactly one section.
+export const UNITS = Object.freeze([
+  {
+    id: 'transformations',
+    title: 'Transformations',
+    description: 'Move, turn and resize objects with transform blocks and pipelines.',
+    sections: [
+      {
+        id: 'single-transforms',
+        title: 'Single transforms',
+        exerciseIds: ['scale-object', 'rotate-object', 'translate-object'],
+      },
+      {
+        id: 'combined-transforms',
+        title: 'Combining transforms',
+        exerciseIds: ['transform-object'],
+      },
+    ],
+  },
+  {
+    id: 'distances-projections',
+    title: 'Distances & Projections',
+    description: 'Measure distances between points, lines, planes and spheres.',
+    sections: [
+      {
+        id: 'points-and-planes',
+        title: 'Points and planes',
+        exerciseIds: ['point-plane-distance'],
+      },
+      {
+        id: 'lines-and-spheres',
+        title: 'Lines and spheres',
+        exerciseIds: ['skew-lines-distance', 'sphere-distance'],
+      },
+    ],
+  },
+  {
+    id: 'perception',
+    title: 'Perception',
+    description: 'Read depth and occlusion cues in the 3D scene.',
+    sections: [
+      {
+        id: 'depth-cues',
+        title: 'Depth cues',
+        exerciseIds: ['closer-object', 'line-in-front'],
+      },
+    ],
+  },
+])
+
+export function getExercise(id) {
+  return EXERCISES.find((exercise) => exercise.id === id)
 }
 
-export function groupExercisesByCategory() {
-  return CATEGORIES.map((category) => ({
-    category,
-    exercises: EXERCISES.filter((exercise) => exercise.category === category),
-  })).filter((group) => group.exercises.length > 0)
+export function getUnit(unitId) {
+  return UNITS.find((unit) => unit.id === unitId)
+}
+
+/** Every exercise, flattened in unit -> section -> exerciseIds order. */
+export function orderedExercises() {
+  return UNITS.flatMap((unit) =>
+    unit.sections.flatMap((section) =>
+      section.exerciseIds.map((id) => getExercise(id)).filter(Boolean),
+    ),
+  )
+}
+
+/** The exercises immediately before and after `id` in orderedExercises(). */
+export function getAdjacentExercises(id) {
+  const ordered = orderedExercises()
+  const index = ordered.findIndex((exercise) => exercise.id === id)
+  return {
+    previous: index > 0 ? ordered[index - 1] : null,
+    next: index >= 0 && index < ordered.length - 1 ? ordered[index + 1] : null,
+  }
+}
+
+/** The unit whose sections contain `id`. */
+export function getUnitForExercise(id) {
+  return UNITS.find((unit) =>
+    unit.sections.some((section) => section.exerciseIds.includes(id)),
+  )
+}
+
+/** Number of exercises across all of a unit's sections. */
+export function countExercises(unit) {
+  return unit.sections.reduce((total, section) => total + section.exerciseIds.length, 0)
 }

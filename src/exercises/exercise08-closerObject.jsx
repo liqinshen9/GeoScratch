@@ -85,7 +85,7 @@ function evaluate() {
 }
 
 export default {
-  number: 8,
+  id: 'closer-object',
   kind: 'perceptual',
   mcq,
   Givens,

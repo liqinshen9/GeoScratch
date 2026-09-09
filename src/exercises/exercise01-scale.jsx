@@ -64,7 +64,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 1,
+  id: 'scale-object',
   kind: 'transform',
   Givens,
   Steps,

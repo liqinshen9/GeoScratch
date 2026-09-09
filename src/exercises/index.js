@@ -9,12 +9,12 @@ import exercise08 from './exercise08-closerObject'
 import exercise09 from './exercise09-lineInFront'
 
 /**
- * One module per exercise, keyed by the number in its URL (/exercise/:n) and in
- * data/exercises.js.
+ * One module per exercise, keyed by the slug id in its URL (/exercise/:id) and
+ * in data/exercises.js.
  *
  * Each module default-exports:
  *
- *   number    Matches its key here and its entry in data/exercises.js.
+ *   id        Matches its key here and its entry in data/exercises.js.
  *   kind      'transform' / 'distance' picks the answer card; 'perceptual' is a
  *             look-and-answer question -- the scene is prefilled by seedWorkspace
  *             and the choices come from the `mcq` descriptor (see exercise08/09).
@@ -46,18 +46,20 @@ import exercise09 from './exercise09-lineInFront'
  * ./shared instead.
  */
 export const EXERCISE_MODULES = {
-  1: exercise01,
-  2: exercise02,
-  3: exercise03,
-  4: exercise04,
-  5: exercise05,
-  6: exercise06,
-  7: exercise07,
-  8: exercise08,
-  9: exercise09,
+  'scale-object': exercise01,
+  'rotate-object': exercise02,
+  'transform-object': exercise03,
+  'translate-object': exercise04,
+  'point-plane-distance': exercise05,
+  'skew-lines-distance': exercise06,
+  'sphere-distance': exercise07,
+  'closer-object': exercise08,
+  'line-in-front': exercise09,
 }
 
-/** The module for an exercise number, falling back to the first exercise. */
-export function getExerciseModule(number) {
-  return EXERCISE_MODULES[Number(number)] || EXERCISE_MODULES[1]
+export const FALLBACK_EXERCISE_ID = 'scale-object'
+
+/** The module for an exercise id, falling back to the first exercise. */
+export function getExerciseModule(id) {
+  return EXERCISE_MODULES[id] || EXERCISE_MODULES[FALLBACK_EXERCISE_ID]
 }

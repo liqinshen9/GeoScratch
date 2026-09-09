@@ -30,6 +30,71 @@
   color: var(--geo-text-muted-on-light);
 }
 
+.exercise-browser-back {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  color: var(--geo-text-muted-on-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.exercise-browser-back:hover {
+  color: var(--geo-highlight);
+}
+
+.exercise-browser-page__units {
+  max-width: 48rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exercise-browser-unit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 12px;
+  background: var(--geo-block-card);
+  box-shadow: 0 6px 18px var(--card-shadow, rgba(0, 46, 166, 0.05));
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.exercise-browser-unit-card:hover {
+  border-color: var(--geo-highlight);
+  box-shadow: 0 8px 22px var(--card-shadow-hover, rgba(0, 46, 166, 0.12));
+  transform: translateY(-1px);
+}
+
+.exercise-browser-unit-card__title {
+  color: var(--geo-highlight);
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.exercise-browser-unit-card__description {
+  color: var(--geo-text);
+  font-size: 0.9rem;
+}
+
+.exercise-browser-unit-card__count {
+  color: var(--geo-text-muted-on-light);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .exercise-browser-page__groups {
   max-width: 48rem;
   margin: 0 auto;
@@ -73,20 +138,6 @@
   border-color: var(--geo-highlight);
   box-shadow: 0 8px 22px rgba(0, 46, 166, 0.12);
   transform: translateY(-1px);
-}
-
-.exercise-browser-card__number {
-  flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--bg-soft);
-  color: var(--geo-highlight);
-  font-weight: 800;
-  font-size: 0.9rem;
 }
 
 .exercise-browser-card__body {

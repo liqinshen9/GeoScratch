@@ -64,7 +64,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 2,
+  id: 'rotate-object',
   kind: 'transform',
   Givens,
   Steps,

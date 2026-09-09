@@ -87,7 +87,7 @@ function evaluate() {
 }
 
 export default {
-  number: 9,
+  id: 'line-in-front',
   kind: 'perceptual',
   mcq,
   Givens,

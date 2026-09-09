@@ -8,7 +8,12 @@ import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
-import { EXERCISES } from '@/data/exercises'
+import {
+  getExercise,
+  orderedExercises,
+  getAdjacentExercises,
+  getUnitForExercise,
+} from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
 import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
@@ -76,20 +81,19 @@ export default function ExercisePage() {
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
   const clearExerciseOverrides = useSettingsStore((s) => s.clearExerciseOverrides)
   const navigate = useNavigate()
-  const { exerciseNumber } = useParams()
+  const { exerciseId } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [perceptualPicked, setPerceptualPicked] = useState(null)
   const clearWorkspaceRef = useRef(() => {})
 
-  // The URL is the source of truth for which exercise is open
-  // /exercise with no param defaults to 1,
-  const activeExerciseConfig =
-    EXERCISES.find(({ number }) => number === Number(exerciseNumber)) ?? EXERCISES[0]
-  const activeExercise = activeExerciseConfig.number
+  // The URL is the source of truth for which exercise is open;
+  // /exercise with no param (or an unknown id) defaults to the first one.
+  const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
+  const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
-  const previousExercise = EXERCISES.toReversed().find(({ number }) => number < activeExercise)
-  const nextExercise = EXERCISES.find(({ number }) => number > activeExercise)
+  const { previous: previousExercise, next: nextExercise } =
+    getAdjacentExercises(activeExercise)
 
   // Everything the page needs to know about progress comes from one call into
   // the exercise's own checker.
@@ -108,8 +112,8 @@ export default function ExercisePage() {
   })
 
   const handleSelectExercise = useCallback(
-    (number) => {
-      navigate(`/exercise/${number}`)
+    (id) => {
+      navigate(`/exercise/${id}`)
       setWorkspaceMaximized(false)
       setPendingObjects([])
       setObjects([])
@@ -164,7 +168,10 @@ export default function ExercisePage() {
                 <button
                   type="button"
                   className="exercise-nav-button exercise-nav-button--wide"
-                  onClick={() => navigate('/exercises')}
+                  onClick={() => {
+                    const unit = getUnitForExercise(activeExercise)
+                    navigate(unit ? `/exercises/${unit.id}` : '/exercises')
+                  }}
                   title="Browse all exercises"
                   aria-label="Browse all exercises"
                 >
@@ -179,7 +186,7 @@ export default function ExercisePage() {
                 <button
                   type="button"
                   className="exercise-nav-button"
-                  onClick={() => previousExercise && handleSelectExercise(previousExercise.number)}
+                  onClick={() => previousExercise && handleSelectExercise(previousExercise.id)}
                   disabled={!previousExercise}
                   title="Previous exercise"
                   aria-label="Previous exercise"
@@ -189,7 +196,7 @@ export default function ExercisePage() {
                 <button
                   type="button"
                   className="exercise-nav-button"
-                  onClick={() => nextExercise && handleSelectExercise(nextExercise.number)}
+                  onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
                   disabled={!nextExercise}
                   title="Next exercise"
                   aria-label="Next exercise"
@@ -215,7 +222,7 @@ export default function ExercisePage() {
                   </div>
                 )}
                 <h1>
-                  {activeExerciseConfig.number}: <strong>{activeExerciseConfig.title}</strong>
+                  <strong>{activeExerciseConfig.title}</strong>
                 </h1>
               </div>
 

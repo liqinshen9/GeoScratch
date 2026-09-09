@@ -3,6 +3,7 @@ import Layout from '@/layout/Layout'
 import LandingPage from '@/pages/LandingPage'
 import ExercisePage from '@/pages/ExercisePage'
 import ExerciseBrowserPage from '@/pages/ExerciseBrowserPage'
+import UnitPage from '@/pages/UnitPage'
 import SettingsPage from '@/pages/SettingsPage'
 import SandboxPage from '@/pages/SandboxPage'
 
@@ -24,11 +25,15 @@ const router = createBrowserRouter([
         element: <ExerciseBrowserPage />,
       },
       {
+        path: 'exercises/:unitId',
+        element: <UnitPage />,
+      },
+      {
         path: 'exercise',
         element: <ExercisePage />,
       },
       {
-        path: 'exercise/:exerciseNumber',
+        path: 'exercise/:exerciseId',
         element: <ExercisePage />,
       },
       {

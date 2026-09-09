@@ -175,7 +175,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 3,
+  id: 'transform-object',
   kind: 'transform',
   Givens,
   Steps,

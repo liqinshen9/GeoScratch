@@ -267,7 +267,7 @@ function evaluate({ objects, workspace }) {
 }
 
 export default {
-  number: 6,
+  id: 'skew-lines-distance',
   kind: 'distance',
   Givens,
   Steps,
