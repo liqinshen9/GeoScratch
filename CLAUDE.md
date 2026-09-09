@@ -108,6 +108,20 @@ That index documents the module contract; `src/exercises/exercises.test.js`
 fails if the lists drift apart or an exercise is not placed in exactly one unit
 section. The `id` appears only in the URL (`/exercise/<id>`), never in the UI.
 
+Each `UNITS` entry carries a paragraph-length `description`, shown in the unit
+page's "About this unit" card. The in-exercise prev/next arrows walk only the
+exercises inside the current unit (`getAdjacentExercises`); a unit is a
+self-contained track and the browser is the way to cross between units.
+
+Solved exercises are remembered per-device in `localStorage`
+(`utils/exerciseProgress.js`): `ExercisePage` calls `markExerciseSolved` when
+the checker passes and `unmarkExerciseSolved` if the workspace is later edited
+into an actively incorrect state (`result.incorrect`, or a wrong perceptual
+pick -- not merely an empty/loading canvas). `UnitPage` reads
+`getSolvedExerciseIds` to tick off links and show section/unit progress. This is
+a local convenience only -- `exercise_attempts` is still the authoritative log
+when the backend is on.
+
 An exercise module can export `settingsOverrides` to force certain app settings
 (e.g. `{ haloEnabled: false }`) while it is open. `settings` in
 `useSettingsStore` is `DEFAULT_SETTINGS < userSettings < exerciseOverrides`;

@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
 import { getExerciseModule, EXERCISE_MODULES } from './index'
-import { EXERCISES, UNITS, getExercise } from '@/data/exercises'
+import {
+  EXERCISES,
+  UNITS,
+  getExercise,
+  getAdjacentExercises,
+  exercisesInUnit,
+  getSectionForExercise,
+} from '@/data/exercises'
 import { SETTING_KEYS } from '@/store/useSettingsStore'
 
 /**
@@ -91,6 +98,33 @@ describe('exercise registry', () => {
     expect(new Set(placements).size).toBe(placements.length)
     // Every exercise is placed.
     expect(new Set(placements)).toEqual(new Set(EXERCISES.map((e) => e.id)))
+  })
+
+  it('resolves each exercise to its containing unit and section', () => {
+    EXERCISES.forEach(({ id }) => {
+      const placement = getSectionForExercise(id)
+      expect(placement, `placement for ${id}`).toBeDefined()
+      expect(placement.unit.sections).toContain(placement.section)
+      expect(placement.section.exerciseIds).toContain(id)
+    })
+    expect(getSectionForExercise('does-not-exist')).toBeUndefined()
+  })
+
+  it('keeps prev/next inside the current unit', () => {
+    UNITS.forEach((unit) => {
+      const ordered = exercisesInUnit(unit)
+      const first = ordered[0]
+      const last = ordered[ordered.length - 1]
+      // The unit boundaries are dead ends.
+      expect(getAdjacentExercises(first.id).previous, `before ${first.id}`).toBeNull()
+      expect(getAdjacentExercises(last.id).next, `after ${last.id}`).toBeNull()
+      // Interior steps stay within the same unit's ordering.
+      ordered.forEach((exercise, i) => {
+        const { previous, next } = getAdjacentExercises(exercise.id)
+        expect(previous?.id ?? null).toBe(i > 0 ? ordered[i - 1].id : null)
+        expect(next?.id ?? null).toBe(i < ordered.length - 1 ? ordered[i + 1].id : null)
+      })
+    })
   })
 
   it('gives every module the shape ExercisePage relies on', () => {

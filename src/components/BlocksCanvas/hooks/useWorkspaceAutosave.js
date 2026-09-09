@@ -11,13 +11,14 @@ const CLOUD_PUSH_DELAY_MS = 3000
  * Restores this workspace's saved XML on first mount, then keeps the store in
  * sync as the user edits.
  *
- * Save/restore is keyed by `id` (e.g. 'sandbox', 'exercise-3'), so each page
- * keeps its own independent workspace.
+ * Save/restore is keyed by `id` (e.g. 'sandbox', 'exercise-scale-object'), so
+ * each page keeps its own independent workspace. The local copy is persisted to
+ * localStorage by useWorkspaceStore, so it survives a reload or a new session.
  *
  * When the backend is configured and the participant is signed in, the same XML
- * is mirrored to `workspace_snapshots` so an accidental tab close can be
- * resumed. The cloud copy wins on restore -- study machines may be shared or
- * have their site data cleared. See docs/architecture/backend.md.
+ * is mirrored to `workspace_snapshots`. The cloud copy wins on restore -- study
+ * machines may be shared or have their site data cleared. See
+ * docs/architecture/backend.md.
  *
  * @param {object|null} workspace  Blockly workspace, once injected.
  * @param {string} id             Storage key for this workspace.

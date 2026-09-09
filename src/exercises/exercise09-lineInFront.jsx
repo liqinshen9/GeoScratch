@@ -1,4 +1,4 @@
-import * as Blockly from 'blockly/core'
+import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 
 // A "look and answer" exercise: two crossing lines are prefilled as real blocks
 // and the student picks which one is in front. The choices live in the `mcq`
@@ -50,14 +50,7 @@ const SEED_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
 </xml>`
 
 function seedWorkspace(workspace) {
-  try {
-    SEED_BLOCK_IDS.map((id) => workspace.getBlockById(id))
-      .filter(Boolean)
-      .forEach((block) => block.dispose())
-    Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(SEED_XML), workspace)
-  } catch (err) {
-    console.error('[GeoScratch] Failed to seed question blocks:', err)
-  }
+  seedBackgroundBlocks(workspace, SEED_BLOCK_IDS, SEED_XML)
 }
 
 const mcq = {

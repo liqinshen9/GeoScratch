@@ -4,7 +4,7 @@ import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
-import { ArrowLeft, ArrowRight, AllApplication } from '@icon-park/react'
+import { ArrowLeft, ArrowRight, AllApplication, CheckOne } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
@@ -12,11 +12,12 @@ import {
   getExercise,
   orderedExercises,
   getAdjacentExercises,
-  getUnitForExercise,
+  getSectionForExercise,
 } from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
 import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
+import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -92,8 +93,9 @@ export default function ExercisePage() {
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
-  const { previous: previousExercise, next: nextExercise } =
-    getAdjacentExercises(activeExercise)
+  const { previous: previousExercise, next: nextExercise } = getAdjacentExercises(activeExercise)
+  const placement = getSectionForExercise(activeExercise)
+  const unit = placement?.unit
 
   // Everything the page needs to know about progress comes from one call into
   // the exercise's own checker.
@@ -110,6 +112,24 @@ export default function ExercisePage() {
   useEffect(() => {
     tracking.reportResult(result)
   })
+
+  // Mirror the solve state into localStorage so the exercise browser shows
+  // progress. A pass records it. It comes back off once we've seen this
+  // exercise pass on this visit and it then stops passing -- so editing a
+  // solved workspace so it no longer works un-ticks it, while merely opening it
+  // (empty/still-restoring, never passed yet this visit) leaves the tick alone.
+  const sawPassThisVisit = useRef(false)
+  useEffect(() => {
+    sawPassThisVisit.current = false
+  }, [activeExercise])
+  useEffect(() => {
+    if (passed) {
+      sawPassThisVisit.current = true
+      markExerciseSolved(activeExercise)
+    } else if (sawPassThisVisit.current || (isPerceptual && perceptualPicked != null)) {
+      unmarkExerciseSolved(activeExercise)
+    }
+  }, [passed, activeExercise, isPerceptual, perceptualPicked])
 
   const handleSelectExercise = useCallback(
     (id) => {
@@ -164,14 +184,11 @@ export default function ExercisePage() {
           leadingHeader={
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
-              <div className="exercise-column-heading__actions" aria-label="Exercise navigation">
+              <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                 <button
                   type="button"
                   className="exercise-nav-button exercise-nav-button--wide"
-                  onClick={() => {
-                    const unit = getUnitForExercise(activeExercise)
-                    navigate(unit ? `/exercises/${unit.id}` : '/exercises')
-                  }}
+                  onClick={() => navigate(unit ? `/exercises/${unit.id}` : '/exercises')}
                   title="Browse all exercises"
                   aria-label="Browse all exercises"
                 >
@@ -216,10 +233,10 @@ export default function ExercisePage() {
           {!workspaceMaximized && (
             <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {passed && (
-                  <div className="exercise-task-panel__meta-row">
-                    <span className="exercise-pass-badge">Passed</span>
-                  </div>
+                {placement && (
+                  <p className="exercise-task-panel__crumb">
+                    {placement.unit.title} · {placement.section.title}
+                  </p>
                 )}
                 <h1>
                   <strong>{activeExerciseConfig.title}</strong>
@@ -236,6 +253,12 @@ export default function ExercisePage() {
               )}
               <Steps steps={result.steps} passed={passed} />
               {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
+              {passed && (
+                <div className="exercise-pass-banner" role="status">
+                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                  <span>Passed</span>
+                </div>
+              )}
             </aside>
           )}
 
