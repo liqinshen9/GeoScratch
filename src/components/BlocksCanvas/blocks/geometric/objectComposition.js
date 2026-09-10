@@ -169,11 +169,10 @@ export default function initObjectCompositionBlocks() {
         if (params.type === 'plane' && target.userData?.point?.isVector3 && target.userData?.normalUnit?.isVector3) {
           const planeSize = Math.max(1, Number(target.userData?.planeSize) || 12);
           const normal = target.userData.normalUnit.clone().normalize();
-          const tangent = new THREE.Vector3(1, 0, 0);
-          if (Math.abs(tangent.dot(normal)) > 0.85) tangent.set(0, 0, 1);
-          tangent.cross(normal).normalize();
-          const bitangent = normal.clone().cross(tangent).normalize();
-          return target.userData.point
+          const rotation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+          const tangent = new THREE.Vector3(1, 0, 0).applyQuaternion(rotation);
+          const bitangent = new THREE.Vector3(0, 1, 0).applyQuaternion(rotation);
+          return (target.userData.planeCenter ?? target.userData.point)
             .clone()
             .addScaledVector(tangent, params.tangentRatio * (planeSize / 2))
             .addScaledVector(bitangent, params.bitangentRatio * (planeSize / 2));

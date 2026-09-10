@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
@@ -17,7 +17,8 @@ import {
 import { getExerciseModule } from '@/exercises'
 import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
-import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
+import ExerciseRewards from './ExerciseRewards'
+import { getSolvedExerciseIds, isExerciseUnlocked } from '@/utils/exerciseProgress'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -77,6 +78,15 @@ function AnswerCard({ result, className }) {
 }
 
 export default function ExercisePage() {
+  const { exerciseId } = useParams()
+  const exercise = getExercise(exerciseId) ?? orderedExercises()[0]
+  if (!isExerciseUnlocked(exercise.id)) {
+    return <Navigate to={`/exercises/${getSectionForExercise(exercise.id).unit.id}`} replace />
+  }
+  return <ExerciseEditor key={exercise.id} />
+}
+
+function ExerciseEditor() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
@@ -92,6 +102,12 @@ export default function ExercisePage() {
   const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
+  const handlePerceptualPicked = useCallback(
+    (value) => {
+      setPerceptualPicked({ exerciseId: activeExercise, value })
+    },
+    [activeExercise],
+  )
 
   const { previous: previousExercise, next: nextExercise } = getAdjacentExercises(activeExercise)
   const placement = getSectionForExercise(activeExercise)
@@ -106,33 +122,23 @@ export default function ExercisePage() {
 
   // Perceptual exercises have no checker pass -- a correct MCQ pick is the pass.
   const isPerceptual = exercise.kind === 'perceptual'
-  const passed = result.passed || (isPerceptual && perceptualPicked === exercise.mcq?.correctId)
+  const passed =
+    result.passed ||
+    (isPerceptual &&
+      perceptualPicked?.exerciseId === activeExercise &&
+      perceptualPicked.value === exercise.mcq?.correctId)
 
   const tracking = useExerciseTracking(activeExercise, exercise.kind)
+  const solved = getSolvedExerciseIds()
+  if (passed) solved.add(activeExercise)
+  const canGoNext = nextExercise && isExerciseUnlocked(nextExercise.id, solved)
   useEffect(() => {
     tracking.reportResult(result)
   })
 
-  // Mirror the solve state into localStorage so the exercise browser shows
-  // progress. A pass records it. It comes back off once we've seen this
-  // exercise pass on this visit and it then stops passing -- so editing a
-  // solved workspace so it no longer works un-ticks it, while merely opening it
-  // (empty/still-restoring, never passed yet this visit) leaves the tick alone.
-  const sawPassThisVisit = useRef(false)
-  useEffect(() => {
-    sawPassThisVisit.current = false
-  }, [activeExercise])
-  useEffect(() => {
-    if (passed) {
-      sawPassThisVisit.current = true
-      markExerciseSolved(activeExercise)
-    } else if (sawPassThisVisit.current || (isPerceptual && perceptualPicked != null)) {
-      unmarkExerciseSolved(activeExercise)
-    }
-  }, [passed, activeExercise, isPerceptual, perceptualPicked])
-
   const handleSelectExercise = useCallback(
     (id) => {
+      if (!isExerciseUnlocked(id)) return
       navigate(`/exercise/${id}`)
       setWorkspaceMaximized(false)
       setPendingObjects([])
@@ -183,7 +189,7 @@ export default function ExercisePage() {
         <EditorColumnHeaders
           leadingHeader={
             <div className="exercise-column-heading">
-              <h2>Exercise</h2>
+              <h2>{unit?.title?.replace(/^Unit\s*\d+:\s*/i, '') ?? 'Exercise'}</h2>
               <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                 <button
                   type="button"
@@ -214,7 +220,7 @@ export default function ExercisePage() {
                   type="button"
                   className="exercise-nav-button"
                   onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
-                  disabled={!nextExercise}
+                  disabled={!canGoNext}
                   title="Next exercise"
                   aria-label="Next exercise"
                 >
@@ -233,22 +239,26 @@ export default function ExercisePage() {
           {!workspaceMaximized && (
             <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {placement && (
-                  <p className="exercise-task-panel__crumb">
-                    {placement.unit.title} · {placement.section.title}
-                  </p>
-                )}
                 <h1>
                   <strong>{activeExerciseConfig.title}</strong>
                 </h1>
+                {unit && (
+                  <ExerciseRewards
+                    key={activeExercise}
+                    unit={unit}
+                    activeExercise={activeExercise}
+                    passed={passed}
+                  />
+                )}
               </div>
 
               <Givens />
               {isPerceptual && exercise.mcq && (
                 <PerceptualQuestion
+                  key={activeExercise}
                   mcq={exercise.mcq}
                   onPick={tracking.recordMcqAnswer}
-                  onPickedChange={setPerceptualPicked}
+                  onPickedChange={handlePerceptualPicked}
                 />
               )}
               <Steps steps={result.steps} passed={passed} />
@@ -257,6 +267,17 @@ export default function ExercisePage() {
                 <div className="exercise-pass-banner" role="status">
                   <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
                   <span>Passed</span>
+                  <button
+                    type="button"
+                    className="exercise-pass-next"
+                    onClick={() =>
+                      nextExercise ? handleSelectExercise(nextExercise.id) : navigate('/exercises')
+                    }
+                    title={nextExercise ? 'Next exercise' : 'Choose another track'}
+                    aria-label={nextExercise ? 'Next exercise' : 'Choose another track'}
+                  >
+                    <ArrowRight theme="outline" size="18" fill="currentColor" />
+                  </button>
                 </div>
               )}
             </aside>
