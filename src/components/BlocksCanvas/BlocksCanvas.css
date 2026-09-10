@@ -176,8 +176,8 @@
 }
 
 .palette-block-preview:hover {
-  background: #1a2048;
-  border-color: var(--border-light);
+  background: #dfeeff;
+  border-color: #9ec7ff;
 }
 
 .palette-block-preview:active {
