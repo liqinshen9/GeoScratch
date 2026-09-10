@@ -139,9 +139,6 @@ export function initVectorScaleBlock() {
     const applyShowSource = (s) => {
       const show = s?.showUnscaledVector !== false;
       arrowV.visible = show;
-      // Off means off: without this the staged reveal would turn it back on the
-      // moment this block is selected. See utils/stagedVectorReveal.js.
-      arrowV.userData.hiddenBySetting = !show;
       group.userData.labels = show ? [sourceLabelEntry, scaledLabelEntry] : [scaledLabelEntry];
     };
     applyShowSource(window.useSettingsStore?.getState().settings || {});
@@ -152,16 +149,10 @@ export function initVectorScaleBlock() {
       });
     }
 
-    // At k = 1 the two arrows are the same arrow: one stage, both glyphs, or
-    // the second half of the timeline visibly does nothing.
-    group.userData.animate = window.makeStagedVectorReveal(
-      identical && scaledObj
-        ? [{ objs: [arrowV, scaledObj], full: safeLen(lenV) }]
-        : [
-          { obj: arrowV, full: safeLen(lenV) },
-          ...(scaledObj ? [{ obj: scaledObj, full: lenS > 1e-8 ? safeLen(lenS) : 0 }] : []),
-        ]
-    );
+    group.userData.animate = window.makeStagedVectorReveal([
+      { obj: arrowV, full: safeLen(lenV) },
+      ...(scaledObj ? [{ obj: scaledObj, full: lenS > 1e-8 ? safeLen(lenS) : 0 }] : []),
+    ]);
 
     if (typeof threeObjStore === 'object' && threeObjStore) {
       threeObjStore[baseId + '_v'] = arrowV;
@@ -174,18 +165,6 @@ export function initVectorScaleBlock() {
     vectorNotation.setVectorMetadata(scaled, {
       geoType: 'named_vector_expression',
       label: scaledLabel,
-      // Provenance: this exact arrow is already on screen, from this tail, so
-      // an operator downstream draws no coincident copy of it.
-      // See vectorArithmetic.js's ownerGlyphs.
-      // objs is what a consumer's staged reveal grows in place of a copy; at
-      // k = 1 the source arrow is the same arrow and has to grow with it.
-      ...(lenS > 1e-8
-        ? { glyph: {
-            blockId: baseId,
-            anchor: anchor.clone(),
-            objs: identical ? [arrowV, scaledObj] : [scaledObj],
-          } }
-        : {}),
     });
     return scaled;
   })()`

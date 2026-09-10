@@ -58,50 +58,6 @@ across the whole sequence. Used by `vector_arithmetic` and
 re-anchoring); a degenerate result (a plain sphere, `full` 0) has no
 `setVectorLength` and is just left visible.
 
-### Reveal order follows the tails
-
-`orderRevealParts(parts)` reorders a stage list so a part whose tail sits on
-another part's tip is revealed after it. Socket order is not reveal order: give
-`vector_arithmetic` a "from point:" operand -- `u` anchored at `v`'s tip, the
-head-to-tail picture of a sum -- and revealing `u` first grows an arrow out of a
-point in mid-air. Parts carrying no `anchor`/`tip` keep their position, and the
-result arrow is appended after the ordered operands rather than sorted among
-them: it closes the picture whatever the operands did.
-
-### One stage per arrow you can see
-
-A stage that grows underneath an arrow already at full length reads as a pause
-in the playback, so nothing gets a slot it cannot show.
-
-- Coincident glyphs share one stage, passed as `objs` rather than `obj` --
-  Scale Vector at k = 1, where `v` and `k*v` are the same arrow.
-- An operand another block already draws is not drawn again here. A vector
-  value carries `userData.glyph = { blockId, anchor, objs }` when the block that
-  produced it put that exact arrow on screen from that exact tail
-  (`linalg_vec3` standalone, `vector_scale`'s `k*v`); `vector_arithmetic`'s
-  `ownerGlyphs` reads it, skips the coincident copy and leaves the label to the
-  owner. This is the cross-block version of `utils/duplicateVectorRegistry.js`,
-  and it also settles a depth fight the copy would otherwise win or lose at
-  random.
-
-  That operand still gets its stage. When the owner has an `animate` of its own
-  (Scale Vector: `v`, then `k*v`) the slot is handed to that closure -- a part
-  of the form `{ animate }` -- and the owner's whole sub-picture plays inside
-  it, easing its own stages; otherwise the slot grows `objs`, the owner's
-  glyphs. Slots are counted in arrows, not in parts: a reveal closure carries
-  `.stages`, and a delegating part claims that many slots, so a nested arrow
-  gets the same share of the timeline as a top-level one instead of two arrows
-  splitting one arrow's worth of time. Either way the scene starts empty and builds from the origin out
-  however many blocks drew it. Two `animate` closures can then drive one glyph,
-  which is safe because `AnimationDriver` runs one at a time and snaps the old
-  target back to progress 1 when the selection changes. Delegation can't loop:
-  provenance only ever points at a block that already ran.
-
-- `userData.hiddenBySetting` marks a glyph a setting has switched off (Vector >
-  Show Unscaled Vector). The reveal owns "not yet its turn", not "wanted at
-  all", so it never sets `visible = true` on one -- without that, selecting the
-  block was enough to bring the hidden arrow back for good.
-
 ## Gotcha a refactor would reintroduce
 
 ### cap-the-first-delta
