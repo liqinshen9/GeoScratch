@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Rocket, X } from 'lucide-react'
 import { getSolvedExerciseIds, markExerciseSolved } from '@/utils/exerciseProgress'
 
 export default function ExerciseRewards({ unit, activeExercise, passed }) {
@@ -46,28 +44,7 @@ export default function ExerciseRewards({ unit, activeExercise, passed }) {
           <progress aria-label={`${unit.title} progress`} value={completed} max={ids.length} />
         </div>
       </section>
-      {celebration &&
-        createPortal(
-          <div className="exercise-victory" role="status" aria-live="polite">
-            <div className="exercise-victory__wash" />
-            <div className="exercise-victory__flight" aria-hidden="true">
-              <Rocket />
-            </div>
-            <div className="exercise-victory__message">
-              <strong>Correct.<br />Well done!</strong>
-            </div>
-            <button
-              type="button"
-              className="exercise-victory__close"
-              onClick={() => setCelebration(false)}
-              aria-label="Dismiss celebration"
-              title="Dismiss celebration"
-            >
-              <X size={22} />
-            </button>
-          </div>,
-          document.body,
-        )}
+      {celebration && null}
     </>
   )
 }
