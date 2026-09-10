@@ -4,7 +4,18 @@
 // the authoritative record (see docs/architecture/backend.md). Nothing here
 // talks to the backend.
 
+import { exercisesInUnit, getUnitForExercise } from '@/data/exercises'
+
 const STORAGE_KEY = 'geoscratch:solved-exercises'
+
+export function isExerciseUnlocked(id, solved = getSolvedExerciseIds()) {
+  const unit = getUnitForExercise(id)
+  if (!unit) return false
+  if (solved.has(id)) return true
+  const exercises = exercisesInUnit(unit)
+  const index = exercises.findIndex((exercise) => exercise.id === id)
+  return exercises.slice(0, index).every((exercise) => solved.has(exercise.id))
+}
 
 function read() {
   try {
