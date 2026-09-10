@@ -37,6 +37,218 @@
   border-top: 1px solid var(--exercise-divider);
 }
 
+.exercise-journey {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.8rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--geo-border-light);
+  background: var(--bg-main);
+  font-size: 0.75rem;
+  letter-spacing: 0;
+}
+.exercise-journey__summary {
+  display: grid;
+  gap: 0.25rem;
+}
+.exercise-journey__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.exercise-journey__meter {
+  width: 10rem;
+  flex-shrink: 0;
+}
+.exercise-journey__meter > div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+.exercise-journey__meter progress {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 7px;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--geo-border-light);
+}
+.exercise-journey__meter progress::-webkit-progress-bar {
+  background: var(--geo-border-light);
+}
+.exercise-journey__meter progress::-webkit-progress-value {
+  background: #18b981;
+  transition: width 600ms ease;
+}
+.exercise-journey__meter progress::-moz-progress-bar {
+  background: #18b981;
+}
+.exercise-pass-next {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.exercise-pass-next:hover {
+  background: #15803d22;
+}
+.exercise-victory {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: #145c40;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.exercise-victory__wash {
+  position: absolute;
+  inset: 0;
+  background: #d1fae5ed;
+  animation: exercise-victory-wash 3.8s ease both;
+}
+.exercise-victory__message {
+  position: relative;
+  text-align: center;
+  padding: 2rem;
+  max-width: 100%;
+  animation: exercise-victory-message 3.8s ease both;
+}
+.exercise-victory__message > strong {
+  display: block;
+  font-size: 7rem;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-shadow: 0 3px 0 #ffffff80;
+  margin: 0.5rem 0;
+}
+.exercise-victory__flight {
+  position: absolute;
+  left: 0;
+  top: 70%;
+  animation: exercise-rocket-flight 1.6s 0.15s cubic-bezier(0.3, 0, 0.65, 1) both;
+}
+.exercise-victory__flight svg {
+  width: 100px;
+  height: 100px;
+  stroke-width: 1.5;
+  fill: #eafff5;
+  stroke: #075a39;
+}
+.exercise-victory__flight::before {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 20px;
+  top: 90%;
+  right: 85%;
+  background: linear-gradient(90deg, transparent, #ffdf7e);
+  transform: rotate(-35deg);
+  transform-origin: right;
+}
+.exercise-victory__close {
+  position: absolute;
+  right: 1.25rem;
+  top: 1.25rem;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  background: #004b36;
+  border: 1px solid #ffffff66;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+}
+@keyframes exercise-victory-wash {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  15%,
+  82% {
+    clip-path: inset(0);
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(0);
+    opacity: 0;
+  }
+}
+@keyframes exercise-victory-message {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.9);
+  }
+  22%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes exercise-rocket-flight {
+  from {
+    transform: translate(-140px, 100px);
+  }
+  to {
+    transform: translate(calc(100vw + 140px), -65vh);
+  }
+}
+@media (max-width: 1000px) {
+  .exercise-victory__message > strong {
+    font-size: 5rem;
+  }
+  .exercise-journey {
+    flex-wrap: wrap;
+    gap: 0.8rem 1.2rem;
+  }
+}
+@media (max-width: 480px) {
+  .exercise-journey__summary {
+    flex: 1 1 100%;
+  }
+  .exercise-journey__meter {
+    width: 100%;
+  }
+  .exercise-victory__message > strong {
+    font-size: 3rem;
+  }
+  .exercise-victory__message {
+    padding: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .exercise-victory__wash,
+  .exercise-victory__message {
+    animation: none;
+  }
+  .exercise-victory__flight {
+    display: none;
+  }
+  .exercise-journey__meter progress::-webkit-progress-value {
+    transition: none;
+  }
+}
+
 .exercise-task-panel {
   grid-column: 1;
   position: relative;
