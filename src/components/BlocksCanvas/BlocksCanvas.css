@@ -715,6 +715,17 @@
   border: 0 !important;
 }
 
+/* Blockly mounts its temporary field editor outside the workspace container. */
+:root[data-theme='dark'] .blocklyWidgetDiv .blocklyHtmlInput {
+  color: #000000;
+  caret-color: #000000;
+}
+
+:root[data-theme='dark'] .blocklyWidgetDiv .blocklyHtmlInput::selection {
+  color: #000000;
+  background: #bfdbfe;
+}
+
 .workspace-host .blocklyMainBackground {
   stroke: transparent !important;
 }
