@@ -37,15 +37,12 @@ export default function ExerciseRewards({ unit, activeExercise, passed }) {
     <>
       <section className="exercise-journey" aria-label="Learning progress">
         <div className="exercise-journey__summary">
-          <span className="exercise-journey__title">{unit.title}</span>
+          <strong>
+            {completed} / {ids.length}
+          </strong>
+          <span>completed</span>
         </div>
         <div className="exercise-journey__meter">
-          <div>
-            <strong>
-              {completed} / {ids.length}
-            </strong>
-            <span>completed</span>
-          </div>
           <progress aria-label={`${unit.title} progress`} value={completed} max={ids.length} />
         </div>
       </section>

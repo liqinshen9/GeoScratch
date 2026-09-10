@@ -181,14 +181,6 @@ function ExerciseEditor() {
 
   return (
     <div className="exercise-page exercise-page--editor">
-      {unit && (
-        <ExerciseRewards
-          key={activeExercise}
-          unit={unit}
-          activeExercise={activeExercise}
-          passed={passed}
-        />
-      )}
       <main
         className={`editor-shell editor-shell--with-leading exercise-editor-shell${
           workspaceMaximized ? ' editor-shell--maximized' : ''
@@ -197,7 +189,7 @@ function ExerciseEditor() {
         <EditorColumnHeaders
           leadingHeader={
             <div className="exercise-column-heading">
-              <h2>Exercise</h2>
+              <h2>{unit?.title?.replace(/^Unit\s*\d+:\s*/i, '') ?? 'Exercise'}</h2>
               <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                 <button
                   type="button"
@@ -247,14 +239,17 @@ function ExerciseEditor() {
           {!workspaceMaximized && (
             <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
               <div className="exercise-task-panel__top">
-                {placement && (
-                  <p className="exercise-task-panel__crumb">
-                    {placement.unit.title} · {placement.section.title}
-                  </p>
-                )}
                 <h1>
                   <strong>{activeExerciseConfig.title}</strong>
                 </h1>
+                {unit && (
+                  <ExerciseRewards
+                    key={activeExercise}
+                    unit={unit}
+                    activeExercise={activeExercise}
+                    passed={passed}
+                  />
+                )}
               </div>
 
               <Givens />

@@ -79,7 +79,7 @@ export const EXERCISES = Object.freeze([
 export const UNITS = Object.freeze([
   {
     id: 'transformations',
-    title: 'Unit 1: Transformations',
+    title: 'Transformations',
     description:
       'Transformations are how you move geometry around a scene: sliding it, turning it, and resizing it. Each one is a matrix you build from a block, and stacking them in a pipeline lets you compose a translation, a rotation and a scale into a single motion. Getting comfortable here sets up everything that follows, because almost every later construction is some object placed by a transform.',
     sections: [
@@ -97,7 +97,7 @@ export const UNITS = Object.freeze([
   },
   {
     id: 'distances-projections',
-    title: 'Unit 2: Distances & Projections',
+    title: 'Distances & Projections',
     description:
       'A distance question is really a projection question: the shortest gap between two shapes lies along the direction perpendicular to both. These exercises work through the standard cases in order of difficulty, from a point and a plane up to two skew lines that never meet. In each one you build the construction that makes the perpendicular explicit, then read the length off it rather than guessing from the picture.',
     sections: [
@@ -115,7 +115,7 @@ export const UNITS = Object.freeze([
   },
   {
     id: 'perception',
-    title: 'Unit 3: Perception',
+    title: 'Perception',
     description:
       'A 3D scene on a flat screen only looks three-dimensional because of cues your visual system reads automatically: things further away are smaller, nearer things overlap the ones behind them, and shading follows depth. These short exercises make those cues explicit by asking you to judge which object is closer or which line passes in front, then check your answer against the real geometry.',
     sections: [
