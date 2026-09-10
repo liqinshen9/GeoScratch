@@ -176,8 +176,8 @@
 }
 
 .palette-block-preview:hover {
-  background: #dfeeff;
-  border-color: #9ec7ff;
+  background: #1a2048;
+  border-color: var(--border-light);
 }
 
 .palette-block-preview:active {
@@ -709,17 +709,6 @@
 }
 
 .workspace-host .injectionDiv,
-/* Blockly mounts its temporary field editor outside the workspace container. */
-:root[data-theme='dark'] .blocklyWidgetDiv .blocklyHtmlInput {
-  color: #000000;
-  caret-color: #000000;
-}
-
-:root[data-theme='dark'] .blocklyWidgetDiv .blocklyHtmlInput::selection {
-  color: #000000;
-  background: #bfdbfe;
-}
-
 .workspace-host .blocklySvg {
   width: 100% !important;
   height: 100% !important;
@@ -853,8 +842,8 @@
 }
 
 :root[data-theme='dark'] .palette-block-preview:hover {
-  background: rgba(147, 197, 253, 0.16);
-  border-color: rgba(147, 197, 253, 0.42);
+  background: var(--geo-tint-weak);
+  border-color: rgba(148, 163, 184, 0.22);
 }
 
 :root[data-theme='dark'] .make-block-button:hover {

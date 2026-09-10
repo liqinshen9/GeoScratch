@@ -41,7 +41,7 @@ function worldPlaneFrame(obj) {
   if (!point?.isVector3 || !normalUnit?.isVector3 || !Number.isFinite(planeSize)) return null
 
   obj.updateMatrixWorld(true)
-  const worldPoint = (obj.userData.planeCenter ?? point).clone().applyMatrix4(obj.matrixWorld)
+  const worldPoint = point.clone().applyMatrix4(obj.matrixWorld)
   const worldNormal = normalUnit.clone().transformDirection(obj.matrixWorld).normalize()
   const worldScale = obj.getWorldScale(new THREE.Vector3())
   const halfSize = (planeSize / 2) * ((worldScale.x + worldScale.y + worldScale.z) / 3)

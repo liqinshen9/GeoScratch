@@ -1,224 +1,297 @@
-.exercise-browser {
-  flex: 1;
+/* Khan-Academy-style unit view: a persistent unit rail on the left, a wide
+   reading column on the right with room for a full unit description. */
+
+.unit-page {
+  flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
   display: flex;
-  flex-direction: column;
-  padding: 2rem max(1.25rem, calc((100% - 1280px) / 2));
+  align-items: stretch;
+  overflow: hidden;
   background: var(--bg-main);
   color: var(--geo-text);
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: 0;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
 }
-.exercise-browser__content {
-  flex-shrink: 0;
-  margin-block: auto;
+
+/* ---- left rail ---------------------------------------------------------- */
+
+.unit-page__rail {
+  /* Matches the exercise page's task panel width (--exercise-task-width). */
+  flex: 0 0 clamp(14.5rem, 15vw, 17rem);
+  border-right: 1px solid var(--geo-border-light);
+  padding: 1.75rem 0.75rem;
+  overflow-y: auto;
+  background: var(--geo-surface);
 }
-.exercise-browser__title {
-  margin: 0 0 1.25rem;
-  font-size: 1.75rem;
-  font-weight: 800;
-  line-height: 1.3;
-}
-.exercise-browser__title span {
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--geo-text-muted-on-light);
-}
-.unit-cards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 1.25rem;
-}
-.unit-choice {
-  --unit-accent: #376b9d;
-  --unit-heading: #214568;
-  --unit-tint: #dfedff;
-  min-width: 0;
-  color: var(--geo-text);
-  border: 1px solid #8da9c5;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--geo-block-card);
-}
-.unit-choice__header {
-  position: relative;
-  min-height: 120px;
-  padding: 1.25rem;
-  background: var(--unit-tint);
-  color: var(--unit-heading);
-}
-.unit-choice--complete {
-  border-color: #376b9d;
-}
-.unit-choice--complete .unit-choice__header {
-  padding-right: 5rem;
-}
-.unit-choice__completed-banner {
-  position: absolute;
-  top: 1.875rem;
-  right: -2.8125rem;
-  width: 11.25rem;
-  height: 1.75rem;
+
+.unit-page__rail-head {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(45deg);
-  background: #16805a;
-  box-shadow: 0 2px 4px #0002;
-  color: #ffffff;
-  font-size: 0.625rem;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--geo-border-light);
+}
+
+.unit-page__rail-title {
+  font-size: 1.15rem;
   font-weight: 800;
-  line-height: 1.4;
-  white-space: nowrap;
+  color: var(--geo-highlight);
+}
+
+.unit-page__rail-count {
+  font-size: 0.72rem;
+  font-weight: 700;
   text-transform: uppercase;
-}
-.unit-choice__header .unit-choice__meta,
-.unit-choice__header h2 {
-  color: var(--unit-heading);
-  font-weight: 600;
-}
-.unit-choice__header h2 {
-  font-weight: 800;
-}
-.unit-choice__description {
-  line-height: 1.65;
-}
-.unit-choice__body {
-  padding: 1.25rem;
-}
-.unit-choice__meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.75rem;
+  letter-spacing: 0.05em;
   color: var(--geo-text-muted-on-light);
 }
-.unit-choice h2 {
-  font-size: 1.75rem;
-  margin: 0.65rem 0 0.5rem;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-.unit-choice p {
-  margin: 0 0 1.25rem;
-  color: var(--geo-text-muted-on-light);
-  font-size: 0.85rem;
-}
-.unit-choice progress {
-  appearance: none;
-  display: block;
-  border: 0;
-  height: 6px;
-  width: 100%;
-  border-radius: 3px;
-  overflow: hidden;
-  background: var(--geo-border-light);
-}
-.unit-choice progress::-webkit-progress-bar {
-  background: var(--geo-border-light);
-}
-.unit-choice progress::-webkit-progress-value {
-  background: #16805a;
-}
-.unit-choice progress::-moz-progress-bar {
-  background: #16805a;
-}
-.unit-choice__footer {
-  margin-top: 0.65rem;
-  font-size: 0.75rem;
-}
-.unit-choice__challenges {
-  list-style: none;
-  margin: 1.25rem 0 0;
-  padding: 0;
-}
-.unit-choice__challenges li {
-  border-top: 1px solid var(--geo-border-light);
-}
-.challenge-row {
+
+.unit-page__rail-list {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 1rem 0;
-  color: var(--geo-text);
+  flex-direction: column;
+}
+
+.unit-page__rail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.75rem;
+  border-left: 4px solid transparent;
   text-decoration: none;
+  color: var(--geo-text);
+  transition: background 0.12s ease;
 }
-a.challenge-row:hover {
-  background: var(--geo-panel-muted);
+
+.unit-page__rail-item:hover:not(.unit-page__rail-item--active) {
+  background: color-mix(in srgb, var(--geo-highlight) 5%, transparent);
 }
-a.challenge-row:focus-visible {
-  outline: 2px solid var(--unit-accent);
-  outline-offset: 2px;
+
+.unit-page__rail-item--active {
+  background: color-mix(in srgb, var(--geo-highlight) 9%, var(--bg-main));
+  border-left-color: var(--geo-highlight);
 }
-.challenge-row > svg {
-  flex-shrink: 0;
-  color: var(--unit-accent);
+
+.unit-page__rail-item-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--geo-text-muted-on-light);
 }
-.challenge-number {
-  flex: 0 0 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 1px solid var(--geo-border-light);
-  font-size: 0.8rem;
+
+.unit-page__rail-item-name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.unit-page__rail-item--active .unit-page__rail-item-name {
+  color: var(--geo-highlight);
   font-weight: 700;
 }
-.challenge-number.is-complete {
-  background: #167c56;
-  color: white;
-  border-color: transparent;
+
+.unit-page__rail-item-check {
+  display: inline-flex;
+  color: #16a34a;
 }
-.challenge-copy {
-  display: grid;
-  gap: 0.3rem;
-  flex: 1;
+
+/* ---- main column: fills all remaining width, full-bleed section cards -- */
+
+.unit-page__main {
+  flex: 1 1 auto;
   min-width: 0;
+  overflow-y: auto;
+  padding: clamp(1.5rem, 3vw, 2.5rem) clamp(1.25rem, 3vw, 2.5rem) 4rem;
 }
-.challenge-copy strong {
-  font-size: 0.85rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-.challenge-title-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-.challenge-title-row strong {
-  flex: 1;
-  min-width: 0;
-}
-.challenge-copy small {
+
+.unit-page__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--geo-text-muted-on-light);
-  font-size: 0.7rem;
-  line-height: 1.4;
 }
-.challenge-difficulty {
+
+.unit-page__title {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.75rem, 3.5vw, 2.4rem);
+  line-height: 1.15;
+  color: var(--geo-highlight);
+}
+
+.unit-page__card {
+  padding: 1.5rem clamp(1.25rem, 2.5vw, 2rem);
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 14px;
+  background: var(--geo-block-card);
+}
+
+.unit-page__about h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1.2rem;
+  color: var(--geo-text);
+}
+
+.unit-page__about p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--geo-text);
+}
+
+.unit-page__section-title {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--geo-text);
+}
+
+.unit-page__section-label {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--geo-text-muted-on-light);
+}
+
+.unit-page__section-progress {
+  color: #16a34a;
+}
+
+.unit-page__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.unit-page__links li + li {
+  border-top: 1px solid var(--geo-border-light);
+}
+
+.unit-page__link {
+  /* inline-flex so only the icon + title (+ tag) is the hit target, not the
+     whole row width. */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.25rem;
+  text-decoration: none;
+  color: var(--geo-highlight);
+}
+
+.unit-page__link:hover .unit-page__link-title {
+  text-decoration: underline;
+}
+
+.unit-page__link-icon {
   flex-shrink: 0;
-  white-space: nowrap;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  display: flex;
+  color: var(--geo-text-muted-on-light);
+}
+
+.unit-page__link-icon--solved {
+  color: #16a34a;
+}
+
+.unit-page__link--solved .unit-page__link-title {
+  color: #15803d;
+}
+
+.unit-page__link-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.unit-page__link-difficulty {
+  flex-shrink: 0;
+  margin-left: 0.5rem;
   font-size: 0.68rem;
   font-weight: 800;
   text-transform: uppercase;
-  line-height: 1.4;
+  letter-spacing: 0.04em;
 }
-.challenge-difficulty--easy { color: #166534; background: #dcfce7; }
-.challenge-difficulty--medium { color: #854d0e; background: #fef3c7; }
-.challenge-difficulty--hard { color: #9f1239; background: #ffe4e6; }
-:root[data-theme='dark'] .challenge-difficulty--easy { color: #86efac; background: #163f2b; }
-:root[data-theme='dark'] .challenge-difficulty--medium { color: #fcd477; background: #453719; }
-:root[data-theme='dark'] .challenge-difficulty--hard { color: #fda4af; background: #492333; }
-.challenge-row.is-locked,
-.challenge-row.is-locked > svg {
+
+.unit-page__link-difficulty--easy {
+  color: #16a34a;
+}
+
+.unit-page__link-difficulty--medium {
+  color: #d97706;
+}
+
+.unit-page__link-difficulty--hard {
+  color: #dc2626;
+}
+
+.unit-page__footnote {
+  margin: 1.5rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--geo-text-muted-on-light);
 }
-@media (max-width: 850px) {
-  .unit-cards {
-    grid-template-columns: 1fr;
+
+/* ---- narrow screens: rail collapses to a horizontal strip -------------- */
+
+@media (max-width: 46rem) {
+  .unit-page {
+    flex-direction: column;
+    overflow-y: auto;
   }
+
+  .unit-page__rail {
+    flex: 0 0 auto;
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--geo-border-light);
+    padding: 1rem;
+  }
+
+  .unit-page__rail-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .unit-page__rail-item {
+    border-left: none;
+    border-bottom: 3px solid transparent;
+  }
+
+  .unit-page__rail-item--active {
+    border-left: none;
+    border-bottom-color: var(--geo-highlight);
+  }
+
+  .unit-page__main {
+    overflow-y: visible;
+  }
+}
+
+:root[data-theme='dark'] .unit-page__rail-item-check,
+:root[data-theme='dark'] .unit-page__section-progress,
+:root[data-theme='dark'] .unit-page__link-icon--solved,
+:root[data-theme='dark'] .unit-page__link--solved .unit-page__link-title,
+:root[data-theme='dark'] .unit-page__link-difficulty--easy {
+  color: var(--state-pass-fg);
+}
+
+:root[data-theme='dark'] .unit-page__link-difficulty--medium {
+  color: var(--state-warn-fg);
+}
+
+:root[data-theme='dark'] .unit-page__link-difficulty--hard {
+  color: var(--state-fail-fg);
 }

@@ -45,6 +45,7 @@ describe('installSceneRuntime', () => {
         'HALO_LAYER',
         'HALO_MAX_IMMUNE_IDS',
         'makeStagedVectorReveal',
+        'orderRevealParts',
         'registerHaloLine',
         'registerVectorGlyph',
         'threeObjStore',

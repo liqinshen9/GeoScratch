@@ -6,7 +6,6 @@ import {
   markExerciseSolved,
   unmarkExerciseSolved,
   clearSolvedExercises,
-  isExerciseUnlocked,
 } from './exerciseProgress'
 
 const STORAGE_KEY = 'geoscratch:solved-exercises'
@@ -19,33 +18,6 @@ describe('exerciseProgress', () => {
   it('starts empty', () => {
     expect(getSolvedExerciseIds().size).toBe(0)
     expect(isExerciseSolved('scale-object')).toBe(false)
-  })
-
-  it('opens the first challenge of every unit independently', () => {
-    for (const id of ['scale-object', 'point-plane-distance', 'closer-object']) {
-      expect(isExerciseUnlocked(id)).toBe(true)
-    }
-    expect(isExerciseUnlocked('rotate-object')).toBe(false)
-    expect(isExerciseUnlocked('skew-lines-distance')).toBe(false)
-    expect(isExerciseUnlocked('line-in-front')).toBe(false)
-    expect(isExerciseUnlocked('unknown')).toBe(false)
-  })
-
-  it('requires all earlier challenges, including across section boundaries', () => {
-    markExerciseSolved('scale-object')
-    expect(isExerciseUnlocked('rotate-object')).toBe(true)
-    expect(isExerciseUnlocked('transform-object')).toBe(false)
-    markExerciseSolved('rotate-object')
-    expect(isExerciseUnlocked('translate-object')).toBe(true)
-    markExerciseSolved('translate-object')
-    expect(isExerciseUnlocked('transform-object')).toBe(true)
-    expect(isExerciseUnlocked('skew-lines-distance')).toBe(false)
-  })
-
-  it('keeps previously solved challenges accessible without bypassing other prerequisites', () => {
-    markExerciseSolved('rotate-object')
-    expect(isExerciseUnlocked('rotate-object')).toBe(true)
-    expect(isExerciseUnlocked('translate-object')).toBe(false)
   })
 
   it('records a solve and persists it', () => {
