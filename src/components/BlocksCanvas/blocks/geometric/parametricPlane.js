@@ -22,13 +22,29 @@ function geoParametricPlaneDefinition(
   }
 
   const normalUnit = normalRaw.clone().normalize()
-  const planeSize = window.__geoScratchRuntimeMode === 'exercise-2' ? 28 : 12
   // This instance's colors, from the shared object-color framework
   // (colorSystem.js) -- the "Plane" family for the plane's own fill/edges/
   // normal arrow, and "Point" for the defining point marker.
   const planeColor = window.GeoScratchColors.forInstance('plane', blockId)
   const planeFillColor = window.GeoScratchColors.forInstanceVariant('plane', blockId, 35)
   const pointColor = window.GeoScratchColors.forInstance('point', blockId)
+  const planeRotation = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 0, 1),
+    normalUnit,
+  )
+  // Center the patch on the plane near the origin, then fit an intact square
+  // two units inside the scene walls. Its size must not depend on the chosen point.
+  const planeCenter = normalUnit.clone().multiplyScalar(normalUnit.dot(point))
+  const u = new THREE.Vector3(1, 0, 0).applyQuaternion(planeRotation)
+  const v = new THREE.Vector3(0, 1, 0).applyQuaternion(planeRotation)
+  let halfSize = window.__geoScratchRuntimeMode === 'exercise-2' ? 14 : 24
+  for (const axis of ['x', 'y', 'z']) {
+    const room = Math.max(0, 18 - Math.abs(planeCenter[axis]))
+    const span = Math.abs(u[axis]) + Math.abs(v[axis])
+    if (span > 1e-10) halfSize = Math.min(halfSize, room / span)
+    if (Math.abs(planeCenter[axis]) > 18) halfSize = 0
+  }
+  const planeSize = halfSize * 2
   const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
   const planeMat = new THREE.MeshStandardMaterial({
     color: planeFillColor,
@@ -45,10 +61,8 @@ function geoParametricPlaneDefinition(
     new THREE.LineBasicMaterial({ color: planeColor, transparent: true, opacity: 0.9 }),
   )
   plane.add(planeEdges)
-  plane.setRotationFromQuaternion(
-    new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalUnit),
-  )
-  plane.position.copy(point)
+  plane.setRotationFromQuaternion(planeRotation)
+  plane.position.copy(planeCenter)
 
   // Point + normal glyph: the two pieces of data that actually define this
   // plane, shown alongside the plane mesh whenever the "Show Point &
@@ -105,6 +119,7 @@ function geoParametricPlaneDefinition(
   group.userData.geoType = 'point_normal_plane_group'
   group.userData.srcBlockId = blockId
   group.userData.point = point.clone()
+  group.userData.planeCenter = plane.position.clone()
   group.userData.normalRaw = normalRaw.clone()
   group.userData.normalUnit = normalUnit.clone()
   group.userData.planeSize = planeSize
