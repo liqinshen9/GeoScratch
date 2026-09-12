@@ -75,7 +75,7 @@ export function initVectorProjectBlock() {
       shadowGroup.userData.srcBlockId=${JSON.stringify(block.id)};
       return shadowGroup;
     };
-    const makeDistanceIllustration = (basePoint, topPoint, pointP, normal, distanceLength) => {
+    const makeDistanceIllustration = (basePoint, topPoint, qPoint, normal, distanceLength) => {
       const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
       const group = new THREE.Group();
 
@@ -96,14 +96,14 @@ export function initVectorProjectBlock() {
         threeObjStore[${JSON.stringify(block.id)} + '_normal'] = normalGlyph;
       }
 
-      const guideGeom = new THREE.BufferGeometry().setFromPoints([topPoint.clone(), pointP.clone()]);
+      const guideGeom = new THREE.BufferGeometry().setFromPoints([basePoint.clone(), qPoint.clone()]);
       const guideLine = new THREE.Line(
         guideGeom,
         new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('accent'), dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
       );
       guideLine.computeLineDistances();
 
-      const tangent = pointP.clone().sub(topPoint);
+      const tangent = qPoint.clone().sub(basePoint);
       if (tangent.lengthSq() < 1e-10) {
         tangent.set(1, 0, 0);
         if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
@@ -113,9 +113,9 @@ export function initVectorProjectBlock() {
       tangent.normalize();
       const markerSize = Math.min(0.42, Math.max(0.18, distanceLength * 0.16));
       const cornerPoints = [
-        topPoint.clone().addScaledVector(normalUnit, -markerSize),
-        topPoint.clone().addScaledVector(normalUnit, -markerSize).addScaledVector(tangent, markerSize),
-        topPoint.clone().addScaledVector(tangent, markerSize),
+        basePoint.clone().addScaledVector(normalUnit, markerSize),
+        basePoint.clone().addScaledVector(normalUnit, markerSize).addScaledVector(tangent, markerSize),
+        basePoint.clone().addScaledVector(tangent, markerSize),
       ];
       const rightAngle = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(cornerPoints),
@@ -167,9 +167,11 @@ export function initVectorProjectBlock() {
       const scale = uVal.dot(vVal) / denom;
       projVec = vVal.clone().multiplyScalar(scale);
       projLen = projVec.length();
-      projOrigin = isPointPlaneDistanceProjection && uVal.userData.start?.isVector3
-        ? uVal.userData.start.clone()
-        : (pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0));
+      // The foot of P's own perpendicular, so the bar runs from the plane up to
+      // P and stays put when Q moves. Anchoring it at Q instead made the bar
+      // slide along the plane with Q, which is not what a distance to a plane
+      // looks like.
+      projOrigin = pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0);
       if (projLen>1e-8) {
         const projTip = projOrigin.clone().add(projVec);
         projObj = isPointPlaneDistanceProjection
@@ -210,7 +212,8 @@ export function initVectorProjectBlock() {
       guideLine.userData.srcBlockId=${JSON.stringify(block.id)};
     } else {
       projectionShadow = makeProjectionShadow(projOrigin);
-      distanceIllustration = makeDistanceIllustration(projOrigin, pTip, uTip, vVal, projLen);
+      const qPointForGuide = uVal.userData.start?.isVector3 ? uVal.userData.start.clone() : uTip.clone();
+      distanceIllustration = makeDistanceIllustration(projOrigin, pTip, qPointForGuide, vVal, projLen);
     }
 
     const group = new THREE.Group();
