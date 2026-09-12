@@ -41,6 +41,14 @@ export function initPointPlaneDistanceBlock() {
 
     // Captured before normalize() mutates it: n is drawn at its own magnitude.
     const normalLength = normalSource.length();
+    // The plane is an input here, so its normal can take the plane's own colour,
+    // matching the arrow parametricPlane draws for the same thing. vectorProject
+    // and the dot product keep the operand colour: there the vector really is an
+    // arbitrary projection target, not a plane's normal.
+    const planeBlockId = plane?.userData?.srcBlockId;
+    const normalColor = planeBlockId
+      ? window.GeoScratchColors.forInstance('plane', planeBlockId)
+      : window.GeoScratchColors.forRole('operandB');
     const normal = normalSource.normalize();
     const signedDistance = point.clone().sub(planePoint).dot(normal);
     const distance = Math.abs(signedDistance);
@@ -59,7 +67,7 @@ export function initPointPlaneDistanceBlock() {
       const normalTip = distanceStart.clone().addScaledVector(normal, normalLength);
       const normalGlyph = window.buildVectorShaftGlyph(
         THREE, ${JSON.stringify(block.id)} + '_normal',
-        distanceStart.clone(), normal.clone(), normalLength > 1e-8 ? normalLength : 1, window.GeoScratchColors.forRole('operandB')
+        distanceStart.clone(), normal.clone(), normalLength > 1e-8 ? normalLength : 1, normalColor
       );
       normalGlyph.userData.geoType = 'distance_normal_arrow';
       normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
@@ -175,7 +183,7 @@ export function initPointPlaneDistanceBlock() {
         distanceFactor: 8,
         offset: [0, 0, 0],
         emphasis: true,
-        color: window.GeoScratchColors.forRole('operandB'),
+        color: normalColor,
       },
     ];
 
