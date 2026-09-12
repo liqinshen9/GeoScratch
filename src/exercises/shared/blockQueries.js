@@ -90,6 +90,19 @@ function getInputBlock(block, inputName) {
   return target
 }
 
+// parametric_plane falls back to +Y when its normal socket is empty or holds a
+// zero-length vector, and renders the unit normal rather than the raw one (see
+// blocks/geometric/parametricPlane.js). A checker that compares the socket's
+// block directly therefore rejects planes the app itself renders as correct:
+// leave the socket empty on a +Y plane and the object check passes while the
+// block check fails. Read the effective normal instead.
+function planeNormalFromBlock(planeBlock) {
+  const raw = vec3FromBlock(getInputBlock(planeBlock, 'norm'))
+  const length = raw ? raw.length() : 0
+  if (!raw || !Number.isFinite(length) || length === 0) return new THREE.Vector3(0, 1, 0)
+  return raw.normalize()
+}
+
 function scalarInputMatches(block, inputName, target, fallback = 0) {
   return Boolean(
     block?.getInputTargetBlock?.(inputName) &&
@@ -131,6 +144,7 @@ export {
   pointBlockLiesOnLine,
   objectOrChildMatches,
   getInputBlock,
+  planeNormalFromBlock,
   scalarInputMatches,
   isSphereBlock,
   isLineBlock,

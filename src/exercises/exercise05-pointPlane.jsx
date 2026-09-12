@@ -5,6 +5,7 @@ import {
   closeNumber,
   getInputBlock,
   objectOrChildMatches,
+  planeNormalFromBlock,
   vectorMatches,
   POINT_VECTOR_BLOCK_TYPES,
 } from './shared/blockQueries'
@@ -52,7 +53,7 @@ function isExercisePlaneBlock(block) {
   return (
     block?.type === 'parametric_plane' &&
     blockMatchesVec3(getInputBlock(block, 'point'), PLANE_POINT_A) &&
-    blockMatchesVec3(getInputBlock(block, 'norm'), PLANE_NORMAL)
+    vectorMatches(planeNormalFromBlock(block), PLANE_NORMAL)
   )
 }
 
