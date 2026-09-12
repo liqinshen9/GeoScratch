@@ -85,6 +85,22 @@ function ZoomInvariantScaler({
 
         if (isUniform) {
           child.scale.setScalar(finalScale)
+        } else if (child.userData.zoomInvariantMaxAspectScale) {
+          // Arrowheads, which get two extra bounds the other glyphs don't.
+          // See docs/architecture/vector-line-glyphs.md#arrowhead-cone-angle-floor.
+          //
+          // Stop growing once the head reaches its share of its own vector,
+          // else a far-out vector is mostly arrowhead and the head occludes
+          // the shaft it points along.
+          const headScale = Math.min(
+            finalScale,
+            child.userData.zoomInvariantMaxHeadScale ?? finalScale,
+          )
+          // Past the tagged cone angle the head reads as a disc, so lengthen
+          // it rather than only widening it. Anchored at its tip, so it grows
+          // backwards and the vector's tip stays put.
+          const lengthScale = Math.max(1, headScale / child.userData.zoomInvariantMaxAspectScale)
+          child.scale.set(headScale, lengthScale, headScale)
         } else {
           child.scale.set(finalScale, 1, finalScale)
         }

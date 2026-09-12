@@ -43,6 +43,12 @@ Per-kind maximums (`VECTOR_ZOOM_MAX_SCALE`, `POINT_ZOOM_MAX_SCALE`,
 blobs when zoomed out; lines/tubes use the full `ZOOM_INVARIANT_MAX_SCALE`.
 Non-uniform glyphs also get a floor of `MIN_LINE_WORLD_RADIUS / baseRadius`.
 
+A cross-section-scaled child normally keeps a length scale of 1. The one
+exception is an arrowhead, tagged `zoomInvariantMaxAspectScale`: past that
+cross-section scale it also scales lengthwise, holding its cone angle at 60
+degrees instead of flattening into a disc. See
+[vector-line-glyphs.md](vector-line-glyphs.md)#arrowhead-cone-angle-floor.
+
 ### DashZoomSync
 
 Keeps each `geo_vector_line`'s dash/ring collision-accent pattern

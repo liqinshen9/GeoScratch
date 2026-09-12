@@ -26,6 +26,37 @@ const RINGED_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED
 // Never let a very short vector produce a negative/zero shaft length.
 const MIN_SHAFT_LENGTH = 0.001
 
+// An arrowhead's length is fixed in world units (the shaft stops short so the
+// head lands on the tip) while zoom-invariant scaling grows only its
+// cross-section, so zooming out alone flattens it. Measured tip to tip across
+// the cone, past 60 degrees it stops reading as an arrow.
+// See docs/architecture/vector-line-glyphs.md#arrowhead-cone-angle-floor.
+const ARROWHEAD_MAX_CONE_ANGLE_DEG = 60
+
+// The cross-section scale at which this head reaches that angle. Past it
+// ZoomInvariantScaler lengthens the head instead of only widening it. A style
+// whose authored head is already wider than the cap gets a scale below 1,
+// which lengthens it even at rest.
+export function arrowheadMaxAspectScale(radius, headLength) {
+  const tangent = Math.tan((ARROWHEAD_MAX_CONE_ANGLE_DEG / 2) * (Math.PI / 180))
+  return (headLength * tangent) / radius
+}
+
+// A head also has to stay a modest fraction of its own vector. Zoom-invariant
+// scaling holds it at a constant size on screen while the vector shrinks, so
+// far out an unbounded head swallows the arrow it belongs to and occludes its
+// own shaft at any near-axial angle.
+// See docs/architecture/vector-line-glyphs.md#arrowhead-length-fraction.
+const ARROWHEAD_MAX_VECTOR_FRACTION = 0.15
+
+// The cross-section scale at which the head's radius reaches that fraction of
+// the vector's length. Floored at 1: this caps zoom growth, it never shrinks a
+// head below its authored size (a vector shorter than its own head keeps the
+// head it has).
+export function arrowheadMaxHeadScale(radius, vectorLength) {
+  return Math.max(1, (ARROWHEAD_MAX_VECTOR_FRACTION * vectorLength) / radius)
+}
+
 // Plain Line has no true 3D radius; its halo companion uses the same thin
 // nominal size geoVectorLine.js picks for this style.
 const HALO_PLAIN_LINE_NOMINAL_RADIUS = 0.035
@@ -191,14 +222,19 @@ export function buildVectorShaftGlyph(
   ringedTube.userData.thickenGroup = 'vector'
   group.add(ringedTube)
 
-  // Cones anchored at their BASE (fixed length, only radius zoom-scales).
-  // See docs/architecture/vector-line-glyphs.md#cone-anchored-at-base.
+  // Cones anchored at their TIP (fixed length, only radius zoom-scales, until
+  // the cone-angle floor lengthens them backwards from here).
+  // See docs/architecture/vector-line-glyphs.md#cone-anchored-at-tip.
+  const arrowheadTip = (shaftEnd, headLength) =>
+    shaftEnd.clone().addScaledVector(direction, headLength)
   const makeArrowhead = (radius, coneLength, shaftEnd, mat) => {
     const geom = new THREE.ConeGeometry(radius, coneLength, 12)
-    geom.translate(0, coneLength / 2, 0)
+    geom.translate(0, -coneLength / 2, 0)
     const mesh = new THREE.Mesh(geom, mat)
-    orient(mesh, shaftEnd, direction, THREE)
+    orient(mesh, arrowheadTip(shaftEnd, coneLength), direction, THREE)
     mesh.userData.zoomInvariantRadius = radius
+    mesh.userData.zoomInvariantMaxAspectScale = arrowheadMaxAspectScale(radius, coneLength)
+    mesh.userData.zoomInvariantMaxHeadScale = arrowheadMaxHeadScale(radius, length)
     mesh.userData.thickenGroup = 'vector'
     group.add(mesh)
     return mesh
@@ -208,14 +244,21 @@ export function buildVectorShaftGlyph(
   // a "+" of two blades reads as confusing clutter to a newcomer.
   const makeFlatArrowhead = (halfWidth, headLength, shaftEnd, mat) => {
     const geom = new THREE.BufferGeometry()
+    // Tip at the local origin, same as the cones, so the cone-angle floor
+    // grows the blade backwards rather than past the vector's tip.
     geom.setAttribute(
       'position',
-      new THREE.Float32BufferAttribute([0, headLength, 0, -halfWidth, 0, 0, halfWidth, 0, 0], 3),
+      new THREE.Float32BufferAttribute(
+        [0, 0, 0, -halfWidth, -headLength, 0, halfWidth, -headLength, 0],
+        3,
+      ),
     )
     const mesh = new THREE.Mesh(geom, mat)
     mesh.userData.zoomInvariantRadius = halfWidth
+    mesh.userData.zoomInvariantMaxAspectScale = arrowheadMaxAspectScale(halfWidth, headLength)
+    mesh.userData.zoomInvariantMaxHeadScale = arrowheadMaxHeadScale(halfWidth, length)
     mesh.userData.thickenGroup = 'vector'
-    orient(mesh, shaftEnd, direction, THREE)
+    orient(mesh, arrowheadTip(shaftEnd, headLength), direction, THREE)
     group.add(mesh)
     return mesh
   }
@@ -384,9 +427,20 @@ export function buildVectorShaftGlyph(
     orient(ringedTube, ringedLayout.shaftMid, direction, THREE)
     setRingTextureRepeat(ringedTexture, ringedLayout.shaftLength, RINGED_RING_PERIOD)
 
-    orient(coneLine, lineLayout.shaftEnd, direction, THREE)
-    orient(coneTube, tubeLayout.shaftEnd, direction, THREE)
-    orient(coneRinged, ringedLayout.shaftEnd, direction, THREE)
+    orient(coneLine, arrowheadTip(lineLayout.shaftEnd, LINE_HEAD_LENGTH), direction, THREE)
+    orient(coneTube, arrowheadTip(tubeLayout.shaftEnd, TUBE_HEAD_LENGTH), direction, THREE)
+    orient(coneRinged, arrowheadTip(ringedLayout.shaftEnd, RINGED_HEAD_LENGTH), direction, THREE)
+
+    // The head cap is relative to the vector's length, so a rescale moves it.
+    coneLine.userData.zoomInvariantMaxHeadScale = arrowheadMaxHeadScale(
+      LINE_HEAD_HALF_WIDTH,
+      length,
+    )
+    coneTube.userData.zoomInvariantMaxHeadScale = arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, length)
+    coneRinged.userData.zoomInvariantMaxHeadScale = arrowheadMaxHeadScale(
+      RINGED_HEAD_RADIUS,
+      length,
+    )
 
     for (const [companion, baseRadius] of [
       [haloCompanionLine, HALO_PLAIN_LINE_NOMINAL_RADIUS],

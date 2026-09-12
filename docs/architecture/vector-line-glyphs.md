@@ -228,14 +228,75 @@ re-wire the settings subscription or replace the group in `threeObjStore`.
 ### shaft-stops-short
 
 Each style's shaft ends exactly its own cone's length short of the true tip
-(`origin + direction*length`, where the label is anchored). The cone length is
-fixed - never zoom-scaled, only its radius responds to zoom / Extra Thick
-Vectors - so the tip always lands exactly on the true tip.
+(`origin + direction*length`, where the label is anchored). The cone's authored
+length is fixed - zoom / Extra Thick Vectors drive its radius, and its length
+only ever grows _backwards_ (see below) - so the tip always lands exactly on
+the true tip.
 
-### cone-anchored-at-base
+### cone-anchored-at-tip
 
-Arrowhead cones are anchored at their **base** (geometry translated so the base,
-not the centre, is the local origin). A sphere scaled from its own centre never
-moves, so a point marker's label tracks perfectly; a cone scaled from its base
-does move - anchoring at the base is what keeps the tip fixed. Getting this
-wrong broke tip/label alignment before.
+Arrowhead cones are anchored at their **tip** (geometry translated so the apex,
+not the centre, is the local origin) and positioned at the tip they are meant
+to land on, with the body extending back along `-Y`. A sphere scaled from its
+own centre never moves, so a point marker's label tracks perfectly; a cone has
+no such luxury, and anchoring at the point that must not move is what keeps the
+tip fixed under **any** scale, lengthwise included. Getting this wrong broke
+tip/label alignment before.
+
+The anchor is `shaftEnd + direction * headLength`, not
+`origin + direction * length`. For any vector longer than its own head these
+are the same point. They differ only for a vector shorter than its head, where
+`MIN_SHAFT_LENGTH` floors the shaft and the head deliberately overshoots the
+true tip rather than collapsing; anchoring on the computed point keeps that
+degenerate case exactly as it was.
+
+### arrowhead-cone-angle-floor
+
+A head's length is fixed in world units while zoom-invariant scaling grows only
+its cross-section, so zooming out flattens it: measured tip to tip across the
+cone, Plain Tube is authored at 59.5 degrees and reached ~126 degrees at
+`VECTOR_ZOOM_MAX_SCALE`, by which point it reads as a disc stuck on a stick
+rather than an arrow.
+
+`arrowheadMaxAspectScale` tags each head with the cross-section scale at which
+it opens to `ARROWHEAD_MAX_CONE_ANGLE_DEG` (60). `ZoomInvariantScaler` reads
+the tag and, past that scale, applies a lengthwise scale of
+`crossScale / cap` so the angle stays pinned there instead of opening further.
+
+The cap is **not** clamped to a minimum of 1, and Ringed Tube relies on that:
+its authored head is 76 degrees, already wider than the limit, so its cap is
+0.73 and the rule lengthens its head from 0.28 to 0.381 even at rest. Plain
+Tube and the Plain Line blade are authored at 59.5 degrees, just inside, so
+they are untouched at the reference distance and start lengthening as soon as
+the camera pulls back.
+
+Widening the head alone (a plain cap on its cross-section) is the obvious
+alternative and is wrong: the shaft goes on thickening after the head stops, so
+at full zoom-out plus Extra Thick Vectors the Ringed Tube's shaft becomes
+_wider_ than its own arrowhead. The head has to grow in both dimensions, which
+is the whole reason it is anchored at its tip.
+
+### arrowhead-length-fraction
+
+The cone-angle floor fixes the head's _shape_; this bounds its _size_.
+Zoom-invariant scaling holds a head at a constant size on screen while the
+vector it belongs to shrinks, so far out the head grows without limit relative
+to its own arrow - a length-2 vector at `VECTOR_ZOOM_MAX_SCALE` had a head of
+radius 0.68 on a shaft of radius 0.15, which reads as a cone on a stick and
+occludes the shaft at any angle within ~40 degrees of the vector's own axis.
+
+`arrowheadMaxHeadScale` caps the cross-section scale so the head's radius never
+exceeds `ARROWHEAD_MAX_VECTOR_FRACTION` (0.15) of the vector's length, and
+`ZoomInvariantScaler` applies it before the cone-angle rule. It is floored at
+1, so it only ever limits zoom growth and never shrinks a head below its
+authored size - a vector shorter than its own head keeps the head it has,
+matching what `MIN_SHAFT_LENGTH` already does at the other end.
+
+The fraction bounds the radius, and the cone-angle rule then derives the length
+from it, so a capped head keeps its shape and simply stops growing. At 60
+degrees the length works out at `radius / tan(30)`, so a head held to 15% of
+the vector's length in radius runs to about 26% of it in length.
+
+The cap depends on the vector's length, so `setVectorLength` has to recompute
+it - a Vector Transform scale step or an animated reveal changes the length
+under a glyph that is already built.

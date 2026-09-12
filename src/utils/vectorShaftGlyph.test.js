@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { computeVectorShaftLayout } from './vectorShaftGlyph'
+import {
+  arrowheadMaxAspectScale,
+  arrowheadMaxHeadScale,
+  computeVectorShaftLayout,
+} from './vectorShaftGlyph'
 
 const HEAD_LENGTH = 0.35 // an arbitrary style's cone length, for these tests
 
@@ -61,5 +65,99 @@ describe('computeVectorShaftLayout', () => {
     const trueTip = origin.clone().addScaledVector(direction, length)
 
     expect(shaftEnd.distanceTo(trueTip)).toBeCloseTo(headLength)
+  })
+})
+
+// The cone angle a head of this radius and length opens to, tip to tip.
+const coneAngleDeg = (radius, headLength) => Math.atan(radius / headLength) * (360 / Math.PI)
+
+describe('arrowheadMaxAspectScale', () => {
+  it('is the scale at which the head opens to 60 degrees', () => {
+    const radius = 0.2
+    const headLength = 0.35
+    const cap = arrowheadMaxAspectScale(radius, headLength)
+
+    expect(coneAngleDeg(radius * cap, headLength)).toBeCloseTo(60)
+  })
+
+  it('is 1 for a head authored exactly at the limit', () => {
+    const headLength = 0.3
+    const radius = headLength * Math.tan(Math.PI / 6)
+
+    expect(arrowheadMaxAspectScale(radius, headLength)).toBeCloseTo(1)
+  })
+
+  // Ringed Tube is authored wider than the cap (76 degrees), so its cap is
+  // below 1 and ZoomInvariantScaler lengthens its head even at rest.
+  it('drops below 1 for a head authored wider than the limit', () => {
+    const cap = arrowheadMaxAspectScale(0.22, 0.28)
+
+    expect(cap).toBeLessThan(1)
+    expect(coneAngleDeg(0.22, 0.28 * Math.max(1, 1 / cap))).toBeCloseTo(60)
+  })
+
+  // What ZoomInvariantScaler does with it: lengthScale = max(1, scale / cap).
+  it('holds the angle at 60 degrees once the cap is passed', () => {
+    const radius = 0.2
+    const headLength = 0.35
+    const cap = arrowheadMaxAspectScale(radius, headLength)
+    const crossScale = 3.4
+
+    const lengthScale = Math.max(1, crossScale / cap)
+
+    expect(coneAngleDeg(radius * crossScale, headLength * lengthScale)).toBeCloseTo(60)
+  })
+
+  it('leaves the head untouched below the cap', () => {
+    const cap = arrowheadMaxAspectScale(0.2, 0.35)
+
+    expect(Math.max(1, 1 / cap)).toBe(1)
+  })
+})
+
+describe('arrowheadMaxHeadScale', () => {
+  const TUBE_HEAD_RADIUS = 0.2
+
+  it('lets the head reach a fixed fraction of the vector, no more', () => {
+    // A long vector can afford a big head, so the cap sits above the zoom
+    // ceiling and never binds.
+    expect(arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 20)).toBeGreaterThan(3.4)
+    // A short one cannot.
+    expect(arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 2)).toBeLessThan(3.4)
+  })
+
+  it('never shrinks a head below its authored size', () => {
+    // A vector shorter than its own head keeps the head it has.
+    expect(arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 0.1)).toBe(1)
+    expect(arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 0)).toBe(1)
+  })
+
+  it('grows in proportion to the vector length', () => {
+    const short = arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 4)
+    const long = arrowheadMaxHeadScale(TUBE_HEAD_RADIUS, 8)
+    expect(long).toBeCloseTo(short * 2)
+  })
+
+  // What ZoomInvariantScaler does with both caps together. The fraction bounds
+  // the head's RADIUS; the cone-angle rule then sets its length, and neither
+  // ever shrinks a head below its authored size.
+  const headAt = (radius, headLength, vectorLength, zoomScale) => {
+    const headScale = Math.min(zoomScale, arrowheadMaxHeadScale(radius, vectorLength))
+    const lengthScale = Math.max(1, headScale / arrowheadMaxAspectScale(radius, headLength))
+    return { worldRadius: radius * headScale, worldLength: headLength * lengthScale }
+  }
+
+  it('caps a short vector at its share of the length', () => {
+    const { worldRadius, worldLength } = headAt(0.2, 0.35, 2, 3.4)
+
+    expect(worldRadius).toBeCloseTo(0.3) // 0.15 * 2, not 0.2 * 3.4 = 0.68
+    expect(coneAngleDeg(worldRadius, worldLength)).toBeCloseTo(60)
+  })
+
+  it('lets a long vector use the full zoom scale', () => {
+    const { worldRadius, worldLength } = headAt(0.2, 0.35, 20, 3.4)
+
+    expect(worldRadius).toBeCloseTo(0.68) // fraction cap (3.0) never binds
+    expect(coneAngleDeg(worldRadius, worldLength)).toBeCloseTo(60)
   })
 })
