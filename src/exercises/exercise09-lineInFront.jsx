@@ -1,4 +1,5 @@
 import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
+import { distanceToDefaultView } from './shared/defaultView'
 
 // A "look and answer" exercise: two crossing lines are prefilled as real blocks
 // and the student picks which one is in front. The choices live in the `mcq`
@@ -7,11 +8,11 @@ import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 const SEED_BLOCK_IDS = ['q9-line-a', 'q9-line-b']
 
 // Where the two lines effectively sit; camera-space distance from the default
-// view ([0, 25, 50]) decides which reads as "in front".
+// view decides which reads as "in front".
 const LINE_A_POINT = [0, 0, 3]
 const LINE_B_POINT = [0, 0, -3]
-const distToDefaultCamera = ([x, y, z]) => Math.hypot(0 - x, 25 - y, 50 - z)
-const CORRECT_ID = distToDefaultCamera(LINE_A_POINT) < distToDefaultCamera(LINE_B_POINT) ? 'a' : 'b'
+const CORRECT_ID =
+  distanceToDefaultView(LINE_A_POINT) < distanceToDefaultView(LINE_B_POINT) ? 'a' : 'b'
 
 const CHOICES = [
   { id: 'a', label: 'The first line (L1)' },

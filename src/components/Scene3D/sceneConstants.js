@@ -39,3 +39,8 @@ export const EXTRA_LARGE_POINT_MULTIPLIER = 1.6
 export const EXTRA_LARGE_POINT_MAX_SCALE = 5.5
 export const POINT_ZOOM_MAX_SCALE = 3.3
 export const VECTOR_ZOOM_MAX_SCALE = 3.4
+
+// Default/reset camera position. Shared because the perceptual exercises grade
+// "which is closer" against it -- moving the camera must move their answer key
+// too, not silently leave it behind.
+export const DEFAULT_CAMERA_POSITION = [0, 25, 50]

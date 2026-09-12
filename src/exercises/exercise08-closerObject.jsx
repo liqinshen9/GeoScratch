@@ -1,4 +1,5 @@
 import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
+import { distanceToDefaultView } from './shared/defaultView'
 
 // A "look and answer" exercise: the scene is prefilled with real blocks and the
 // student picks an answer instead of building. The choices live in the `mcq`
@@ -7,12 +8,11 @@ import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 
 const SEED_BLOCK_IDS = ['q8-cube', 'q8-sphere']
 
-// Camera-space distances for the default view ([0, 25, 50]) decide the answer.
+// Camera-space distances from the default view decide the answer.
 const CUBE_CENTRE = [4, 0.55, 2.5]
 const SPHERE_CENTRE = [-4, 0.6, -3]
-const distToDefaultCamera = ([x, y, z]) => Math.hypot(0 - x, 25 - y, 50 - z)
 const CORRECT_ID =
-  distToDefaultCamera(CUBE_CENTRE) < distToDefaultCamera(SPHERE_CENTRE) ? 'cube' : 'sphere'
+  distanceToDefaultView(CUBE_CENTRE) < distanceToDefaultView(SPHERE_CENTRE) ? 'cube' : 'sphere'
 
 const CHOICES = [
   { id: 'cube', label: 'The cube' },

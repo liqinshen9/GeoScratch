@@ -11,7 +11,7 @@ import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
 import SelectionHighlight from './SelectionHighlight'
 import AnimationDriver from './AnimationDriver'
-import { getAxisColors } from './sceneConstants'
+import { getAxisColors, DEFAULT_CAMERA_POSITION } from './sceneConstants'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
 import { CameraHandle, HeadLight } from './HeadLight'
 import { BoundingBoxRoom, Axes, FadedGrid } from './SceneFurniture'
@@ -22,7 +22,6 @@ import { ZoomInvariantScaler, DashZoomSync, FatLineSync } from './sizing/GlyphSi
 import { computeNestingRenderOrders } from '@/utils/nestingRenderOrder'
 import { getObjectFocus } from '@/utils/sceneFocus'
 
-const DEFAULT_CAMERA_POSITION = [0, 25, 50]
 const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
 
 const MIN_CAMERA_DISTANCE = 4
