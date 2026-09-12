@@ -5,6 +5,34 @@ Assorted Blockly-specific knowledge. See also
 [selection-and-picking.md](selection-and-picking.md) (FocusManager fallout), and
 `CLAUDE.md` (adding a block).
 
+## Operator input layout
+
+Most operators keep **inline** inputs: short and readable, and an operand that is
+itself short sits happily beside its sibling.
+
+Two do not.
+
+`vector_project` uses **external** inputs, so `u:` and `onto v:` stack. Both of
+its operands routinely hold whole nested chains -- a point difference on one
+side, a plane normal on the other -- and side by side they ran off the right of
+the workspace.
+
+`vector_magnitude` and `geo_show_point_on_object` wrap their operand the way
+`geo_variable` does: a title row closed with `appendEndRowInput`, the value
+input, another end row, inline throughout. Blockly then draws the child as a
+puzzle hole inside the block's outline instead of hanging it off the right edge.
+Both read as a container around the thing they act on, which is what they are --
+one measures its operand, the other puts a point on it.
+
+Measured on the solved point-plane chain, the widest block went from 1022px
+(everything inline) to 693px. Stacking all six two-operand operators instead
+reached 704px, and made the rest of them needlessly tall for operands that were
+never the problem.
+
+Note what this does not fix: it only narrows a block against its own siblings. A
+deep chain still steps rightward, because a nested block hangs off the right of
+its row whichever mode is used.
+
 ## The variable wrapper's block layout
 
 `blocks/geometricVariables/variableWrapper.js`. `geo_variable` is a pass-through

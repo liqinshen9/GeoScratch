@@ -12,10 +12,18 @@ export default function initObjectCompositionBlocks() {
 
   Blockly.Blocks.geo_show_point_on_object = {
     init() {
-      this.appendDummyInput()
+      // Wraps its object the way geo_variable does: a title row closed with
+      // appendEndRowInput, the value input, another end row, inline throughout.
+      // Blockly then draws the child as a puzzle hole inside this block's
+      // outline instead of hanging it off the right edge, so it reads as a
+      // container around the object it puts a point on.
+      // See docs/architecture/blockly-integration.md#operator-input-layout.
+      this.appendEndRowInput('SHOW_POINT_TITLE')
         .appendField('Show any point on object')
         .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
       this.appendValueInput('OBJECT').appendField('object:').setCheck('obj3D')
+      this.appendEndRowInput('SHOW_POINT_OBJECT_ROW_END')
+      this.setInputsInline(true)
       this.setStyle(BLOCK_STYLES.CREATE_POINT)
       this.setColour(forInstance('point', this.id))
       this.setTooltip(

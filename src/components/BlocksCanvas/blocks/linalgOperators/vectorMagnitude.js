@@ -10,8 +10,14 @@ export function initVectorMagnitude() {
 
   Blockly.Blocks['vector_magnitude'] = {
     init() {
-      this.appendDummyInput().appendField('Vector Magnitude')
+      // Wraps its operand the way geo_variable does: a title row closed with
+      // appendEndRowInput, then the value input, then another end row, with
+      // inline inputs throughout. Blockly then draws the child as a puzzle hole
+      // inside this block's outline rather than hanging it off the right edge.
+      // See docs/architecture/blockly-integration.md#operator-input-layout.
+      this.appendEndRowInput('MAGNITUDE_TITLE').appendField('Vector Magnitude')
       this.appendValueInput('V').setCheck('vector3').appendField('j:')
+      this.appendEndRowInput('MAGNITUDE_VALUE_ROW_END')
       this.setInputsInline(true)
       this.setOutput(true, 'obj3D')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)

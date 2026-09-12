@@ -13,7 +13,11 @@ export function initVectorProjectBlock() {
       this.appendDummyInput().appendField('Vector Project')
       this.appendValueInput('U').setCheck('vector3').appendField('u:')
       this.appendValueInput('V').setCheck('vector3').appendField('onto ').appendField('v:')
-      this.setInputsInline(true)
+      // Two operand inputs, either of which can hold a whole nested chain.
+      // Inline puts them side by side, so a point-plane distance ran off the
+      // right of the workspace. External stacks them instead.
+      // See docs/architecture/blockly-integration.md#operator-input-layout.
+      this.setInputsInline(false)
 
       this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
