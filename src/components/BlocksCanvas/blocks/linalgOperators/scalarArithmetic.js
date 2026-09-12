@@ -218,7 +218,7 @@ export function initScalarArithmeticBlock() {
       const distanceVector = resultMeta.end.clone().sub(resultMeta.start);
       const distanceLength = distanceVector.length();
       const distanceMid = resultMeta.start.clone().add(resultMeta.end).multiplyScalar(0.5);
-      const highlightYellow = '#facc15';
+      const highlightYellow = window.GeoScratchColors.forRole('warning');
       let distanceHighlight;
       if (distanceLength > 1e-8) {
         distanceHighlight = new THREE.Mesh(
@@ -250,8 +250,7 @@ export function initScalarArithmeticBlock() {
         distanceFactor: 8,
         offset: [0, 0, 0],
         emphasis: true,
-        className: 'distance-highlight-label',
-        color: '#facc15',
+        color: window.GeoScratchColors.forRole('distance'),
       },
     ];
     if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = group;

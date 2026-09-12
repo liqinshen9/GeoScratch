@@ -66,7 +66,7 @@ export function initVectorMagnitude() {
       const distanceVector = arrowTip.clone().sub(arrowOrigin);
       highlight = new THREE.Mesh(
         new THREE.CylinderGeometry(0.055, 0.055, len, 24),
-        new THREE.MeshBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.9, depthWrite: false })
+        new THREE.MeshBasicMaterial({ color: window.GeoScratchColors.forRole('warning'), transparent: true, opacity: 0.9, depthWrite: false })
       );
       highlight.position.copy(arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5));
       highlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());
@@ -113,10 +113,11 @@ export function initVectorMagnitude() {
         distanceFactor: isPointPlaneProjection || isPointToPointDistance ? 6 : 8,
         offset: isPointPlaneProjection || isPointToPointDistance ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection || isPointToPointDistance,
-        className: isPointPlaneProjection || isPointToPointDistance ? 'distance-highlight-label' : undefined,
-        color: isPointToPointDistance
-          ? '#facc15'
-          : (!isPointPlaneProjection && len > 1e-8) ? operandAColor : undefined,
+        // Both distance forms read as a distance; the plain magnitude takes the
+        // colour of the vector it measures.
+        color: isPointPlaneProjection || isPointToPointDistance
+          ? distanceColor
+          : len > 1e-8 ? operandAColor : undefined,
       },
     ];
 

@@ -87,16 +87,16 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       ]);
       const normalLine = new THREE.Line(
         normalLineGeom,
-        new THREE.LineDashedMaterial({ color: 0xef4444, dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('operandB'), dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
       );
       normalLine.computeLineDistances();
       const normalTip = distanceStart.clone().addScaledVector(normalUnit, normalExtent);
-      const normalArrowHead = makeArrowHead(normalTip, normalUnit, 0xef4444);
+      const normalArrowHead = makeArrowHead(normalTip, normalUnit, window.GeoScratchColors.forRole('operandB'));
 
       const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), pointDifferenceVal.userData.end.clone()]);
       const guideLine = new THREE.Line(
         guideGeom,
-        new THREE.LineDashedMaterial({ color: 0x111827, dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
+        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('accent'), dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
       );
       guideLine.computeLineDistances();
 
@@ -115,7 +115,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           distanceEnd.clone().addScaledVector(normalUnit, -markerSize).addScaledVector(tangent, markerSize),
           distanceEnd.clone().addScaledVector(tangent, markerSize),
         ]),
-        new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.9 })
+        new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
       );
       normalLine.userData.geoType = 'geo_helper';
       normalArrowHead.userData.geoType = 'geo_helper';
@@ -142,7 +142,8 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           text: 'n',
           distanceFactor: 8,
           offset: [0, 0, 0],
-          className: 'normal-vector-label',
+          emphasis: true,
+          color: window.GeoScratchColors.forRole('operandB'),
         },
         {
           anchor: 'formula',
@@ -150,7 +151,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           distanceFactor: 6,
           offset: [0, 0, 0],
           emphasis: true,
-          className: 'distance-highlight-label',
+          color: window.GeoScratchColors.forRole('distance'),
         },
       ];
 

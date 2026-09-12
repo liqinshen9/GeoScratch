@@ -110,7 +110,7 @@ export function initSphereDistanceBlock() {
         distanceFactor: 6,
         offset: [0, 0, 0],
         emphasis: true,
-        className: 'distance-highlight-label',
+        color: window.GeoScratchColors.forRole('distance'),
       },
     ];
 
