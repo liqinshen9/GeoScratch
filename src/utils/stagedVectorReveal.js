@@ -41,6 +41,13 @@ export function makeStagedVectorReveal(parts) {
   }
   // What a consumer's slot has to be worth for this reveal to keep its pace.
   reveal.stages = total
+  // A reveal that hands a stage to a slower closure has to ask for that time
+  // too. AnimationDriver reads this off the SELECTED object's closure, and the
+  // block a student selects is usually the outermost one, which delegates.
+  reveal.durationScale = parts.reduce(
+    (slowest, part) => Math.max(slowest, Number(part.animate?.durationScale) || 1),
+    1,
+  )
   return reveal
 }
 

@@ -75,21 +75,27 @@ against.
 **Q has to sweep THROUGH the foot, not around it.** A circle about the foot
 keeps Q at a constant distance from it, so `|P - Q|` stays at
 `sqrt(d^2 + r^2)` for the whole animation and the sweep demonstrates nothing.
-Q instead wanders a path built around `foot + axis * r * cos(2*pi*t)`, so
-`|P - Q|` falls to exactly d where Q crosses the foot -- there `P - Q` lies along
-the perpendicular -- and grows again. `cos` also puts the resting scene at both
-progress 0 and progress 1, satisfying the protocol's invariant for free.
+Q instead orbits a circle whose diameter runs from its own resting place to the
+foot, so the path passes through both: Q at progress 0 and 1, the foot at 0.5,
+where `|P - Q|` is exactly d. In between it varies smoothly, which is the whole
+demonstration -- the projection is visibly the shortest of them.
 
-The wander on top of that is not noise: every wobble term is a whole number of
-cycles times four, so each one is zero at progress 0, 0.25, 0.75 and 1. Q
-therefore still rests exactly where the student left it at both ends, and still
-lands exactly on the foot twice, while taking an unpredictable route between
-those points. Picking the frequencies freely would lose both.
+The orbit's radius breathes slightly so it does not look mechanical, and the
+frequencies for that are not free. Only even multiples of the base frequency are
+used, because those are the terms that vanish at progress 0, 0.5 and 1. The
+variation therefore never disturbs either fixed point. Choosing frequencies
+freely loses the resting position, the foot, or both.
 
 The closure sets `durationScale = 4`. A staged reveal is a short build-up and the
 configured 1.5s suits it; a path has to be followed rather than watched go past.
 `AnimationDriver` divides its per-frame step by that scale, so the speed control
 still applies on top.
+
+`makeStagedVectorReveal` propagates the largest `durationScale` among the
+closures it delegates to. Without that the scale never reaches the driver: it
+reads the value off the **selected** object, and the block a student selects is
+the outermost one, which delegates to the sweep rather than being it. The sweep
+ran at 1x until that was fixed.
 
 The sweep reaches across blocks, which a reveal never has to: the marker belongs
 to `geo_show_point_on_object`, the arrow to `vector_arithmetic`, the guide line

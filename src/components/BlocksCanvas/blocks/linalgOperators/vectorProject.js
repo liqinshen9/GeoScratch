@@ -309,16 +309,21 @@ export function initVectorProjectBlock() {
 
       return (progress) => {
         const angle = (Number(progress) || 0) * Math.PI * 2;
-        // Wander rather than run straight, without giving up either fixed
-        // point. Every wobble term is a whole number of cycles times 4, so all
-        // of them are zero at progress 0, 0.25 and 1: Q still rests where the
-        // student put it at each end, and still lands exactly on the foot at
-        // quarter progress where |P - Q| equals d.
-        const wobbleA = 0.30 * radius * Math.sin(4 * angle);
-        const wobbleB = 0.45 * radius * Math.sin(4 * angle) + 0.22 * radius * Math.sin(8 * angle);
+        // An orbit whose diameter runs from Q's resting place to the foot, so
+        // it passes through both: Q at progress 0 and 1, the foot at 0.5, where
+        // |P - Q| is exactly d. A circle centred ON the foot would instead hold
+        // |P - Q| constant and show nothing.
+        //
+        // The radius breathes rather than staying rigid, which keeps it from
+        // looking mechanical. Only even multiples of the base frequency are
+        // used, because those are the ones that vanish at progress 0, 0.5 and
+        // 1 -- so the variation never disturbs either fixed point.
+        const orbit = radius / 2;
+        const breathe = 1 + 0.18 * Math.sin(2 * angle) + 0.09 * Math.sin(4 * angle);
         const q = projOrigin.clone()
-          .addScaledVector(axisA, radius * Math.cos(angle) + wobbleA)
-          .addScaledVector(axisB, wobbleB);
+          .addScaledVector(axisA, orbit)
+          .addScaledVector(axisA, orbit * breathe * Math.cos(angle))
+          .addScaledVector(axisB, orbit * breathe * Math.sin(angle));
 
         if (marker) marker.position.copy(q);
 
