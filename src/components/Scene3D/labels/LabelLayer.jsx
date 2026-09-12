@@ -1,6 +1,6 @@
 import { Html } from '@react-three/drei'
 import { fmtVec, resolveAnchor } from './labelAnchors'
-import { LabelAnchor } from './LabelDeclutter'
+import { LabelAnchor, LabelGroup } from './LabelDeclutter'
 import { getLabelVisibilityKey, getLabelsForObject, formatLabelText } from './labelData'
 import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
 
@@ -40,7 +40,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
         const worldPos = pos
 
         return (
-          <group key={`lbl-${i}`} position={worldPos}>
+          <LabelGroup key={`lbl-${i}`} id={`${labelIdBase}-${i}`} position={worldPos}>
             <Html>
               <LabelAnchor
                 id={`${labelIdBase}-${i}`}
@@ -55,13 +55,18 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                     : lbl.color
                 }
                 worldPos={worldPos}
+                // An animated object moves every frame while labelAnchors are
+                // only read on render, so the declutter pass re-resolves from
+                // these while something is playing.
+                anchorObject={object3D}
+                anchorName={lbl.anchor}
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}
               >
                 {text}
               </LabelAnchor>
             </Html>
-          </group>
+          </LabelGroup>
         )
       })}
     </>

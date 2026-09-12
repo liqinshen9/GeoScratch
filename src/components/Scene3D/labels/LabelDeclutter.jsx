@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import THREE from '@/utils/three'
-import { hexToRgba } from './labelAnchors'
+import { hexToRgba, resolveAnchor } from './labelAnchors'
 import { stepLabelSim } from './labelSim'
+import useAnimationStore from '@/store/useAnimationStore'
 
 // Module-level registry, not React context: drei's <Html> mounts into a
 // separate ReactDOM root. See docs/architecture/label-declutter.md.
@@ -18,12 +19,34 @@ const EMPHASIS_MASS = 2.5
 // Bounds one settling burst so an impossible layout can't render forever.
 const MAX_LABEL_SETTLE_FRAMES = 180
 
+/**
+ * The R3F group a label hangs from. Its position is a React prop, so it only
+ * updates on render -- which is never, while an animation plays. Registering it
+ * against the label's id lets the frame loop move it directly.
+ */
+export function LabelGroup({ id, position, children }) {
+  const groupRef = useRef(null)
+
+  useEffect(() => {
+    const entry = labelRegistry.get(id)
+    if (entry) entry.groupRef = groupRef
+  })
+
+  return (
+    <group ref={groupRef} position={position}>
+      {children}
+    </group>
+  )
+}
+
 function LabelAnchor({
   id,
   visibilityKey,
   className,
   color,
   worldPos,
+  anchorObject,
+  anchorName,
   emphasis,
   onHide,
   children,
@@ -36,6 +59,8 @@ function LabelAnchor({
     const entry = {
       bodyRef,
       worldPos,
+      anchorObject,
+      anchorName,
       cx: 0,
       cy: 0,
       hw: 0,
@@ -79,6 +104,8 @@ function LabelAnchor({
       previous[2] !== worldPos[2]
     const massChanged = entry.mass !== mass
     entry.worldPos = worldPos
+    entry.anchorObject = anchorObject
+    entry.anchorName = anchorName
     entry.mass = mass
     if (!anchorMoved && !massChanged) return
     labelRegistryRevision += 1
@@ -87,7 +114,7 @@ function LabelAnchor({
       entry.velX = 0
       entry.velY = 0
     }
-  }, [id, worldPos, emphasis])
+  }, [id, worldPos, emphasis, anchorObject, anchorName])
 
   const background = color ? hexToRgba(color, 0.55) : undefined
 
@@ -135,8 +162,45 @@ function LabelDeclutter() {
     zoom: NaN,
   })
 
+  const playingRef = useRef(false)
+  useEffect(
+    () =>
+      useAnimationStore.subscribe((state) => {
+        playingRef.current = state.playing
+      }),
+    [],
+  )
+
   useFrame(({ camera, invalidate }, delta) => {
     const entries = Array.from(labelRegistry.values()).filter((e) => e.bodyRef.current)
+
+    // labelAnchors are read on React render, so a label would sit still while
+    // the object it names moves -- the Q sweep swings P - Q across the plane
+    // with its label left behind. Re-resolve while something is playing, and
+    // only then: idle scenes get the cheaper render-time position, and this
+    // keeps the settle logic from being fed a moving target for no reason.
+    if (playingRef.current) {
+      let anyMoved = false
+      entries.forEach((entry) => {
+        if (!entry.anchorObject || !entry.anchorName) return
+        const live = resolveAnchor(entry.anchorObject, entry.anchorName)
+        if (!live) return
+        const previous = entry.worldPos
+        if (
+          !previous ||
+          previous[0] !== live[0] ||
+          previous[1] !== live[1] ||
+          previous[2] !== live[2]
+        ) {
+          entry.worldPos = live
+          // The group's position is a React prop, so moving it needs doing by
+          // hand; a re-render per frame is not on the table.
+          entry.groupRef?.current?.position.set(live[0], live[1], live[2])
+          anyMoved = true
+        }
+      })
+      if (anyMoved) settleFrameRef.current = 0
+    }
 
     const previousCamera = cameraStateRef.current
     const cameraChanged =

@@ -246,6 +246,15 @@ export function initVectorProjectBlock() {
         return found;
       })();
       const differenceArrow = window.threeObjStore?.[uVal.userData?.glyph?.blockId + '_r'];
+      // labelAnchors are plain arrays baked at scene build, so a label sits
+      // still unless the sweep rewrites them. LabelDeclutter re-reads them each
+      // frame while an animation plays.
+      const markerOwner = window.threeObjStore?.[uVal.userData?.startBlockId];
+      const differenceGroup = window.threeObjStore?.[uVal.userData?.glyph?.blockId];
+      const writeAnchor = (owner, name, point) => {
+        const anchor = owner?.userData?.labelAnchors?.[name];
+        if (anchor) anchor.position = [point.x, point.y, point.z];
+      };
 
       return (progress) => {
         const angle = (Number(progress) || 0) * Math.PI * 2;
@@ -266,6 +275,7 @@ export function initVectorProjectBlock() {
           .addScaledVector(axisB, orbit * breathe * Math.sin(angle));
 
         if (marker) marker.position.copy(q);
+        writeAnchor(markerOwner, 'q', q);
 
         const toP = pPoint.clone().sub(q);
         const toPLen = toP.length();
@@ -273,6 +283,8 @@ export function initVectorProjectBlock() {
           differenceArrow.userData.setVectorSegment(q, toP.clone().normalize(), toPLen);
         }
         const guideLineForSweep = distanceIllustration?.userData?.guideLine;
+        // The difference label rides the middle of the swinging arrow.
+        writeAnchor(differenceGroup, 'rTip', q.clone().add(pPoint).multiplyScalar(0.5));
         if (guideLineForSweep?.geometry) {
           guideLineForSweep.geometry.setFromPoints([projOrigin.clone(), q]);
           guideLineForSweep.computeLineDistances();
