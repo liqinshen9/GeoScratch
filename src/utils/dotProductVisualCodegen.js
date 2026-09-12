@@ -16,6 +16,9 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
     const fmtN = vectorNotation.formatNumber;
+    // Just enough to clear the distance bar's radius plus the glyph's tube;
+    // fixed rather than distance-scaled, which threw it far sideways.
+    const NORMAL_SIDE_CLEARANCE = 0.12;
     const makeSegment = (start, end, color, radius = 0.022) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
@@ -119,6 +122,16 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       rightAngle.userData.srcBlockId = ${id};
 
       const group = new THREE.Group();
+
+      // The normal shares the distance bar's origin AND axis, so drawn true it
+      // sits inside the bar. Shift it along the tangent -- the same
+      // perpendicular the right-angle marker uses, pointing toward P -- so the
+      // two read as two things. The tail no longer sits exactly on the plane
+      // point; this arrow shows a direction, not an anchor.
+      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
+      // Keep the label with the arrow, which just moved off the axis.
+      normalTip.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
+
       group.add(distanceVector, normalGlyph, guideLine, rightAngle);
       group.userData.geoType = 'point_plane_distance_dot';
       group.userData.srcBlockId = ${id};

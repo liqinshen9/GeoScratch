@@ -32,6 +32,9 @@ export function initVectorProjectBlock() {
     const vVal = ${v};
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
+    // Just enough to clear the distance bar's radius plus the glyph's tube;
+    // fixed rather than distance-scaled, which threw it far sideways.
+    const NORMAL_SIDE_CLEARANCE = 0.12;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'u');
@@ -118,6 +121,14 @@ export function initVectorProjectBlock() {
         new THREE.BufferGeometry().setFromPoints(cornerPoints),
         new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
       );
+
+
+      // The normal shares the distance bar's origin AND axis, so drawn true it
+      // sits inside the bar. Shift it along the tangent -- the same
+      // perpendicular the right-angle marker uses, pointing toward P -- so the
+      // two read as two things. The tail no longer sits exactly on the plane
+      // point; this arrow shows a direction, not an anchor.
+      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
 
       group.add(normalGlyph, guideLine, rightAngle);
       group.userData.geoType = 'distance_projection_illustration';
@@ -217,9 +228,12 @@ export function initVectorProjectBlock() {
     normalLabelSide.addScaledVector(normalLabelUnit, -normalLabelSide.dot(normalLabelUnit));
     if (normalLabelSide.lengthSq() < 1e-10) normalLabelSide.set(1, 0, 0);
     normalLabelSide.normalize();
+    // Same side and the same amount as the glyph's lateral offset inside
+    // makeDistanceIllustration, so label and arrow stay together.
+    const normalLabelOffset = NORMAL_SIDE_CLEARANCE;
     const normalLabelTip = projOrigin.clone()
       .addScaledVector(normalLabelUnit, normalLabelExtent)
-      .addScaledVector(normalLabelSide, -0.42);
+      .addScaledVector(normalLabelSide, normalLabelOffset);
 
     // Labels at tips
     group.userData.labelAnchors = {

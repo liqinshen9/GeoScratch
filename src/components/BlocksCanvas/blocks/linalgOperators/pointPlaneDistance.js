@@ -58,6 +58,9 @@ export function initPointPlaneDistanceBlock() {
     const midpoint = distanceStart.clone().add(distanceEnd).multiplyScalar(0.5);
     const difference = point.clone().sub(planePoint);
     const fmt = vectorNotation.formatVector;
+    // Just enough to clear the distance bar's radius plus the glyph's tube;
+    // fixed rather than distance-scaled, which threw it far sideways.
+    const NORMAL_SIDE_CLEARANCE = 0.12;
     const makeDistanceIllustration = () => {
       const illustration = new THREE.Group();
       // n through the shared glyph at its own magnitude, so it follows the
@@ -99,6 +102,16 @@ export function initPointPlaneDistanceBlock() {
 
       const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('distance'), radius: 0.04 });
       footDot.position.copy(distanceStart);
+
+
+      // The normal shares the distance bar's origin AND axis, so drawn true it
+      // sits inside the bar. Shift it along the tangent -- the same
+      // perpendicular the right-angle marker uses, pointing toward P -- so the
+      // two read as two things. The tail no longer sits exactly on the plane
+      // point; this arrow shows a direction, not an anchor.
+      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
+      // Keep the label with the arrow, which just moved off the axis.
+      normalTip.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
 
       illustration.add(normalGlyph, guideLine, rightAngle, footDot);
       illustration.userData.geoType = 'distance_projection_illustration';
