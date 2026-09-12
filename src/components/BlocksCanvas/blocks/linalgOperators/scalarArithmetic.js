@@ -250,6 +250,7 @@ export function initScalarArithmeticBlock() {
         distanceFactor: 8,
         offset: [0, 0, 0],
         emphasis: true,
+        role: 'distance',
         color: window.GeoScratchColors.forRole('distance'),
       },
     ];

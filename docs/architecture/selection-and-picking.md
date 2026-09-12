@@ -163,34 +163,38 @@ programmatic end) would otherwise miss.
 `handleDeletedBlockDragStart` sets `effectAllowed = 'copy'`, which must match the
 `'copy'` `dropEffect` set in `handleWorkspaceDragOver`, or the drop is rejected.
 
-## The answer glow
+## Marking the answer
 
-`AnswerHighlight` in `Scene3D/SelectionHighlight.jsx` reuses the same tuned
-`applyGlow` to say something other than "selected": green when the exercise's
-answer is right, red when it is wrong, nothing in the Sandbox where there is no
-answer. It takes the accent colour as an argument, which is why `applyGlow`
-grew one; selection keeps `SELECTION_HIGHLIGHT_COLOR` as the default.
+An exercise's answer is recoloured green when its value is right and red when it
+is wrong, and left alone in the Sandbox where there is no answer. Two pieces,
+because the answer is drawn in two places:
 
-Always GLOW, never BLINK. This is a standing statement about which part of the
-scene is the answer, and a blinking answer next to a blinking selection is
-unreadable. The two effects are mounted independently so an object can be both
-selected and the answer without either one clobbering the other's `restore`.
+- `Scene3D/AnswerTint.jsx` recolours the geometry, walking for the geoTypes in
+  `utils/answerGeometry.js` and restoring the saved colours on cleanup.
+- `LabelLayer` recolours the `d = ...` readout, overriding the colour of any
+  label whose descriptor carries `role: 'distance'`.
 
-Correctness reaches the scene through the module contract: `evaluate()` already
-returned a `target`, previously unused, which `ExercisePage` now passes to
-`Scene3D` alongside `correct` / `incorrect`. Note that is `correct`, the value
-being right, not `passed`, which additionally requires the working to be built.
+This was tried first as the selection glow in green/red, and it looked bad. The
+glow lights its surroundings, and on a thin distance bar it washed a large patch
+of the plane, reading as "this region" rather than "this bar". A recolour says
+the same thing without touching anything else, and leaves the glow meaning
+"selected" and nothing more.
+
+Correctness reaches the scene through a contract that already existed:
+`evaluate()` returned a `target` that nothing consumed. `ExercisePage` now
+passes `correct` / `incorrect` down to the scene. Note that is `correct`, the
+value being right, not `passed`, which additionally requires the working to be
+built -- so the answer turns green at the same moment the answer card does.
+
+The colours live in `store/highlightStyles.js` and deliberately do **not** come
+from the colour preset: a "correct" green that turns grey under Monochrome would
+stop meaning anything.
 
 ### The answer is not where the number is
 
 The object carrying a distance **value** is frequently not the object that
 **draws** it. A point-plane magnitude group holds the number and the `d = ...`
-label but contains no geometry at all, so glowing it lights up nothing. The bar
-you actually see is a nested `distance_segment` belonging to the projection.
-`findAnswerGeometry` in `exercises/shared/blockQueries.js` walks the scene for
-the visible tag (`distance_segment`, `sphere_distance_candidate_highlight`) and
-the distance exercises prefer it, falling back to the value-bearing object.
-
-The correctness colours live in `store/highlightStyles.js` and deliberately do
-**not** come from the colour preset: a "correct" green that turns grey under
-Monochrome would stop meaning anything.
+label but contains no geometry at all. The bar you actually see is a nested
+`distance_segment` belonging to the projection, which is why the tint walks for
+the drawing geoTypes rather than trusting the value-bearing object, and why the
+label is handled separately from the geometry.

@@ -9,7 +9,8 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
-import SelectionHighlight, { AnswerHighlight } from './SelectionHighlight'
+import SelectionHighlight from './SelectionHighlight'
+import AnswerTint from './AnswerTint'
 import AnimationDriver from './AnimationDriver'
 import { getAxisColors, DEFAULT_CAMERA_POSITION } from './sceneConstants'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
@@ -97,7 +98,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
       />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
-      <AnswerHighlight target={answer?.target} state={answer?.state} />
+      <AnswerTint objects={objects} state={answer?.state} />
       <AnimationDriver objects={objects} />
       <LabelDeclutter />
       <ambientLight intensity={isDark ? 0.6 : 0.4} />
@@ -152,6 +153,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
                 hiddenLabelKeys={hiddenLabelKeys}
                 onHideLabel={onHideLabel}
                 labelDetail={settings.labelDetail}
+                answerState={answer?.state}
               />
             )}
           </group>

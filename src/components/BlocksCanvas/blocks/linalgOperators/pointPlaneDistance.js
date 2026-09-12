@@ -176,6 +176,7 @@ export function initPointPlaneDistanceBlock() {
         distanceFactor: 6,
         offset: [0, 0, 0],
         emphasis: true,
+        role: 'distance',
         color: window.GeoScratchColors.forRole('distance'),
       },
       {

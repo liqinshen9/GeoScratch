@@ -151,6 +151,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           distanceFactor: 6,
           offset: [0, 0, 0],
           emphasis: true,
+          role: 'distance',
           color: window.GeoScratchColors.forRole('distance'),
         },
       ];

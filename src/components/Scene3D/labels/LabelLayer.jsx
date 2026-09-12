@@ -2,8 +2,9 @@ import { Html } from '@react-three/drei'
 import { fmtVec, resolveAnchor } from './labelAnchors'
 import { LabelAnchor } from './LabelDeclutter'
 import { getLabelVisibilityKey, getLabelsForObject, formatLabelText } from './labelData'
+import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
 
-function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
+function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answerState }) {
   const ud = object3D.userData || {}
   const derived = getLabelsForObject(object3D)
   //srcBlockId stays stable across scene regenerations (uuid doesn't), so
@@ -45,7 +46,14 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail }) {
                 id={`${labelIdBase}-${i}`}
                 visibilityKey={visibilityKey}
                 className={`label${lbl.emphasis ? ' label--emphasis' : ''}${lbl.className ? ` ${lbl.className}` : ''}`}
-                color={lbl.className ? undefined : lbl.color}
+                // A distance readout is the answer, so it takes the
+                // correctness colour when an exercise has one. The bar it
+                // annotates is recoloured to match by AnswerTint.
+                color={
+                  answerState && lbl.role === 'distance'
+                    ? ANSWER_HIGHLIGHT_COLORS[answerState]
+                    : lbl.color
+                }
                 worldPos={worldPos}
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}

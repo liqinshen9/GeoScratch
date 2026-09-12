@@ -113,6 +113,7 @@ export function initVectorMagnitude() {
         distanceFactor: isPointPlaneProjection || isPointToPointDistance ? 6 : 8,
         offset: isPointPlaneProjection || isPointToPointDistance ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection || isPointToPointDistance,
+        role: isPointPlaneProjection || isPointToPointDistance ? 'distance' : undefined,
         // Both distance forms read as a distance; the plain magnitude takes the
         // colour of the vector it measures.
         color: isPointPlaneProjection || isPointToPointDistance

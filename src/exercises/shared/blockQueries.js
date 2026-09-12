@@ -1,4 +1,5 @@
 import THREE from '@/utils/three'
+import { ANSWER_GEOMETRY_TYPES } from '@/utils/answerGeometry'
 import { getScalarInputValue } from '@/utils/sceneHelpers'
 
 /**
@@ -71,8 +72,6 @@ function pointBlockLiesOnLine(block, linePoint, lineDirection, tolerance = 1e-6)
 // geometry at all, while the bar you actually see is a nested distance_segment.
 // Exercises name the visible one as their answer target so the scene has
 // something to glow.
-const ANSWER_GEOMETRY_TYPES = new Set(['distance_segment', 'sphere_distance_candidate_highlight'])
-
 function findAnswerGeometry(objects) {
   let found = null
   const visit = (node) => {
