@@ -16,7 +16,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
     const fmtN = vectorNotation.formatNumber;
-    const makeSegment = (start, end, color, radius = 0.035) => {
+    const makeSegment = (start, end, color, radius = 0.022) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
       const segment = new THREE.Mesh(
@@ -65,6 +65,11 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       distanceVector.userData.srcBlockId = ${id};
 
       const normalUnit = normalLen > 1e-12 ? normalVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      // Named and coloured as the vector it is; see the note in vectorProject.js.
+      // A colour from the vector family; see the note in vectorProject.js.
+      const normalBlockId = normalVal.userData?.glyph?.blockId ?? ${id} + '_normal';
+      const normalColor = window.GeoScratchColors.forInstance('vector', normalBlockId);
+      const normalLabel = vectorNotation.getLabel(normalVal, 'n');
       const labelSide = pointDifferenceVal.userData.end.clone().sub(distanceStart);
       labelSide.addScaledVector(normalUnit, -labelSide.dot(normalUnit));
       if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
@@ -75,7 +80,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       const normalTip = distanceStart.clone().addScaledVector(normalUnit, safeLen(normalLen));
       const normalGlyph = window.buildVectorShaftGlyph(
         THREE, ${id} + '_normal',
-        distanceStart.clone(), normalUnit.clone(), safeLen(normalLen), window.GeoScratchColors.forRole('operandB')
+        distanceStart.clone(), normalUnit.clone(), safeLen(normalLen), normalColor
       );
       normalGlyph.userData.geoType = 'distance_normal_arrow';
       normalGlyph.userData.srcBlockId = ${id};
@@ -126,11 +131,10 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       group.userData.labels = [
         {
           anchor: 'normal',
-          text: 'n',
+          name: normalLabel,
           distanceFactor: 8,
           offset: [0, 0, 0],
-          emphasis: true,
-          color: window.GeoScratchColors.forRole('operandB'),
+          color: normalColor,
         },
         {
           anchor: 'formula',

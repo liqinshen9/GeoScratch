@@ -62,7 +62,7 @@ export function initSphereDistanceBlock() {
     let distanceSegment;
     if (surfaceDistance > 1e-8) {
       distanceSegment = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.04, 0.04, safeLength, 18),
+        new THREE.CylinderGeometry(0.022, 0.022, safeLength, 18),
         new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.94, depthWrite: false })
       );
       distanceSegment.position.copy(midpoint);

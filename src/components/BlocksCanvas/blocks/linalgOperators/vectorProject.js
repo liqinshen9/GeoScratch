@@ -36,10 +36,20 @@ export function initVectorProjectBlock() {
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'u');
     const vLabel = vectorNotation.getLabel(vVal, 'v');
+    // The normal is just the vector you projected onto, so it is named and
+    // coloured as that vector rather than relabelled "n" in a colour of its
+    // own. vector3/vectorScale tag their result with the block that drew it,
+    // which is what makes the instance colour reachable here.
+    // Prefer the block that drew v, so the normal matches that vector if it is
+    // also on screen; otherwise fall back to this glyph's own id. Either way it
+    // is a colour from the VECTOR family, because that is what it is -- not an
+    // operand role, which is why it used to come out red.
+    const vBlockId = vVal.userData?.glyph?.blockId ?? ${JSON.stringify(block.id)} + '_normal';
+    const normalColor = window.GeoScratchColors.forInstance('vector', vBlockId);
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const projectionLabel = 'proj ' + uLabel + ' on ' + vLabel;
     const baseId = ${JSON.stringify(block.id)};
-    const makeSegment = (start, end, color, radius = 0.035) => {
+    const makeSegment = (start, end, color, radius = 0.022) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
       const segment = new THREE.Mesh(
@@ -75,7 +85,7 @@ export function initVectorProjectBlock() {
       const normalGlyph = window.buildVectorShaftGlyph(
         THREE, ${JSON.stringify(block.id)} + '_normal',
         basePoint.clone(), normalUnit.clone(), safeLen(normalLength),
-        window.GeoScratchColors.forRole('operandB')
+        normalColor
       );
       normalGlyph.userData.geoType = 'distance_normal_arrow';
       normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
@@ -220,7 +230,7 @@ export function initVectorProjectBlock() {
     };
     group.userData.labels = isPointPlaneDistanceProjection
       ? [
-        { anchor:'normal', text:'n', distanceFactor:8, offset:[0,0,0], emphasis:true, color:window.GeoScratchColors.forRole('operandB') },
+        { anchor:'normal', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0,0,0], color: normalColor },
       ]
       : showOperandLabels
         ? [

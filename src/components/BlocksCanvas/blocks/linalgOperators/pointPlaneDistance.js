@@ -130,7 +130,7 @@ export function initPointPlaneDistanceBlock() {
     let segment;
     if (distance > 1e-8) {
       segment = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.035, 0.035, safeLength, 18),
+        new THREE.CylinderGeometry(0.022, 0.022, safeLength, 18),
         new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.92, depthWrite: false })
       );
       segment.position.copy(midpoint);
