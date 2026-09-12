@@ -7,11 +7,17 @@ import {
   rotationMatches,
   scaleMatches,
 } from './shared/transformChecks'
+import { teapotPipelineSolution } from './shared/fillSolution'
 import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
 
 const COMBINED_SCALE_FACTOR = 2
 const COMBINED_ROTATE_AXIS = 'Y'
 const COMBINED_ROTATE_DEGREES = 45
+
+// The worked solution, loaded by the dev-only "Fill solution" control.
+const SOLUTION_XML = teapotPipelineSolution(
+  `<block type="scale_matrix"><field name="SX">2</field><field name="SY">2</field><field name="SZ">2</field><next><block type="rot_matrix"><field name="AXIS">Y</field><field name="DEGREES">45</field></block></next></block>`,
+)
 
 // Purely decorative "given" blocks for the Transform exercise, so the
 // workspace/scene doesn't read as one lone teapot floating in an empty room.
@@ -165,5 +171,6 @@ export default {
   Givens,
   Steps,
   evaluate,
+  solutionXml: SOLUTION_XML,
   seedWorkspace,
 }

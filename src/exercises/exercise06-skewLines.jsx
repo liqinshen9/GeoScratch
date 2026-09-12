@@ -18,6 +18,62 @@ const SKEW_NORMAL = new THREE.Vector3().crossVectors(SKEW_LINE_1_DIRECTION, SKEW
 const SKEW_DISTANCE =
   Math.abs(SKEW_LINE_2_POINT.clone().sub(SKEW_LINE_1_POINT).dot(SKEW_NORMAL)) / SKEW_NORMAL.length()
 
+const v3 = (v) =>
+  `<block type="linalg_vec3"><field name="X">${v.x}</field><field name="Y">${v.y}</field><field name="Z">${v.z}</field></block>`
+const line = (point, direction) => `
+  <block type="geo_vector">
+    <value name="POS">${v3(point)}</value>
+    <value name="DIR">${v3(direction)}</value>
+  </block>`
+const cross = () => `
+  <block type="vector_cross_product">
+    <value name="U">${v3(SKEW_LINE_1_DIRECTION)}</value>
+    <value name="V">${v3(SKEW_LINE_2_DIRECTION)}</value>
+  </block>`
+
+// The worked solution, loaded by the dev-only "Fill solution" control. It takes
+// the projection route: build the plane through L1 with the common normal, take
+// a point on it and a point on L2, and project their difference onto the
+// normal. Kept beside the checker so a change to what counts as correct is made
+// next to the blocks that are supposed to satisfy it.
+const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="geo_vector" x="40" y="40">
+    <value name="POS">${v3(SKEW_LINE_1_POINT)}</value>
+    <value name="DIR">${v3(SKEW_LINE_1_DIRECTION)}</value>
+  </block>
+  <block type="geo_vector" x="40" y="170">
+    <value name="POS">${v3(SKEW_LINE_2_POINT)}</value>
+    <value name="DIR">${v3(SKEW_LINE_2_DIRECTION)}</value>
+  </block>
+  <block type="vector_magnitude" x="40" y="300">
+    <value name="V">
+      <block type="vector_project">
+        <value name="U">
+          <block type="vector_arithmetic">
+            <field name="OP">subtract</field>
+            <value name="U">
+              <block type="geo_show_point_on_object">
+                <value name="OBJECT">
+                  <block type="parametric_plane">
+                    <value name="point">${v3(SKEW_LINE_1_POINT)}</value>
+                    <value name="norm">${cross()}</value>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <value name="V">
+              <block type="geo_show_point_on_object">
+                <value name="OBJECT">${line(SKEW_LINE_2_POINT, SKEW_LINE_2_DIRECTION)}</value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <value name="V">${cross()}</value>
+      </block>
+    </value>
+  </block>
+</xml>`
+
 const LINE_INTERSECTION_3D_BLOCK_XML =
   '<xml xmlns="https://developers.google.com/blockly/xml"><block type="line_intersection_3d" x="0" y="0"></block></xml>'
 
@@ -305,6 +361,7 @@ export default {
   Givens,
   Steps,
   evaluate,
+  solutionXml: SOLUTION_XML,
   decorateObjects,
   reusableBlockTemplate: {
     defaultName: 'Intersect 3D lines',

@@ -28,6 +28,17 @@ import exercise09 from './exercise09-lineInFront'
  *                                     for a 'perceptual' exercise. ExercisePage
  *                                     renders it via shared/PerceptualQuestion
  *                                     and logs the pick to exercise_attempts.
+ *   solutionXml                       Blockly XML for a worked solution, offered
+ *                                     behind ExercisePage's dev-only "Fill
+ *                                     solution" control. Gated on
+ *                                     import.meta.env.DEV, so it is compiled out
+ *                                     of a study build rather than merely
+ *                                     hidden from participants. Omitted by the
+ *                                     perceptual exercises, which have nothing
+ *                                     to build. The four transform exercises
+ *                                     share one shape via
+ *                                     shared/fillSolution.js's
+ *                                     teapotPipelineSolution().
  *   seedWorkspace(workspace)          Drops starter/decorative blocks in on entry.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.

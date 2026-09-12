@@ -16,6 +16,7 @@ import {
 } from '@/data/exercises'
 import { getExerciseModule } from '@/exercises'
 import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
+import { fillSolution } from '@/exercises/shared/fillSolution'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
 import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
 
@@ -252,6 +253,19 @@ export default function ExercisePage() {
                 />
               )}
               <Steps steps={result.steps} passed={passed} />
+              {/* Dev only: import.meta.env.DEV is false in the study build, so
+                  the control is compiled out rather than merely hidden. */}
+              {import.meta.env?.DEV && exercise.solutionXml && (
+                <button
+                  type="button"
+                  className="exercise-debug-fill"
+                  onClick={() =>
+                    fillSolution(workspace, exercise.solutionXml, exercise.seedWorkspace)
+                  }
+                >
+                  Fill solution (dev)
+                </button>
+              )}
               {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
               {passed && (
                 <div className="exercise-pass-banner" role="status">

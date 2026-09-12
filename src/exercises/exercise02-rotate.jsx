@@ -5,9 +5,15 @@ import {
   hasRotateStepForTeapot,
   rotationMatches,
 } from './shared/transformChecks'
+import { teapotPipelineSolution } from './shared/fillSolution'
 
 const ROTATE_AXIS = 'Z'
 const ROTATE_DEGREES = 90
+
+// The worked solution, loaded by the dev-only "Fill solution" control.
+const SOLUTION_XML = teapotPipelineSolution(
+  `<block type="rot_matrix"><field name="AXIS">Z</field><field name="DEGREES">90</field></block>`,
+)
 
 function Givens() {
   return (
@@ -69,4 +75,5 @@ export default {
   Givens,
   Steps,
   evaluate,
+  solutionXml: SOLUTION_XML,
 }

@@ -548,3 +548,21 @@
 :root[data-theme='dark'] .exercise-page--editor .palette-group-label {
   color: var(--geo-text-muted-on-light);
 }
+
+/* Dev-only affordance; compiled out of the study build. Deliberately plain and
+   a little ugly so it is never mistaken for part of the exercise UI. */
+.exercise-debug-fill {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 3px 8px;
+  border: 1px dashed var(--geo-text-muted-on-light);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--geo-text-muted-on-light);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.exercise-debug-fill:hover {
+  border-style: solid;
+}

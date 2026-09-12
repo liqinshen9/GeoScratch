@@ -5,10 +5,16 @@ import {
   hasTranslateStepForTeapot,
   translationMatches,
 } from './shared/transformChecks'
+import { teapotPipelineSolution } from './shared/fillSolution'
 
 const TRANSLATE_X = 3
 const TRANSLATE_Y = 0
 const TRANSLATE_Z = 0
+
+// The worked solution, loaded by the dev-only "Fill solution" control.
+const SOLUTION_XML = teapotPipelineSolution(
+  `<block type="trans_matrix"><field name="TX">3</field><field name="TY">0</field><field name="TZ">0</field></block>`,
+)
 
 function Givens() {
   return (
@@ -70,4 +76,5 @@ export default {
   Givens,
   Steps,
   evaluate,
+  solutionXml: SOLUTION_XML,
 }

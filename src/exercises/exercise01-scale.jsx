@@ -5,8 +5,14 @@ import {
   hasScaleStepForTeapot,
   scaleMatches,
 } from './shared/transformChecks'
+import { teapotPipelineSolution } from './shared/fillSolution'
 
 const SCALE_FACTOR = 3
+
+// The worked solution, loaded by the dev-only "Fill solution" control.
+const SOLUTION_XML = teapotPipelineSolution(
+  `<block type="scale_matrix"><field name="SX">3</field><field name="SY">3</field><field name="SZ">3</field></block>`,
+)
 
 function Givens() {
   return (
@@ -69,4 +75,5 @@ export default {
   Givens,
   Steps,
   evaluate,
+  solutionXml: SOLUTION_XML,
 }

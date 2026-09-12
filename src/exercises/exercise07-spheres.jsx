@@ -16,6 +16,44 @@ const SPHERE_DISTANCE = Math.max(
   SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
 )
 
+const v3 = (x, y, z) =>
+  `<block type="linalg_vec3"><field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field></block>`
+const scalar = (n) => `<block type="scalar"><field name="scalar">${n}</field></block>`
+const sphere = (centre, radius, x, y) => `
+  <block type="geo_sphere" x="${x}" y="${y}">
+    <value name="RADIUS_INPUT">${scalar(radius)}</value>
+    <value name="CENTRE">${v3(centre.x, centre.y, centre.z)}</value>
+  </block>`
+
+// The worked solution, loaded by the dev-only "Fill solution" control. Kept
+// beside the checker so a change to what counts as correct is made next to the
+// blocks that are supposed to satisfy it.
+const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
+  ${sphere(SPHERE_A_CENTRE, SPHERE_A_RADIUS, 40, 40)}
+  ${sphere(SPHERE_B_CENTRE, SPHERE_B_RADIUS, 40, 180)}
+  <block type="scalar_arithmetic" x="40" y="320">
+    <field name="OP">subtract</field>
+    <value name="A">
+      <block type="vector_magnitude">
+        <value name="V">
+          <block type="vector_arithmetic">
+            <field name="OP">subtract</field>
+            <value name="U">${v3(SPHERE_B_CENTRE.x, SPHERE_B_CENTRE.y, SPHERE_B_CENTRE.z)}</value>
+            <value name="V">${v3(SPHERE_A_CENTRE.x, SPHERE_A_CENTRE.y, SPHERE_A_CENTRE.z)}</value>
+          </block>
+        </value>
+      </block>
+    </value>
+    <value name="B">
+      <block type="scalar_arithmetic">
+        <field name="OP">add</field>
+        <value name="A">${scalar(SPHERE_A_RADIUS)}</value>
+        <value name="B">${scalar(SPHERE_B_RADIUS)}</value>
+      </block>
+    </value>
+  </block>
+</xml>`
+
 const SPHERE_DISTANCE_BLOCK_XML =
   '<xml xmlns="https://developers.google.com/blockly/xml"><block type="sphere_distance" x="0" y="0"></block></xml>'
 
@@ -215,6 +253,7 @@ function evaluate({ objects, workspace }) {
 export default {
   id: 'sphere-distance',
   kind: 'distance',
+  solutionXml: SOLUTION_XML,
   Givens,
   Steps,
   evaluate,
