@@ -1,5 +1,6 @@
 import THREE from '@/utils/three'
 import { createVectorNotationRuntime } from '@/utils/vectorNotation'
+import { createPointMarker } from '@/utils/pointMarker'
 import {
   blockMatchesVec3,
   closeNumber,
@@ -15,14 +16,55 @@ const PLANE_POINT_A = new THREE.Vector3(1, 1, 2)
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0)
 const CORRECT_DISTANCE = 3
 
-// Matches the standalone linalg_point marker in
-// blocks/linalgPrimitives/vector3.js, so the exercise-supplied P reads as the
-// same kind of object a student would build.
-const POINT_MARKER_RADIUS = 0.24
 const POINT_P_COLOR_SEED = 'exercise:point-plane-distance:P'
 const POINT_MARKER_FALLBACK_COLOR = '#94a3b8'
 
 const vectorNotation = createVectorNotationRuntime()
+
+// The worked solution, loaded by the dev-only "Fill solution" control. Kept
+// beside the checker so a change to what counts as correct is made next to the
+// blocks that are supposed to satisfy it.
+const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="vector_magnitude" x="60" y="60">
+    <value name="V">
+      <block type="vector_project">
+        <value name="U">
+          <block type="vector_arithmetic">
+            <field name="OP">subtract</field>
+            <value name="U">
+              <block type="linalg_point">
+                <field name="X">3</field><field name="Y">4</field><field name="Z">5</field>
+              </block>
+            </value>
+            <value name="V">
+              <block type="geo_show_point_on_object">
+                <value name="OBJECT">
+                  <block type="parametric_plane">
+                    <value name="point">
+                      <block type="linalg_point">
+                        <field name="X">1</field><field name="Y">1</field><field name="Z">2</field>
+                      </block>
+                    </value>
+                    <value name="norm">
+                      <block type="linalg_vec3">
+                        <field name="X">0</field><field name="Y">1</field><field name="Z">0</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+              </block>
+            </value>
+          </block>
+        </value>
+        <value name="V">
+          <block type="linalg_vec3">
+            <field name="X">0</field><field name="Y">1</field><field name="Z">0</field>
+          </block>
+        </value>
+      </block>
+    </value>
+  </block>
+</xml>`
 
 const POINT_PLANE_DISTANCE_BLOCK_XML =
   '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
@@ -92,25 +134,14 @@ function objectIsAtPointP(object) {
 }
 
 function createPointPMarker() {
-  // Colours and settings come off the window surface rather than a static
-  // import so this module stays importable outside the browser (its checker
-  // logic is unit-tested in a node environment).
+  // Colour comes off the window surface rather than a static import so this
+  // module stays importable outside the browser (its checker logic is
+  // unit-tested in a node environment).
   const color =
     window.GeoScratchColors?.forInstance('point', POINT_P_COLOR_SEED) ?? POINT_MARKER_FALLBACK_COLOR
-  const matte = !!window.useSettingsStore?.getState().settings?.mattePoints
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(POINT_MARKER_RADIUS, 16, 12),
-    new THREE.MeshStandardMaterial({
-      color,
-      roughness: matte ? 1 : 0.35,
-      metalness: matte ? 0 : 0.05,
-    }),
-  )
+  const marker = createPointMarker({ color, geoType: 'exercise_point_p' })
 
   marker.position.copy(POINT_P)
-  marker.userData.geoType = 'exercise_point_p'
-  marker.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
-  marker.userData.zoomInvariantUniform = true
   marker.userData.labelAnchors = {
     p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
   }
@@ -266,6 +297,7 @@ export default {
   Steps,
   evaluate,
   decorateObjects: addExercisePointPIfNeeded,
+  solutionXml: SOLUTION_XML,
   reusableBlockTemplate: {
     defaultName: 'Distance from point to plane',
     description: 'Save a reusable distance block with open inputs for any point and any plane.',
