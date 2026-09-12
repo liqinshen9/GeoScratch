@@ -32,9 +32,6 @@ export function initVectorProjectBlock() {
     const vVal = ${v};
     if (!uVal || !vVal || !uVal.isVector3 || !vVal.isVector3) return null;
 
-    // Just enough to clear the distance bar's radius plus the glyph's tube;
-    // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.08;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'u');
@@ -74,68 +71,6 @@ export function initVectorProjectBlock() {
       shadowGroup.userData.geoType = 'projection_shadow';
       shadowGroup.userData.srcBlockId=${JSON.stringify(block.id)};
       return shadowGroup;
-    };
-    const makeDistanceIllustration = (basePoint, topPoint, qPoint, normal, distanceLength) => {
-      const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const group = new THREE.Group();
-
-      // n is drawn at its OWN magnitude through the shared glyph, so it follows
-      // the vector style setting, takes a halo, and scales with zoom like every
-      // other vector. It used to be a bespoke dashed line of length
-      // max(2.2, d + 1.4) -- 4.4 units for a unit normal at d = 3 -- labelled
-      // "n" while showing nothing of the sort.
-      const normalLength = normal.length();
-      const normalGlyph = window.buildVectorShaftGlyph(
-        THREE, ${JSON.stringify(block.id)} + '_normal',
-        basePoint.clone(), normalUnit.clone(), safeLen(normalLength),
-        normalColor
-      );
-      normalGlyph.userData.geoType = 'distance_normal_arrow';
-      normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
-      if (typeof threeObjStore === 'object' && threeObjStore) {
-        threeObjStore[${JSON.stringify(block.id)} + '_normal'] = normalGlyph;
-      }
-
-      const guideGeom = new THREE.BufferGeometry().setFromPoints([basePoint.clone(), qPoint.clone()]);
-      const guideLine = new THREE.Line(
-        guideGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('accent'), dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
-      );
-      guideLine.computeLineDistances();
-
-      const tangent = qPoint.clone().sub(basePoint);
-      if (tangent.lengthSq() < 1e-10) {
-        tangent.set(1, 0, 0);
-        if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
-      }
-      tangent.addScaledVector(normalUnit, -tangent.dot(normalUnit));
-      if (tangent.lengthSq() < 1e-10) tangent.set(1, 0, 0);
-      tangent.normalize();
-      const markerSize = Math.min(0.42, Math.max(0.18, distanceLength * 0.16));
-      const cornerPoints = [
-        basePoint.clone().addScaledVector(normalUnit, markerSize),
-        basePoint.clone().addScaledVector(normalUnit, markerSize).addScaledVector(tangent, markerSize),
-        basePoint.clone().addScaledVector(tangent, markerSize),
-      ];
-      const rightAngle = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(cornerPoints),
-        new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
-      );
-
-
-      // The normal shares the distance bar's origin AND axis, so drawn true it
-      // sits inside the bar. Shift it along the tangent -- the same
-      // perpendicular the right-angle marker uses, pointing toward P -- so the
-      // two read as two things. The tail no longer sits exactly on the plane
-      // point; this arrow shows a direction, not an anchor.
-      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
-
-      group.add(normalGlyph, guideLine, rightAngle);
-      // The sweep redraws this each frame as Q moves.
-      group.userData.guideLine = guideLine;
-      group.userData.geoType = 'distance_projection_illustration';
-      group.userData.srcBlockId=${JSON.stringify(block.id)};
-      return group;
     };
 
     // Inputs
@@ -206,6 +141,7 @@ export function initVectorProjectBlock() {
     let guideLine = null;
     let projectionShadow = null;
     let distanceIllustration = null;
+    let normalLabelTipFromIllustration = null;
     if (!isPointPlaneDistanceProjection) {
       const guideGeom = new THREE.BufferGeometry().setFromPoints([uTip, pTip]);
       const guideMat  = new THREE.LineBasicMaterial({ color: warningColor, transparent:true, opacity:1 });
@@ -215,7 +151,18 @@ export function initVectorProjectBlock() {
     } else {
       projectionShadow = makeProjectionShadow(projOrigin);
       const qPointForGuide = uVal.userData.start?.isVector3 ? uVal.userData.start.clone() : uTip.clone();
-      distanceIllustration = makeDistanceIllustration(projOrigin, pTip, qPointForGuide, vVal, projLen);
+      const illustration = window.buildDistanceIllustration(THREE, {
+        blockId: ${JSON.stringify(block.id)},
+        foot: projOrigin,
+        normal: vVal,
+        guideTo: qPointForGuide,
+        distanceLength: projLen,
+        normalColor,
+        accentColor: window.GeoScratchColors.forRole('accent'),
+        store: typeof threeObjStore === 'object' ? threeObjStore : null,
+      });
+      distanceIllustration = illustration.group;
+      normalLabelTipFromIllustration = illustration.normalTip;
     }
 
     const group = new THREE.Group();
@@ -228,17 +175,10 @@ export function initVectorProjectBlock() {
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
     const normalLabelUnit = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
-    const normalLabelExtent = lenV > 1e-12 ? lenV : 1;
-    const normalLabelSide = uTip.clone().sub(projOrigin);
-    normalLabelSide.addScaledVector(normalLabelUnit, -normalLabelSide.dot(normalLabelUnit));
-    if (normalLabelSide.lengthSq() < 1e-10) normalLabelSide.set(1, 0, 0);
-    normalLabelSide.normalize();
-    // Same side and the same amount as the glyph's lateral offset inside
-    // makeDistanceIllustration, so label and arrow stay together.
-    const normalLabelOffset = NORMAL_SIDE_CLEARANCE;
-    const normalLabelTip = projOrigin.clone()
-      .addScaledVector(normalLabelUnit, normalLabelExtent)
-      .addScaledVector(normalLabelSide, normalLabelOffset);
+    // The illustration already placed the arrow, clearance and all, so take its
+    // tip rather than recomputing the same offset a second way and drifting.
+    const normalLabelTip = normalLabelTipFromIllustration
+      ?? projOrigin.clone().addScaledVector(normalLabelUnit, lenV > 1e-12 ? lenV : 1);
 
     // Labels at tips
     group.userData.labelAnchors = {
@@ -288,7 +228,7 @@ export function initVectorProjectBlock() {
       // |P - Q| shrink to exactly d at quarter progress, where P - Q lies along
       // the perpendicular, and grow again -- the projection visibly being the
       // shortest. cos() puts the resting scene at both progress 0 and 1.
-      // normalUnit lives inside makeDistanceIllustration; recompute it here.
+      // The illustration owns normalUnit; the sweep needs its own copy.
       const planeNormal = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
       const radial = qStart.clone().sub(projOrigin);
       radial.addScaledVector(planeNormal, -radial.dot(planeNormal));

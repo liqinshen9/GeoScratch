@@ -52,72 +52,15 @@ export function initPointPlaneDistanceBlock() {
     const normal = normalSource.normalize();
     const signedDistance = point.clone().sub(planePoint).dot(normal);
     const distance = Math.abs(signedDistance);
-    const distanceStart = planePoint.clone();
-    const distanceEnd = planePoint.clone().addScaledVector(normal, signedDistance);
+    // The foot of P's own perpendicular, so the bar runs from the plane up to P.
+    // It used to start at the plane's defining point A, which is the right
+    // length drawn in the wrong place. vector_project does the same thing.
+    const distanceStart = point.clone().addScaledVector(normal, -signedDistance);
+    const distanceEnd = point.clone();
     const safeLength = Number.isFinite(distance) && distance > 1e-8 ? distance : 1;
     const midpoint = distanceStart.clone().add(distanceEnd).multiplyScalar(0.5);
     const difference = point.clone().sub(planePoint);
     const fmt = vectorNotation.formatVector;
-    // Just enough to clear the distance bar's radius plus the glyph's tube;
-    // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.08;
-    const makeDistanceIllustration = () => {
-      const illustration = new THREE.Group();
-      // n through the shared glyph at its own magnitude, so it follows the
-      // vector style setting and takes a halo like any other vector. It was a
-      // bespoke dashed ray of length max(2.2, d + 1.4), labelled "n" while
-      // showing nothing of the sort.
-      const normalTip = distanceStart.clone().addScaledVector(normal, normalLength);
-      const normalGlyph = window.buildVectorShaftGlyph(
-        THREE, ${JSON.stringify(block.id)} + '_normal',
-        distanceStart.clone(), normal.clone(), normalLength > 1e-8 ? normalLength : 1, normalColor
-      );
-      normalGlyph.userData.geoType = 'distance_normal_arrow';
-      normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
-
-      const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), point.clone()]);
-      const guideLine = new THREE.Line(
-        guideGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('accent'), dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
-      );
-      guideLine.computeLineDistances();
-
-      const tangent = point.clone().sub(distanceEnd);
-      tangent.addScaledVector(normal, -tangent.dot(normal));
-      if (tangent.lengthSq() < 1e-10) {
-        tangent.set(1, 0, 0);
-        if (Math.abs(tangent.dot(normal)) > 0.85) tangent.set(0, 0, 1);
-      }
-      tangent.normalize();
-      const markerSize = Math.min(0.42, Math.max(0.18, distance * 0.16));
-      const cornerPoints = [
-        distanceEnd.clone().addScaledVector(normal, -markerSize),
-        distanceEnd.clone().addScaledVector(normal, -markerSize).addScaledVector(tangent, markerSize),
-        distanceEnd.clone().addScaledVector(tangent, markerSize),
-      ];
-      const rightAngle = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(cornerPoints),
-        new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
-      );
-
-      const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('distance'), radius: 0.04 });
-      footDot.position.copy(distanceStart);
-
-
-      // The normal shares the distance bar's origin AND axis, so drawn true it
-      // sits inside the bar. Shift it along the tangent -- the same
-      // perpendicular the right-angle marker uses, pointing toward P -- so the
-      // two read as two things. The tail no longer sits exactly on the plane
-      // point; this arrow shows a direction, not an anchor.
-      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
-      // Keep the label with the arrow, which just moved off the axis.
-      normalTip.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
-
-      illustration.add(normalGlyph, guideLine, rightAngle, footDot);
-      illustration.userData.geoType = 'distance_projection_illustration';
-      illustration.userData.srcBlockId = ${JSON.stringify(block.id)};
-      return { illustration, normalTip };
-    };
 
     const pointColor = window.GeoScratchColors.forInstance('point', ${JSON.stringify(block.id)});
     const differenceVectorColor = window.GeoScratchColors.forInstance('vector', ${JSON.stringify(block.id)});
@@ -154,7 +97,20 @@ export function initPointPlaneDistanceBlock() {
     }
     segment.userData.geoType = 'distance_segment';
     segment.userData.srcBlockId = ${JSON.stringify(block.id)};
-    const { illustration, normalTip } = makeDistanceIllustration();
+    const built = window.buildDistanceIllustration(THREE, {
+      blockId: ${JSON.stringify(block.id)},
+      foot: distanceStart,
+      normal,
+      guideTo: planePoint,
+      distanceLength: distance,
+      normalColor,
+      accentColor: window.GeoScratchColors.forRole('accent'),
+      footDotColor: window.GeoScratchColors.forRole('distance'),
+      footDot: true,
+      store: typeof threeObjStore === 'object' ? threeObjStore : null,
+    });
+    const illustration = built.group;
+    const normalTip = built.normalTip;
     group.add(segment, illustration, pointDot, planePointDot);
     if (differenceArrow) group.add(differenceArrow);
 

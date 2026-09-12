@@ -15,6 +15,7 @@ import {
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorReveal'
 import { makeExtendableSegment } from '@/utils/segmentGlyph'
+import { buildDistanceIllustration } from '@/utils/distanceIllustration'
 import {
   createPointMarker,
   createPointMaterial,
@@ -45,6 +46,7 @@ import {
  * @property {Function} buildVectorShaftGlyph
  * @property {Function} geoPointMarker                Builds a point marker (geometry, matte/sheen finish, zoom tagging).
  * @property {Function} geoPointMaterial              The point finish alone, for a marker built by hand.
+ * @property {Function} buildDistanceIllustration    The point-to-plane distance picture.
  * @property {Function} makeStagedVectorReveal
  * @property {Function} orderRevealParts
  */
@@ -111,6 +113,7 @@ export function installSceneRuntime(workspace, options = {}) {
   window.makeStagedVectorReveal = makeStagedVectorReveal
   window.orderRevealParts = orderRevealParts
   window.makeExtendableSegment = makeExtendableSegment
+  window.buildDistanceIllustration = buildDistanceIllustration
   window.geoPointMarker = createPointMarker
   window.geoPointMaterial = createPointMaterial
 

@@ -16,9 +16,6 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
     const fmtN = vectorNotation.formatNumber;
-    // Just enough to clear the distance bar's radius plus the glyph's tube;
-    // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.08;
     const makeSegment = (start, end, color, radius = 0.022) => {
       const delta = end.clone().sub(start);
       const length = delta.length();
@@ -44,10 +41,12 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       const projection = normalLen > 1e-12
         ? normalVal.clone().multiplyScalar(dot / normalVal.lengthSq())
         : new THREE.Vector3(0, 0, 0);
-      const distanceStart = pointDifferenceVal.userData.start?.isVector3
-        ? pointDifferenceVal.userData.start.clone()
-        : pointDifferenceVal.userData.end.clone().sub(projection);
-      const distanceEnd = distanceStart.clone().add(projection);
+      // The foot of P's own perpendicular, so the bar runs from the plane up to
+      // P rather than from Q. Same correction as vector_project and
+      // point_plane_distance; the formula was already here, unused, as the
+      // fallback branch.
+      const distanceStart = pointDifferenceVal.userData.end.clone().sub(projection);
+      const distanceEnd = pointDifferenceVal.userData.end.clone();
       const labelPos = distanceStart
         .clone()
         .add(distanceEnd)
@@ -77,62 +76,27 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       labelSide.addScaledVector(normalUnit, -labelSide.dot(normalUnit));
       if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
       labelSide.normalize().multiplyScalar(-1);
-      // n through the shared glyph at its own magnitude; see the note in
-      // vectorProject.js. It was a bespoke dashed ray sized to span the
-      // distance, labelled "n" while showing nothing of the sort.
-      const normalTip = distanceStart.clone().addScaledVector(normalUnit, safeLen(normalLen));
-      const normalGlyph = window.buildVectorShaftGlyph(
-        THREE, ${id} + '_normal',
-        distanceStart.clone(), normalUnit.clone(), safeLen(normalLen), normalColor
-      );
-      normalGlyph.userData.geoType = 'distance_normal_arrow';
-      normalGlyph.userData.srcBlockId = ${id};
-
-      const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), pointDifferenceVal.userData.end.clone()]);
-      const guideLine = new THREE.Line(
-        guideGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('accent'), dashSize: 0.14, gapSize: 0.1, transparent: true, opacity: 0.82 })
-      );
-      guideLine.computeLineDistances();
-
-      const tangent = pointDifferenceVal.userData.end.clone().sub(distanceEnd);
-      if (tangent.lengthSq() < 1e-10) {
-        tangent.set(1, 0, 0);
-        if (Math.abs(tangent.dot(normalUnit)) > 0.85) tangent.set(0, 0, 1);
-      }
-      tangent.addScaledVector(normalUnit, -tangent.dot(normalUnit));
-      if (tangent.lengthSq() < 1e-10) tangent.set(1, 0, 0);
-      tangent.normalize();
-      const markerSize = Math.min(0.42, Math.max(0.18, distance * 0.16));
-      const rightAngle = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([
-          distanceEnd.clone().addScaledVector(normalUnit, -markerSize),
-          distanceEnd.clone().addScaledVector(normalUnit, -markerSize).addScaledVector(tangent, markerSize),
-          distanceEnd.clone().addScaledVector(tangent, markerSize),
-        ]),
-        new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
-      );
-      normalLine.userData.geoType = 'geo_helper';
-      normalArrowHead.userData.geoType = 'geo_helper';
-      guideLine.userData.geoType = 'geo_helper';
-      rightAngle.userData.geoType = 'geo_helper';
-      normalLine.userData.srcBlockId = ${id};
-      normalArrowHead.userData.srcBlockId = ${id};
-      guideLine.userData.srcBlockId = ${id};
-      rightAngle.userData.srcBlockId = ${id};
+      // The shared distance picture. This block's copy had drifted furthest:
+      // it still referenced normalLine and normalArrowHead, deleted when the
+      // normal moved to the shared glyph, so this branch threw at runtime.
+      const built = window.buildDistanceIllustration(THREE, {
+        blockId: ${id},
+        foot: distanceStart,
+        normal: normalVal,
+        guideTo: pointDifferenceVal.userData.start?.isVector3
+          ? pointDifferenceVal.userData.start.clone()
+          : null,
+        distanceLength: distance,
+        normalColor,
+        accentColor: window.GeoScratchColors.forRole('accent'),
+        store: typeof threeObjStore === 'object' ? threeObjStore : null,
+      });
+      const illustration = built.group;
+      const normalTip = built.normalTip;
 
       const group = new THREE.Group();
 
-      // The normal shares the distance bar's origin AND axis, so drawn true it
-      // sits inside the bar. Shift it along the tangent -- the same
-      // perpendicular the right-angle marker uses, pointing toward P -- so the
-      // two read as two things. The tail no longer sits exactly on the plane
-      // point; this arrow shows a direction, not an anchor.
-      normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
-      // Keep the label with the arrow, which just moved off the axis.
-      normalTip.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
-
-      group.add(distanceVector, normalGlyph, guideLine, rightAngle);
+      group.add(distanceVector, illustration);
       group.userData.geoType = 'point_plane_distance_dot';
       group.userData.srcBlockId = ${id};
       group.userData.dot = dot;

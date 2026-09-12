@@ -35,6 +35,7 @@ describe('installSceneRuntime', () => {
         '__geoScratchCrossVisualKeys',
         '__geoScratchRuntimeMode',
         'applyHaloDiscardMaterial',
+        'buildDistanceIllustration',
         'buildVectorShaftGlyph',
         'createHaloIdMaterial',
         'geoNaming',
