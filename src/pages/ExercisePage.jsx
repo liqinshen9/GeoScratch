@@ -253,6 +253,13 @@ export default function ExercisePage() {
                 />
               )}
               <Steps steps={result.steps} passed={passed} />
+              {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
+              {passed && (
+                <div className="exercise-pass-banner" role="status">
+                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                  <span>Passed</span>
+                </div>
+              )}
               {/* Dev only: import.meta.env.DEV is false in the study build, so
                   the control is compiled out rather than merely hidden. */}
               {import.meta.env?.DEV && exercise.solutionXml && (
@@ -265,13 +272,6 @@ export default function ExercisePage() {
                 >
                   Fill solution (dev)
                 </button>
-              )}
-              {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
-              {passed && (
-                <div className="exercise-pass-banner" role="status">
-                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
-                  <span>Passed</span>
-                </div>
               )}
             </aside>
           )}
