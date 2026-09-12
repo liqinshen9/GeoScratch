@@ -60,3 +60,25 @@ export function resolveSelectedBlockId(hits) {
   }
   return null
 }
+
+// Every object a selected block owns in the scene: the outermost node of each
+// subtree whose srcBlockId matches, searching nested children rather than only
+// the top-level list. A block whose object is consumed by another block keeps
+// its own srcBlockId but is re-parented under the consumer (a plane inside a
+// geo_show_point_on_object group), so it is no longer a top-level object.
+// See docs/architecture/selection-and-picking.md#nested-selection-targets.
+export function collectSelectionTargets(objects, blockId) {
+  if (blockId == null) return []
+  const id = String(blockId)
+  const targets = []
+  const visit = (node) => {
+    if (!node) return
+    if (node.userData?.srcBlockId != null && String(node.userData.srcBlockId) === id) {
+      targets.push(node)
+      return
+    }
+    node.children?.forEach(visit)
+  }
+  ;(objects || []).forEach(visit)
+  return targets
+}

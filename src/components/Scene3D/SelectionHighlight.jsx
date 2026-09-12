@@ -7,6 +7,7 @@ import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeome
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { OBJECT_HIGHLIGHT_STYLES, SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
+import { collectSelectionTargets } from '@/utils/scenePicking'
 
 // BLINK / GLOW highlight tuning. See docs/architecture/selection-and-picking.md.
 const BLINK_MIN_OPACITY = 0.55
@@ -502,13 +503,12 @@ export default function SelectionHighlight({ objects = [] }) {
   const enabled = useSettingsStore((s) => s.settings.objectHighlightEnabled)
   const style = useSettingsStore((s) => s.settings.objectHighlightStyle)
 
-  // Matched by srcBlockId (stable across rebuilds, unlike uuid).
-  const targets = useMemo(() => {
-    if (!selectedBlockId) return []
-    return objects.filter(
-      (o) => o?.userData?.srcBlockId != null && String(o.userData.srcBlockId) === selectedBlockId,
-    )
-  }, [objects, selectedBlockId])
+  // Matched by srcBlockId (stable across rebuilds, unlike uuid), nested
+  // objects included. See docs/architecture/selection-and-picking.md.
+  const targets = useMemo(
+    () => collectSelectionTargets(objects, selectedBlockId),
+    [objects, selectedBlockId],
+  )
 
   const activeRef = useRef(null)
 

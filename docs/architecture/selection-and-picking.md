@@ -58,6 +58,23 @@ cutting hard against a cone it overlaps.
 
 ## Gotchas a refactor would reintroduce
 
+### nested-selection-targets
+
+`SelectionHighlight` resolves the selected block's objects with
+`collectSelectionTargets`, which walks each top-level object's subtree rather
+than filtering the flat `objects` array. A block whose object is consumed by
+another block keeps its own `srcBlockId` but is re-parented under the consumer
+and drops out of the top-level list -- `geo_show_point_on_object` wraps its
+input object in an `annotated_object` group and deletes the input's
+`threeObjStore` entries, which is the shape every "point on a plane" exercise
+builds. A flat filter found nothing for the plane's block id, so clicking the
+plane selected its block in Blockly but drew no 3D highlight, reading as "the
+plane can't be selected".
+
+It takes the **outermost** match in each subtree and stops there. A glyph's
+parts are all tagged with the same `srcBlockId`, so descending past a match
+would return the group and every piece inside it and highlight them twice.
+
 ### blink-plane-exception
 
 A plane's own already-translucent materials keep their transparency under BLINK

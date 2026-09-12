@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   classifyGesture,
   findLabelOwner,
+  collectSelectionTargets,
   resolveSelectedBlockId,
   resolveSrcBlockId,
   CLICK_MAX_DIST,
@@ -87,5 +88,42 @@ describe('findLabelOwner', () => {
 
   it('returns null when no ancestor has labels', () => {
     expect(findLabelOwner(node({}), getLabels)).toBeNull()
+  })
+})
+
+// Minimal stand-in for a THREE.Object3D subtree.
+function tree(userData, children = []) {
+  return { userData, children }
+}
+
+describe('collectSelectionTargets', () => {
+  it('finds a top-level object owned by the block', () => {
+    const plane = tree({ srcBlockId: 'plane-1' })
+    expect(collectSelectionTargets([tree({ srcBlockId: 'other' }), plane], 'plane-1')).toEqual([
+      plane,
+    ])
+  })
+
+  // The exercise-5 shape: geo_show_point_on_object re-parents the plane under
+  // its own group, so the plane is no longer in the top-level objects list.
+  it('finds an object nested under the block that consumed it', () => {
+    const plane = tree({ srcBlockId: 'plane-1' }, [tree({ srcBlockId: 'plane-1' })])
+    const annotated = tree({ srcBlockId: 'show-point-1' }, [plane, tree({})])
+    expect(collectSelectionTargets([annotated], 'plane-1')).toEqual([plane])
+  })
+
+  it('stops at the outermost match instead of returning every tagged descendant', () => {
+    const group = tree({ srcBlockId: 'blk-1' }, [
+      tree({ srcBlockId: 'blk-1' }),
+      tree({ srcBlockId: 'blk-1' }),
+    ])
+    expect(collectSelectionTargets([group], 'blk-1')).toEqual([group])
+  })
+
+  it('coerces ids to strings and returns empty for no selection', () => {
+    const numeric = tree({ srcBlockId: 7 })
+    expect(collectSelectionTargets([numeric], '7')).toEqual([numeric])
+    expect(collectSelectionTargets([numeric], null)).toEqual([])
+    expect(collectSelectionTargets(undefined, 'blk-1')).toEqual([])
   })
 })
