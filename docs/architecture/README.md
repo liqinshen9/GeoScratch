@@ -38,6 +38,10 @@ Documented because a plausible-looking simplification reintroduces them:
 - **Label declutter force continuity** -
   [label-declutter.md](label-declutter.md#repulsion-continuity). Any repulsion
   force that isn't exactly 0 at the overlap boundary oscillates forever.
+- **Label declutter contact damping** -
+  [label-declutter.md](label-declutter.md#contact-damping). Damping tuned for
+  the spring leaves the far stiffer contact regime underdamped, so crowded
+  labels hold a limit cycle and visibly vibrate.
 - **Needle-triangle UV interpolation** -
   [vector-line-glyphs.md](vector-line-glyphs.md#needle-triangle). A cylinder
   spanning the whole scene with one height segment breaks texture
