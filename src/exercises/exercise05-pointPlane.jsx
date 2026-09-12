@@ -1,4 +1,5 @@
 import THREE from '@/utils/three'
+import { createVectorNotationRuntime } from '@/utils/vectorNotation'
 import {
   blockMatchesVec3,
   closeNumber,
@@ -12,6 +13,15 @@ const POINT_P = new THREE.Vector3(3, 4, 5)
 const PLANE_POINT_A = new THREE.Vector3(1, 1, 2)
 const PLANE_NORMAL = new THREE.Vector3(0, 1, 0)
 const CORRECT_DISTANCE = 3
+
+// Matches the standalone linalg_point marker in
+// blocks/linalgPrimitives/vector3.js, so the exercise-supplied P reads as the
+// same kind of object a student would build.
+const POINT_MARKER_RADIUS = 0.24
+const POINT_P_COLOR_SEED = 'exercise:point-plane-distance:P'
+const POINT_MARKER_FALLBACK_COLOR = '#94a3b8'
+
+const vectorNotation = createVectorNotationRuntime()
 
 const POINT_PLANE_DISTANCE_BLOCK_XML =
   '<xml xmlns="https://developers.google.com/blockly/xml"><block type="point_plane_distance" x="0" y="0"></block></xml>'
@@ -81,23 +91,36 @@ function objectIsAtPointP(object) {
 }
 
 function createPointPMarker() {
+  // Colours and settings come off the window surface rather than a static
+  // import so this module stays importable outside the browser (its checker
+  // logic is unit-tested in a node environment).
+  const color =
+    window.GeoScratchColors?.forInstance('point', POINT_P_COLOR_SEED) ?? POINT_MARKER_FALLBACK_COLOR
+  const matte = !!window.useSettingsStore?.getState().settings?.mattePoints
   const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.04, 20, 14),
-    new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.35, metalness: 0.05 }),
+    new THREE.SphereGeometry(POINT_MARKER_RADIUS, 16, 12),
+    new THREE.MeshStandardMaterial({
+      color,
+      roughness: matte ? 1 : 0.35,
+      metalness: matte ? 0 : 0.05,
+    }),
   )
 
   marker.position.copy(POINT_P)
   marker.userData.geoType = 'exercise_point_p'
+  marker.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
+  marker.userData.zoomInvariantUniform = true
   marker.userData.labelAnchors = {
     p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
   }
   marker.userData.labels = [
     {
       anchor: 'p',
-      text: 'P = [3, 4, 5]',
+      name: 'P',
+      value: vectorNotation.formatVector(POINT_P),
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
-      color: '#2563eb',
+      color,
     },
   ]
 
