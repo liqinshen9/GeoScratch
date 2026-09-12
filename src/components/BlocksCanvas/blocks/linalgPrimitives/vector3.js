@@ -240,6 +240,12 @@ export function initVec3Block() {
       `
           : ''
       }
+      // Which block this value came from. Deliberately NOT a label: a value
+      // carrying one makes shouldShowOperandLabels false, which suppresses the
+      // operand labels an operator draws, and a socketed vec3 renders no glyph
+      // of its own to carry the name instead. This just lets a consumer look the
+      // name up when it wants to show it.
+      vec.userData = { ...(vec.userData || {}), srcBlockId: ${blockId} };
       return vec;
     })()`,
       Order.FUNCTION_CALL,

@@ -44,8 +44,12 @@ export function initVectorProjectBlock() {
     // also on screen; otherwise fall back to this glyph's own id. Either way it
     // is a colour from the VECTOR family, because that is what it is -- not an
     // operand role, which is why it used to come out red.
-    const vBlockId = vVal.userData?.glyph?.blockId ?? ${JSON.stringify(block.id)} + '_normal';
+    // Prefer the block that supplied v, so the normal carries that block's own
+    // name and colour rather than a generic "v" in a colour of its own.
+    const vSourceId = vVal.userData?.glyph?.blockId ?? vVal.userData?.srcBlockId ?? null;
+    const vBlockId = vSourceId ?? ${JSON.stringify(block.id)} + '_normal';
     const normalColor = window.GeoScratchColors.forInstance('vector', vBlockId);
+    const normalName = (vSourceId && geoNaming.nameFor(vSourceId)) || vLabel;
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const projectionLabel = 'proj ' + uLabel + ' on ' + vLabel;
     const baseId = ${JSON.stringify(block.id)};
@@ -189,7 +193,7 @@ export function initVectorProjectBlock() {
     };
     group.userData.labels = isPointPlaneDistanceProjection
       ? [
-        { anchor:'normal', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0,0,0], color: normalColor },
+        { anchor:'normal', name: normalName, value: fmt(vVal), distanceFactor:8, offset:[0,0,0], color: normalColor },
       ]
       : showOperandLabels
         ? [

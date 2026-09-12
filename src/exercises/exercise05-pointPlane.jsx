@@ -85,11 +85,19 @@ function isExercisePlaneObject(object) {
   )
 }
 
+function findPointPBlock(workspace) {
+  if (!workspace) return null
+  for (const type of POINT_VECTOR_BLOCK_TYPES) {
+    const match = workspace
+      .getBlocksByType(type, false)
+      .find((block) => blockMatchesVec3(block, POINT_P))
+    if (match) return match
+  }
+  return null
+}
+
 function workspaceHasPointPVector(workspace) {
-  if (!workspace) return false
-  return POINT_VECTOR_BLOCK_TYPES.some((type) =>
-    workspace.getBlocksByType(type, false).some((block) => blockMatchesVec3(block, POINT_P)),
-  )
+  return Boolean(findPointPBlock(workspace))
 }
 
 function isExercisePlaneBlock(block) {
@@ -134,7 +142,7 @@ function objectIsAtPointP(object) {
   )
 }
 
-function createPointPMarker() {
+function createPointPMarker(name) {
   // Colour comes off the window surface rather than a static import so this
   // module stays importable outside the browser (its checker logic is
   // unit-tested in a node environment).
@@ -149,7 +157,7 @@ function createPointPMarker() {
   marker.userData.labels = [
     {
       anchor: 'p',
-      name: 'P',
+      name,
       value: vectorNotation.formatVector(POINT_P),
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
@@ -161,9 +169,13 @@ function createPointPMarker() {
 }
 
 function addExercisePointPIfNeeded(objects, workspace) {
-  if (!workspaceHasPointPVector(workspace)) return objects
+  // A point block plugged into a socket draws no glyph of its own, so the
+  // exercise supplies the marker. Label it with that block's own name rather
+  // than a hardcoded "P", so the scene and the workspace agree.
+  const block = findPointPBlock(workspace)
+  if (!block) return objects
   if (objects.some(objectIsAtPointP)) return objects
-  return [...objects, createPointPMarker()]
+  return [...objects, createPointPMarker(window.geoNaming?.nameFor(block.id) || 'P')]
 }
 
 function hasExercisePlane(objects) {
