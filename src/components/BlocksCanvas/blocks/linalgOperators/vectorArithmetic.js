@@ -335,6 +335,12 @@ export function initVectorArithmeticBlock() {
         label: genericResultLabel,
       });
     }
+    // Lets a consumer hand its animation stage to this block's own reveal
+    // instead of growing a copy of the result. Carries no anchor on purpose:
+    // an anchor is what switches on vectorArithmetic's coincident-copy
+    // suppression, a separate decision from whether a reveal can be delegated.
+    resultVector.userData = resultVector.userData || {};
+    resultVector.userData.glyph = { blockId: ${JSON.stringify(block.id)} };
     return resultVector;
   })()`
 

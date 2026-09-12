@@ -44,6 +44,7 @@ describe('installSceneRuntime', () => {
         'getHaloId',
         'HALO_LAYER',
         'HALO_MAX_IMMUNE_IDS',
+        'makeExtendableSegment',
         'makeStagedVectorReveal',
         'orderRevealParts',
         'registerHaloLine',

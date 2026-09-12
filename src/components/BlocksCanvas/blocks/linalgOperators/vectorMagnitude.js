@@ -66,9 +66,10 @@ export function initVectorMagnitude() {
     // Group wrapper
     const group = new THREE.Group();
     if (!isPointPlaneProjection && !isPointToPointDistance) group.add(obj);
+    let highlight = null;
     if (isPointToPointDistance && len > 1e-8) {
       const distanceVector = arrowTip.clone().sub(arrowOrigin);
-      const highlight = new THREE.Mesh(
+      highlight = new THREE.Mesh(
         new THREE.CylinderGeometry(0.055, 0.055, len, 24),
         new THREE.MeshBasicMaterial({ color: '#facc15', transparent: true, opacity: 0.9, depthWrite: false })
       );
@@ -78,6 +79,7 @@ export function initVectorMagnitude() {
       highlight.userData.srcBlockId = ${JSON.stringify(block.id)};
       highlight.userData.start = arrowOrigin.clone();
       highlight.userData.end = arrowTip.clone();
+      window.makeExtendableSegment(highlight, arrowOrigin.clone(), arrowTip.clone());
       group.add(highlight);
     }
 
@@ -122,6 +124,24 @@ export function initVectorMagnitude() {
           : (!isPointPlaneProjection && len > 1e-8) ? operandAColor : undefined,
       },
     ];
+
+    // Staged reveal. The plain form grows the arrow it draws itself. Both
+    // distance forms measure a vector some upstream block already drew, so that
+    // block's reveal takes the opening stage and this one adds only its own
+    // measurement on top. The point-plane form draws no geometry at all -- it
+    // contributes the d = ... label -- so it delegates and adds no stage.
+    // See docs/architecture/animation.md#staged-vector-reveal.
+    const upstream = window.threeObjStore?.[vVal.userData?.glyph?.blockId];
+    const upstreamStage = typeof upstream?.userData?.animate === 'function'
+      ? [{ animate: upstream.userData.animate }]
+      : [];
+    group.userData.animate = window.makeStagedVectorReveal(
+      isPointPlaneProjection
+        ? upstreamStage
+        : isPointToPointDistance
+          ? [...upstreamStage, ...(highlight ? [{ obj: highlight, full: safeLen(len) }] : [])]
+          : [{ obj, full: len > 1e-8 ? safeLen(len) : 0 }]
+    );
 
     if (typeof threeObjStore === 'object' && threeObjStore) {
       if (!isPointPlaneProjection && !isPointToPointDistance) threeObjStore[baseId + '_v'] = obj;

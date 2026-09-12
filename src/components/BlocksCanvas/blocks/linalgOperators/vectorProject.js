@@ -162,8 +162,13 @@ export function initVectorProjectBlock() {
         ? uVal.userData.start.clone()
         : (pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0));
       if (projLen>1e-8) {
+        const projTip = projOrigin.clone().add(projVec);
         projObj = isPointPlaneDistanceProjection
-          ? makeSegment(projOrigin.clone(), projOrigin.clone().add(projVec), distanceColor)
+          ? window.makeExtendableSegment(
+              makeSegment(projOrigin.clone(), projTip.clone(), distanceColor),
+              projOrigin.clone(),
+              projTip.clone()
+            )
           : window.buildVectorShaftGlyph(
             THREE, baseId + '_proj', projOrigin.clone(), projVec.clone().normalize(), safeLen(projLen), resultColor
           );
@@ -249,6 +254,34 @@ export function initVectorProjectBlock() {
         { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
       ];
 
+    // Staged reveal: the operands first, then the projection they produce,
+    // then the helper geometry that explains it. A point-plane projection has
+    // no operand arrows of its own -- the point difference was drawn upstream,
+    // so that block's reveal is handed the opening stage.
+    // See docs/architecture/animation.md#staged-vector-reveal.
+    const orderParts = window.orderRevealParts || ((p) => p);
+    const upstream = window.threeObjStore?.[uVal.userData?.glyph?.blockId];
+    const upstreamReveal = typeof upstream?.userData?.animate === 'function'
+      ? upstream.userData.animate
+      : null;
+    const projFull = projLen > 1e-8 ? safeLen(projLen) : 0;
+    group.userData.animate = window.makeStagedVectorReveal(
+      isPointPlaneDistanceProjection
+        ? [
+          ...(upstreamReveal ? [{ animate: upstreamReveal }] : []),
+          { obj: projObj, full: projFull },
+          { objs: [projectionShadow, distanceIllustration], full: 1 },
+        ]
+        : [
+          ...orderParts([
+            { obj: arrowU, full: safeLen(lenU), anchor: [0,0,0], tip: uVal.toArray() },
+            { obj: arrowV, full: safeLen(lenV), anchor: [0,0,0], tip: vVal.toArray() },
+          ]),
+          { obj: projObj, full: projFull },
+          { objs: [guideLine], full: 1 },
+        ]
+    );
+
     if (typeof threeObjStore==='object' && threeObjStore){
       const base=${JSON.stringify(block.id)};
       if (!isPointPlaneDistanceProjection) {
@@ -281,6 +314,12 @@ export function initVectorProjectBlock() {
         label: projectionLabel,
       });
     }
+    // Lets a consumer hand its animation stage to this block's own reveal
+    // instead of growing a copy of the result. Carries no anchor on purpose:
+    // an anchor is what switches on vectorArithmetic's coincident-copy
+    // suppression, a separate decision from whether a reveal can be delegated.
+    resultVector.userData = resultVector.userData || {};
+    resultVector.userData.glyph = { blockId: ${JSON.stringify(block.id)} };
     return resultVector;
   })()`
 

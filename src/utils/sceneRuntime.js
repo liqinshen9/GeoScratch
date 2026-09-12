@@ -14,6 +14,7 @@ import {
 } from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorReveal'
+import { makeExtendableSegment } from '@/utils/segmentGlyph'
 
 /**
  * The runtime API available to block builder functions. Builders are
@@ -102,6 +103,7 @@ export function installSceneRuntime(workspace, options = {}) {
   window.registerVectorGlyph = registerVectorGlyph
   window.makeStagedVectorReveal = makeStagedVectorReveal
   window.orderRevealParts = orderRevealParts
+  window.makeExtendableSegment = makeExtendableSegment
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()
