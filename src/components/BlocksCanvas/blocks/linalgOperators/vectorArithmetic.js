@@ -319,6 +319,10 @@ export function initVectorArithmeticBlock() {
     if (isPointDifference) {
       resultVector.userData = {
         geoType: 'point_difference_vector',
+        // Which block drew the point this difference starts from, so a
+        // downstream sweep can move that marker. This userData is assigned
+        // wholesale, so it has to be carried explicitly or it is lost here.
+        startBlockId: vVal.userData?.srcBlockId ?? null,
         start: resultOrigin.clone(),
         end: resultTip.clone(),
         label: pointDifferenceLabel,

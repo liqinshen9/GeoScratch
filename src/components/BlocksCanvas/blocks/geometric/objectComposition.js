@@ -308,6 +308,9 @@ export default function initObjectCompositionBlocks() {
       const pointVector = markerPoint.clone();
       pointVector.userData = {
         geoType: 'point_on_object_vector',
+        // Lets a consumer reach this point's marker -- the Q sweep has to move
+        // it, and only this block knows which object in the store is ours.
+        srcBlockId: ${JSON.stringify(block.id)},
         label: pointLabel,
         labelVisible: true,
         point: markerPoint.clone(),

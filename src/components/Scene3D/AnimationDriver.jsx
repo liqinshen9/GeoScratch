@@ -70,7 +70,11 @@ export default function AnimationDriver({ objects = [] }) {
     // Cap the first-after-idle delta or the animation skips to the end.
     // See docs/architecture/animation.md#cap-the-first-delta.
     const dt = Math.min(delta, 0.05)
-    let next = progress + (dt * 1000) / durationMs
+    // An animation may ask for more time than the configured duration: a staged
+    // reveal is a short build-up, while a sweep wanders a path and needs room to
+    // be followed. The speed control still scales it, this just sets the ratio.
+    const scale = Number(target.userData?.animate?.durationScale) || 1
+    let next = progress + (dt * 1000) / (durationMs * scale)
     if (next >= 1) next = loop ? next % 1 : 1
     applyAnimation(target, next)
     tickProgress(next)

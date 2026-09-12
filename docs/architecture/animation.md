@@ -58,6 +58,52 @@ across the whole sequence. Used by `vector_arithmetic` and
 re-anchoring); a degenerate result (a plain sphere, `full` 0) has no
 `setVectorLength` and is just left visible.
 
+### Sweeping a point instead of revealing
+
+A point-plane distance does not use a staged reveal. Growing the pieces in
+sequence shows how the picture was _constructed_; it does not show why the
+projection is the _answer_. So `vector_project` swaps the reveal for a sweep
+when its input is a point difference: Q slides across the plane, `P - Q` swings
+and stretches with it, and the perpendicular stays put at length d.
+
+Two things make it work, and both were wrong in the first attempt.
+
+**The perpendicular has to be anchored at P's own foot.** It used to start at Q
+and rise to height d, so it travelled with Q and nothing stayed fixed to compare
+against.
+
+**Q has to sweep THROUGH the foot, not around it.** A circle about the foot
+keeps Q at a constant distance from it, so `|P - Q|` stays at
+`sqrt(d^2 + r^2)` for the whole animation and the sweep demonstrates nothing.
+Q instead wanders a path built around `foot + axis * r * cos(2*pi*t)`, so
+`|P - Q|` falls to exactly d where Q crosses the foot -- there `P - Q` lies along
+the perpendicular -- and grows again. `cos` also puts the resting scene at both
+progress 0 and progress 1, satisfying the protocol's invariant for free.
+
+The wander on top of that is not noise: every wobble term is a whole number of
+cycles times four, so each one is zero at progress 0, 0.25, 0.75 and 1. Q
+therefore still rests exactly where the student left it at both ends, and still
+lands exactly on the foot twice, while taking an unpredictable route between
+those points. Picking the frequencies freely would lose both.
+
+The closure sets `durationScale = 4`. A staged reveal is a short build-up and the
+configured 1.5s suits it; a path has to be followed rather than watched go past.
+`AnimationDriver` divides its per-frame step by that scale, so the speed control
+still applies on top.
+
+The sweep reaches across blocks, which a reveal never has to: the marker belongs
+to `geo_show_point_on_object`, the arrow to `vector_arithmetic`, the guide line
+to the illustration. `geo_show_point_on_object` therefore tags its returned point
+with its own `srcBlockId`, and `vector_arithmetic` carries that onto the point
+difference as `startBlockId` -- it assigns `userData` wholesale, so anything not
+copied explicitly is lost there. Re-aiming the arrow needs
+`setVectorSegment`, since a swinging vector changes origin and direction as well
+as length.
+
+Labels do not follow the sweep. `labelAnchors` are read on React render, not per
+frame, so a moving object's label stays where it started until the next scene
+rebuild.
+
 ### Derivations, not just transformations
 
 `vector_project` and `vector_magnitude` reveal the same way, which is what lets a

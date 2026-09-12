@@ -131,6 +131,8 @@ export function initVectorProjectBlock() {
       normalGlyph.position.addScaledVector(tangent, NORMAL_SIDE_CLEARANCE);
 
       group.add(normalGlyph, guideLine, rightAngle);
+      // The sweep redraws this each frame as Q moves.
+      group.userData.guideLine = guideLine;
       group.userData.geoType = 'distance_projection_illustration';
       group.userData.srcBlockId=${JSON.stringify(block.id)};
       return group;
@@ -270,7 +272,74 @@ export function initVectorProjectBlock() {
       ? upstream.userData.animate
       : null;
     const projFull = projLen > 1e-8 ? safeLen(projLen) : 0;
-    group.userData.animate = window.makeStagedVectorReveal(
+    // A point-plane distance sweeps rather than reveals. Growing the pieces in
+    // sequence shows the construction; sweeping Q around the plane shows WHY it
+    // is the answer -- P - Q stretches and swings while the perpendicular stays
+    // put at length d, so the projection is visibly the shortest of them.
+    // See docs/architecture/animation.md#sweeping-a-point-instead-of-revealing.
+    const buildQSweep = () => {
+      const qStart = uVal.userData.start?.isVector3 ? uVal.userData.start.clone() : null;
+      const pPoint = pointEnd ? pointEnd.clone() : null;
+      if (!qStart || !pPoint || projLen <= 1e-8) return null;
+
+      // Q oscillates along the line through the foot and its own start, rather
+      // than circling the foot: a circle keeps |P - Q| constant at
+      // sqrt(d^2 + r^2) and shows nothing. Sweeping THROUGH the foot makes
+      // |P - Q| shrink to exactly d at quarter progress, where P - Q lies along
+      // the perpendicular, and grow again -- the projection visibly being the
+      // shortest. cos() puts the resting scene at both progress 0 and 1.
+      // normalUnit lives inside makeDistanceIllustration; recompute it here.
+      const planeNormal = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
+      const radial = qStart.clone().sub(projOrigin);
+      radial.addScaledVector(planeNormal, -radial.dot(planeNormal));
+      const radius = radial.length();
+      if (radius < 1e-6) return null;
+      const axisA = radial.clone().normalize();
+      const axisB = new THREE.Vector3().crossVectors(planeNormal, axisA).normalize();
+
+      const marker = (() => {
+        const owner = window.threeObjStore?.[uVal.userData?.startBlockId];
+        let found = null;
+        owner?.traverse?.((child) => {
+          if (!found && child.userData?.geoType === 'selectable_point_marker') found = child;
+        });
+        return found;
+      })();
+      const differenceArrow = window.threeObjStore?.[uVal.userData?.glyph?.blockId + '_r'];
+
+      return (progress) => {
+        const angle = (Number(progress) || 0) * Math.PI * 2;
+        // Wander rather than run straight, without giving up either fixed
+        // point. Every wobble term is a whole number of cycles times 4, so all
+        // of them are zero at progress 0, 0.25 and 1: Q still rests where the
+        // student put it at each end, and still lands exactly on the foot at
+        // quarter progress where |P - Q| equals d.
+        const wobbleA = 0.30 * radius * Math.sin(4 * angle);
+        const wobbleB = 0.45 * radius * Math.sin(4 * angle) + 0.22 * radius * Math.sin(8 * angle);
+        const q = projOrigin.clone()
+          .addScaledVector(axisA, radius * Math.cos(angle) + wobbleA)
+          .addScaledVector(axisB, wobbleB);
+
+        if (marker) marker.position.copy(q);
+
+        const toP = pPoint.clone().sub(q);
+        const toPLen = toP.length();
+        if (differenceArrow?.userData?.setVectorSegment && toPLen > 1e-6) {
+          differenceArrow.userData.setVectorSegment(q, toP.clone().normalize(), toPLen);
+        }
+        const guideLineForSweep = distanceIllustration?.userData?.guideLine;
+        if (guideLineForSweep?.geometry) {
+          guideLineForSweep.geometry.setFromPoints([projOrigin.clone(), q]);
+          guideLineForSweep.computeLineDistances();
+        }
+      };
+    };
+    const qSweep = isPointPlaneDistanceProjection ? buildQSweep() : null;
+    // A wandering path needs following, not watching go past; the default 1.5s
+    // covers the whole out-through-back-through-home trip.
+    if (qSweep) qSweep.durationScale = 4;
+
+    group.userData.animate = qSweep || window.makeStagedVectorReveal(
       isPointPlaneDistanceProjection
         ? [
           ...(upstreamReveal ? [{ animate: upstreamReveal }] : []),
