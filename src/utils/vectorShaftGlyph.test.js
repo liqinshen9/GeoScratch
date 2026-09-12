@@ -1,8 +1,14 @@
-import { describe, it, expect } from 'vitest'
+// @vitest-environment jsdom
+// buildVectorShaftGlyph paints a ring texture onto a canvas, so it needs a DOM.
+import { describe, it, expect, beforeAll } from 'vitest'
 import * as THREE from 'three'
+// The builder needs the augmented THREE (fat lines); the pure layout helpers
+// above are happy with bare three.
+import AppTHREE from '@/utils/three'
 import {
   arrowheadMaxAspectScale,
   arrowheadMaxHeadScale,
+  buildVectorShaftGlyph,
   computeVectorShaftLayout,
 } from './vectorShaftGlyph'
 
@@ -159,5 +165,61 @@ describe('arrowheadMaxHeadScale', () => {
 
     expect(worldRadius).toBeCloseTo(0.68) // fraction cap (3.0) never binds
     expect(coneAngleDeg(worldRadius, worldLength)).toBeCloseTo(60)
+  })
+})
+
+describe('setVectorSegment', () => {
+  // jsdom has no 2d context without the native canvas package, and the glyph
+  // paints a ring texture on one. Only fillStyle/fillRect are touched.
+  beforeAll(() => {
+    window.HTMLCanvasElement.prototype.getContext = () => ({
+      fillStyle: '',
+      fillRect: () => {},
+    })
+  })
+
+  const build = () =>
+    buildVectorShaftGlyph(
+      AppTHREE,
+      'test-block',
+      new AppTHREE.Vector3(0, 0, 0),
+      new AppTHREE.Vector3(1, 0, 0),
+      2,
+      '#123456',
+    )
+
+  it('re-anchors, re-aims and rescales in one call', () => {
+    const glyph = build()
+    glyph.userData.setVectorSegment(new AppTHREE.Vector3(1, 2, 3), new AppTHREE.Vector3(0, 5, 0), 4)
+
+    expect(glyph.userData.vectorOrigin.toArray()).toEqual([1, 2, 3])
+    // Stored normalised, whatever magnitude was handed in.
+    expect(glyph.userData.vectorDirection.toArray()).toEqual([0, 1, 0])
+    expect(glyph.userData.vectorLength).toBe(4)
+  })
+
+  it('keeps whichever parts are omitted', () => {
+    const glyph = build()
+    glyph.userData.setVectorSegment(null, null, 7)
+    expect(glyph.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+    expect(glyph.userData.vectorDirection.toArray()).toEqual([1, 0, 0])
+    expect(glyph.userData.vectorLength).toBe(7)
+  })
+
+  it('ignores a degenerate direction rather than producing NaN geometry', () => {
+    const glyph = build()
+    glyph.userData.setVectorSegment(null, new AppTHREE.Vector3(0, 0, 0), 3)
+    expect(glyph.userData.vectorDirection.toArray()).toEqual([1, 0, 0])
+  })
+
+  // setVectorLength is what staged reveals drive; it must survive the refactor
+  // that split the rebuild out from it.
+  it('leaves setVectorLength working on the re-aimed axis', () => {
+    const glyph = build()
+    glyph.userData.setVectorSegment(new AppTHREE.Vector3(0, 1, 0), new AppTHREE.Vector3(0, 0, 1), 5)
+    glyph.userData.setVectorLength(1)
+    expect(glyph.userData.vectorLength).toBe(1)
+    expect(glyph.userData.vectorOrigin.toArray()).toEqual([0, 1, 0])
+    expect(glyph.userData.vectorDirection.toArray()).toEqual([0, 0, 1])
   })
 })

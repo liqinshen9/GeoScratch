@@ -390,10 +390,9 @@ export function buildVectorShaftGlyph(
     })
   }
 
-  // Rescales in place (e.g. Vector Transform's scale step). A userData method
-  // so a rescale needn't re-wire the subscription or replace the group.
-  group.userData.setVectorLength = (newLength) => {
-    length = Math.max(0, newLength)
+  // Everything below is derived from origin/direction/length, so re-aiming is
+  // exactly the same work as rescaling. One rebuild, two setters.
+  const rebuildGlyph = () => {
     lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
     tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
     ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
@@ -455,6 +454,28 @@ export function buildVectorShaftGlyph(
     }
 
     group.userData.vectorLength = length
+    group.userData.vectorOrigin = origin
+    group.userData.vectorDirection = direction
+  }
+
+  // Rescales in place (e.g. Vector Transform's scale step). A userData method
+  // so a rescale needn't re-wire the subscription or replace the group.
+  group.userData.setVectorLength = (newLength) => {
+    length = Math.max(0, newLength)
+    rebuildGlyph()
+  }
+
+  // Re-anchors and re-aims in place. A staged reveal only ever needed
+  // setVectorLength, because a revealed vector grows along a fixed axis; a
+  // vector that swings -- P - Q as Q moves across the plane -- changes its
+  // origin and direction too.
+  group.userData.setVectorSegment = (newOrigin, newDirection, newLength) => {
+    if (newOrigin?.isVector3) origin = newOrigin.clone()
+    if (newDirection?.isVector3 && newDirection.lengthSq() > 1e-12) {
+      direction = newDirection.clone().normalize()
+    }
+    length = Math.max(0, newLength ?? length)
+    rebuildGlyph()
   }
   group.userData.vectorOrigin = origin
   group.userData.vectorDirection = direction
