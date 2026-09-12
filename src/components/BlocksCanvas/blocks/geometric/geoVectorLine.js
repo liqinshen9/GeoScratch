@@ -582,18 +582,10 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     })
   }
 
-  const POINT_MARKER_RADIUS = 0.24
-  const sphereGeom = new THREE.SphereGeometry(POINT_MARKER_RADIUS, 16, 12)
-
   if (typeof tRaw !== 'undefined' && Number.isFinite(Number(tRaw))) {
     const tVal = Number(tRaw)
     const rPoint = origin.clone().addScaledVector(direction, tVal)
-    const tSphere = new THREE.Mesh(
-      sphereGeom,
-      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.4, metalness: 0.1 }),
-    )
-    tSphere.userData.zoomInvariantRadius = POINT_MARKER_RADIUS
-    tSphere.userData.zoomInvariantUniform = true
+    const tSphere = window.geoPointMarker({ color: pointColor })
     tSphere.position.copy(rPoint)
     group.add(tSphere)
     tSphereRef = tSphere

@@ -228,12 +228,7 @@ export function initScalarArithmeticBlock() {
         distanceHighlight.position.copy(distanceMid);
         distanceHighlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());
       } else {
-        distanceHighlight = new THREE.Mesh(
-          new THREE.SphereGeometry(0.07, 18, 12),
-          new THREE.MeshStandardMaterial({ color: highlightYellow, roughness: 0.35, metalness: 0.05 })
-        );
-        distanceHighlight.userData.zoomInvariantRadius = 0.07;
-        distanceHighlight.userData.zoomInvariantUniform = true;
+        distanceHighlight = window.geoPointMarker({ color: highlightYellow, radius: 0.07, widthSegments: 18 });
         distanceHighlight.position.copy(distanceMid);
       }
       distanceHighlight.userData.geoType = 'distance_segment';

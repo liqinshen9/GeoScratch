@@ -66,10 +66,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       if (distance > 1e-8) {
         distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), distanceColor);
       } else {
-        distanceVector = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: distanceColor, roughness: 0.4, metalness: 0.1 })
-        );
+        distanceVector = window.geoPointMarker({ color: distanceColor, radius: 0.04 });
         distanceVector.position.copy(distanceStart);
       }
       distanceVector.userData.geoType = 'distance_segment';
@@ -188,16 +185,10 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
           THREE, ${id} + '_proj', origin, projQ.clone().normalize(), safeLen(projLen), resultColor
         );
       } else {
-        projObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: resultColor, roughness: 0.4, metalness: 0.1 })
-        );
+        projObj = window.geoPointMarker({ color: resultColor, radius: 0.04 });
       }
     } else {
-      projObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: resultColor, roughness: 0.4, metalness: 0.1 })
-      );
+      projObj = window.geoPointMarker({ color: resultColor, radius: 0.04 });
     }
 
     const pDir = lenP > 1e-8 ? uVal.clone().normalize() : new THREE.Vector3(1, 0, 0);

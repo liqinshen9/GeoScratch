@@ -31,14 +31,13 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
     new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff }),
   )
   mesh.add(edges)
-  const centreMarker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.075, 18, 12),
-    new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.05 }),
-  )
-  centreMarker.userData.geoType = 'sphere_center_marker'
-  centreMarker.userData.srcBlockId = blockId
-  centreMarker.userData.zoomInvariantRadius = 0.075
-  centreMarker.userData.zoomInvariantUniform = true
+  const centreMarker = window.geoPointMarker({
+    color: 0x111827,
+    radius: 0.075,
+    widthSegments: 18,
+    geoType: 'sphere_center_marker',
+    srcBlockId: blockId,
+  })
   mesh.add(centreMarker)
 
   edges.visible = !!useSettingsStore?.getState().settings.sphereShowGridlines

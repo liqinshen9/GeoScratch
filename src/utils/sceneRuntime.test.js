@@ -38,6 +38,8 @@ describe('installSceneRuntime', () => {
         'buildVectorShaftGlyph',
         'createHaloIdMaterial',
         'geoNaming',
+        'geoPointMarker',
+        'geoPointMaterial',
         'geoSetVar',
         'geoVar',
         'geoVarStore',

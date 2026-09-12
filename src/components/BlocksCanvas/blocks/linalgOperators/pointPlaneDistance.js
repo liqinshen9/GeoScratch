@@ -99,12 +99,7 @@ export function initPointPlaneDistanceBlock() {
         new THREE.LineBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.9 })
       );
 
-      const footDot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forRole('distance'), roughness: 0.35, metalness: 0.05 })
-      );
-      footDot.userData.zoomInvariantRadius = 0.04;
-      footDot.userData.zoomInvariantUniform = true;
+      const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('distance'), radius: 0.04 });
       footDot.position.copy(distanceStart);
 
       illustration.add(normalLine, normalArrowHead, guideLine, rightAngle, footDot);
@@ -118,20 +113,10 @@ export function initPointPlaneDistanceBlock() {
     const distanceColor = window.GeoScratchColors.forRole('distance');
 
     const group = new THREE.Group();
-    const pointDot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 16, 12),
-      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 })
-    );
-    pointDot.userData.zoomInvariantRadius = 0.045;
-    pointDot.userData.zoomInvariantUniform = true;
+    const pointDot = window.geoPointMarker({ color: pointColor, radius: 0.045 });
     pointDot.position.copy(point);
 
-    const planePointDot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 16, 12),
-      new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 })
-    );
-    planePointDot.userData.zoomInvariantRadius = 0.045;
-    planePointDot.userData.zoomInvariantUniform = true;
+    const planePointDot = window.geoPointMarker({ color: pointColor, radius: 0.045 });
     planePointDot.position.copy(planePoint);
 
     let differenceArrow = null;
@@ -153,12 +138,7 @@ export function initPointPlaneDistanceBlock() {
       segment.position.copy(midpoint);
       segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceEnd.clone().sub(distanceStart).normalize());
     } else {
-      segment = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 16, 12),
-        new THREE.MeshStandardMaterial({ color: distanceColor, roughness: 0.35, metalness: 0.05 })
-      );
-      segment.userData.zoomInvariantRadius = 0.05;
-      segment.userData.zoomInvariantUniform = true;
+      segment = window.geoPointMarker({ color: distanceColor, radius: 0.05 });
       segment.position.copy(point);
     }
     segment.userData.geoType = 'distance_segment';

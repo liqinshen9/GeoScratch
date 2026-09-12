@@ -104,13 +104,8 @@ export function initVectorScaleBlock() {
         );
       } else {
         // k = 0 collapses the vector to its own tail.
-        scaledObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-        );
+        scaledObj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
         scaledObj.position.copy(anchor);
-        scaledObj.userData.zoomInvariantRadius = 0.04;
-        scaledObj.userData.zoomInvariantUniform = true;
       }
     }
 

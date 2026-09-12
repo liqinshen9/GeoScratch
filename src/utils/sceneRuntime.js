@@ -15,6 +15,11 @@ import {
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorReveal'
 import { makeExtendableSegment } from '@/utils/segmentGlyph'
+import {
+  createPointMarker,
+  createPointMaterial,
+  resetPointMarkerRegistry,
+} from '@/utils/pointMarker'
 
 /**
  * The runtime API available to block builder functions. Builders are
@@ -38,6 +43,8 @@ import { makeExtendableSegment } from '@/utils/segmentGlyph'
  * @property {Function} registerVectorGlyph
  * @property {number} HALO_MAX_IMMUNE_IDS
  * @property {Function} buildVectorShaftGlyph
+ * @property {Function} geoPointMarker                Builds a point marker (geometry, matte/sheen finish, zoom tagging).
+ * @property {Function} geoPointMaterial              The point finish alone, for a marker built by hand.
  * @property {Function} makeStagedVectorReveal
  * @property {Function} orderRevealParts
  */
@@ -104,10 +111,13 @@ export function installSceneRuntime(workspace, options = {}) {
   window.makeStagedVectorReveal = makeStagedVectorReveal
   window.orderRevealParts = orderRevealParts
   window.makeExtendableSegment = makeExtendableSegment
+  window.geoPointMarker = createPointMarker
+  window.geoPointMaterial = createPointMaterial
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()
   resetDuplicateVectorRegistry()
+  resetPointMarkerRegistry()
 
   return [
     THREE,

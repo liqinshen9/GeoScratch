@@ -55,12 +55,7 @@ export function initVectorMagnitude() {
         isPointPlaneProjection ? distanceColor : operandAColor
       );
     } else {
-      obj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-      );
-      obj.userData.zoomInvariantRadius = 0.04;
-      obj.userData.zoomInvariantUniform = true;
+      obj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
     }
 
     // Group wrapper

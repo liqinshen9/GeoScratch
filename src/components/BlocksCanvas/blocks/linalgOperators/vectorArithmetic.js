@@ -219,12 +219,7 @@ export function initVectorArithmeticBlock() {
         resultGlyphOptions
       );
     } else {
-      resObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: window.GeoScratchColors.forRole('warning'), roughness: 0.4, metalness: 0.1 })
-      );
-      resObj.userData.zoomInvariantRadius = 0.04;
-      resObj.userData.zoomInvariantUniform = true;
+      resObj = window.geoPointMarker({ color: window.GeoScratchColors.forRole('warning'), radius: 0.04 });
     }
 
     // Tag metadata on part objects

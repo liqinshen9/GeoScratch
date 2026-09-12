@@ -55,12 +55,7 @@ export function initNormInplaceBlock() {
       );
     } else {
       normVec.set(0,0,0);
-      normObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-      );
-      normObj.userData.zoomInvariantRadius = 0.04;
-      normObj.userData.zoomInvariantUniform = true;
+      normObj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
     }
 
     const tag=(o)=>{o.userData.geoType='geo_vector';o.userData.srcBlockId=baseId;return o;};

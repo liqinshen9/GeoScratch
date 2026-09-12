@@ -102,29 +102,13 @@ export function initVec3Block() {
           isStandalone
             ? `
         const pointColor = window.GeoScratchColors.forInstance('point', ${blockId});
-        const markerMat = new THREE.MeshStandardMaterial({ color: pointColor });
-        const applyPointFinish = (mat, s) => {
-          mat.roughness = s.mattePoints ? 1 : 0.35;
-          mat.metalness = s.mattePoints ? 0 : 0.05;
-        };
-        applyPointFinish(markerMat, window.useSettingsStore?.getState().settings || {});
-        const marker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), markerMat);
+        const marker = window.geoPointMarker({ color: pointColor, geoType: 'linalg_point_marker', srcBlockId: ${blockId} });
         marker.position.copy(point);
-        marker.userData.zoomInvariantRadius = 0.24;
-        marker.userData.zoomInvariantUniform = true;
-        marker.userData.geoType = 'linalg_point_marker';
-        marker.userData.srcBlockId = ${blockId};
         marker.userData.labelAnchors = { p: { type: 'world', position: [point.x, point.y, point.z] } };
         marker.userData.labels = [
           { anchor: 'p', name: label, value: vectorNotation.formatVector(point), distanceFactor: 8, offset: [0.12, 0.12, 0], color: pointColor },
         ];
         if (typeof threeObjStore === 'object' && threeObjStore) threeObjStore[${blockId}] = marker;
-        if (window.useSettingsStore) {
-          const unsubscribe = window.useSettingsStore.subscribe((state) => {
-            if (window.threeObjStore?.[${blockId}] !== marker) { unsubscribe(); return; }
-            applyPointFinish(markerMat, state.settings);
-          });
-        }
         `
             : ''
         }
@@ -164,13 +148,8 @@ export function initVec3Block() {
       if (len > 1e-8) {
         visual = window.buildVectorShaftGlyph(THREE, ${blockId}, origin, vec.clone().normalize(), len, vectorColor);
       } else {
-        visual = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: vectorColor, roughness: 0.4, metalness: 0.1 })
-        );
+        visual = window.geoPointMarker({ color: vectorColor, radius: 0.04 });
         visual.position.copy(origin);
-        visual.userData.zoomInvariantRadius = 0.04;
-        visual.userData.zoomInvariantUniform = true;
       }
       visual.userData.geoType = 'geo_vector';
       visual.userData.srcBlockId = ${blockId};
@@ -189,17 +168,9 @@ export function initVec3Block() {
       // implied by where the shaft starts, and the extra dot reads as a
       // separate object that nobody asked for.
       const originPointColor = window.GeoScratchColors.forInstance('point', ${blockId});
-      const originMarkerMat = new THREE.MeshStandardMaterial({ color: originPointColor });
-      const applyOriginPointFinish = (mat, s) => {
-        mat.roughness = s.mattePoints ? 1 : 0.35;
-        mat.metalness = s.mattePoints ? 0 : 0.05;
-      };
-      applyOriginPointFinish(originMarkerMat, window.useSettingsStore?.getState().settings || {});
-      const originMarker = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 12), originMarkerMat);
+      const originMarker = window.geoPointMarker({ color: originPointColor });
       originMarker.visible = !!(window.useSettingsStore?.getState().settings?.showVectorOriginPoint);
       originMarker.position.copy(origin);
-      originMarker.userData.zoomInvariantRadius = 0.24;
-      originMarker.userData.zoomInvariantUniform = true;
       originMarker.userData.geoType = 'linalg_vector_origin_marker';
       originMarker.userData.srcBlockId = ${blockId};
 
@@ -214,7 +185,6 @@ export function initVec3Block() {
       if (window.useSettingsStore) {
         const unsubscribe = window.useSettingsStore.subscribe((state) => {
           if (window.threeObjStore?.[${blockId}] !== visual) { unsubscribe(); return; }
-          applyOriginPointFinish(originMarkerMat, state.settings);
           originMarker.visible = !!state.settings.showVectorOriginPoint;
         });
       }

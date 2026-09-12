@@ -68,25 +68,14 @@ export function initSphereDistanceBlock() {
       distanceSegment.position.copy(midpoint);
       distanceSegment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     } else {
-      distanceSegment = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06, 16, 12),
-        new THREE.MeshStandardMaterial({ color: distanceColor, roughness: 0.35, metalness: 0.05 })
-      );
-      distanceSegment.userData.zoomInvariantRadius = 0.06;
-      distanceSegment.userData.zoomInvariantUniform = true;
+      distanceSegment = window.geoPointMarker({ color: distanceColor, radius: 0.06 });
       distanceSegment.position.copy(midpoint);
     }
     distanceSegment.userData.geoType = 'distance_segment';
     distanceSegment.userData.srcBlockId = ${blockId};
 
-    const centerDotGeom = new THREE.SphereGeometry(0.045, 16, 12);
-    const centerDotMat = new THREE.MeshStandardMaterial({ color: centerLineColor, roughness: 0.35, metalness: 0.05 });
-    const centerDotA = new THREE.Mesh(centerDotGeom, centerDotMat);
-    const centerDotB = new THREE.Mesh(centerDotGeom.clone(), centerDotMat.clone());
-    centerDotA.userData.zoomInvariantRadius = 0.045;
-    centerDotB.userData.zoomInvariantRadius = 0.045;
-    centerDotA.userData.zoomInvariantUniform = true;
-    centerDotB.userData.zoomInvariantUniform = true;
+    const centerDotA = window.geoPointMarker({ color: centerLineColor, radius: 0.045 });
+    const centerDotB = window.geoPointMarker({ color: centerLineColor, radius: 0.045 });
     centerDotA.position.copy(centreA);
     centerDotB.position.copy(centreB);
 

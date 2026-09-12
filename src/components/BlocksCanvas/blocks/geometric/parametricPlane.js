@@ -68,15 +68,12 @@ function geoParametricPlaneDefinition(
   // plane, shown alongside the plane mesh whenever the "Show Point &
   // Normal" setting is on. Visibility is toggled in place (not rebuilt) so
   // flipping the setting doesn't touch the plane mesh itself.
-  const pointMarker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.24, 16, 12),
-    new THREE.MeshStandardMaterial({ color: pointColor, roughness: 0.35, metalness: 0.05 }),
-  )
+  const pointMarker = window.geoPointMarker({
+    color: pointColor,
+    geoType: 'parametric_plane_point_marker',
+    srcBlockId: blockId,
+  })
   pointMarker.position.copy(point)
-  pointMarker.userData.zoomInvariantRadius = 0.24
-  pointMarker.userData.zoomInvariantUniform = true
-  pointMarker.userData.geoType = 'parametric_plane_point_marker'
-  pointMarker.userData.srcBlockId = blockId
 
   // buildVectorShaftGlyph self-unsubscribes from settings once
   // threeObjStore no longer holds it under the id it was given -- so it

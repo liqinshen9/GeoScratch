@@ -36,12 +36,13 @@ function lineIntersectionDefinition(
   group.userData.hasIntersection = false
   group.userData.status = 'missing-lines'
 
-  const markerMaterial = (color) =>
-    new THREE.MeshStandardMaterial({ color, roughness: 0.34, metalness: 0.08 })
   const marker = (position, color) => {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 24, 16), markerMaterial(color))
-    mesh.userData.zoomInvariantRadius = 0.04
-    mesh.userData.zoomInvariantUniform = true
+    const mesh = window.geoPointMarker({
+      color,
+      radius: 0.04,
+      widthSegments: 24,
+      heightSegments: 16,
+    })
     mesh.position.copy(position)
     return mesh
   }

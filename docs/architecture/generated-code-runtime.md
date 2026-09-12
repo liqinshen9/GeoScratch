@@ -27,7 +27,8 @@ need something new inside a builder, **add it there rather than importing it**.
 rendered), `window.vectorNotation`, `window.geoNaming`, `window.geoVarStore` /
 `geoSetVar` / `geoVar`, the halo surface (`HALO_LAYER`, `getHaloId`,
 `applyHaloDiscardMaterial`, `createHaloIdMaterial`, `registerHaloLine`,
-`HALO_MAX_IMMUNE_IDS`), `buildVectorShaftGlyph`, `makeStagedVectorReveal`.
+`HALO_MAX_IMMUNE_IDS`), `buildVectorShaftGlyph`, `makeStagedVectorReveal`,
+`geoPointMarker` / `geoPointMaterial`.
 
 A subset (`THREE`, `threeObjStore`, `createInfinitePlaneMesh`,
 `vectorNotation`, `geoNaming`, `geoSetVar`, `geoVar`) is **also** passed

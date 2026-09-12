@@ -198,7 +198,7 @@ export default function SettingsPage() {
                 />
                 <ToggleRow
                   label="Matte Points"
-                  description="Render point markers with a flat, non-shiny matte finish instead of the default subtle sheen"
+                  description="Render point markers with a flat, non-shiny matte finish; turn off for a subtle sheen"
                   checked={settings.mattePoints}
                   settingKey="mattePoints"
                   onChange={(v) => updateSetting('mattePoints', v)}

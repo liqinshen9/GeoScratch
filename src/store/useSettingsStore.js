@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS = {
   zoomInvariantSizing: true,
   extraThickLines: false,
   extraLargePoints: false,
-  mattePoints: false,
+  mattePoints: true,
   haloEnabled: true,
   haloLineVectorEnabled: true,
   vectorStyle: LINE_STYLES.PLAIN_TUBE,

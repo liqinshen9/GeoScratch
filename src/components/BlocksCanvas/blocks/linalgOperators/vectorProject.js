@@ -65,12 +65,7 @@ export function initVectorProjectBlock() {
     };
     const makeProjectionShadow = (foot) => {
       const shadowGroup = new THREE.Group();
-      const footDot = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.05 })
-      );
-      footDot.userData.zoomInvariantRadius = 0.04;
-      footDot.userData.zoomInvariantUniform = true;
+      const footDot = window.geoPointMarker({ color: 0xfacc15, radius: 0.04 });
       footDot.position.copy(foot);
 
       shadowGroup.add(footDot);
@@ -175,22 +170,12 @@ export function initVectorProjectBlock() {
       } else {
         projVec.set(0,0,0);
         projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
-        projObj = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 12),
-          new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-        );
-        projObj.userData.zoomInvariantRadius = 0.04;
-        projObj.userData.zoomInvariantUniform = true;
+        projObj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
       }
     } else {
       projVec.set(0,0,0);
       projOrigin = pointEnd ? pointEnd.clone() : new THREE.Vector3(0,0,0);
-      projObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-      );
-      projObj.userData.zoomInvariantRadius = 0.04;
-      projObj.userData.zoomInvariantUniform = true;
+      projObj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
     }
 
     const tag=(o)=>{o.userData.geoType='geo_vector';o.userData.srcBlockId=baseId;return o;};

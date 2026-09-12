@@ -65,6 +65,27 @@ linewidth) and the extra-thick multiplier - neither is available at
 construction time. A `thickenGroup === 'vector'` child keys off
 `extraThickVectors`, same independence rule as above.
 
+## Point markers
+
+Every point marker in the app - a standalone Point, a plane's defining point, a
+sphere's centre, an operator's foot dot, the dot a degenerate vector collapses
+to - comes from `createPointMarker` in `utils/pointMarker.js`, published to
+builders as `window.geoPointMarker`. It owns the sphere geometry, the
+matte/sheen finish, and the `zoomInvariantRadius` + `zoomInvariantUniform`
+tagging that this file's scaler keys off. Radius stays a per-call argument,
+because a standalone Point and a foot dot are deliberately different sizes; the
+finish and the tagging do not.
+
+Settings > Geometry > "Matte Points" swaps the finish. Nothing re-runs the
+generated code when a setting changes, so the finish is repainted in place: the
+module keeps a registry of the materials built this run and one subscription
+repaints all of them. The registry is cleared per run by
+`resetPointMarkerRegistry()` from `installSceneRuntime`, alongside the other
+per-run registries. A per-marker self-unsubscribing closure (the pattern used
+for object-level settings elsewhere) does not work here, because most markers
+are nested parts with no `threeObjStore` key of their own to anchor the
+unsubscribe to.
+
 ## Gotchas a refactor would reintroduce
 
 ### one-distance-per-object

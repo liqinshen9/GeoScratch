@@ -90,12 +90,7 @@ export function initCrossProductBlock() {
         THREE, baseId + '_c', new THREE.Vector3(0,0,0), cross.clone().normalize(), safeLen(lenC), crossVectorColor
       );
     } else {
-      crossObj = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 12),
-        new THREE.MeshStandardMaterial({ color: warningColor, roughness: 0.4, metalness: 0.1 })
-      );
-      crossObj.userData.zoomInvariantRadius = 0.04;
-      crossObj.userData.zoomInvariantUniform = true;
+      crossObj = window.geoPointMarker({ color: warningColor, radius: 0.04 });
     }
 
     const tag=(o)=>{o.userData.geoType='geo_vector';o.userData.srcBlockId=baseId;return o;};
