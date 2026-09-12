@@ -84,7 +84,14 @@ function LabelAnchor({
     labelRegistryRevision += 1
     applyLabelTransform(entry, 0, 0, 1)
     return () => {
-      labelRegistry.delete(id)
+      // Retract only our own entry. The scene rebuilds on every workspace edit,
+      // and React can mount the replacement LabelAnchor for an id before
+      // unmounting the old one; an unconditional delete then drops the live
+      // entry, leaving a rendered label with nothing in the registry. Nothing
+      // ever positions or scales it again, so it sits frozen at the mount
+      // default -- full size and unoffset -- while its neighbours shrink with
+      // camera distance.
+      if (labelRegistry.get(id) === entry) labelRegistry.delete(id)
       labelRegistryRevision += 1
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
