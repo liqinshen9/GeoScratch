@@ -552,8 +552,12 @@
 /* Dev-only affordance; compiled out of the study build. Deliberately plain and
    a little ugly so it is never mistaken for part of the exercise UI. */
 .exercise-debug-fill {
-  align-self: flex-start;
-  margin-top: 0.25rem;
+  /* Pinned to the foot and right-aligned. margin-top:auto keeps it in the same
+     place whether or not the pass banner is showing -- the banner claims the
+     free space first, and this then sits directly under it -- and flex-end
+     keeps it clear of the fixed "tracking off" badge in the bottom-left. */
+  align-self: flex-end;
+  margin-top: auto;
   padding: 3px 8px;
   border: 1px dashed var(--geo-text-muted-on-light);
   border-radius: 4px;
