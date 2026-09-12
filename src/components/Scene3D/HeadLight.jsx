@@ -43,6 +43,8 @@ function HeadLight({ controlsRef, castShadow = true }) {
     lightRef.current.position.copy(camera.position).add(worldOffset)
 
     const shadowCam = lightRef.current.shadow.camera
+    // Lets Scene3D's shadow hook tell this light's pass from the overhead one.
+    shadowCam.userData.isHeadlightShadow = true
     shadowCam.far = Math.max(HEADLIGHT_SHADOW_MIN_FAR, distance * HEADLIGHT_SHADOW_FAR_MARGIN)
     shadowCam.updateProjectionMatrix()
   })

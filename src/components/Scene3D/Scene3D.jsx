@@ -27,6 +27,29 @@ const DEFAULT_CAMERA_OFFSET = new THREE.Vector3(...DEFAULT_CAMERA_POSITION)
 const MIN_CAMERA_DISTANCE = 4
 const MAX_CAMERA_DISTANCE = 130
 
+// Meshes that set castShadow themselves in their builder; the primitive
+// shadow setting must not switch these off.
+const SOLID_CASTERS = new Set(['geo_cube', 'geo_sphere', 'geo_teapot'])
+
+// castShadow is per-object, not per-light, so a primitive that casts at all
+// casts from every shadowing light. A thin tube lit by the camera headlight
+// throws a long shadow that swings with the viewer and reads as a second
+// primitive, so primitives cast from the fixed overhead light only. Drawing
+// zero vertices skips the headlight's pass; onBeforeShadow / onAfterShadow
+// bracket renderBufferDirect exactly, so the range is always restored.
+function skipHeadlightShadow(renderer, object, camera, shadowCamera, geometry) {
+  if (!shadowCamera.userData.isHeadlightShadow) return
+  object.userData.shadowDrawRange = { ...geometry.drawRange }
+  geometry.setDrawRange(0, 0)
+}
+
+function restoreShadowDrawRange(renderer, object, camera, shadowCamera, geometry) {
+  const saved = object.userData.shadowDrawRange
+  if (!saved) return
+  geometry.setDrawRange(saved.start, saved.count)
+  object.userData.shadowDrawRange = null
+}
+
 const globalThreeObjStore = {}
 
 function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme }) {
@@ -37,10 +60,18 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
     objects.forEach((o) => {
       if (!o) return
       o.traverse((child) => {
-        if (child.isMesh) child.receiveShadow = settings.objectsReceiveShadows
+        if (!child.isMesh) return
+        child.receiveShadow = settings.objectsReceiveShadows
+        // Solids opt into casting at build time and keep that regardless.
+        // LineSegments2 subclasses Mesh but draws through LineMaterial, which
+        // has no depth variant, so it cannot render into a shadow map at all.
+        if (SOLID_CASTERS.has(child.userData.geoType) || child.isLineSegments2) return
+        child.castShadow = settings.primitivesCastShadows
+        child.onBeforeShadow = skipHeadlightShadow
+        child.onAfterShadow = restoreShadowDrawRange
       })
     })
-  }, [objects, settings.objectsReceiveShadows])
+  }, [objects, settings.objectsReceiveShadows, settings.primitivesCastShadows])
 
   useEffect(() => {
     const renderOrders = computeNestingRenderOrders(objects)
@@ -85,7 +116,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
         intensity={isDark ? 3 : 2.5}
         decay={0}
         distance={100}
-        castShadow
+        castShadow={settings.pointShadowsEnabled}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-bias={-0.001}

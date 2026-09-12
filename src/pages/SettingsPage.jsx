@@ -329,6 +329,20 @@ export default function SettingsPage() {
                   onChange={(v) => updateSetting('objectsReceiveShadows', v)}
                 />
                 <ToggleRow
+                  label="Primitive Shadows"
+                  description="Let lines, vectors and points cast shadows, not just solid objects. Plain Line cannot cast: it has no 3D geometry, so use a tube style to see this."
+                  checked={settings.primitivesCastShadows}
+                  settingKey="primitivesCastShadows"
+                  onChange={(v) => updateSetting('primitivesCastShadows', v)}
+                />
+                <ToggleRow
+                  label="Overhead Shadows"
+                  description="Let the fixed overhead point light cast shadows. Turning this off with Camera Shadows also off leaves the scene unshadowed."
+                  checked={settings.pointShadowsEnabled}
+                  settingKey="pointShadowsEnabled"
+                  onChange={(v) => updateSetting('pointShadowsEnabled', v)}
+                />
+                <ToggleRow
                   label="Camera Shadows"
                   description="Let the camera-following headlamp cast shadows. Turning this off leaves the fixed overhead light as the only shadow source."
                   checked={settings.cameraShadowsEnabled}

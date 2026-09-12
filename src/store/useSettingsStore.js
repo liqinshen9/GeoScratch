@@ -22,6 +22,8 @@ const DEFAULT_SETTINGS = {
   showAxisScaleLabels: true,
   showAxisGizmo: true,
   objectsReceiveShadows: false,
+  primitivesCastShadows: false,
+  pointShadowsEnabled: true,
   cameraShadowsEnabled: true,
   autoFocusOnNewObject: false,
   sphereShowGridlines: false,
