@@ -36,8 +36,8 @@ export const MIN_LINE_WORLD_RADIUS = AXIS_SHAFT_RADIUS * 1.25
 // Per-glyph-kind zoom/thickness caps. See docs/architecture/glyph-sizing.md.
 export const EXTRA_THICK_LINE_MULTIPLIER = 2.7
 export const EXTRA_LARGE_POINT_MULTIPLIER = 1.6
-export const EXTRA_LARGE_POINT_MAX_SCALE = 5.5
-export const POINT_ZOOM_MAX_SCALE = 3.3
+export const EXTRA_LARGE_POINT_MAX_SCALE = 1.75
+export const POINT_ZOOM_MAX_SCALE = 1.3
 export const VECTOR_ZOOM_MAX_SCALE = 3.4
 
 // Default/reset camera position. Shared because the perceptual exercises grade
