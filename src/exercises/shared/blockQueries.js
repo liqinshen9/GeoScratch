@@ -75,8 +75,19 @@ function objectOrChildMatches(object, predicate) {
   return matched
 }
 
+// geo_variable is a pass-through wrapper: naming a value plugs it into one, and
+// the wrapper then behaves exactly as the block it holds. Every structural check
+// here has to see the wrapped block rather than the wrapper, or naming an input
+// silently fails the step that walks to it.
+// See docs/architecture/blockly-integration.md#the-variable-wrappers-block-layout.
 function getInputBlock(block, inputName) {
-  return block?.getInputTargetBlock?.(inputName) ?? null
+  let target = block?.getInputTargetBlock?.(inputName) ?? null
+  // Bounded rather than a bare while: a malformed chain must not hang a checker
+  // that runs on every workspace edit.
+  for (let depth = 0; target?.type === 'geo_variable' && depth < 8; depth++) {
+    target = target.getInputTargetBlock?.('VALUE') ?? null
+  }
+  return target
 }
 
 function scalarInputMatches(block, inputName, target, fallback = 0) {
