@@ -29,17 +29,6 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       }
       return segment;
     };
-    const makeArrowHead = (tip, direction, color) => {
-      const dir = direction.lengthSq() > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const height = 0.38;
-      const head = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, height, 24),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
-      );
-      head.position.copy(tip).addScaledVector(dir, -height / 2);
-      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      return head;
-    };
     const origin = new THREE.Vector3(0, 0, 0);
     const pointDifferenceVal = uVal.userData?.geoType === 'point_difference_vector' ? uVal : (
       vVal.userData?.geoType === 'point_difference_vector' ? vVal : null
@@ -80,18 +69,16 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       labelSide.addScaledVector(normalUnit, -labelSide.dot(normalUnit));
       if (labelSide.lengthSq() < 1e-10) labelSide.set(1, 0, 0);
       labelSide.normalize().multiplyScalar(-1);
-      const normalExtent = Math.max(2.2, distance + 1.4);
-      const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
-        distanceStart.clone(),
-        distanceStart.clone().addScaledVector(normalUnit, normalExtent),
-      ]);
-      const normalLine = new THREE.Line(
-        normalLineGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('operandB'), dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+      // n through the shared glyph at its own magnitude; see the note in
+      // vectorProject.js. It was a bespoke dashed ray sized to span the
+      // distance, labelled "n" while showing nothing of the sort.
+      const normalTip = distanceStart.clone().addScaledVector(normalUnit, safeLen(normalLen));
+      const normalGlyph = window.buildVectorShaftGlyph(
+        THREE, ${id} + '_normal',
+        distanceStart.clone(), normalUnit.clone(), safeLen(normalLen), window.GeoScratchColors.forRole('operandB')
       );
-      normalLine.computeLineDistances();
-      const normalTip = distanceStart.clone().addScaledVector(normalUnit, normalExtent);
-      const normalArrowHead = makeArrowHead(normalTip, normalUnit, window.GeoScratchColors.forRole('operandB'));
+      normalGlyph.userData.geoType = 'distance_normal_arrow';
+      normalGlyph.userData.srcBlockId = ${id};
 
       const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), pointDifferenceVal.userData.end.clone()]);
       const guideLine = new THREE.Line(
@@ -127,7 +114,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
       rightAngle.userData.srcBlockId = ${id};
 
       const group = new THREE.Group();
-      group.add(distanceVector, normalLine, normalArrowHead, guideLine, rightAngle);
+      group.add(distanceVector, normalGlyph, guideLine, rightAngle);
       group.userData.geoType = 'point_plane_distance_dot';
       group.userData.srcBlockId = ${id};
       group.userData.dot = dot;

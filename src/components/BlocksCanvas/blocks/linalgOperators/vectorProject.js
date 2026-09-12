@@ -52,17 +52,6 @@ export function initVectorProjectBlock() {
       }
       return segment;
     };
-    const makeArrowHead = (tip, direction, color) => {
-      const dir = direction.lengthSq() > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const height = 0.38;
-      const head = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, height, 24),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
-      );
-      head.position.copy(tip).addScaledVector(dir, -height / 2);
-      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      return head;
-    };
     const makeProjectionShadow = (foot) => {
       const shadowGroup = new THREE.Group();
       const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('warning'), radius: 0.04 });
@@ -77,18 +66,22 @@ export function initVectorProjectBlock() {
       const normalUnit = normal.lengthSq() > 1e-12 ? normal.clone().normalize() : new THREE.Vector3(0, 1, 0);
       const group = new THREE.Group();
 
-      const normalExtent = Math.max(2.2, distanceLength + 1.4);
-      const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
-        basePoint.clone(),
-        basePoint.clone().addScaledVector(normalUnit, normalExtent),
-      ]);
-      const normalLine = new THREE.Line(
-        normalLineGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('operandB'), dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+      // n is drawn at its OWN magnitude through the shared glyph, so it follows
+      // the vector style setting, takes a halo, and scales with zoom like every
+      // other vector. It used to be a bespoke dashed line of length
+      // max(2.2, d + 1.4) -- 4.4 units for a unit normal at d = 3 -- labelled
+      // "n" while showing nothing of the sort.
+      const normalLength = normal.length();
+      const normalGlyph = window.buildVectorShaftGlyph(
+        THREE, ${JSON.stringify(block.id)} + '_normal',
+        basePoint.clone(), normalUnit.clone(), safeLen(normalLength),
+        window.GeoScratchColors.forRole('operandB')
       );
-      normalLine.computeLineDistances();
-      const normalTip = basePoint.clone().addScaledVector(normalUnit, normalExtent);
-      const normalArrowHead = makeArrowHead(normalTip, normalUnit, window.GeoScratchColors.forRole('operandB'));
+      normalGlyph.userData.geoType = 'distance_normal_arrow';
+      normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
+      if (typeof threeObjStore === 'object' && threeObjStore) {
+        threeObjStore[${JSON.stringify(block.id)} + '_normal'] = normalGlyph;
+      }
 
       const guideGeom = new THREE.BufferGeometry().setFromPoints([topPoint.clone(), pointP.clone()]);
       const guideLine = new THREE.Line(
@@ -116,7 +109,7 @@ export function initVectorProjectBlock() {
         new THREE.LineBasicMaterial({ color: window.GeoScratchColors.forRole('accent'), transparent: true, opacity: 0.9 })
       );
 
-      group.add(normalLine, normalArrowHead, guideLine, rightAngle);
+      group.add(normalGlyph, guideLine, rightAngle);
       group.userData.geoType = 'distance_projection_illustration';
       group.userData.srcBlockId=${JSON.stringify(block.id)};
       return group;
@@ -209,7 +202,7 @@ export function initVectorProjectBlock() {
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
     const normalLabelUnit = lenV > 1e-12 ? vVal.clone().normalize() : new THREE.Vector3(0, 1, 0);
-    const normalLabelExtent = Math.max(2.2, projLen + 1.4);
+    const normalLabelExtent = lenV > 1e-12 ? lenV : 1;
     const normalLabelSide = uTip.clone().sub(projOrigin);
     normalLabelSide.addScaledVector(normalLabelUnit, -normalLabelSide.dot(normalLabelUnit));
     if (normalLabelSide.lengthSq() < 1e-10) normalLabelSide.set(1, 0, 0);

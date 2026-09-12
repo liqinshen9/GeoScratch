@@ -39,6 +39,8 @@ export function initPointPlaneDistanceBlock() {
         : null;
     if (!planePoint || !normalSource || normalSource.lengthSq() < 1e-12) return null;
 
+    // Captured before normalize() mutates it: n is drawn at its own magnitude.
+    const normalLength = normalSource.length();
     const normal = normalSource.normalize();
     const signedDistance = point.clone().sub(planePoint).dot(normal);
     const distance = Math.abs(signedDistance);
@@ -48,31 +50,19 @@ export function initPointPlaneDistanceBlock() {
     const midpoint = distanceStart.clone().add(distanceEnd).multiplyScalar(0.5);
     const difference = point.clone().sub(planePoint);
     const fmt = vectorNotation.formatVector;
-    const makeArrowHead = (tip, direction, color) => {
-      const dir = direction.lengthSq() > 1e-12 ? direction.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const height = 0.38;
-      const head = new THREE.Mesh(
-        new THREE.ConeGeometry(0.16, height, 24),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
-      );
-      head.position.copy(tip).addScaledVector(dir, -height / 2);
-      head.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      return head;
-    };
     const makeDistanceIllustration = () => {
       const illustration = new THREE.Group();
-      const normalExtent = Math.max(2.2, distance + 1.4);
-      const normalLineGeom = new THREE.BufferGeometry().setFromPoints([
-        distanceStart.clone(),
-        distanceStart.clone().addScaledVector(normal, normalExtent),
-      ]);
-      const normalLine = new THREE.Line(
-        normalLineGeom,
-        new THREE.LineDashedMaterial({ color: window.GeoScratchColors.forRole('operandB'), dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.86 })
+      // n through the shared glyph at its own magnitude, so it follows the
+      // vector style setting and takes a halo like any other vector. It was a
+      // bespoke dashed ray of length max(2.2, d + 1.4), labelled "n" while
+      // showing nothing of the sort.
+      const normalTip = distanceStart.clone().addScaledVector(normal, normalLength);
+      const normalGlyph = window.buildVectorShaftGlyph(
+        THREE, ${JSON.stringify(block.id)} + '_normal',
+        distanceStart.clone(), normal.clone(), normalLength > 1e-8 ? normalLength : 1, window.GeoScratchColors.forRole('operandB')
       );
-      normalLine.computeLineDistances();
-      const normalTip = distanceStart.clone().addScaledVector(normal, normalExtent);
-      const normalArrowHead = makeArrowHead(normalTip, normal, window.GeoScratchColors.forRole('operandB'));
+      normalGlyph.userData.geoType = 'distance_normal_arrow';
+      normalGlyph.userData.srcBlockId = ${JSON.stringify(block.id)};
 
       const guideGeom = new THREE.BufferGeometry().setFromPoints([distanceEnd.clone(), point.clone()]);
       const guideLine = new THREE.Line(
@@ -102,7 +92,7 @@ export function initPointPlaneDistanceBlock() {
       const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('distance'), radius: 0.04 });
       footDot.position.copy(distanceStart);
 
-      illustration.add(normalLine, normalArrowHead, guideLine, rightAngle, footDot);
+      illustration.add(normalGlyph, guideLine, rightAngle, footDot);
       illustration.userData.geoType = 'distance_projection_illustration';
       illustration.userData.srcBlockId = ${JSON.stringify(block.id)};
       return { illustration, normalTip };
