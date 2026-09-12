@@ -12,10 +12,17 @@ import {
   POINT_VECTOR_BLOCK_TYPES,
 } from './shared/blockQueries'
 
-const POINT_P = new THREE.Vector3(3, 4, 5)
-const PLANE_POINT_A = new THREE.Vector3(1, 1, 2)
-const PLANE_NORMAL = new THREE.Vector3(0, 1, 0)
-const CORRECT_DISTANCE = 3
+const POINT_P = new THREE.Vector3(-9, 8, 7)
+const PLANE_POINT_A = new THREE.Vector3(-5, 0, 2)
+const PLANE_NORMAL = new THREE.Vector3(0.5, 1, 0.5)
+// Derived, not typed: |n| is sqrt(1.5), so the distance is not a round number
+// and hardcoding it would drift the moment any of the three above changed.
+const CORRECT_DISTANCE =
+  Math.abs(POINT_P.clone().sub(PLANE_POINT_A).dot(PLANE_NORMAL)) / PLANE_NORMAL.length()
+// planeNormalFromBlock returns the UNIT normal, mirroring what the renderer
+// draws, so a comparison against it has to be unit too. This was invisible
+// while PLANE_NORMAL happened to be a unit vector.
+const PLANE_NORMAL_UNIT = PLANE_NORMAL.clone().normalize()
 
 const POINT_P_COLOR_SEED = 'exercise:point-plane-distance:P'
 const POINT_MARKER_FALLBACK_COLOR = '#94a3b8'
@@ -34,7 +41,7 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
             <field name="OP">subtract</field>
             <value name="U">
               <block type="linalg_point">
-                <field name="X">3</field><field name="Y">4</field><field name="Z">5</field>
+                <field name="X">-9</field><field name="Y">8</field><field name="Z">7</field>
               </block>
             </value>
             <value name="V">
@@ -43,12 +50,12 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
                   <block type="parametric_plane">
                     <value name="point">
                       <block type="linalg_point">
-                        <field name="X">1</field><field name="Y">1</field><field name="Z">2</field>
+                        <field name="X">-5</field><field name="Y">0</field><field name="Z">2</field>
                       </block>
                     </value>
                     <value name="norm">
                       <block type="linalg_vec3">
-                        <field name="X">0</field><field name="Y">1</field><field name="Z">0</field>
+                        <field name="X">0.5</field><field name="Y">1</field><field name="Z">0.5</field>
                       </block>
                     </value>
                   </block>
@@ -59,7 +66,7 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
         </value>
         <value name="V">
           <block type="linalg_vec3">
-            <field name="X">0</field><field name="Y">1</field><field name="Z">0</field>
+            <field name="X">0.5</field><field name="Y">1</field><field name="Z">0.5</field>
           </block>
         </value>
       </block>
@@ -104,7 +111,7 @@ function isExercisePlaneBlock(block) {
   return (
     block?.type === 'parametric_plane' &&
     blockMatchesVec3(getInputBlock(block, 'point'), PLANE_POINT_A) &&
-    vectorMatches(planeNormalFromBlock(block), PLANE_NORMAL)
+    vectorMatches(planeNormalFromBlock(block), PLANE_NORMAL_UNIT)
   )
 }
 
@@ -196,6 +203,17 @@ function hasPointDifferenceBlock(workspace) {
   return workspace.getBlocksByType('vector_arithmetic', false).some(isPointDifferenceBlock)
 }
 
+function hasProjectionOntoNormalBlock(workspace) {
+  if (!workspace) return false
+  return workspace
+    .getBlocksByType('vector_project', false)
+    .some(
+      (block) =>
+        isPointDifferenceBlock(getInputBlock(block, 'U')) &&
+        isNormalVectorBlock(getInputBlock(block, 'V')),
+    )
+}
+
 function hasProjectionDistanceBlock(workspace) {
   if (!workspace) return false
   return workspace.getBlocksByType('vector_magnitude', false).some((block) => {
@@ -208,20 +226,12 @@ function hasProjectionDistanceBlock(workspace) {
   })
 }
 
-function hasDotProductDistanceBlock(workspace) {
-  if (!workspace) return false
-  return workspace.getBlocksByType('vector_dot_product', false).some((block) => {
-    const left = getInputBlock(block, 'U')
-    const right = getInputBlock(block, 'V')
-    return (
-      (isPointDifferenceBlock(left) && isNormalVectorBlock(right)) ||
-      (isNormalVectorBlock(left) && isPointDifferenceBlock(right))
-    )
-  })
-}
-
+// Projection only. The dot product of (P - Q) and n equals the distance just
+// when |n| = 1, and this plane's normal is (0.5, 1, 0.5), so |n| is sqrt(1.5).
+// A student taking that route would read 8.5 instead of 6.94, fail the value
+// check, and have nothing to tell them why.
 function hasValidDistanceComputation(workspace) {
-  return hasProjectionDistanceBlock(workspace) || hasDotProductDistanceBlock(workspace)
+  return hasProjectionDistanceBlock(workspace)
 }
 
 function Givens() {
@@ -229,12 +239,12 @@ function Givens() {
     <div className="exercise-given-values" aria-label="Given values">
       <section>
         <h3>Plane</h3>
-        <p>Point A = (1, 1, 2)</p>
-        <p>Normal n = (0, 1, 0)</p>
+        <p>Point A = (-5, 0, 2)</p>
+        <p>Normal n = (0.5, 1, 0.5)</p>
       </section>
       <section>
         <h3>Point</h3>
-        <p>P = (3, 4, 5)</p>
+        <p>P = (-9, 8, 7)</p>
       </section>
     </div>
   )
@@ -249,10 +259,11 @@ function Steps({ steps, passed }) {
       <li className={steps.difference ? 'is-complete' : ''}>
         Compute: P - Q with the Vector Arithmetic block.
       </li>
+      <li className={steps.projection ? 'is-complete' : ''}>
+        Project: P - Q onto n with the Vector Project block.
+      </li>
       <li className={steps.distance ? 'is-complete' : ''}>
-        Compute: distance by projecting P - Q onto n and taking Vector Magnitude. Alternatively, you
-        can use the dot product of (P - Q) and n because n is a unit vector. This gives the distance
-        from P to the plane.
+        Compute: the Vector Magnitude of that projection. This is the distance from P to the plane.
       </li>
     </ol>
   )
@@ -300,6 +311,8 @@ function evaluate({ objects, workspace }) {
       pointP: hasPointP,
       pointQ: hasPointQ,
       difference: hasPointP && hasPointQ && hasPointDifferenceBlock(workspace),
+      // The projection ticks on its own, before the magnitude finishes the job.
+      projection: hasProjectionOntoNormalBlock(workspace),
       distance: passed,
     },
   }

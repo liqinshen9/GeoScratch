@@ -384,7 +384,7 @@ describe('exercise 5 (point to plane)', () => {
   const mod = EXERCISE_MODULES['point-plane-distance']
 
   it('recognises the point P vector in the workspace', () => {
-    const workspace = fakeWorkspace([vec3(3, 4, 5)])
+    const workspace = fakeWorkspace([vec3(-9, 8, 7)])
     expect(mod.evaluate({ objects: [], workspace }).steps.pointP).toBe(true)
   })
 
