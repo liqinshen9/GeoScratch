@@ -53,7 +53,7 @@
   min-width: max-content;
   display: inline-block;
   font:
-    9px/1.2 ui-monospace,
+    7px/1.2 ui-monospace,
     Menlo,
     Consolas,
     monospace;
@@ -84,7 +84,7 @@
   background: transparent;
   color: #ca8a04;
   font:
-    900 16px/1.2 ui-monospace,
+    900 12px/1.2 ui-monospace,
     Menlo,
     Consolas,
     monospace;
@@ -98,7 +98,7 @@
   background: transparent;
   color: #b91c1c;
   font:
-    800 14px/1.2 ui-monospace,
+    800 10.5px/1.2 ui-monospace,
     Menlo,
     Consolas,
     monospace;
