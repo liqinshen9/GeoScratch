@@ -2,6 +2,7 @@ import THREE from '@/utils/three'
 import {
   blockMatchesVec3,
   closeNumber,
+  findAnswerGeometry,
   getInputBlock,
   isLineBlock,
   pointBlockLiesOnLine,
@@ -280,7 +281,8 @@ function readDistance(objects) {
     (object) => object?.userData?.geoType === 'geo_line_intersection',
   )
   const fromIntersection = Number(intersection?.userData?.distance)
-  if (Number.isFinite(fromIntersection)) return fromIntersection
+  if (Number.isFinite(fromIntersection))
+    return { distance: fromIntersection, target: findAnswerGeometry(objects) ?? intersection }
 
   const distanceObject = objects.find(
     (object) =>
@@ -291,11 +293,12 @@ function readDistance(objects) {
     .filter((object) => object?.userData?.geoType === 'scalar_arithmetic_result')
     .find((object) => closeNumber(object.userData?.value, SKEW_DISTANCE, 0.01))
   const distance = Number(distanceObject?.userData?.distance ?? scalarAnswer?.userData?.value)
-  return Number.isFinite(distance) ? distance : null
+  if (!Number.isFinite(distance)) return { distance: null, target: null }
+  return { distance, target: findAnswerGeometry(objects) ?? distanceObject ?? scalarAnswer ?? null }
 }
 
 function evaluate({ objects, workspace }) {
-  const distance = readDistance(objects)
+  const { distance, target } = readDistance(objects)
   const distanceIsCorrect = distance !== null && closeNumber(distance, SKEW_DISTANCE, 0.01)
   const passed = distanceIsCorrect && hasValidSkewDistanceComputation(workspace)
 
@@ -310,6 +313,7 @@ function evaluate({ objects, workspace }) {
     // computation rather than typed the number in.
     correct: distanceIsCorrect,
     incorrect: distance !== null && !distanceIsCorrect,
+    target,
     answer: { type: 'distance', value: distance },
     steps: {
       lines: hasSkewLineBlocks(workspace),

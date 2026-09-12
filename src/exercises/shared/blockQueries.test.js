@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getInputBlock, planeNormalFromBlock } from './blockQueries'
+import { getInputBlock, planeNormalFromBlock, findAnswerGeometry } from './blockQueries'
 
 // Minimal stand-in for a Blockly block: only the socket lookup the queries use.
 function block(type, inputs = {}, fields = {}) {
@@ -76,5 +76,34 @@ describe('planeNormalFromBlock', () => {
   it('sees through a variable wrapper on the normal', () => {
     const wrapped = block('geo_variable', { VALUE: vec(0, 1, 0) })
     expect(xyz(planeNormalFromBlock(plane(wrapped)))).toEqual([0, 1, 0])
+  })
+})
+
+// The object holding a distance VALUE is often not the object that draws it: a
+// point-plane magnitude group carries the number and the label but no geometry
+// at all, so glowing it would light up nothing.
+describe('findAnswerGeometry', () => {
+  const node = (geoType, children = []) => ({ userData: { geoType }, children })
+
+  it('finds a distance segment nested inside a group', () => {
+    const segment = node('distance_segment')
+    const objects = [node('geo_vector_group', [node('geo_vector'), segment])]
+    expect(findAnswerGeometry(objects)).toBe(segment)
+  })
+
+  it('finds the sphere-distance highlight', () => {
+    const highlight = node('sphere_distance_candidate_highlight')
+    expect(findAnswerGeometry([node('group', [highlight])])).toBe(highlight)
+  })
+
+  it('returns null when only a value-bearing group is present', () => {
+    // 0 meshes: this is exactly the case that made the glow invisible.
+    expect(findAnswerGeometry([node('point_plane_distance_projection_magnitude')])).toBeNull()
+  })
+
+  it('tolerates empty and malformed input', () => {
+    expect(findAnswerGeometry([])).toBeNull()
+    expect(findAnswerGeometry(null)).toBeNull()
+    expect(findAnswerGeometry([null, {}])).toBeNull()
   })
 })

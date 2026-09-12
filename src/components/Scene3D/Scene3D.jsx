@@ -9,7 +9,7 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
-import SelectionHighlight from './SelectionHighlight'
+import SelectionHighlight, { AnswerHighlight } from './SelectionHighlight'
 import AnimationDriver from './AnimationDriver'
 import { getAxisColors, DEFAULT_CAMERA_POSITION } from './sceneConstants'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
@@ -48,7 +48,7 @@ function restoreShadowDrawRange(renderer, object, camera, shadowCamera, geometry
 
 const globalThreeObjStore = {}
 
-function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme }) {
+function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme, answer }) {
   const { settings } = useSettingsStore()
   const isDark = theme === 'dark'
 
@@ -97,6 +97,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
       />
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
+      <AnswerHighlight target={answer?.target} state={answer?.state} />
       <AnimationDriver objects={objects} />
       <LabelDeclutter />
       <ambientLight intensity={isDark ? 0.6 : 0.4} />
@@ -162,7 +163,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
 
 const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0b111b' }
 
-export default function Scene3D({ objects = [] }) {
+export default function Scene3D({ objects = [], answer }) {
   const { settings, updateSetting } = useSettingsStore()
   const resolvedTheme = useResolvedTheme()
   const backgroundColor = SCENE_BACKGROUND_COLOR[resolvedTheme] || SCENE_BACKGROUND_COLOR.light
@@ -296,6 +297,7 @@ export default function Scene3D({ objects = [] }) {
             controlsRef={controlsRef}
             onHideLabel={handleHideLabel}
             theme={resolvedTheme}
+            answer={answer}
           />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />

@@ -6,7 +6,11 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
-import { OBJECT_HIGHLIGHT_STYLES, SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
+import {
+  OBJECT_HIGHLIGHT_STYLES,
+  SELECTION_HIGHLIGHT_COLOR,
+  ANSWER_HIGHLIGHT_COLORS,
+} from '@/store/highlightStyles'
 import { collectSelectionTargets } from '@/utils/scenePicking'
 
 // BLINK / GLOW highlight tuning. See docs/architecture/selection-and-picking.md.
@@ -292,8 +296,8 @@ function addPlaneEdgeGlow(planeMesh, accent, size) {
   return out
 }
 
-function applyGlow(targets, scene, size) {
-  const accent = new THREE.Color(SELECTION_HIGHLIGHT_COLOR)
+function applyGlow(targets, scene, size, accentColor = SELECTION_HIGHLIGHT_COLOR) {
+  const accent = new THREE.Color(accentColor)
   const parts = [] // { light, sprite, spriteMat }
   const added = [] // { obj, mat, geom } parented into the scene graph
   const nudged = [] // emissive-bumped materials (bbox path only)
@@ -491,8 +495,8 @@ function applyGlow(targets, scene, size) {
   }
 }
 
-function applyHighlight(style, targets, scene, size) {
-  if (style === OBJECT_HIGHLIGHT_STYLES.GLOW) return applyGlow(targets, scene, size)
+function applyHighlight(style, targets, scene, size, accentColor) {
+  if (style === OBJECT_HIGHLIGHT_STYLES.GLOW) return applyGlow(targets, scene, size, accentColor)
   return applyBlink(targets)
 }
 
@@ -525,6 +529,43 @@ export default function SelectionHighlight({ objects = [] }) {
   }, [targets, enabled, style, scene, size, invalidate])
 
   // frameloop="demand": tick returns whether it needs another frame.
+  useFrame(({ clock }) => {
+    if (activeRef.current?.tick?.(clock.elapsedTime)) invalidate()
+  })
+
+  return null
+}
+
+/**
+ * Glows the object an exercise names as its answer, green when correct and red
+ * when not. Always GLOW, never BLINK: this is a standing statement about which
+ * part of the scene is the answer, and a blinking answer alongside a blinking
+ * selection would be unreadable.
+ *
+ * Mounted beside SelectionHighlight and independent of it, so an object can be
+ * both selected and the answer without either effect clobbering the other's
+ * restore.
+ */
+export function AnswerHighlight({ target, state }) {
+  const { scene, invalidate, size } = useThree()
+  const enabled = useSettingsStore((s) => s.settings.objectHighlightEnabled)
+
+  const targets = useMemo(() => (target?.isObject3D ? [target] : []), [target])
+  const accent = ANSWER_HIGHLIGHT_COLORS[state]
+  const activeRef = useRef(null)
+
+  useEffect(() => {
+    activeRef.current?.restore()
+    activeRef.current =
+      targets.length && accent && enabled ? applyGlow(targets, scene, size, accent) : null
+    invalidate()
+    return () => {
+      activeRef.current?.restore()
+      activeRef.current = null
+      invalidate()
+    }
+  }, [targets, accent, enabled, scene, size, invalidate])
+
   useFrame(({ clock }) => {
     if (activeRef.current?.tick?.(clock.elapsedTime)) invalidate()
   })

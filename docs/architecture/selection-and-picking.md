@@ -162,3 +162,35 @@ programmatic end) would otherwise miss.
 
 `handleDeletedBlockDragStart` sets `effectAllowed = 'copy'`, which must match the
 `'copy'` `dropEffect` set in `handleWorkspaceDragOver`, or the drop is rejected.
+
+## The answer glow
+
+`AnswerHighlight` in `Scene3D/SelectionHighlight.jsx` reuses the same tuned
+`applyGlow` to say something other than "selected": green when the exercise's
+answer is right, red when it is wrong, nothing in the Sandbox where there is no
+answer. It takes the accent colour as an argument, which is why `applyGlow`
+grew one; selection keeps `SELECTION_HIGHLIGHT_COLOR` as the default.
+
+Always GLOW, never BLINK. This is a standing statement about which part of the
+scene is the answer, and a blinking answer next to a blinking selection is
+unreadable. The two effects are mounted independently so an object can be both
+selected and the answer without either one clobbering the other's `restore`.
+
+Correctness reaches the scene through the module contract: `evaluate()` already
+returned a `target`, previously unused, which `ExercisePage` now passes to
+`Scene3D` alongside `correct` / `incorrect`. Note that is `correct`, the value
+being right, not `passed`, which additionally requires the working to be built.
+
+### The answer is not where the number is
+
+The object carrying a distance **value** is frequently not the object that
+**draws** it. A point-plane magnitude group holds the number and the `d = ...`
+label but contains no geometry at all, so glowing it lights up nothing. The bar
+you actually see is a nested `distance_segment` belonging to the projection.
+`findAnswerGeometry` in `exercises/shared/blockQueries.js` walks the scene for
+the visible tag (`distance_segment`, `sphere_distance_candidate_highlight`) and
+the distance exercises prefer it, falling back to the value-bearing object.
+
+The correctness colours live in `store/highlightStyles.js` and deliberately do
+**not** come from the colour preset: a "correct" green that turns grey under
+Monochrome would stop meaning anything.

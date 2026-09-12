@@ -3,6 +3,7 @@ import {
   blockMatchesVec3,
   blockTreeContains,
   closeNumber,
+  findAnswerGeometry,
   getInputBlock,
   isSphereBlock,
 } from './shared/blockQueries'
@@ -216,7 +217,8 @@ function readDistance(objects, workspace) {
     )
   })
   const scalarValue = Number(scalarObject?.userData?.value)
-  if (workspace && Number.isFinite(scalarValue)) return scalarValue
+  if (workspace && Number.isFinite(scalarValue))
+    return { distance: scalarValue, target: findAnswerGeometry(objects) ?? scalarObject }
 
   const distanceObject = objects.find(
     (object) => object?.userData?.geoType === 'sphere_sphere_distance',
@@ -225,11 +227,12 @@ function readDistance(objects, workspace) {
     .filter((object) => object?.userData?.geoType === 'scalar_arithmetic_result')
     .find((object) => closeNumber(object.userData?.value, SPHERE_DISTANCE, 0.01))
   const distance = Number(distanceObject?.userData?.distance ?? scalarAnswer?.userData?.value)
-  return Number.isFinite(distance) ? distance : null
+  if (!Number.isFinite(distance)) return { distance: null, target: null }
+  return { distance, target: findAnswerGeometry(objects) ?? distanceObject ?? scalarAnswer ?? null }
 }
 
 function evaluate({ objects, workspace }) {
-  const distance = readDistance(objects, workspace)
+  const { distance, target } = readDistance(objects, workspace)
   const distanceIsCorrect = distance !== null && closeNumber(distance, SPHERE_DISTANCE, 0.01)
   const passed = distanceIsCorrect && hasValidSphereDistanceComputation(workspace)
 
@@ -240,6 +243,7 @@ function evaluate({ objects, workspace }) {
     // computation rather than typed the number in.
     correct: distanceIsCorrect,
     incorrect: distance !== null && !distanceIsCorrect,
+    target,
     answer: { type: 'distance', value: distance },
     steps: {
       spheres: hasSphereBlocks(workspace),

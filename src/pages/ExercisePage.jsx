@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
@@ -172,6 +172,17 @@ export default function ExercisePage() {
     [exercise, autoRender, setPendingObjects, setObjects, workspace],
   )
 
+  // The exercise names the object holding its answer; the scene glows it green
+  // or red. `correct` is the value being right, which is deliberately not the
+  // same as `passed` -- that additionally requires the working to be built.
+  const answerHighlight = useMemo(
+    () => ({
+      target: result.target,
+      state: result.correct ? 'correct' : result.incorrect ? 'incorrect' : null,
+    }),
+    [result.target, result.correct, result.incorrect],
+  )
+
   const { Givens, Steps } = exercise
 
   return (
@@ -286,7 +297,7 @@ export default function ExercisePage() {
               clearWorkspaceRef.current = fn
             }}
           />
-          <Scene3D objects={objects} />
+          <Scene3D objects={objects} answer={answerHighlight} />
         </div>
       </main>
     </div>

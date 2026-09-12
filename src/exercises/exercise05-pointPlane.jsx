@@ -4,6 +4,7 @@ import { createPointMarker } from '@/utils/pointMarker'
 import {
   blockMatchesVec3,
   closeNumber,
+  findAnswerGeometry,
   getInputBlock,
   objectOrChildMatches,
   planeNormalFromBlock,
@@ -261,11 +262,12 @@ function readDistance(objects) {
     closeNumber(object.userData?.value, CORRECT_DISTANCE, 0.01),
   )
   const distance = Number(distanceObject?.userData?.distance ?? scalarAnswer?.userData?.value)
-  return Number.isFinite(distance) ? distance : null
+  if (!Number.isFinite(distance)) return { distance: null, target: null }
+  return { distance, target: findAnswerGeometry(objects) ?? distanceObject ?? scalarAnswer ?? null }
 }
 
 function evaluate({ objects, workspace }) {
-  const distance = readDistance(objects)
+  const { distance, target } = readDistance(objects)
   const distanceIsCorrect = distance !== null && closeNumber(distance, CORRECT_DISTANCE, 0.01)
   const passed = distanceIsCorrect && hasValidDistanceComputation(workspace)
 
@@ -279,6 +281,7 @@ function evaluate({ objects, workspace }) {
     // computation rather than typed the number in.
     correct: distanceIsCorrect,
     incorrect: distance !== null && !distanceIsCorrect,
+    target,
     answer: { type: 'distance', value: distance },
     steps: {
       plane: hasExercisePlane(objects),

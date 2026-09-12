@@ -66,6 +66,27 @@ function pointBlockLiesOnLine(block, linePoint, lineDirection, tolerance = 1e-6)
   )
 }
 
+// The object carrying a distance VALUE is not always the object that shows it:
+// a point-plane magnitude group holds the number and the d = ... label but no
+// geometry at all, while the bar you actually see is a nested distance_segment.
+// Exercises name the visible one as their answer target so the scene has
+// something to glow.
+const ANSWER_GEOMETRY_TYPES = new Set(['distance_segment', 'sphere_distance_candidate_highlight'])
+
+function findAnswerGeometry(objects) {
+  let found = null
+  const visit = (node) => {
+    if (found || !node) return
+    if (ANSWER_GEOMETRY_TYPES.has(node.userData?.geoType)) {
+      found = node
+      return
+    }
+    node.children?.forEach(visit)
+  }
+  ;(objects || []).forEach(visit)
+  return found
+}
+
 function objectOrChildMatches(object, predicate) {
   if (!object?.isObject3D) return false
   let matched = false
@@ -143,6 +164,7 @@ export {
   vectorsAreParallel,
   pointBlockLiesOnLine,
   objectOrChildMatches,
+  findAnswerGeometry,
   getInputBlock,
   planeNormalFromBlock,
   scalarInputMatches,
