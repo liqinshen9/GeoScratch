@@ -34,7 +34,7 @@ export function initVectorProjectBlock() {
 
     // Just enough to clear the distance bar's radius plus the glyph's tube;
     // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.12;
+    const NORMAL_SIDE_CLEARANCE = 0.08;
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
     const uLabel = vectorNotation.getLabel(uVal, 'u');

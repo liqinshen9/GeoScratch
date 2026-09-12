@@ -18,7 +18,7 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const fmtN = vectorNotation.formatNumber;
     // Just enough to clear the distance bar's radius plus the glyph's tube;
     // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.12;
+    const NORMAL_SIDE_CLEARANCE = 0.08;
     const makeSegment = (start, end, color, radius = 0.022) => {
       const delta = end.clone().sub(start);
       const length = delta.length();

@@ -60,7 +60,7 @@ export function initPointPlaneDistanceBlock() {
     const fmt = vectorNotation.formatVector;
     // Just enough to clear the distance bar's radius plus the glyph's tube;
     // fixed rather than distance-scaled, which threw it far sideways.
-    const NORMAL_SIDE_CLEARANCE = 0.12;
+    const NORMAL_SIDE_CLEARANCE = 0.08;
     const makeDistanceIllustration = () => {
       const illustration = new THREE.Group();
       // n through the shared glyph at its own magnitude, so it follows the
