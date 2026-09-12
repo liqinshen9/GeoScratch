@@ -172,6 +172,7 @@ non-obvious mechanism carries a one-line pointer to the relevant section.
 | `selection-and-picking.md`      | `ScenePicker`, `SelectionHighlight`, selection sync, trash                |
 | `transform-and-line-rebuild.md` | #77, `runConnectedTransformPipelines`, `lineTransformAnimation.js`        |
 | `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                            |
+| `shadows.md`                    | which lights cast, and why primitives skip the headlight pass             |
 | `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                    |
 | `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
 | `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |

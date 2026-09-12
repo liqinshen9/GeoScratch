@@ -31,12 +31,8 @@ const MAX_CAMERA_DISTANCE = 130
 // shadow setting must not switch these off.
 const SOLID_CASTERS = new Set(['geo_cube', 'geo_sphere', 'geo_teapot'])
 
-// castShadow is per-object, not per-light, so a primitive that casts at all
-// casts from every shadowing light. A thin tube lit by the camera headlight
-// throws a long shadow that swings with the viewer and reads as a second
-// primitive, so primitives cast from the fixed overhead light only. Drawing
-// zero vertices skips the headlight's pass; onBeforeShadow / onAfterShadow
-// bracket renderBufferDirect exactly, so the range is always restored.
+// Primitives cast from the fixed overhead light only, never the headlight.
+// See docs/architecture/shadows.md#primitives-cast-from-the-overhead-light-only.
 function skipHeadlightShadow(renderer, object, camera, shadowCamera, geometry) {
   if (!shadowCamera.userData.isHeadlightShadow) return
   object.userData.shadowDrawRange = { ...geometry.drawRange }
@@ -62,9 +58,8 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme 
       o.traverse((child) => {
         if (!child.isMesh) return
         child.receiveShadow = settings.objectsReceiveShadows
-        // Solids opt into casting at build time and keep that regardless.
-        // LineSegments2 subclasses Mesh but draws through LineMaterial, which
-        // has no depth variant, so it cannot render into a shadow map at all.
+        // Solids opt in at build time; LineSegments2 cannot cast at all.
+        // See docs/architecture/shadows.md#who-casts.
         if (SOLID_CASTERS.has(child.userData.geoType) || child.isLineSegments2) return
         child.castShadow = settings.primitivesCastShadows
         child.onBeforeShadow = skipHeadlightShadow
