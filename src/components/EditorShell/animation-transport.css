@@ -57,11 +57,3 @@
   padding: 1px 3px;
   cursor: pointer;
 }
-
-.animation-transport__hint {
-  font-size: 11px;
-  color: var(--geo-text-muted-on-light);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
