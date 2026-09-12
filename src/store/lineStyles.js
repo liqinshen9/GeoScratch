@@ -7,8 +7,11 @@ export const LINE_STYLES = Object.freeze({
 // How a line indicates the stretch(es) where it passes through a solid
 // object -- applies regardless of which lineStyle is active (see the
 // COLLISION ACCENTS section of geoVectorLine.js for how each style
-// represents each of these three looks).
+// represents each of these looks). NONE draws no accent at all, leaving the
+// continuous glyph unbroken; it exists so the cue can be switched off as an
+// experimental condition.
 export const LINE_COLLISION_STYLES = Object.freeze({
+  NONE: 'none',
   RINGED: 'ringed',
   DASHED: 'dashed',
   DARK_TEXTURE: 'dark_texture',

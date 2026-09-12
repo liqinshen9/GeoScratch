@@ -104,6 +104,11 @@ glyph is visible, so it's handled per-glyph (`dashedTubeGroup` /
 `getAccentRadius(style)` sizes the overlay to the visible glyph's own radius
 (0.085 / 0.051 / 0.035-nominal for fat-line) plus a clearance "hair".
 
+`none` is the fourth value and draws no accent: it matches none of the three
+visibility branches in `applyGlyphVisibility`, so the continuous glyph stays
+whole and both overlay groups stay hidden. It exists so the cue can be turned
+off as an experimental condition, and needs no per-style handling of its own.
+
 ## userData contract
 
 `geoType`, `origin`, `direction` (with a `named_vector_expression` tag),
