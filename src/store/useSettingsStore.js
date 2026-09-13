@@ -7,7 +7,7 @@ import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from './namingConfig'
 import { THEMES, DEFAULT_THEME, resolveTheme, THEME_STORAGE_KEY } from './themeConfig'
 
 // Extract defaults so you only have to maintain them in one place
-const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS = {
   theme: DEFAULT_THEME,
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,

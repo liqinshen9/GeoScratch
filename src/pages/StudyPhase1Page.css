@@ -1,0 +1,107 @@
+.study-phase1 {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px;
+}
+
+/* A fixed CSS size so every trial subtends the same visual angle. */
+.study-phase1__stage {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.18);
+}
+
+.study-phase1__stage > .editor-body-3d {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.study-phase1__fixation {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44px;
+  font-weight: 300;
+  color: #111827;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Above drei <Html> scene labels, whose z-index range starts in the millions. */
+.study-phase1__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 16777272;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background: var(--background, #ffffff);
+}
+
+.study-phase1__panel {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.study-phase1__feedback {
+  min-height: 1.5em;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.study-phase1__feedback.is-correct {
+  color: #15803d;
+}
+
+.study-phase1__feedback.is-incorrect {
+  color: #b91c1c;
+}
+
+.phase1-preview {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  align-items: flex-start;
+}
+
+.phase1-preview__controls {
+  width: 320px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+
+.phase1-preview__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.phase1-preview__controls select,
+.phase1-preview__controls input[type='text'] {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.phase1-preview__info {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}

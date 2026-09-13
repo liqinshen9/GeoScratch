@@ -6,6 +6,9 @@ import ExerciseBrowserPage from '@/pages/ExerciseBrowserPage'
 import UnitPage from '@/pages/UnitPage'
 import SettingsPage from '@/pages/SettingsPage'
 import SandboxPage from '@/pages/SandboxPage'
+import StudyLayout from '@/layout/StudyLayout'
+import StudyPhase1Page from '@/pages/StudyPhase1Page'
+import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
 
 const router = createBrowserRouter([
   {
@@ -44,6 +47,18 @@ const router = createBrowserRouter([
         path: 'sandbox',
         element: <SandboxPage />,
       },
+    ],
+  },
+  {
+    // No header or navigation: participants cannot wander out of the task.
+    path: '/study',
+    element: <StudyLayout />,
+    children: [
+      {
+        path: 'phase1',
+        element: <StudyPhase1Page />,
+      },
+      ...(import.meta.env.DEV ? [{ path: 'phase1/preview', element: <Phase1PreviewPage /> }] : []),
     ],
   },
 ])

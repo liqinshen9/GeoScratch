@@ -177,6 +177,7 @@ non-obvious mechanism carries a one-line pointer to the relevant section.
 | `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
 | `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
 | `theming.md`                    | light/dark mode: `themeConfig.js`, `useThemeSync.js`, `data-theme` tokens |
+| `study-phase1.md`               | `src/study/phase1/`, `/study/phase1`, `Scene3D`'s `interactive` props     |
 | `blockly-integration.md`        | variable-wrapper layout, My Block dedup, autosave                         |
 | `backend.md`                    | Supabase auth/gate, `exercise_attempts`, RLS, workspace snapshots, export |
 

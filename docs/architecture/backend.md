@@ -48,13 +48,14 @@ Rules for anything that touches the backend:
 
 ## Schema
 
-`supabase/migrations/0001_init.sql` is the source of truth. Tables:
+`supabase/migrations/` is the source of truth, applied in order. Tables:
 
-| Table                 | Row meaning                                                   |
-| --------------------- | ------------------------------------------------------------- |
-| `profiles`            | one per auth user; `participant_code`, `cohort`, `user_agent` |
-| `exercise_attempts`   | one per exercise open; timing, pass, counts, `mcq_answer`     |
-| `workspace_snapshots` | latest Blockly XML per `(profile, workspace_id)` (Phase 2)    |
+| Table                 | Row meaning                                                                      |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `profiles`            | one per auth user; `participant_code`, `cohort`, `user_agent`, `phase1_sequence` |
+| `exercise_attempts`   | one per exercise open; timing, pass, counts, `mcq_answer`                        |
+| `workspace_snapshots` | latest Blockly XML per `(profile, workspace_id)` (Phase 2)                       |
+| `phase1_trials`       | one per study Phase 1 trial (`0002_phase1_trials.sql`, see `study-phase1.md`)    |
 
 `profiles` rows are created by the `on_auth_user_created` trigger. RLS restricts
 every table to `auth.uid() = profile_id`. No delete policies exist.

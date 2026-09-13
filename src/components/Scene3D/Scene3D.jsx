@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useEffect, useState, useCallback } from 'react'
+import { useRef, useLayoutEffect, useEffect, useState, useCallback, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, GizmoHelper, GizmoViewport } from '@react-three/drei'
 import THREE from '@/utils/three'
@@ -17,8 +17,10 @@ import { useResolvedTheme } from '@/hooks/useThemeSync'
 import { CameraHandle, HeadLight } from './HeadLight'
 import { BoundingBoxRoom, Axes, FadedGrid } from './SceneFurniture'
 import ScenePicker from './ScenePicker'
+import PresentationProbe from './PresentationProbe'
 import LabelDeclutter from './labels/LabelDeclutter'
 import LabelLayer from './labels/LabelLayer'
+import { getLabelVisibilityKeysForObject } from './labels/labelData'
 import { ZoomInvariantScaler, DashZoomSync, FatLineSync } from './sizing/GlyphSizing'
 import { computeNestingRenderOrders } from '@/utils/nestingRenderOrder'
 import { getObjectFocus } from '@/utils/sceneFocus'
@@ -165,7 +167,20 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
 
 const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0b111b' }
 
-export default function Scene3D({ objects = [], answer }) {
+/**
+ * `interactive={false}`, `onPresented`, `hiddenLabelKeys` and `onObjectClick`
+ * exist for the study trial runner: they change input, label visibility and the
+ * camera-only overlays (gizmo, view buttons), never how the scene itself is
+ * drawn. See docs/architecture/study-phase1.md#same-3d-view.
+ */
+export default function Scene3D({
+  objects = [],
+  answer,
+  interactive = true,
+  onPresented,
+  hiddenLabelKeys: extraHiddenLabelKeys,
+  onObjectClick,
+}) {
   const { settings, updateSetting } = useSettingsStore()
   const resolvedTheme = useResolvedTheme()
   const backgroundColor = SCENE_BACKGROUND_COLOR[resolvedTheme] || SCENE_BACKGROUND_COLOR.light
@@ -248,6 +263,14 @@ export default function Scene3D({ objects = [], answer }) {
     controlsRef.current.update()
   }
 
+  const visibleHiddenLabelKeys = useMemo(
+    () =>
+      extraHiddenLabelKeys?.size
+        ? new Set([...hiddenLabelKeys, ...extraHiddenLabelKeys])
+        : hiddenLabelKeys,
+    [hiddenLabelKeys, extraHiddenLabelKeys],
+  )
+
   const handleHideLabel = useCallback((labelKey) => {
     setHiddenLabelKeys((current) => {
       const next = new Set(current)
@@ -272,6 +295,28 @@ export default function Scene3D({ objects = [], answer }) {
     [setSelectedBlockId],
   )
 
+  // Non-interactive only: a left click reports the top-level object clicked
+  // instead of selecting its block.
+  const handleObjectClickFrom3D = useCallback(
+    (blockId) => {
+      if (blockId == null) return
+      const object = objects.find((o) => String(o?.userData?.srcBlockId) === blockId)
+      if (object) onObjectClick?.(object)
+    },
+    [objects, onObjectClick],
+  )
+  const ignoreLabelToggle = useCallback(() => {}, [])
+
+  // Non-interactive: a click on a label pill counts as a click on its object,
+  // so the editor's persistent click-to-hide never fires.
+  const handleLabelClickFrom3D = useCallback(
+    (labelKey) => {
+      const object = objects.find((o) => o && getLabelVisibilityKeysForObject(o).includes(labelKey))
+      if (object) onObjectClick?.(object)
+    },
+    [objects, onObjectClick],
+  )
+
   return (
     <div className="editor-body-3d">
       <div className="relative flex-1 min-h-0">
@@ -284,20 +329,31 @@ export default function Scene3D({ objects = [], answer }) {
         >
           <OrbitControls
             makeDefault
+            enabled={interactive}
             minDistance={MIN_CAMERA_DISTANCE}
             maxDistance={MAX_CAMERA_DISTANCE}
             ref={handleControlsReady}
           />
           <CameraHandle onReady={handleCameraReady} />
-          <ScenePicker
-            onSelectBlock={handleSelectBlockFrom3D}
-            onToggleLabels={handleToggleObjectLabels}
-          />
+          {interactive ? (
+            <ScenePicker
+              onSelectBlock={handleSelectBlockFrom3D}
+              onToggleLabels={handleToggleObjectLabels}
+            />
+          ) : (
+            onObjectClick && (
+              <ScenePicker
+                onSelectBlock={handleObjectClickFrom3D}
+                onToggleLabels={ignoreLabelToggle}
+              />
+            )
+          )}
+          {onPresented && <PresentationProbe objects={objects} onPresented={onPresented} />}
           <Scene
             objects={objects}
-            hiddenLabelKeys={hiddenLabelKeys}
+            hiddenLabelKeys={visibleHiddenLabelKeys}
             controlsRef={controlsRef}
-            onHideLabel={handleHideLabel}
+            onHideLabel={interactive ? handleHideLabel : handleLabelClickFrom3D}
             theme={resolvedTheme}
             answer={answer}
           />
@@ -308,7 +364,7 @@ export default function Scene3D({ objects = [], answer }) {
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
-          {settings.showAxisGizmo && (
+          {interactive && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
                 axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
@@ -321,47 +377,56 @@ export default function Scene3D({ objects = [], answer }) {
             </GizmoHelper>
           )}
         </Canvas>
-        <div className="scene-view-controls">
-          {/* Any additional buttons stack above Reset View, which stays
+        {interactive && (
+          <div className="scene-view-controls">
+            {/* Any additional buttons stack above Reset View, which stays
               pinned in the true bottom-right corner. */}
-          {settings.showAxisToggleButton && (
+            {settings.showAxisToggleButton && (
+              <button
+                className={`scene-view-btn${settings.showAxes ? ' scene-view-btn--active' : ''}`}
+                onClick={() => updateSetting('showAxes', !settings.showAxes)}
+                aria-label={settings.showAxes ? 'Hide axes' : 'Show axes'}
+                title={settings.showAxes ? 'Hide axes' : 'Show axes'}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path
+                    d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            )}
             <button
-              className={`scene-view-btn${settings.showAxes ? ' scene-view-btn--active' : ''}`}
-              onClick={() => updateSetting('showAxes', !settings.showAxes)}
-              aria-label={settings.showAxes ? 'Hide axes' : 'Show axes'}
-              title={settings.showAxes ? 'Hide axes' : 'Show axes'}
+              className="scene-view-btn"
+              onClick={resetDefaultView}
+              aria-label="Reset to default 3D view"
+              title="Default view"
             >
               <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="6.2"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                />
+                <circle cx="12" cy="12" r="2.2" fill="currentColor" />
                 <path
-                  d="M12 21V5M12 5l-4 4M12 5l4 4M21 12H5M5 12l4-4M5 12l4 4"
+                  d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="1.8"
                   strokeLinecap="round"
-                  strokeLinejoin="round"
                 />
               </svg>
             </button>
-          )}
-          <button
-            className="scene-view-btn"
-            onClick={resetDefaultView}
-            aria-label="Reset to default 3D view"
-            title="Default view"
-          >
-            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-              <circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
-              <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-              <path
-                d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )

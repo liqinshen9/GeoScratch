@@ -7,7 +7,7 @@ const TOUCH_EPSILON = 1e-4
 // Closest point between two infinite lines (d1/d2 normalized). Parallel
 // pairs (denom ~ 0) report null -> non-intersecting, which is what the
 // halo check wants.
-function closestApproach(p1, d1, p2, d2) {
+export function closestApproach(p1, d1, p2, d2) {
   const r = new THREE.Vector3().subVectors(p1, p2)
   const b = d1.dot(d2)
   const d = d1.dot(r)
