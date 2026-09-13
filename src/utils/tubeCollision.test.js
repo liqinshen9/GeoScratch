@@ -191,4 +191,54 @@ describe('applyTubeCollisions', () => {
       expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
     })
   })
+  describe('annotated objects', () => {
+    // What "show point on object" stores in place of the object it wraps.
+    function annotate(object) {
+      const group = new THREE.Group()
+      const marker = new THREE.Object3D()
+      marker.userData = { geoType: 'selectable_point_marker' }
+      group.add(object, marker)
+      group.userData = { geoType: 'annotated_object' }
+      return group
+    }
+
+    it('collides a wrapped plane as its square, not as the group bounding box', () => {
+      // A tilted plane: its world AABB is far larger than the square itself.
+      const normal = new THREE.Vector3(0, 1, 1).normalize()
+      const plane = makePlane({ normal, planeSize: 4 })
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(4, 4))
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
+      plane.add(mesh)
+      const line = makeLine({ direction: new THREE.Vector3(1, 0, 0) })
+
+      applyTubeCollisions({ line, wrapped: annotate(plane) })
+
+      const zones = line.userData.setCollisionZones.mock.calls[0][0]
+      expect(zones).toHaveLength(1)
+      expect(zones[0].start).toBeCloseTo(-2 - TUBE_RADIUS, 6)
+      expect(zones[0].end).toBeCloseTo(2 + TUBE_RADIUS, 6)
+    })
+
+    it('never collides a line with a wrapped line', () => {
+      const line = makeLine()
+      const twin = makeLine()
+      twin.add(new THREE.Mesh(new THREE.BoxGeometry(20, 0.1, 0.1)))
+
+      applyTubeCollisions({ line, wrapped: annotate(twin) })
+
+      expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
+      expect(twin.userData.setCollisionZones).toHaveBeenCalledWith([])
+    })
+
+    it('still gives a wrapped line its zones', () => {
+      const line = makeLine()
+      const sphere = makeSphere({ position: new THREE.Vector3(5, 0, 0), radius: 1 })
+
+      applyTubeCollisions({ wrapped: annotate(line), sphere })
+
+      const zones = line.userData.setCollisionZones.mock.calls[0][0]
+      expect(zones).toHaveLength(1)
+      expect(zones[0].start).toBeCloseTo(5 - 1 - TUBE_RADIUS, 2)
+    })
+  })
 })

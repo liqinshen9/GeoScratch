@@ -16,6 +16,25 @@ Accent accuracy is measured against the plain tube's own radius:
 extra buffer) - the ring starts where the tube's _surface_ meets the solid's
 surface, not where its centerline does.
 
+## Annotated objects
+
+"Show point on object" (`objectComposition.js`) deletes its object from the store
+and stores an `annotated_object` group in its place: the object plus a point
+marker. `applyTubeCollisions` unwraps that group (`unwrapAnnotated`) before
+sorting objects into lines and solids, on both sides:
+
+- **As a collider**, the group is its wrapped object: a plane collides as a
+  plane, a sphere as a sphere, and a line not at all. Treated as a box, a tilted
+  plane's world AABB is far larger than its square, so a line lying in the
+  plane was dashed well past the plane's edges. A wrapped line became a solid
+  box too, quietly reintroducing line-vs-line collisions.
+- **As a line**, a wrapped line gets zones like any other. The skew-lines
+  exercise builds L2 twice, once alone and once inside "point on L2"; the lone
+  copy collided with its twin's box along its whole length and drew dashes on
+  top of an identical solid tube, which z-fought as a flicker. Unwrapping only
+  the colliders would stop that case but leave the two copies accented
+  differently next to any real solid.
+
 ## Per-collider strategy
 
 | Collider           | Test                                                                                                                                                                                      |

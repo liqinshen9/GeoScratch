@@ -17,6 +17,21 @@ const SOLID_GEO_TYPES = new Set([
   'annotated_object',
 ])
 
+const ANNOTATION_MARKER_GEO_TYPE = 'selectable_point_marker'
+
+// "Show point on object" replaces its object in the store with a group holding
+// the object and a marker. Collide as the object inside, never as the group's
+// box. See docs/architecture/collision.md#annotated-objects.
+function unwrapAnnotated(obj) {
+  let current = obj
+  for (let depth = 0; current?.userData?.geoType === 'annotated_object' && depth < 8; depth += 1) {
+    current = current.children.find(
+      (child) => child.userData?.geoType && child.userData.geoType !== ANNOTATION_MARKER_GEO_TYPE,
+    )
+  }
+  return current ?? null
+}
+
 function worldSegment(group) {
   const { segmentMid, direction, segmentHalfLength } = group.userData
   if (!segmentMid?.isVector3 || !direction?.isVector3) return null
@@ -187,9 +202,12 @@ function mergeZones(zones) {
  * the scene into threeObjStore.
  */
 export function applyTubeCollisions(threeObjStore) {
-  const allObjects = Object.values(threeObjStore || {})
+  const allObjects = Object.values(threeObjStore || {}).map(unwrapAnnotated)
   const lines = allObjects.filter((obj) => obj?.userData?.geoType === 'geo_vector_line')
-  const solids = allObjects.filter((obj) => SOLID_GEO_TYPES.has(obj?.userData?.geoType))
+  const solids = allObjects.filter(
+    (obj) =>
+      SOLID_GEO_TYPES.has(obj?.userData?.geoType) && obj.userData.geoType !== 'annotated_object',
+  )
 
   const lineEntries = lines
     .map((group) => ({ group, segment: worldSegment(group) }))
