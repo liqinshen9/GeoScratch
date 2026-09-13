@@ -64,6 +64,7 @@ function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: '#111827',
+      clearSilhouette: true,
     },
   ]
 

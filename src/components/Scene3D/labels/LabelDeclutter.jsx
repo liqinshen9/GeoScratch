@@ -1,14 +1,19 @@
 import { useEffect, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import THREE from '@/utils/three'
 import { hexToRgba, resolveAnchor } from './labelAnchors'
 import { stepLabelSim } from './labelSim'
+import { clearanceAnchor } from './silhouetteClearance'
 import useAnimationStore from '@/store/useAnimationStore'
 
 // Module-level registry, not React context: drei's <Html> mounts into a
 // separate ReactDOM root. See docs/architecture/label-declutter.md.
 const labelRegistry = new Map()
+const labelGroups = new Map()
 let labelRegistryRevision = 0
+// A label mounts inside <Html>'s own root, out of reach of useThree, and on a
+// demand frameloop nothing else asks for the frame that first places it.
+let requestLabelFrame = () => {}
 
 // Gentle camera-distance scaling, tightly clamped.
 const LABEL_SCALE_REF_DISTANCE = 56
@@ -27,10 +32,15 @@ const MAX_LABEL_SETTLE_FRAMES = 180
 export function LabelGroup({ id, position, children }) {
   const groupRef = useRef(null)
 
+  // Its own map rather than a field on the registry entry: the entry is created
+  // by LabelAnchor, which mounts later inside <Html>'s separate root, so an
+  // effect here usually ran before there was an entry to write to.
   useEffect(() => {
-    const entry = labelRegistry.get(id)
-    if (entry) entry.groupRef = groupRef
-  })
+    labelGroups.set(id, groupRef)
+    return () => {
+      if (labelGroups.get(id) === groupRef) labelGroups.delete(id)
+    }
+  }, [id])
 
   return (
     <group ref={groupRef} position={position}>
@@ -47,6 +57,7 @@ function LabelAnchor({
   worldPos,
   anchorObject,
   anchorName,
+  clearObject,
   emphasis,
   onHide,
   children,
@@ -57,10 +68,12 @@ function LabelAnchor({
   // live by the effect below. See docs/architecture/label-declutter.md#registry-key.
   useEffect(() => {
     const entry = {
+      id,
       bodyRef,
       worldPos,
       anchorObject,
       anchorName,
+      clearObject,
       cx: 0,
       cy: 0,
       hw: 0,
@@ -75,6 +88,7 @@ function LabelAnchor({
     labelRegistry.set(id, entry)
     labelRegistryRevision += 1
     applyLabelTransform(entry, 0, 0, 1)
+    requestLabelFrame()
     return () => {
       // Retract only our own entry. The scene rebuilds on every workspace edit,
       // and React can mount the replacement LabelAnchor for an id before
@@ -106,6 +120,7 @@ function LabelAnchor({
     entry.worldPos = worldPos
     entry.anchorObject = anchorObject
     entry.anchorName = anchorName
+    entry.clearObject = clearObject
     entry.mass = mass
     if (!anchorMoved && !massChanged) return
     labelRegistryRevision += 1
@@ -114,7 +129,7 @@ function LabelAnchor({
       entry.velX = 0
       entry.velY = 0
     }
-  }, [id, worldPos, emphasis, anchorObject, anchorName])
+  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject])
 
   const background = color ? hexToRgba(color, 0.55) : undefined
 
@@ -147,6 +162,25 @@ function applyLabelTransform(entry, x, y, scale) {
   }
 }
 
+// A solid's label hangs from the object's edge, not its centre, recomputed every
+// frame so it tracks the camera. Moves the group before drei's <Html> projects
+// it, which runs later in the same frame. See
+// docs/architecture/label-declutter.md#silhouette-clearance.
+function anchorClearOfSilhouettes(entries, camera, scratch) {
+  for (const e of entries) {
+    if (!e.clearObject || !e.anchorObject || !e.anchorName) continue
+    const centre = resolveAnchor(e.anchorObject, e.anchorName)
+    if (!centre) continue
+    const edge = clearanceAnchor(e.clearObject, centre, camera, scratch)
+    if (!edge) continue
+    const previous = e.worldPos
+    if (previous && previous[0] === edge.x && previous[1] === edge.y && previous[2] === edge.z)
+      continue
+    e.worldPos = [edge.x, edge.y, edge.z]
+    labelGroups.get(e.id)?.current?.position.copy(edge)
+  }
+}
+
 function LabelDeclutter() {
   const scratchVec = useRef(new THREE.Vector3())
   const settleFrameRef = useRef(0)
@@ -171,6 +205,14 @@ function LabelDeclutter() {
     [],
   )
 
+  const invalidate = useThree((state) => state.invalidate)
+  useEffect(() => {
+    requestLabelFrame = invalidate
+    return () => {
+      requestLabelFrame = () => {}
+    }
+  }, [invalidate])
+
   useFrame(({ camera, invalidate }, delta) => {
     const entries = Array.from(labelRegistry.values()).filter((e) => e.bodyRef.current)
 
@@ -182,7 +224,7 @@ function LabelDeclutter() {
     if (playingRef.current) {
       let anyMoved = false
       entries.forEach((entry) => {
-        if (!entry.anchorObject || !entry.anchorName) return
+        if (!entry.anchorObject || !entry.anchorName || entry.clearObject) return
         const live = resolveAnchor(entry.anchorObject, entry.anchorName)
         if (!live) return
         const previous = entry.worldPos
@@ -195,12 +237,14 @@ function LabelDeclutter() {
           entry.worldPos = live
           // The group's position is a React prop, so moving it needs doing by
           // hand; a re-render per frame is not on the table.
-          entry.groupRef?.current?.position.set(live[0], live[1], live[2])
+          labelGroups.get(entry.id)?.current?.position.set(live[0], live[1], live[2])
           anyMoved = true
         }
       })
       if (anyMoved) settleFrameRef.current = 0
     }
+
+    anchorClearOfSilhouettes(entries, camera, scratchVec.current)
 
     const previousCamera = cameraStateRef.current
     const cameraChanged =

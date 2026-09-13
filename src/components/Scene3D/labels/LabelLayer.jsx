@@ -1,10 +1,14 @@
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
+import THREE from '@/utils/three'
+import { clearanceAnchor } from './silhouetteClearance'
 import { fmtVec, resolveAnchor } from './labelAnchors'
 import { LabelAnchor, LabelGroup } from './LabelDeclutter'
 import { getLabelVisibilityKey, getLabelsForObject, formatLabelText } from './labelData'
 import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
 
 function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answerState }) {
+  const camera = useThree((state) => state.camera)
   const ud = object3D.userData || {}
   const derived = getLabelsForObject(object3D)
   //srcBlockId stays stable across scene regenerations (uuid doesn't), so
@@ -37,7 +41,13 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
         // way off in space from another" bug. BASE_OFFSET_X/Y in LabelDeclutter is
         // the sole, camera-angle-consistent source of separation now; the raw
         // anchor position is what gets projected and sprung away from.
-        const worldPos = pos
+        // A solid's label hangs from its edge. The declutter frame loop keeps it
+        // there as the camera moves; this is only the starting point, so a
+        // rebuild does not flash the label at the centre.
+        const edge = lbl.clearSilhouette
+          ? clearanceAnchor(object3D, pos, camera, new THREE.Vector3())
+          : null
+        const worldPos = edge ? [edge.x, edge.y, edge.z] : pos
 
         return (
           <LabelGroup key={`lbl-${i}`} id={`${labelIdBase}-${i}`} position={worldPos}>
@@ -60,6 +70,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                 // these while something is playing.
                 anchorObject={object3D}
                 anchorName={lbl.anchor}
+                clearObject={lbl.clearSilhouette ? object3D : null}
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}
               >

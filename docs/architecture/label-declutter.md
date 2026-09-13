@@ -161,6 +161,50 @@ pointing along the view direction), letting the label render on top of the
 object it labels. A fixed screen-space offset is applied after projection, so
 it's the same nudge regardless of camera angle.
 
+### silhouette-clearance
+
+`BASE_OFFSET_*` works for points, lines and vectors because their glyphs keep a
+constant screen size, so a label ~16px from the anchor is always just beside
+the glyph. A sphere, cube or teapot grows with zoom: its label is anchored at
+the centre, and zoomed in, 16px from the centre is well inside the object.
+
+A label opts out with `clearSilhouette: true` on its descriptor. Its anchor then
+moves from the centre to a world point, at the centre's depth, that projects
+exactly as far up and to the right of the centre as the object's outline
+reaches (`clearanceAnchor`, `silhouetteClearance.js`). The ordinary base offset
+carries on from there, so the label behaves like a point label whose point sits
+on the object's edge.
+
+**Never read the DOM for this.** The first version measured the label's rect and
+moved the spring's home outward in screen space. That rect is where drei's
+`<Html>` placed the label on the previous frame, while the projection used this
+frame's camera. At rest they agree; during a fast orbit or scroll every home was
+off by however far the label had just moved, and labels visibly flew around.
+Measured over a fast orbit and scroll, frame-to-frame acceleration was 2-4x a
+vector label's, with 35px peaks. A world-space anchor is projected by `<Html>` in
+the same frame as the object, and measured below the vector label.
+
+**Measure the projected outline, not the 3D extent.** A second version placed
+the anchor at the object's furthest extent in 3D. Close up, perspective spreads
+the near side of an object well past that, and a teapot seen from just below
+had its label inside its own outline. The reach is taken in camera space as
+view `x` and `y` over depth, which is the screen position up to a factor that
+cancels when the anchor is placed back through the same division.
+
+**Refresh the camera's matrices first.** OrbitControls moves the camera ahead
+of the render that updates `matrixWorld`; `<Html>` calls `updateMatrixWorld()`
+before projecting, and `clearanceAnchor` must too or the anchor lags a frame.
+
+The anchor is recomputed every frame in `anchorClearOfSilhouettes`, which moves
+the label's group directly. That must happen before `<Html>`'s own `useFrame`
+projects it, which it does because `LabelDeclutter` mounts before any label.
+Group refs live in their own `labelGroups` map, not on the registry entry: the
+entry is created by `LabelAnchor` inside `<Html>`'s separate root, which mounts
+after `LabelGroup`'s effect has run, so a ref written onto the entry was usually
+never written at all. Every label then stayed wherever its render put it.
+`LabelLayer` computes the same point at render so a rebuild does not flash the
+label at the centre.
+
 ### registry-key
 
 The register/unregister effect is keyed on `id` **alone**. `worldPos` / `emphasis`

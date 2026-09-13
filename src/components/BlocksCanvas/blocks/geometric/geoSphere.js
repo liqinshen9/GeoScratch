@@ -67,6 +67,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: '#111827',
+      clearSilhouette: true,
     },
   ]
   if (threeObjStore) threeObjStore[blockId] = mesh
