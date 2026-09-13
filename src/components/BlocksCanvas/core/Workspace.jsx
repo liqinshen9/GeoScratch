@@ -35,7 +35,7 @@ const Workspace = (hostElement) => {
     // the live per-theme colour comes from CSS -- see the
     // .blocklyGridPattern rule in BlocksCanvas.css.
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
-    zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.5, maxScale: 2 },
+    zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.3, maxScale: 2 },
     trashcan: false,
     theme: getBlockTheme(resolvedTheme),
     // Blockly ties drag-to-pan to `scrollbars` internally -- if scrollbars is
