@@ -125,9 +125,11 @@ export function initVectorScaleBlock() {
       sTip: { type:'world', position:[sTip.x, sTip.y, sTip.z] },
     };
     const scaledColor = lenS > 1e-8 ? resultColor : warningColor;
-    const sourceLabelEntry = { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: sourceColor };
+    // A label waits for the arrow it names. See docs/architecture/animation.md#labels-wait-for-their-arrow.
+    const shownWith = (obj) => () => !obj || obj.visible !== false;
+    const sourceLabelEntry = { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: sourceColor, revealed: shownWith(arrowV) };
     // Identical glyphs share a tip, so stack the scaled label below it.
-    const scaledLabelEntry = { anchor:'sTip', name: scaledLabel, value: fmt(scaled), distanceFactor:8, offset: identical ? [0.12,-0.18,0] : [0.12,0.12,0], color: scaledColor };
+    const scaledLabelEntry = { anchor:'sTip', name: scaledLabel, value: fmt(scaled), distanceFactor:8, offset: identical ? [0.12,-0.18,0] : [0.12,0.12,0], color: scaledColor, revealed: shownWith(scaledObj) };
 
     // Settings > Vector > "Show Unscaled Vector". Live, not baked in: nothing
     // re-runs the generated code when a setting changes.

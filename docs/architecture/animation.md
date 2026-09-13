@@ -185,6 +185,80 @@ in the playback, so nothing gets a slot it cannot show.
   all", so it never sets `visible = true` on one -- without that, selecting the
   block was enough to bring the hidden arrow back for good.
 
+### Subtraction shows the negative
+
+`vector_arithmetic`'s general `u - v` used to grow `u`, then `v`, then the result
+from the origin. That last arrow touches neither operand, so nothing on screen
+said why it was the difference.
+
+It now reveals `u`; then `v` and `-v` together; then the result; then two last
+slots (`holdNegated`, `stages = 2`) that hold `-v` against the finished result
+for their first 20% and fade it out slowly over the rest; and `-v` is hidden at
+progress 1. The second fade slot is extra time: the reveal's `durationScale` is
+multiplied by `stages / (stages - 1)`, so `u`, `v` and the result keep the pace
+they had with a one-slot fade instead of being squeezed to make room.
+
+`-v` grows inside `v`'s slot rather than taking one of its own. `v`'s stage is
+tagged `isSubtrahend` before `orderRevealParts` runs, then wrapped in a closure
+that plays it through `makeStagedVectorReveal([part])` -- so an owner's
+delegated reveal still works -- and grows `-v` over the same progress. The whole
+reveal is wrapped once more to hide `-v` at progress 1; that is also the last
+frame of any consumer's slot this reveal is handed, so a delegating block leaves
+it hidden too.
+
+The fade is `setGlyphOpacity` on the shaft glyph (`vectorShaftGlyph.js`). It
+flips `transparent` and `depthWrite` only at the ends, so a fade recompiles
+twice rather than every frame, and it hides the halo companions while the arrow
+is see-through, since they would still cut gaps in lines behind it. Only the
+hold slot sets `-v`'s opacity: every slot runs every frame with its own local
+progress, so a second writer (say, `v`'s slot resetting it to 1) would flip it
+back and forth each frame and recompile continuously. Scrubbing back into an
+earlier slot gives the hold slot progress 0, which restores opacity 1. The `-v`
+label hides once the fade passes halfway. Its `-v` label uses `revealed: () => negatedV.visible`, so it is
+hidden at rest as well as before its slot.
+
+`negatedV` is added to the group hidden and is not registered in
+`threeObjStore`, for the same reason as the point-difference guides below.
+
+This replaced a tip-to-tip version (grow the result from `v`'s tip to `u`'s tip,
+then slide it to the origin).
+
+The point-difference form (`P - Q`, both operands points) works differently.
+It rests from `Q` to `P`, and it used to grow that one arrow on its own with
+nothing on screen for `P` or `Q` as vectors, which read as though `P - Q` were
+just `P`. Now `P` and `Q` grow from the origin as position vectors, then the
+difference grows from the origin too -- the free vector it is -- and slides over
+to run from `Q` to `P`, its label riding along. Four slots: two guides, grow,
+slide. It ends where its static scene draws it.
+
+The guides are the operand arrows this path always built and never showed. They
+are added to the group hidden and made visible only while progress is below 1,
+so a scene that never animates, and every animation's last frame, look exactly
+as before. They are not registered in `threeObjStore` (the point path never
+registered its operands, and an exercise checker scanning the store would count
+two extra vectors), so a line-style change will not restyle them until the next
+rebuild.
+
+### Labels wait for their arrow
+
+Labels are rendered by the label layer, not the reveal, so every label used to
+show from the first frame -- `V2` and `V1 - V2` floating over empty space while
+`V1` was still growing.
+
+A label descriptor can carry `revealed: () => boolean`. The blocks that reveal
+(`vector_arithmetic`, `vector_cross_product`, `vector_scale`,
+`vector_magnitude`, `vector_project`) set it to "the glyph I name is visible",
+which is exactly what the staged reveal toggles per stage. `LabelDeclutter`
+hides a label while it returns false and leaves it out of the declutter sim, so
+a hidden label does not shove visible ones aside. It is a function, not a stored
+glyph, so nothing ever tries to copy an Object3D out of `userData`.
+`vector_magnitude`'s point-plane form draws nothing, so its `d = ...` label waits
+for the upstream projection's `distance_segment`.
+
+Anchors re-resolve while playing **or scrubbed below progress 1**, plus one
+frame after coming to rest. Scrubbing sets `playing` false, so a playing-only
+check left a moving label behind for the whole scrub.
+
 ## Gotcha a refactor would reintroduce
 
 ### cap-the-first-delta

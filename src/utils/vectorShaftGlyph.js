@@ -380,6 +380,32 @@ export function buildVectorShaftGlyph(
 
   applyVectorStyle(useSettingsStore?.getState().settings || {})
 
+  // Fades the arrow in place (vector_arithmetic fades -v out). The halo
+  // companions go while it is see-through: they would still cut gaps in lines
+  // behind an arrow that is no longer fully there. Transparency only flips, and
+  // so only recompiles, at the ends; the opacity in between is a uniform.
+  group.userData.glyphOpacity = 1
+  group.userData.setGlyphOpacity = (alpha) => {
+    const next = Math.max(0, Math.min(1, Number(alpha)))
+    if (!Number.isFinite(next) || next === group.userData.glyphOpacity) return
+    const wasOpaque = group.userData.glyphOpacity >= 1
+    group.userData.glyphOpacity = next
+    const opaque = next >= 1
+    for (const mat of glyphMaterials) {
+      mat.opacity = next
+      if (opaque !== wasOpaque) {
+        mat.transparent = !opaque
+        mat.depthWrite = opaque
+        mat.needsUpdate = true
+      }
+    }
+    if (opaque) {
+      applyVectorStyle(useSettingsStore?.getState().settings || {})
+    } else if (haloAvailable) {
+      haloCompanionLine.visible = haloCompanionTube.visible = haloCompanionRinged.visible = false
+    }
+  }
+
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
       if (window.threeObjStore?.[blockId] !== group) {

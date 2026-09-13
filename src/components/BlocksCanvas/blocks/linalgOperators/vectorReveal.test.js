@@ -184,6 +184,228 @@ describe('vector_arithmetic staged reveal', () => {
   })
 })
 
+describe('vector_arithmetic subtraction', () => {
+  // u = (1, -4, 1), v = (1, 3, 1): u - v = (0, -7, 0).
+  function subtract({ vFrom } = {}) {
+    const minus = workspace.newBlock('vector_arithmetic')
+    minus.setFieldValue('subtract', 'OP')
+    plug(minus, 'U', vec3(1, -4, 1))
+    const v = vec3(1, 3, 1)
+    if (vFrom) plug(v, 'ORIGIN', vec3(...vFrom))
+    plug(minus, 'V', v)
+    const store = run()
+    const group = store[minus.id]
+    return {
+      group,
+      result: store[minus.id + '_r'],
+      arrowU: store[minus.id + '_u'],
+      arrowV: store[minus.id + '_v'],
+      negated: group.children.find(
+        (child) => child.userData?.vectorOrigin && child.visible === false,
+      ),
+    }
+  }
+
+  const length = (glyph) => glyph.userData.vectorLength
+  const V_LENGTH = Math.hypot(1, 3, 1)
+
+  it('keeps -v off the static scene', () => {
+    const { negated, result } = subtract()
+    expect(negated).toBeTruthy()
+    expect(negated.visible).toBe(false)
+    expect(result.visible).toBe(true)
+  })
+
+  // u, then v with -v, then the result, then two slots to hold and fade -v: five.
+  it('grows u first, on its own', () => {
+    const { group, arrowU, arrowV, negated, result } = subtract()
+    expect(group.userData.animate.stages).toBe(5)
+    // The fade's extra slot adds time rather than squeezing the others.
+    expect(group.userData.animate.durationScale).toBeCloseTo(5 / 4, 9)
+
+    group.userData.animate(0.5 / 5)
+    expect(arrowU.visible).toBe(true)
+    expect(arrowV.visible).toBe(false)
+    expect(negated.visible).toBe(false)
+    expect(result.visible).toBe(false)
+  })
+
+  it('grows v and -v together, both from v tail', () => {
+    const { group, arrowV, negated, result } = subtract()
+    group.userData.animate(1.5 / 5)
+    expect(arrowV.visible).toBe(true)
+    expect(negated.visible).toBe(true)
+    expect(length(negated)).toBeCloseTo(length(arrowV), 9)
+    expect(length(negated)).toBeCloseTo(V_LENGTH / 2, 9)
+    expect(negated.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+    const direction = negated.userData.vectorDirection.toArray()
+    ;[-1, -3, -1].forEach((c, i) => expect(direction[i]).toBeCloseTo(c / V_LENGTH, 9))
+    expect(result.visible).toBe(false)
+  })
+
+  it('then grows the result from the origin, with -v still up', () => {
+    const { group, negated, result } = subtract()
+    group.userData.animate(2.5 / 5)
+    expect(negated.visible).toBe(true)
+    expect(length(negated)).toBeCloseTo(V_LENGTH, 9)
+    expect(result.visible).toBe(true)
+    expect(result.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+    expect(length(result)).toBeCloseTo(7 / 2, 9)
+  })
+
+  it('keeps -v up for a moment after the result has finished', () => {
+    const { group, negated, result } = subtract()
+    group.userData.animate(3.2 / 5)
+    expect(length(result)).toBeCloseTo(7, 9)
+    expect(negated.visible).toBe(true)
+    expect(length(negated)).toBeCloseTo(V_LENGTH, 9)
+    expect(negated.userData.glyphOpacity).toBe(1)
+  })
+
+  // The last two slots hold for their first 20%, then fade over the rest.
+  it('then fades -v out rather than cutting it', () => {
+    const { group, negated } = subtract()
+    group.userData.animate(3.7 / 5)
+    expect(negated.visible).toBe(true)
+    expect(negated.userData.glyphOpacity).toBeCloseTo(1 - 0.15 / 0.8, 9)
+
+    group.userData.animate(4.6 / 5)
+    expect(negated.userData.glyphOpacity).toBeCloseTo(1 - 0.6 / 0.8, 9)
+
+    // Scrubbing back brings it back whole.
+    group.userData.animate(2.5 / 5)
+    expect(negated.userData.glyphOpacity).toBe(1)
+  })
+
+  it('takes -v away at rest', () => {
+    const { group, arrowU, arrowV, negated, result } = subtract()
+    group.userData.animate(0.5)
+    group.userData.animate(1)
+    expect(negated.visible).toBe(false)
+    // Opaque again, so the next play starts from a whole arrow.
+    expect(negated.userData.glyphOpacity).toBe(1)
+    expect(arrowU.visible).toBe(true)
+    expect(arrowV.visible).toBe(true)
+    expect(length(result)).toBeCloseTo(7, 9)
+  })
+
+  // -v follows v's tail, which the student controls: hang v off u's tip and
+  // -v hangs there too, head to tail.
+  it('draws -v from wherever v is drawn from', () => {
+    const { group, negated } = subtract({ vFrom: [1, -4, 1] })
+    group.userData.animate(0.5)
+    expect(negated.userData.vectorOrigin.toArray()).toEqual([1, -4, 1])
+  })
+
+  it('shows the -v label only while -v is on screen', () => {
+    const { group } = subtract()
+    const label = group.userData.labels.find((l) => l.anchor === 'negTip')
+    expect(label.name).toBe('\u2212' + group.userData.labels.find((l) => l.anchor === 'vTip').name)
+
+    group.userData.animate(0.5 / 5)
+    expect(label.revealed()).toBe(false)
+    group.userData.animate(1.5 / 5)
+    expect(label.revealed()).toBe(true)
+    group.userData.animate(3.5 / 5)
+    expect(label.revealed()).toBe(true)
+    // Goes once the arrow is more than half faded.
+    group.userData.animate(4.6 / 5)
+    expect(label.revealed()).toBe(false)
+    group.userData.animate(1)
+    expect(label.revealed()).toBe(false)
+  })
+})
+
+describe('vector_arithmetic point difference', () => {
+  // P = (-9, 8, 7), Q = (3, -2, 5): P - Q = (-12, 10, 2), drawn from Q.
+  const point = (x, y, z) => {
+    const block = workspace.newBlock('linalg_point')
+    block.setFieldValue(x, 'X')
+    block.setFieldValue(y, 'Y')
+    block.setFieldValue(z, 'Z')
+    return block
+  }
+
+  function pointDifference() {
+    const minus = workspace.newBlock('vector_arithmetic')
+    minus.setFieldValue('subtract', 'OP')
+    plug(minus, 'U', point(-9, 8, 7))
+    plug(minus, 'V', point(3, -2, 5))
+    const store = run()
+    const group = store[minus.id]
+    const result = store[minus.id + '_r']
+    const [guideP, guideQ] = group.children.filter((child) => child !== result)
+    return { group, result, guideP, guideQ }
+  }
+
+  const length = (glyph) => glyph.userData.vectorLength
+  const DIFFERENCE = Math.hypot(12, 10, 2)
+
+  it('draws only the difference when nothing is playing', () => {
+    const { result, guideP, guideQ } = pointDifference()
+    expect(result.visible).toBe(true)
+    expect(guideP.visible).toBe(false)
+    expect(guideQ.visible).toBe(false)
+    expect(result.userData.vectorOrigin.toArray()).toEqual([3, -2, 5])
+  })
+
+  // P and Q take a slot each, the difference two: grow at the origin, slide.
+  it('grows P, then Q, from the origin before the difference', () => {
+    const { group, result, guideP, guideQ } = pointDifference()
+    expect(group.userData.animate.stages).toBe(4)
+
+    group.userData.animate(0.5 / 4)
+    expect(guideP.visible).toBe(true)
+    expect(length(guideP)).toBeCloseTo(Math.hypot(9, 8, 7) / 2, 9)
+    expect(guideP.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+    expect(guideQ.visible).toBe(false)
+    expect(result.visible).toBe(false)
+
+    group.userData.animate(1.5 / 4)
+    expect(length(guideP)).toBeCloseTo(Math.hypot(9, 8, 7), 9)
+    expect(guideQ.visible).toBe(true)
+    expect(result.visible).toBe(false)
+  })
+
+  // Drawn first as the free vector it is, so it cannot be mistaken for P.
+  it('grows the difference out of the origin', () => {
+    const { group, result, guideP, guideQ } = pointDifference()
+    group.userData.animate(2.5 / 4)
+    expect(guideP.visible).toBe(true)
+    expect(guideQ.visible).toBe(true)
+    expect(result.visible).toBe(true)
+    expect(result.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+    expect(length(result)).toBeCloseTo(DIFFERENCE / 2, 9)
+  })
+
+  it('then slides it over to run from Q to P, label and all', () => {
+    const { group, result } = pointDifference()
+    group.userData.animate(3.5 / 4)
+    const halfway = [1.5, -1, 2.5]
+    result.userData.vectorOrigin.toArray().forEach((c, i) => expect(c).toBeCloseTo(halfway[i], 9))
+    expect(length(result)).toBeCloseTo(DIFFERENCE, 9)
+    // The label sits at the arrow's midpoint, lifted the same as at rest.
+    const rest = [(3 - 9) / 2, (-2 + 8) / 2 + 0.35, (5 + 7) / 2]
+    const shift = [-1.5, 1, -2.5]
+    group.userData.labelAnchors.rTip.position.forEach((c, i) =>
+      expect(c).toBeCloseTo(rest[i] + shift[i], 9),
+    )
+  })
+
+  it('takes the guides away at rest, leaving the static scene', () => {
+    const { group, result, guideP, guideQ } = pointDifference()
+    group.userData.animate(0.6)
+    group.userData.animate(1)
+    expect(guideP.visible).toBe(false)
+    expect(guideQ.visible).toBe(false)
+    expect(result.visible).toBe(true)
+    expect(length(result)).toBeCloseTo(DIFFERENCE, 9)
+    expect(result.userData.vectorOrigin.toArray()).toEqual([3, -2, 5])
+    const labelAtRest = group.userData.labelAnchors.rTip.position
+    ;[-3, 3.35, 6].forEach((c, i) => expect(labelAtRest[i]).toBeCloseTo(c, 9))
+  })
+})
+
 describe('vector_scale staged reveal', () => {
   const scaleBy = (k) => {
     const scale = workspace.newBlock('vector_scale')

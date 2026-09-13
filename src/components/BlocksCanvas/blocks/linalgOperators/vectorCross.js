@@ -114,18 +114,20 @@ export function initCrossProductBlock() {
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
     };
     const crossLabelColor = lenC > 1e-8 ? crossVectorColor : warningColor;
+    // A label waits for the arrow it names. See docs/architecture/animation.md#labels-wait-for-their-arrow.
+    const shownWith = (obj) => () => !obj || obj.visible !== false;
     group.userData.labels = exerciseMode
       ? [
-      { anchor:'cTip', name: 'n = ' + crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'cTip', name: 'n = ' + crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor, revealed: shownWith(crossObj) },
     ]
       : (showOperandLabels
       ? [
-      { anchor:'uTip', name: 'p', value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-      { anchor:'vTip', name: 'q', value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
-      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'uTip', name: 'p', value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) },
+      { anchor:'vTip', name: 'q', value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV) },
+      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor, revealed: shownWith(crossObj) },
     ]
       : [
-      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor },
+      { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor, revealed: shownWith(crossObj) },
     ]);
 
     // Staged reveal for the play/scrub transport (AnimationDriver): grow p, then

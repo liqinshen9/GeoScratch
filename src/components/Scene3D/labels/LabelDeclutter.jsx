@@ -58,6 +58,7 @@ function LabelAnchor({
   anchorObject,
   anchorName,
   clearObject,
+  revealed,
   emphasis,
   onHide,
   children,
@@ -74,6 +75,7 @@ function LabelAnchor({
       anchorObject,
       anchorName,
       clearObject,
+      revealed,
       cx: 0,
       cy: 0,
       hw: 0,
@@ -121,6 +123,7 @@ function LabelAnchor({
     entry.anchorObject = anchorObject
     entry.anchorName = anchorName
     entry.clearObject = clearObject
+    entry.revealed = revealed
     entry.mass = mass
     if (!anchorMoved && !massChanged) return
     labelRegistryRevision += 1
@@ -129,7 +132,7 @@ function LabelAnchor({
       entry.velX = 0
       entry.velY = 0
     }
-  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject])
+  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject, revealed])
 
   const background = color ? hexToRgba(color, 0.55) : undefined
 
@@ -196,11 +199,17 @@ function LabelDeclutter() {
     zoom: NaN,
   })
 
+  // Anchors follow a moving object while anything is playing OR scrubbed short
+  // of the resting pose, plus one frame after it comes to rest so labels land
+  // on the resting anchors rather than on the last in-between frame.
   const playingRef = useRef(false)
+  const settleAnchorsRef = useRef(false)
   useEffect(
     () =>
       useAnimationStore.subscribe((state) => {
-        playingRef.current = state.playing
+        const animating = state.playing || state.progress < 1
+        if (playingRef.current && !animating) settleAnchorsRef.current = true
+        playingRef.current = animating
       }),
     [],
   )
@@ -214,14 +223,34 @@ function LabelDeclutter() {
   }, [invalidate])
 
   useFrame(({ camera, invalidate }, delta) => {
-    const entries = Array.from(labelRegistry.values()).filter((e) => e.bodyRef.current)
+    const registered = Array.from(labelRegistry.values()).filter((e) => e.bodyRef.current)
+
+    // A label whose arrow a reveal has not grown yet is hidden, and left out of
+    // the declutter so it does not push visible labels around.
+    // See docs/architecture/animation.md#labels-wait-for-their-arrow.
+    let revealChanged = false
+    registered.forEach((e) => {
+      let shown = true
+      try {
+        shown = !e.revealed || e.revealed() !== false
+      } catch {
+        shown = true
+      }
+      if (e.shown === shown) return
+      e.shown = shown
+      e.bodyRef.current.style.visibility = shown ? '' : 'hidden'
+      revealChanged = true
+    })
+    if (revealChanged) settleFrameRef.current = 0
+    const entries = registered.filter((e) => e.shown !== false)
 
     // labelAnchors are read on React render, so a label would sit still while
     // the object it names moves -- the Q sweep swings P - Q across the plane
     // with its label left behind. Re-resolve while something is playing, and
     // only then: idle scenes get the cheaper render-time position, and this
     // keeps the settle logic from being fed a moving target for no reason.
-    if (playingRef.current) {
+    if (playingRef.current || settleAnchorsRef.current) {
+      settleAnchorsRef.current = false
       let anyMoved = false
       entries.forEach((entry) => {
         if (!entry.anchorObject || !entry.anchorName || entry.clearObject) return

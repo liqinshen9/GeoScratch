@@ -71,6 +71,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                 anchorObject={object3D}
                 anchorName={lbl.anchor}
                 clearObject={lbl.clearSilhouette ? object3D : null}
+                revealed={typeof lbl.revealed === 'function' ? lbl.revealed : null}
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}
               >

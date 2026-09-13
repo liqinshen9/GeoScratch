@@ -6,7 +6,7 @@ import { appendVectorPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPr
 
 let REGISTERED = false
 
-const fmt = (n) => (Number.isFinite(n) ? String(Math.round(n * 1e4) / 1e4) : '—')
+const fmt = (n) => (Number.isFinite(n) ? String(Math.round(n * 100) / 100) : '—')
 
 const esc = (s) =>
   String(s).replace(
@@ -222,22 +222,41 @@ export function initVectorArithmeticBlock() {
       resObj = window.geoPointMarker({ color: window.GeoScratchColors.forRole('warning'), radius: 0.04 });
     }
 
+    // u - v shows v's negative while it plays: grown from v's own tail alongside
+    // v, so a student who hangs v off u's tip sees u + (-v) head to tail. Hidden
+    // at rest. See docs/architecture/animation.md#subtraction-shows-the-negative.
+    const negatedV = ${op === 'subtract' ? 'true' : 'false'} && !isPointDifference && lenV > 1e-8
+      ? window.buildVectorShaftGlyph(
+        THREE, baseId + '_negv', vAnchor.clone(), vVal.clone().negate().normalize(),
+        safeLen(lenV), operandBColor, glyphOptions
+      )
+      : null;
+    if (negatedV) negatedV.visible = false;
+
     // Tag metadata on part objects
     const tag = (obj) => {
       obj.userData.geoType='geo_vector';
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    if (arrowU) tag(arrowU); if (arrowV) tag(arrowV); tag(resObj);
+    if (arrowU) tag(arrowU); if (arrowV) tag(arrowV); if (negatedV) tag(negatedV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
     if (isPointDifference) {
       group.add(resObj);
+      // P and Q as position vectors, shown only while the reveal plays: they are
+      // what the difference is taken between, and the resting scene is just P - Q.
+      [arrowU, arrowV].forEach((guide) => {
+        if (!guide) return;
+        guide.visible = false;
+        group.add(guide);
+      });
     } else {
       if (arrowU) group.add(arrowU);
       group.add(resObj);
       if (arrowV) group.add(arrowV);
+      if (negatedV) group.add(negatedV);
     }
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
@@ -251,24 +270,34 @@ export function initVectorArithmeticBlock() {
       uTip:   { type:'world', position:[uAnchor.x + uVal.x, uAnchor.y + uVal.y, uAnchor.z + uVal.z] },
       vTip:   { type:'world', position:[vAnchor.x + vVal.x, vAnchor.y + vVal.y, vAnchor.z + vVal.z] },
       rTip:   { type:'world', position:[resultLabelPosition.x,  resultLabelPosition.y,  resultLabelPosition.z ] },
+      negTip: { type:'world', position:[vAnchor.x - vVal.x, vAnchor.y - vVal.y, vAnchor.z - vVal.z] },
     };
     const resultColor = isPointDifference
       ? window.GeoScratchColors.forInstance('vector', baseId)
       : (lenR > 1e-8 ? window.GeoScratchColors.forRole('result') : window.GeoScratchColors.forRole('warning'));
+    // A label waits for the arrow it names: during a reveal it would otherwise
+    // float over empty space. See docs/architecture/animation.md#labels-wait-for-their-arrow.
+    const shownWith = (obj) => () => !obj || obj.visible !== false;
+    // Shown only while -v itself is: at rest it is hidden, and so is this.
+    const negatedLabel = negatedV
+      ? [{ anchor:'negTip', name: '\u2212' + vLabel, value: fmt(vVal.clone().negate()), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: () => negatedV.visible === true && !negatedV.userData.fadingOut }]
+      : [];
     group.userData.labels = isPointDifference
       ? [
-        { anchor:'rTip', name: pointDifferenceLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'rTip', name: pointDifferenceLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor, revealed: shownWith(resObj) },
       ]
       : showOperandLabels
         ? [
         // An operand we left to its owner is already labelled by it.
-        ...(uOwnerGlyphs ? [] : [{ anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor }]),
+        ...(uOwnerGlyphs ? [] : [{ anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) }]),
         // Identical operands share a tip, so stack the second label below it.
-        ...(vOwnerGlyphs ? [] : [{ anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor }]),
-        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        ...(vOwnerGlyphs ? [] : [{ anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset: operandsIdentical ? [0.12,-0.16,0] : [0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV || arrowU) }]),
+        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor, revealed: shownWith(resObj) },
+        ...negatedLabel,
       ]
         : [
-        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor },
+        { anchor:'rTip', name: genericResultLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor, revealed: shownWith(resObj) },
+        ...negatedLabel,
       ];
 
     // Staged reveal for the play/scrub transport (AnimationDriver): grow the
@@ -297,13 +326,96 @@ export function initVectorArithmeticBlock() {
     };
     const operandParts = orderParts([
       ...operandStage(arrowU, uOwnerGlyphs, uVal, uAnchor, safeLen(lenU)),
-      ...operandStage(arrowV, vOwnerGlyphs, vVal, vAnchor, safeLen(lenV)),
+      ...operandStage(arrowV, vOwnerGlyphs, vVal, vAnchor, safeLen(lenV))
+        .map((part) => ({ ...part, isSubtrahend: true })),
     ]);
-    group.userData.animate = window.makeStagedVectorReveal(
+    const resultStage = { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 };
+    // -v grows in v's own slot, however v is revealed (its arrow, or an owner's
+    // closure), so the two appear together.
+    const revealParts = negatedV
+      ? operandParts.map((part) => {
+        if (!part.isSubtrahend) return part;
+        const own = window.makeStagedVectorReveal([part]);
+        const withNegated = (progress, ease) => {
+          own(progress, ease);
+          const ez = typeof ease === 'function' ? ease : (t) => t;
+          negatedV.userData.setVectorLength?.(safeLen(lenV) * ez(progress));
+          negatedV.visible = progress > 1e-3;
+        };
+        withNegated.stages = own.stages;
+        withNegated.durationScale = own.durationScale;
+        return { animate: withNegated, anchor: part.anchor, tip: part.tip };
+      })
+      : operandParts;
+
+    // P - Q: P and Q grow from the origin, then the difference grows there too,
+    // as the free vector it is, and slides over to run from Q to P where it
+    // rests. The guides go at progress 1, leaving the static scene.
+    // See docs/architecture/animation.md#subtraction-shows-the-negative.
+    let pointDifferenceReveal = null;
+    if (isPointDifference) {
+      const guides = [[arrowU, lenU], [arrowV, lenV]].filter(([guide, len]) => guide && len > 1e-8);
+      const resultFull = lenR > 1e-8 ? safeLen(lenR) : 0;
+      const canSlide = resultFull > 0 && typeof resObj.userData?.setVectorSegment === 'function';
+      const resultDirection = lenR > 1e-8 ? res.clone().normalize() : new THREE.Vector3(1, 0, 0);
+      const labelLift = resultLabelPosition.clone().sub(resultOrigin.clone().add(resultTip).multiplyScalar(0.5));
+      const restingLabel = group.userData.labelAnchors.rTip.position.slice();
+      const slots = guides.length + (canSlide ? 2 : 1);
+      pointDifferenceReveal = (progress, ease) => {
+        const ez = typeof ease === 'function' ? ease : (t) => t;
+        const local = (i) => Math.max(0, Math.min(1, progress * slots - i));
+        guides.forEach(([guide, len], i) => {
+          guide.userData.setVectorLength?.(len * ez(local(i)));
+          guide.visible = progress < 1 && local(i) > 1e-3;
+        });
+        const grow = local(guides.length);
+        resObj.visible = resultFull === 0 || grow > 1e-3;
+        if (!canSlide) {
+          if (resultFull > 0) resObj.userData.setVectorLength?.(resultFull * ez(grow));
+          return;
+        }
+        const start = origin.clone().lerp(resultOrigin, ez(local(guides.length + 1)));
+        const length = resultFull * ez(grow);
+        resObj.userData.setVectorSegment(start, resultDirection, length);
+        const mid = start.clone().addScaledVector(resultDirection, length / 2).add(labelLift);
+        group.userData.labelAnchors.rTip.position = progress >= 1 ? restingLabel.slice() : [mid.x, mid.y, mid.z];
+      };
+      pointDifferenceReveal.stages = slots;
+    }
+    // The last two slots hold -v against the finished result for a moment, then
+    // fade it out slowly.
+    // It is the only thing that sets -v's opacity, and it runs every frame with
+    // its own progress (0 before its turn), so scrubbing back restores it.
+    const NEGATED_HOLD = 0.2;
+    const holdNegated = (progress) => {
+      if (!negatedV) return;
+      const fade = Math.max(0, Math.min(1, (progress - NEGATED_HOLD) / (1 - NEGATED_HOLD)));
+      negatedV.userData.setGlyphOpacity?.(1 - fade);
+      negatedV.userData.fadingOut = fade > 0.5;
+    };
+    holdNegated.stages = 2;
+    const staged = window.makeStagedVectorReveal(
       isPointDifference
-        ? [{ obj: resObj, full: safeLen(lenR) }]
-        : [...operandParts, { obj: resObj, full: lenR > 1e-8 ? safeLen(lenR) : 0 }]
+        ? [{ animate: pointDifferenceReveal }]
+        : [...revealParts, resultStage, ...(negatedV ? [{ animate: holdNegated }] : [])]
     );
+    // -v goes once the result is up. Progress 1 is also the last frame of any
+    // consumer's slot this reveal is handed, so it goes there too.
+    group.userData.animate = negatedV
+      ? Object.assign((progress, ease) => {
+        staged(progress, ease);
+        if (progress >= 1) {
+          negatedV.visible = false;
+          negatedV.userData.setGlyphOpacity?.(1);
+          negatedV.userData.fadingOut = false;
+        }
+      }, {
+        stages: staged.stages,
+        // The second fade slot is extra time, not a squeeze on the others: scale
+        // the run so every other slot keeps the length it had with one.
+        durationScale: staged.durationScale * (staged.stages / (staged.stages - 1)),
+      })
+      : staged;
 
     // Register
     if (typeof threeObjStore==='object' && threeObjStore) {

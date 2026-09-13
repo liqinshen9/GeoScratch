@@ -120,6 +120,16 @@ export function initVectorMagnitude() {
         offset: isPointPlaneProjection || isPointToPointDistance ? [0, 0, 0] : [0.12, 0.12, 0],
         emphasis: isPointPlaneProjection || isPointToPointDistance,
         role: isPointPlaneProjection || isPointToPointDistance ? 'distance' : undefined,
+        // Waits for what it measures: the plain form's own arrow, the centre
+        // highlight, or -- drawing nothing itself -- the upstream projection's
+        // distance segment. See docs/architecture/animation.md#labels-wait-for-their-arrow.
+        revealed: () => {
+          const measured = isPointPlaneProjection
+            ? window.threeObjStore?.[vVal.userData?.glyph?.blockId]?.children?.find(
+              (child) => child.userData?.geoType === 'distance_segment')
+            : isPointToPointDistance ? highlight : obj;
+          return !measured || measured.visible !== false;
+        },
         // Both distance forms read as a distance; the plain magnitude takes the
         // colour of the vector it measures.
         color: isPointPlaneProjection || isPointToPointDistance

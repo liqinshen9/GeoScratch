@@ -195,18 +195,20 @@ export function initVectorProjectBlock() {
       pTip:{type:'world', position:[pTip.x,  pTip.y,  pTip.z ]},
       normal:{type:'world', position:[normalLabelTip.x, normalLabelTip.y, normalLabelTip.z]},
     };
+    // A label waits for the arrow it names. See docs/architecture/animation.md#labels-wait-for-their-arrow.
+    const shownWith = (obj) => () => !obj || obj.visible !== false;
     group.userData.labels = isPointPlaneDistanceProjection
       ? [
-        { anchor:'normal', name: normalName, value: fmt(vVal), distanceFactor:8, offset:[0,0,0], color: normalColor },
+        { anchor:'normal', name: normalName, value: fmt(vVal), distanceFactor:8, offset:[0,0,0], color: normalColor, revealed: shownWith(distanceIllustration) },
       ]
       : showOperandLabels
         ? [
-        { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor },
-        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor },
-        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
+        { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) },
+        { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV) },
+        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor, revealed: shownWith(projObj) },
       ]
         : [
-        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor },
+        { anchor:'pTip', name: projectionLabel, value: fmt(projVec), distanceFactor:8, offset:[0.12,0.12,0], color: projLen > 1e-8 ? resultColor : warningColor, revealed: shownWith(projObj) },
       ];
 
     // Staged reveal: the operands first, then the projection they produce,
