@@ -32,20 +32,48 @@ function geoParametricPlaneDefinition(
     new THREE.Vector3(0, 0, 1),
     normalUnit,
   )
-  // Center the patch on the plane near the origin, then fit an intact square
-  // two units inside the scene walls. Its size must not depend on the chosen point.
-  const planeCenter = normalUnit.clone().multiplyScalar(normalUnit.dot(point))
+  // A square centred on the defining point, or one covering the whole scene box,
+  // cut off at the box walls the same way a line is, never shrunk to fit. See
+  // docs/architecture/collision.md#plane-patch.
+  const planeCenter = point.clone()
   const u = new THREE.Vector3(1, 0, 0).applyQuaternion(planeRotation)
   const v = new THREE.Vector3(0, 1, 0).applyQuaternion(planeRotation)
-  let halfSize = window.__geoScratchRuntimeMode === 'exercise-2' ? 14 : 24
-  for (const axis of ['x', 'y', 'z']) {
-    const room = Math.max(0, 18 - Math.abs(planeCenter[axis]))
-    const span = Math.abs(u[axis]) + Math.abs(v[axis])
-    if (span > 1e-10) halfSize = Math.min(halfSize, room / span)
-    if (Math.abs(planeCenter[axis]) > 18) halfSize = 0
-  }
+  const planeSettings = window.useSettingsStore?.getState().settings || {}
+  const halfSize = window.planePatchHalfSize({
+    fillBox: planeSettings.planeFillsBoundingBox !== false,
+    size: planeSettings.planeSize,
+    centre: planeCenter,
+  })
   const planeSize = halfSize * 2
-  const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize)
+  const planePolygon = window.planePatchPolygon({ centre: planeCenter, u, v, halfSize })
+
+  // UVs span the outline's bounding rectangle, so the selection glow's edge-fade
+  // texture still fades in from the drawn edges.
+  const planeGeom = new THREE.BufferGeometry()
+  if (planePolygon.length >= 3) {
+    const shapeGeom = new THREE.ShapeGeometry(
+      new THREE.Shape(planePolygon.map(([s, t]) => new THREE.Vector2(s, t))),
+    )
+    const position = shapeGeom.attributes.position
+    shapeGeom.computeBoundingBox()
+    const { min, max } = shapeGeom.boundingBox
+    const spanS = Math.max(max.x - min.x, 1e-9)
+    const spanT = Math.max(max.y - min.y, 1e-9)
+    const uvs = new Float32Array(position.count * 2)
+    for (let i = 0; i < position.count; i += 1) {
+      uvs[i * 2] = (position.getX(i) - min.x) / spanS
+      uvs[i * 2 + 1] = (position.getY(i) - min.y) / spanT
+    }
+    shapeGeom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+    planeGeom.copy(shapeGeom)
+    shapeGeom.dispose()
+  } else {
+    // Nothing of the square is inside the box. EdgesGeometry, here and in the
+    // selection glow, throws on a geometry with no positions, so draw nothing
+    // with a zero-area triangle instead.
+    planeGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3))
+    planeGeom.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(6), 2))
+  }
   const planeMat = new THREE.MeshStandardMaterial({
     color: planeFillColor,
     transparent: true,
@@ -120,6 +148,7 @@ function geoParametricPlaneDefinition(
   group.userData.normalRaw = normalRaw.clone()
   group.userData.normalUnit = normalUnit.clone()
   group.userData.planeSize = planeSize
+  group.userData.planePolygon = planePolygon
   group.userData.labelAnchors = {
     point: { type: 'world', position: [point.x, point.y, point.z] },
   }

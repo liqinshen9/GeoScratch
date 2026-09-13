@@ -47,6 +47,32 @@ function ToggleRow({ label, description, checked, onChange, settingKey }) {
   )
 }
 
+function NumberRow({ label, description, value, onChange, settingKey, min, max, step, disabled }) {
+  const locked = useSettingLocked(settingKey)
+  return (
+    <div className="settings-row">
+      <div className="settings-row__copy">
+        <label className="settings-label">{label}</label>
+        {description && <p className="settings-description">{description}</p>}
+        {locked && <LockedHint />}
+      </div>
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        disabled={locked || disabled}
+        onChange={(e) => {
+          const next = Number(e.target.value)
+          if (Number.isFinite(next) && next > 0) onChange(next)
+        }}
+        className="settings-number"
+      />
+    </div>
+  )
+}
+
 function SettingsSection({ title, children, className = '' }) {
   return (
     <section className={`settings-card ${className}`}>
@@ -283,6 +309,24 @@ export default function SettingsPage() {
                   checked={settings.showPlanePointNormal}
                   settingKey="showPlanePointNormal"
                   onChange={(v) => updateSetting('showPlanePointNormal', v)}
+                />
+                <ToggleRow
+                  label="Fill Bounding Box"
+                  description="Extend every plane to the walls of the scene box, the way a line is. Off, a plane is a square of the size below, still cut off at the walls"
+                  checked={settings.planeFillsBoundingBox}
+                  settingKey="planeFillsBoundingBox"
+                  onChange={(v) => updateSetting('planeFillsBoundingBox', v)}
+                />
+                <NumberRow
+                  label="Plane Size"
+                  description="Side length of a plane's square, centred on its point, when it does not fill the box"
+                  value={settings.planeSize}
+                  settingKey="planeSize"
+                  min={1}
+                  max={80}
+                  step={1}
+                  disabled={settings.planeFillsBoundingBox}
+                  onChange={(v) => updateSetting('planeSize', v)}
                 />
               </GeometryTile>
 

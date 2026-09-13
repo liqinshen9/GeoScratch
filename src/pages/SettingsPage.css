@@ -13,6 +13,7 @@
 :root[data-theme='dark'] .settings-card,
 :root[data-theme='dark'] .settings-geometry-tile,
 :root[data-theme='dark'] .settings-select,
+:root[data-theme='dark'] .settings-number,
 :root[data-theme='dark'] .settings-reset-button {
   background: var(--geo-surface) !important;
   border-color: var(--geo-border) !important;
@@ -170,7 +171,19 @@
   font-weight: 600;
 }
 
+.settings-number {
+  flex: 0 0 auto;
+  width: 64px;
+  padding: 3px 6px;
+  border: 1px solid rgba(0, 46, 166, 0.22);
+  border-radius: 6px;
+  background: #fff;
+  color: #102a6b;
+  font-size: 12px;
+}
+
 .settings-switch:disabled,
+.settings-number:disabled,
 .settings-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;

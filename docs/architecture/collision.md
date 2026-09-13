@@ -35,6 +35,40 @@ sorting objects into lines and solids, on both sides:
   the colliders would stop that case but leave the two copies accented
   differently next to any real solid.
 
+## Plane patch
+
+A point-normal plane draws a square centred on its point, then clipped to the
+scene box (`utils/planePatch.js`), the way `geoVectorLine.js` extends a line to
+the box and stops there. Settings > Plane chooses the square: **Fill Bounding
+Box** (`planeFillsBoundingBox`) makes it large enough to cover the plane's whole
+cross-section of the box, otherwise **Plane Size** (`planeSize`) is its side
+length. A plane near a wall keeps its size and loses the part past the wall.
+
+The clip stops `PLANE_PATCH_WALL_INSET` (0.1) inside the walls, not on them. The
+room is a depth-writing box mesh, so a border lying exactly in a wall draws at
+the wall's depth and flickers against it as the camera moves. A line never had
+this problem: it only touches a wall at its end point.
+
+This replaced a square centred on the plane's point nearest the origin and
+shrunk until it fit two units inside the walls. Moving a plane's point then moved
+its marker and normal but left the plane where it was, and the fit tied the
+plane's size to its position.
+
+The clipped outline is stored as `userData.planePolygon`, `[s, t]` pairs along
+the plane's `basisU` / `basisV` relative to `planeCenter`, and everything that
+needs the plane's extent reads it rather than `planeSize`:
+
+- `findLinePlaneCollisionZone` clips a line lying in the plane against the
+  polygon (Cyrus-Beck, edges pushed out by the tube radius, either winding).
+  Clipping against the nominal square put dashes past the drawn edge, and
+  filling the box makes that square far larger than the box.
+- The "point on the plane" picker in `objectComposition.js` maps its cached
+  ratios into the polygon with `planePatchPoint`, so it never lands off the
+  drawn patch.
+
+Both settings feed the build, collisions and picked points, so changing either
+re-runs the scene (`useBlocksWorkspace.js`) instead of resizing meshes in place.
+
 ## Per-collider strategy
 
 | Collider           | Test                                                                                                                                                                                      |

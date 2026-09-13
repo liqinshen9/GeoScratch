@@ -40,6 +40,8 @@ const DEFAULT_SETTINGS = {
   showVectorOriginPoint: false,
   showUnscaledVector: true,
   showPlanePointNormal: true,
+  planeFillsBoundingBox: true,
+  planeSize: 20,
   objectHighlightEnabled: true,
   objectHighlightStyle: OBJECT_HIGHLIGHT_STYLES.BLINK,
   animationDurationMs: DEFAULT_ANIMATION_DURATION_MS,

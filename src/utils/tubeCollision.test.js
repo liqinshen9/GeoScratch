@@ -191,6 +191,53 @@ describe('applyTubeCollisions', () => {
       expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
     })
   })
+  describe('clipped plane patches', () => {
+    // A plane in z = 0 whose drawn outline is a square cut off by a wall at x = 3.
+    const clippedPatch = () => {
+      const plane = makePlane({ planeSize: 12 })
+      plane.userData.planePolygon = [
+        [-6, -6],
+        [3, -6],
+        [3, 6],
+        [-6, 6],
+      ]
+      return plane
+    }
+
+    it('ends the zone at the drawn edge, not the unclipped square', () => {
+      const line = makeLine({ direction: new THREE.Vector3(1, 0, 0) })
+      applyTubeCollisions({ line, plane: clippedPatch() })
+      const zones = line.userData.setCollisionZones.mock.calls[0][0]
+      expect(zones).toHaveLength(1)
+      expect(zones[0].start).toBeCloseTo(-6 - TUBE_RADIUS, 9)
+      expect(zones[0].end).toBeCloseTo(3 + TUBE_RADIUS, 9)
+    })
+
+    it('clips against slanted edges, whichever way the outline winds', () => {
+      const triangle = [
+        [0, 0],
+        [8, 0],
+        [0, 8],
+      ]
+      for (const polygon of [triangle, [...triangle].reverse()]) {
+        const plane = makePlane({ planeSize: 40 })
+        plane.userData.planePolygon = polygon
+        // y = 2 crosses the triangle from x = 0 to x = 6.
+        const line = makeLine({ mid: new THREE.Vector3(0, 2, 0) })
+        applyTubeCollisions({ line, plane })
+        const [zone] = line.userData.setCollisionZones.mock.calls[0][0]
+        expect(zone.start).toBeCloseTo(-TUBE_RADIUS, 9)
+        expect(zone.end).toBeCloseTo(6 + TUBE_RADIUS * Math.SQRT2, 9)
+      }
+    })
+
+    it('misses a patch the line lies beside but outside of', () => {
+      const line = makeLine({ mid: new THREE.Vector3(0, 9, 0) })
+      applyTubeCollisions({ line, plane: clippedPatch() })
+      expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
+    })
+  })
+
   describe('annotated objects', () => {
     // What "show point on object" stores in place of the object it wraps.
     function annotate(object) {

@@ -133,5 +133,20 @@ export function useBlocksWorkspace({
     })
   }, [workspace])
 
+  // A plane's drawn size is decided when the scene is built, and so are the
+  // collision zones and picked points that depend on it, so a change re-runs
+  // the scene rather than resizing meshes in place.
+  useEffect(() => {
+    if (!workspace) return
+    const planeKeys = (settings) => [settings.planeFillsBoundingBox, settings.planeSize]
+    let prev = planeKeys(useSettingsStore.getState().settings)
+    return useSettingsStore.subscribe((state) => {
+      const next = planeKeys(state.settings)
+      if (next[0] === prev[0] && next[1] === prev[1]) return
+      prev = next
+      syncScene(workspace)
+    })
+  }, [workspace, syncScene])
+
   return { workspace, registryRef, syncScene, clearObjects }
 }

@@ -180,6 +180,15 @@ export default function initObjectCompositionBlocks() {
           const rotation = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
           const tangent = new THREE.Vector3(1, 0, 0).applyQuaternion(rotation);
           const bitangent = new THREE.Vector3(0, 1, 0).applyQuaternion(rotation);
+          // Pick inside what is drawn: a plane filling the box has a nominal square
+          // far larger than the box, so a point on that square can land outside it.
+          if (Array.isArray(target.userData.planePolygon) && typeof window.planePatchPoint === 'function') {
+            const [s, t] = window.planePatchPoint(target.userData.planePolygon, params.tangentRatio, params.bitangentRatio);
+            return (target.userData.planeCenter ?? target.userData.point)
+              .clone()
+              .addScaledVector(tangent, s)
+              .addScaledVector(bitangent, t);
+          }
           return (target.userData.planeCenter ?? target.userData.point)
             .clone()
             .addScaledVector(tangent, params.tangentRatio * (planeSize / 2))

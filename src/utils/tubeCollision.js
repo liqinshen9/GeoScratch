@@ -71,7 +71,14 @@ function worldPlaneFrame(obj) {
     .transformDirection(obj.matrixWorld)
     .normalize()
 
-  return { point: worldPoint, normal: worldNormal, halfSize, basisU, basisV }
+  // The drawn outline, when the plane has one, in the same (u, v) frame. It is
+  // the square clipped to the scene box. See docs/architecture/collision.md#plane-patch.
+  const averageScale = (worldScale.x + worldScale.y + worldScale.z) / 3
+  const polygon = Array.isArray(obj.userData.planePolygon)
+    ? obj.userData.planePolygon.map(([s, t]) => [s * averageScale, t * averageScale])
+    : null
+
+  return { point: worldPoint, normal: worldNormal, halfSize, basisU, basisV, polygon }
 }
 
 // Analytic ray/segment vs sphere, clamped to [tMin, tMax]. Exact with the
@@ -143,7 +150,7 @@ function findBoxTubeCollisionZone(origin, direction, tMin, tMax, box, radius) {
 // A line gets a plane collision zone only if parallel to AND lying in the
 // plane, clipped to its finite square. See docs/architecture/collision.md.
 function findLinePlaneCollisionZone(origin, direction, tMin, tMax, planeCollider, radius) {
-  const { point, normal, halfSize, basisU, basisV } = planeCollider
+  const { point, normal, halfSize, basisU, basisV, polygon } = planeCollider
 
   if (Math.abs(direction.dot(normal)) > PLANE_PARALLEL_DOT_TOLERANCE) return null
 
@@ -171,12 +178,54 @@ function findLinePlaneCollisionZone(origin, direction, tMin, tMax, planeCollider
     return start <= end ? [start, end] : null
   }
 
+  if (polygon) {
+    const interval = clipToConvexPolygon([tMin, tMax], u0, v0, du, dv, polygon, radius)
+    return interval ? { tEntry: interval[0], tExit: interval[1] } : null
+  }
+
   let interval = [tMin, tMax]
   interval = clipAxis(interval, u0, du, halfSize + radius)
   interval = clipAxis(interval, v0, dv, halfSize + radius)
   if (!interval) return null
 
   return { tEntry: interval[0], tExit: interval[1] }
+}
+
+// Cyrus-Beck: the part of (u0 + t du, v0 + t dv) inside a convex polygon whose
+// edges are pushed out by `radius`, so the zone starts where the tube's surface
+// reaches the edge, as with the square.
+function clipToConvexPolygon(interval, u0, v0, du, dv, polygon, radius) {
+  if (polygon.length < 3) return null
+  let signedArea = 0
+  for (let i = 0; i < polygon.length; i += 1) {
+    const [s1, t1] = polygon[i]
+    const [s2, t2] = polygon[(i + 1) % polygon.length]
+    signedArea += s1 * t2 - s2 * t1
+  }
+  const winding = signedArea >= 0 ? 1 : -1
+
+  let [start, end] = interval
+  for (let i = 0; i < polygon.length; i += 1) {
+    const [s1, t1] = polygon[i]
+    const [s2, t2] = polygon[(i + 1) % polygon.length]
+    const edgeLength = Math.hypot(s2 - s1, t2 - t1)
+    if (edgeLength < 1e-12) continue
+    // Outward unit normal of this edge.
+    const nx = (winding * (t2 - t1)) / edgeLength
+    const ny = (-winding * (s2 - s1)) / edgeLength
+    // Inside means (p - edge start) . n <= radius.
+    const offset = (u0 - s1) * nx + (v0 - t1) * ny - radius
+    const rate = du * nx + dv * ny
+    if (Math.abs(rate) < 1e-12) {
+      if (offset > 0) return null
+      continue
+    }
+    const crossing = -offset / rate
+    if (rate > 0) end = Math.min(end, crossing)
+    else start = Math.max(start, crossing)
+    if (start > end) return null
+  }
+  return [start, end]
 }
 
 function mergeZones(zones) {
