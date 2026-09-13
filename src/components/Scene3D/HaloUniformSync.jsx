@@ -1,10 +1,11 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import useSettingsStore from '@/store/useSettingsStore'
+import { getHaloUniforms } from '@/utils/haloDiscardShader'
 
 // Every frame, pushes HaloDilatePass's dilated target + camera near/far +
-// haloEnabled into every halo-discard material's uniforms. Per-frame (not an
-// effect) because onBeforeCompile populates userData.haloUniforms lazily on
-// first render. See docs/architecture/halos.md.
+// haloEnabled into every halo-discard material's uniforms. The uniforms exist
+// before the material first compiles, so the very first frame after a rebuild
+// is already correct. See docs/architecture/halos.md#uniforms-before-first-compile.
 export default function HaloUniformSync({ objects, target }) {
   const { camera } = useThree()
   const haloEnabled = useSettingsStore((s) => s.settings.haloEnabled)
@@ -15,7 +16,7 @@ export default function HaloUniformSync({ objects, target }) {
     objects.forEach((o) => {
       if (!o) return
       o.traverse((child) => {
-        const uniforms = child.material?.userData?.haloUniforms
+        const uniforms = getHaloUniforms(child.material)
         if (!uniforms) return
         uniforms.haloTex.value = target.texture
         // Full-canvas resolution, not the downsampled target size.

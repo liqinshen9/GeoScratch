@@ -21,7 +21,7 @@ Classic haloed-line rendering, implemented via depth buffer trickery instead of 
 2. `HaloDepthPrepass.jsx` renders just the `HALO_LAYER` companions into an offscreen target every frame (priority `-2`), full canvas resolution (`HALO_TARGET_SCALE = 1.0`) -- color channel R carries a per-object integer ID (`haloIdRegistry.js`, `id/255` in an unlit `ShaderMaterial`, `haloIdMaterial.js`), a `DepthTexture` attachment carries real hardware depth.
 3. `HaloDilatePass.jsx` (priority `-1`) runs a fullscreen box-max filter (`haloDilateShader.js`, `KERNEL_RADIUS = 8` texels) over that raw target, keeping whichever sample is nearest the camera per output texel. This is what actually produces the margin, as a **constant screen-space pixel radius** (~8 canvas px) rather than a 3D-geometry-based one -- isotropic, doesn't elongate at shallow crossing angles the way the companion mesh's own (now deliberately tiny) inflation would alone.
 4. Each real glyph's material gets an `onBeforeCompile` injection (`haloDiscardShader.js`) that samples the dilated target at `gl_FragCoord.xy`, compares linear view-space depth (a local `haloPerspectiveDepthToViewZ` copy, not three's `<packing>`-chunk version -- not every material this gets applied to includes that chunk, bias `0.01` world units) and object ID, and `discard`s the fragment if a _different_ object's dilated footprint is genuinely nearer.
-5. `HaloUniformSync.jsx` pushes the dilated target + camera near/far + the `haloEnabled` setting into every haloed material's uniforms every frame, decoupled from the (lazy, first-render-only) `onBeforeCompile` population timing.
+5. `HaloUniformSync.jsx` pushes the dilated target + camera near/far + the `haloEnabled` setting into every haloed material's uniforms every frame. The uniform objects are created when the material is set up, before it ever compiles (see [uniforms-before-first-compile](#uniforms-before-first-compile)).
 
 Where a nearer line's inflated footprint overlaps a farther line, the farther line's fragments there get discarded -- a gap, computed by the GPU's own per-pixel depth test, correct every frame automatically as the camera moves, with no explicit "where do these two lines cross" math.
 
@@ -147,6 +147,24 @@ the registry mutates the array in place and the change reaches the GPU next
 frame with no extra wiring.
 
 ### Gotchas a refactor would reintroduce
+
+#### uniforms-before-first-compile
+
+`applyHaloDiscardMaterial` creates the uniform objects up front, keeps them in a
+module `WeakMap` (`getHaloUniforms`), and `onBeforeCompile` only copies those
+same objects into the shader. They used to be created **inside**
+`onBeforeCompile`, which runs during the render. `HaloUniformSync` runs in
+`useFrame`, before the render, so on the frame that first compiled a freshly
+rebuilt line there was nothing to fill: the shader got a null `haloTex` and a
+1x1 resolution. Under `frameloop="demand"` a static scene renders only that one
+frame, so halos silently never appeared after a rebuild until something (an
+orbit) caused a second frame. A fresh page load hid it by happening to render
+several frames. It showed up as the study's fixed-camera T5 condition being
+pixel-identical to T1 (`study-phase1.md`).
+
+Not `userData`: `Material.copy` JSON-clones `userData`, which would try to
+serialise the texture. `haloDiscardShader.test.js` pins the eager, shared
+uniforms.
 
 #### id-material
 
