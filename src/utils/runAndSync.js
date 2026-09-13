@@ -1,5 +1,6 @@
 import { generateAndRun } from '@/utils/generateAndRun'
 import { applyTubeCollisions } from '@/utils/tubeCollision'
+import { SCENE_RUN_EVENT } from '@/utils/sceneRunEvent'
 
 const runAndSync = (workspace, onObjectsChange, registry, options = {}) => {
   // Clear the window target object completely before code execution
@@ -18,6 +19,11 @@ const runAndSync = (workspace, onObjectsChange, registry, options = {}) => {
   registry.reconcile(objects)
   const objectsForScene = registry.list().map((entry) => entry.obj)
   onObjectsChange?.(objectsForScene)
+
+  // See utils/sceneRunEvent.js.
+  if (typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new Event(SCENE_RUN_EVENT))
+  }
 }
 
 export default runAndSync

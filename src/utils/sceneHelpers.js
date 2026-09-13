@@ -120,6 +120,13 @@ export function vector3FromBlock(block) {
     return new THREE.Vector3(num('X'), num('Y'), num('Z'))
   }
 
+  // Its point is picked when the scene runs, so nothing in its fields says
+  // where it is: read the point the last run placed. Null until one has run.
+  if (block.type === 'geo_show_point_on_object') {
+    const point = globalThis.window?.threeObjStore?.[block.id]?.userData?.point
+    return point?.isVector3 ? point.clone() : null
+  }
+
   if (block.type === 'vector_arithmetic') {
     const u = vector3FromBlock(block.getInputTargetBlock('U'))
     const v = vector3FromBlock(block.getInputTargetBlock('V'))

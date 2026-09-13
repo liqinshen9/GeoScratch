@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { Field } from 'blockly/core'
 import { blockMoveChangesGeneratedCode } from '@/utils/blocklyEventFilters'
+import { SCENE_RUN_EVENT } from '@/utils/sceneRunEvent'
 import { formatMatrixHtml } from './homogeneousMatrix.js'
 
 /** @typedef {(block: Block) => string} RenderHtmlFn */
@@ -35,6 +36,8 @@ let anchor = null
 let workspaceListener = null
 /** @type {((e: PointerEvent) => void) | null} */
 let outsidePointerListener = null
+// Re-renders an open drawer after each scene run. See utils/sceneRunEvent.js.
+let sceneRunListener = null
 let rafId = 0
 let trackRafId = 0
 
@@ -336,6 +339,8 @@ function unbindListeners() {
     document.removeEventListener('pointerdown', outsidePointerListener, true)
   }
   outsidePointerListener = null
+  if (sceneRunListener) window.removeEventListener(SCENE_RUN_EVENT, sceneRunListener)
+  sceneRunListener = null
 }
 
 function bindListeners() {
@@ -391,6 +396,11 @@ function bindListeners() {
     }
   }
   anchor.workspace.addChangeListener(workspaceListener)
+
+  sceneRunListener = () => {
+    if (anchor) refreshContent()
+  }
+  window.addEventListener(SCENE_RUN_EVENT, sceneRunListener)
 
   requestAnimationFrame(() => {
     if (!anchor) return
