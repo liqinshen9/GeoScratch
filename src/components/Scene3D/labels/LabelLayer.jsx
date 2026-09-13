@@ -7,6 +7,11 @@ import { LabelAnchor, LabelGroup } from './LabelDeclutter'
 import { getLabelVisibilityKey, getLabelsForObject, formatLabelText } from './labelData'
 import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
 
+// Html's wrapper div sits on the anchor, which for a point is the marker itself,
+// and would swallow clicks meant for it; the pill re-enables its own. drei's
+// `pointerEvents` prop only applies in transform mode, hence `style`.
+const HTML_WRAPPER_STYLE = { pointerEvents: 'none' }
+
 function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answerState }) {
   const camera = useThree((state) => state.camera)
   const ud = object3D.userData || {}
@@ -51,7 +56,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
 
         return (
           <LabelGroup key={`lbl-${i}`} id={`${labelIdBase}-${i}`} position={worldPos}>
-            <Html>
+            <Html style={HTML_WRAPPER_STYLE}>
               <LabelAnchor
                 id={`${labelIdBase}-${i}`}
                 visibilityKey={visibilityKey}
