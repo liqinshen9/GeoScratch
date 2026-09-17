@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useAnimationStore from '@/store/useAnimationStore'
+import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { getEasingFn } from '@/store/animationConfig'
 
@@ -50,6 +51,7 @@ export default function AnimationDriver({ objects = [] }) {
     setHasTarget(!!target)
   }, [target, setHasTarget])
 
+
   // On selection change / unmount, snap the previous target back to progress 1.
   useEffect(() => {
     const restoreTarget = target
@@ -67,6 +69,7 @@ export default function AnimationDriver({ objects = [] }) {
 
   useFrame((_, delta) => {
     if (!playing || !target) return
+    if (usePivotPlaybackStore.getState().target === target) return
     // Cap the first-after-idle delta or the animation skips to the end.
     // See docs/architecture/animation.md#cap-the-first-delta.
     const dt = Math.min(delta, 0.05)

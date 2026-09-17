@@ -72,10 +72,29 @@ function posedTeapot({ scale = 1, quaternion = null, position = [0, 0, 0] } = {}
   return mesh
 }
 
+function posedCubeWithPoint({ quaternion = null, position = [1, 1, 1] } = {}) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
+  mesh.userData.geoType = 'geo_cube'
+  mesh.userData.centre = new THREE.Vector3(1, 1, 1)
+  mesh.userData.sideLength = 2
+  mesh.position.set(1, 1, 1)
+  const group = new THREE.Group()
+  const marker = new THREE.Object3D()
+  marker.userData.geoType = 'attached_corner_point'
+  marker.position.set(0, 2, 2)
+  group.add(mesh, marker)
+  group.userData.geoType = 'object_with_point'
+  if (quaternion) group.quaternion.copy(quaternion)
+  group.position.set(position[0] - 1, position[1] - 1, position[2] + 1)
+  return group
+}
+
 const quatAbout = (axis, degrees) =>
   new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(degrees))
 
 const teapotBlock = () => fakeBlock('geo_teapot', {}, { SIZE_INPUT: scalar(1) })
+const specialCubeBlock = () =>
+  fakeBlock('geo_special_cube')
 
 function pipelineTo(target, steps) {
   const chain = steps.reduceRight((next, step) => ({ ...step, getNextBlock: () => next }), null)
@@ -284,6 +303,53 @@ describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
 
   it('exposes seedWorkspace for its decorative blocks', () => {
     expect(mod.seedWorkspace).toBeTypeOf('function')
+  })
+})
+
+describe('Cube and corner point pivot rotation exercise', () => {
+  const mod = EXERCISE_MODULES['cube-point-pivot-rotation']
+  const posed = () =>
+    posedCubeWithPoint({ quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 90), position: [1, 1, 1] })
+
+  it('passes when the cube is moved to the origin, rotated, then moved back', () => {
+    const workspace = fakeWorkspace([
+      pipelineTo(specialCubeBlock(), [
+        fakeBlock('trans_matrix', { TX: -1, TY: -1, TZ: -1 }),
+        fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 90 }),
+        fakeBlock('trans_matrix', { TX: 1, TY: 1, TZ: 1 }),
+      ]),
+    ])
+
+    const object = posed()
+    object.userData.srcBlockId = workspace.getBlocksByType('geo_special_cube')[0].id
+    const result = mod.evaluate({ objects: [object], workspace })
+
+    expect(result.passed).toBe(true)
+    expect(result.steps).toEqual({
+      cube: true,
+      point: true,
+      pair: true,
+      pipeline: true,
+      toOrigin: true,
+      rotate: true,
+      back: true,
+    })
+  })
+
+  it('does not pass when the cube is only rotated in place without the translation scaffold', () => {
+    const workspace = fakeWorkspace([
+      pipelineTo(specialCubeBlock(), [fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 90 })]),
+    ])
+
+    const object = posed()
+    object.userData.srcBlockId = workspace.getBlocksByType('geo_special_cube')[0].id
+    const result = mod.evaluate({ objects: [object], workspace })
+
+    expect(result.passed).toBe(false)
+    expect(result.correct).toBe(true)
+    expect(result.steps.toOrigin).toBe(false)
+    expect(result.steps.rotate).toBe(false)
+    expect(result.steps.back).toBe(false)
   })
 })
 

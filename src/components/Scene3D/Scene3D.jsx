@@ -20,6 +20,7 @@ import ScenePicker from './ScenePicker'
 import PresentationProbe from './PresentationProbe'
 import LabelDeclutter from './labels/LabelDeclutter'
 import LabelLayer from './labels/LabelLayer'
+import PivotPlaybackDriver from './PivotPlaybackDriver'
 import { getLabelVisibilityKeysForObject } from './labels/labelData'
 import { ZoomInvariantScaler, DashZoomSync, FatLineSync } from './sizing/GlyphSizing'
 import { computeNestingRenderOrders } from '@/utils/nestingRenderOrder'
@@ -102,6 +103,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
       <SelectionHighlight objects={objects} />
       <AnswerTint objects={objects} state={answer?.state} />
       <AnimationDriver objects={objects} />
+      <PivotPlaybackDriver objects={objects} />
       <LabelDeclutter />
       <ambientLight intensity={isDark ? 0.6 : 0.4} />
 
@@ -149,6 +151,15 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
+            {o.children.filter((child) => child.userData?.togglePointCoordinates).map((point) => (
+              <LabelLayer
+                key={point.uuid}
+                object3D={point}
+                hiddenLabelKeys={hiddenLabelKeys}
+                onHideLabel={onHideLabel}
+                labelDetail={settings.labelDetail}
+              />
+            ))}
             {settings.showLabels && (
               <LabelLayer
                 object3D={o}

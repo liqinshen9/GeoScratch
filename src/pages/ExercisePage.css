@@ -24,6 +24,77 @@
     sans-serif;
 }
 
+.exercise-page--editor[data-exercise-id='cube-point-pivot-rotation'] {
+  --exercise-task-width: clamp(20rem, 20vw, 25rem);
+}
+
+.exercise-step-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--geo-highlight);
+  border-radius: 4px;
+  color: var(--geo-highlight);
+  background: var(--geo-surface);
+  cursor: pointer;
+}
+
+.exercise-step-animation:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.exercise-completion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: auto;
+  position: relative;
+}
+
+.exercise-completion-row.is-passed .exercise-pass-banner {
+  padding-right: 11rem;
+}
+
+.exercise-completion-row.is-passed .exercise-step-animation {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.exercise-completion-row .exercise-pass-banner {
+  margin-top: 0;
+  flex: 1;
+}
+
+.exercise-completion-row .exercise-step-animation {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  gap: 0.35rem;
+}
+
+.exercise-page--editor[data-exercise-id='cube-point-pivot-rotation']
+  .blocklyHighlighted > .blocklyPath {
+  fill: #facc15 !important;
+  stroke: #eab308 !important;
+  stroke-width: 3px;
+  filter: none !important;
+}
+
+@media (min-width: 1101px) {
+  .exercise-page--editor[data-exercise-id='cube-point-pivot-rotation']
+    .exercise-editor-shell:not(.editor-shell--maximized) {
+    /* Preserve the scene width from the standard exercise layout. */
+    grid-template-columns:
+      var(--exercise-task-width) 67px minmax(0, 1fr)
+      minmax(0, calc((100% - clamp(14.5rem, 15vw, 17rem) - 70px) / 2));
+  }
+}
+
 .exercise-editor-shell {
   /* Only adds to .editor-shell's own display:grid/background -- this class
      must not redeclare either here. Redeclaring display would silently
@@ -53,6 +124,10 @@
      shadow for the same reason -- it must not change the panel's box. */
   background: var(--bg-main);
   overflow-y: auto;
+}
+
+.exercise-task-panel > * {
+  flex-shrink: 0;
 }
 
 .exercise-task-panel.is-passed {
