@@ -113,4 +113,4 @@ function AnimationButton({ objects, workspace }) {
     usePivotPlaybackStore.getState().play(target)
   }}><FontAwesomeIcon icon="fa-solid fa-play" /> Show animation</button>
 }
-export default { id: 'rgb-cube-pivot-rotation', kind: 'transform', hideAnswerCard: true, Givens, Steps, evaluate, solutionXml, getReusableBlockTemplate, decorateObjects, AnimationButton, settingsOverrides: { cubeShowEdges: true } }
+export default { id: 'cube-point-pivot-rotation', kind: 'transform', hideAnswerCard: true, Givens, Steps, evaluate, solutionXml, getReusableBlockTemplate, decorateObjects, AnimationButton, settingsOverrides: { cubeShowEdges: true } }

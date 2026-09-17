@@ -24,7 +24,7 @@
     sans-serif;
 }
 
-.exercise-page--editor[data-exercise-id='rgb-cube-pivot-rotation'] {
+.exercise-page--editor[data-exercise-id='cube-point-pivot-rotation'] {
   --exercise-task-width: clamp(20rem, 20vw, 25rem);
 }
 
@@ -77,7 +77,7 @@
   gap: 0.35rem;
 }
 
-.exercise-page--editor[data-exercise-id='rgb-cube-pivot-rotation']
+.exercise-page--editor[data-exercise-id='cube-point-pivot-rotation']
   .blocklyHighlighted > .blocklyPath {
   fill: #facc15 !important;
   stroke: #eab308 !important;
@@ -86,7 +86,7 @@
 }
 
 @media (min-width: 1101px) {
-  .exercise-page--editor[data-exercise-id='rgb-cube-pivot-rotation']
+  .exercise-page--editor[data-exercise-id='cube-point-pivot-rotation']
     .exercise-editor-shell:not(.editor-shell--maximized) {
     /* Preserve the scene width from the standard exercise layout. */
     grid-template-columns:

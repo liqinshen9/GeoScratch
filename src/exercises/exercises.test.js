@@ -72,7 +72,7 @@ function posedTeapot({ scale = 1, quaternion = null, position = [0, 0, 0] } = {}
   return mesh
 }
 
-function posedRgbCube({ quaternion = null, position = [1, 1, 1] } = {}) {
+function posedCubeWithPoint({ quaternion = null, position = [1, 1, 1] } = {}) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
   mesh.userData.geoType = 'geo_cube'
   mesh.userData.centre = new THREE.Vector3(1, 1, 1)
@@ -93,7 +93,7 @@ const quatAbout = (axis, degrees) =>
   new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(degrees))
 
 const teapotBlock = () => fakeBlock('geo_teapot', {}, { SIZE_INPUT: scalar(1) })
-const rgbCubeBlock = () =>
+const specialCubeBlock = () =>
   fakeBlock('geo_special_cube')
 
 function pipelineTo(target, steps) {
@@ -307,13 +307,13 @@ describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
 })
 
 describe('Cube and corner point pivot rotation exercise', () => {
-  const mod = EXERCISE_MODULES['rgb-cube-pivot-rotation']
+  const mod = EXERCISE_MODULES['cube-point-pivot-rotation']
   const posed = () =>
-    posedRgbCube({ quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 90), position: [1, 1, 1] })
+    posedCubeWithPoint({ quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 90), position: [1, 1, 1] })
 
   it('passes when the cube is moved to the origin, rotated, then moved back', () => {
     const workspace = fakeWorkspace([
-      pipelineTo(rgbCubeBlock(), [
+      pipelineTo(specialCubeBlock(), [
         fakeBlock('trans_matrix', { TX: -1, TY: -1, TZ: -1 }),
         fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 90 }),
         fakeBlock('trans_matrix', { TX: 1, TY: 1, TZ: 1 }),
@@ -338,7 +338,7 @@ describe('Cube and corner point pivot rotation exercise', () => {
 
   it('does not pass when the cube is only rotated in place without the translation scaffold', () => {
     const workspace = fakeWorkspace([
-      pipelineTo(rgbCubeBlock(), [fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 90 })]),
+      pipelineTo(specialCubeBlock(), [fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 90 })]),
     ])
 
     const object = posed()
