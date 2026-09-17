@@ -40,6 +40,11 @@ export const EXERCISES = Object.freeze([
     difficulty: DIFFICULTIES.MEDIUM,
   },
   {
+    id: 'rgb-cube-pivot-rotation',
+    title: 'Rotate a cube and its corner point',
+    difficulty: DIFFICULTIES.MEDIUM,
+  },
+  {
     id: 'translate-object',
     title: 'Translate this object',
     difficulty: DIFFICULTIES.EASY,
@@ -91,7 +96,7 @@ export const UNITS = Object.freeze([
       {
         id: 'combined-transforms',
         title: 'Combining transforms',
-        exerciseIds: ['transform-object'],
+        exerciseIds: ['transform-object', 'rgb-cube-pivot-rotation'],
       },
     ],
   },

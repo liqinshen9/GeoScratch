@@ -186,7 +186,7 @@ export default function ExercisePage() {
   const { Givens, Steps } = exercise
 
   return (
-    <div className="exercise-page exercise-page--editor">
+    <div className="exercise-page exercise-page--editor" data-exercise-id={activeExercise}>
       <main
         className={`editor-shell editor-shell--with-leading exercise-editor-shell${
           workspaceMaximized ? ' editor-shell--maximized' : ''
@@ -264,8 +264,16 @@ export default function ExercisePage() {
                 />
               )}
               <Steps steps={result.steps} passed={passed} />
-              {!isPerceptual && <AnswerCard result={result} className={answerCardClass} />}
-              {passed && (
+              {!isPerceptual && !exercise.hideAnswerCard && <AnswerCard result={result} className={answerCardClass} />}
+              {exercise.AnimationButton ? (
+                <div className={`exercise-completion-row${passed ? ' is-passed' : ''}`}>
+                  {passed && <div className="exercise-pass-banner" role="status">
+                    <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                    <span>Passed</span>
+                  </div>}
+                  <exercise.AnimationButton objects={objects} workspace={workspace} />
+                </div>
+              ) : passed && (
                 <div className="exercise-pass-banner" role="status">
                   <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
                   <span>Passed</span>
@@ -291,7 +299,10 @@ export default function ExercisePage() {
             key={`exercise-${activeExercise}`}
             id={`exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
-            reusableBlockTemplate={result.passed ? exercise.reusableBlockTemplate : null}
+            reusableBlockTemplate={
+              exercise.getReusableBlockTemplate?.({ workspace, result }) ??
+              (result.passed ? exercise.reusableBlockTemplate : null)
+            }
             onObjectsChange={handleObjectsChange}
             onRegisterClear={(fn) => {
               clearWorkspaceRef.current = fn
