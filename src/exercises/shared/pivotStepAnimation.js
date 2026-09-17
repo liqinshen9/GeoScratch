@@ -5,13 +5,9 @@ export function installPivotStepAnimation(object, steps, workspace) {
   const start = object.userData.transformAnim
   if (!start || !steps.length) return
   const matrix = new THREE.Matrix4().compose(start.startPos, start.startQuat, start.startScale)
-  const poses = []
+  const matrices = []
   const capture = () => {
-    const position = new THREE.Vector3()
-    const quaternion = new THREE.Quaternion()
-    const scale = new THREE.Vector3()
-    matrix.decompose(position, quaternion, scale)
-    poses.push({ position, quaternion, scale })
+    matrices.push(matrix.clone())
   }
   capture()
   for (const step of steps) {
@@ -26,11 +22,17 @@ export function installPivotStepAnimation(object, steps, workspace) {
     const index = Math.min(steps.length - 1, Math.max(0, Math.floor(stage) - 1))
     const local = preview ? 0 : p === 1 ? 1 : stage - 1 - index
     const t = typeof ease === 'function' ? ease(local) : local
-    const from = poses[index]
-    const to = poses[index + 1]
-    object.position.lerpVectors(from.position, to.position, t)
-    object.quaternion.slerpQuaternions(from.quaternion, to.quaternion, t)
-    object.scale.lerpVectors(from.scale, to.scale, t)
+    const stepMatrix = matrix4FromTransformStepBlock(steps[index], { fallbackToIdentity: true })
+    const translation = new THREE.Vector3()
+    const rotation = new THREE.Quaternion()
+    const scale = new THREE.Vector3()
+    stepMatrix.decompose(translation, rotation, scale)
+    const partial = new THREE.Matrix4().compose(
+      translation.multiplyScalar(t),
+      new THREE.Quaternion().slerp(rotation, t),
+      new THREE.Vector3(1, 1, 1).lerp(scale, t),
+    )
+    partial.multiply(matrices[index]).decompose(object.position, object.quaternion, object.scale)
     object.updateMatrixWorld(true)
     const blockId = p === 1 ? null : preview ? object.userData.srcBlockId : steps[index].id
     if (highlighted !== blockId) {
