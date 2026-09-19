@@ -24,6 +24,28 @@
   height: 100%;
 }
 
+/* The judged column of a proximity question. Identical in every condition, so
+   it cannot favour one technique over another. */
+.study-phase1__band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 14;
+  pointer-events: none;
+  background: rgba(17, 24, 39, 0.06);
+  border-left: 1px dashed rgba(17, 24, 39, 0.35);
+  border-right: 1px dashed rgba(17, 24, 39, 0.35);
+}
+
+/* Scene labels are sized for an editor the participant can zoom; here the
+   camera never moves, so A and B are set larger to stay legible. */
+.study-phase1__stage .editor-body-3d .label {
+  font-size: 15px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
 .study-phase1__fixation {
   position: absolute;
   inset: 0;
@@ -68,6 +90,51 @@
 
 .study-phase1__feedback.is-incorrect {
   color: #b91c1c;
+}
+
+/* Dev-only controls, rendered under import.meta.env.DEV. Deliberately plain, so
+   there is no mistaking them for part of the task. */
+.study-phase1__dev {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px dashed #d1d5db;
+  padding-top: 12px;
+}
+
+.study-phase1__dev-row {
+  flex-basis: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.study-phase1__dev-technique {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.study-phase1__dev-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+}
+
+.study-phase1__dev button {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  color: #4b5563;
+  background: #ffffff;
+}
+
+.study-phase1__dev button:hover {
+  background: #f3f4f6;
 }
 
 .phase1-preview {

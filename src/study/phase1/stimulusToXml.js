@@ -4,6 +4,7 @@
 
 const BLOCK_TYPES = {
   line: 'geo_vector',
+  vector: 'linalg_vec3',
   point: 'linalg_point',
   cube: 'geo_cube',
   sphere: 'geo_sphere',
@@ -51,6 +52,10 @@ function objectBlock(stimulus, object, index) {
   switch (object.kind) {
     case 'line':
       return `<block type="${type}" id="${id}" ${position}>${data}<value name="POS">${vec3Block(`${id}-pos`, object.origin)}</value><value name="DIR">${vec3Block(`${id}-dir`, object.direction)}</value></block>`
+    case 'vector':
+      // A vector with its tail plugged into ORIGIN: the glyph runs tail -> tip
+      // and its label hangs at the tip. See naming-registry.md for the <data>.
+      return `<block type="${type}" id="${id}" ${position}>${data}${xyzFields(object.vector)}<value name="ORIGIN">${vec3Block(`${id}-origin`, object.origin)}</value></block>`
     case 'point':
       return `<block type="${type}" id="${id}" ${position}>${data}${xyzFields(object.position)}</block>`
     case 'cube':

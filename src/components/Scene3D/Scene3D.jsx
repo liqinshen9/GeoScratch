@@ -151,15 +151,17 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
-            {o.children.filter((child) => child.userData?.togglePointCoordinates).map((point) => (
-              <LabelLayer
-                key={point.uuid}
-                object3D={point}
-                hiddenLabelKeys={hiddenLabelKeys}
-                onHideLabel={onHideLabel}
-                labelDetail={settings.labelDetail}
-              />
-            ))}
+            {o.children
+              .filter((child) => child.userData?.togglePointCoordinates)
+              .map((point) => (
+                <LabelLayer
+                  key={point.uuid}
+                  object3D={point}
+                  hiddenLabelKeys={hiddenLabelKeys}
+                  onHideLabel={onHideLabel}
+                  labelDetail={settings.labelDetail}
+                />
+              ))}
             {settings.showLabels && (
               <LabelLayer
                 object3D={o}
@@ -191,6 +193,9 @@ export default function Scene3D({
   onPresented,
   hiddenLabelKeys: extraHiddenLabelKeys,
   onObjectClick,
+  // Where the camera starts. Only a non-interactive view has any business
+  // changing it: with no orbiting, the fixed distance is the whole framing.
+  cameraPosition = DEFAULT_CAMERA_POSITION,
 }) {
   const { settings, updateSetting } = useSettingsStore()
   const resolvedTheme = useResolvedTheme()
@@ -334,7 +339,7 @@ export default function Scene3D({
         <Canvas
           shadows
           frameloop="demand"
-          camera={{ position: DEFAULT_CAMERA_POSITION, fov: 45, near: 0.1, far: 5000 }}
+          camera={{ position: cameraPosition, fov: 45, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >

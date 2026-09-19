@@ -22,13 +22,19 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
 
   // (size, segments, lid, body, fitLid, blinnScale)
   const geometry = new THREE.TeapotGeometry(size, segments, true, true, true, true)
+  const NEAR_OPAQUE = 0.9
+  const solidOpacity = useSettingsStore?.getState().settings.solidOpacity ?? 0.8
   const material = new THREE.MeshStandardMaterial({
     color: window.GeoScratchColors.forInstance('teapot', blockId),
     roughness: 0.5,
     metalness: 0.1,
-    opacity: 0.8,
+    opacity: solidOpacity,
+    // A see-through solid cannot depth-test against another one, so an
+    // overlapping pair composites by draw order and an opaque line punches a
+    // line-shaped hole through whichever is drawn last. A near-opaque solid
+    // writes depth instead. See docs/architecture/render-order.md#solid-depthwrite.
+    depthWrite: solidOpacity >= NEAR_OPAQUE,
     transparent: true,
-    depthWrite: false,
   })
   const mesh = new THREE.Mesh(geometry, material)
   mesh.position.copy(centre)

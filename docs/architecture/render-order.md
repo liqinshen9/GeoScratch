@@ -43,6 +43,28 @@ smaller, and >= 60% of the inner volume overlapping.
 still the visible rim of the other wall. `openFaces` marks a face open when the
 camera is beyond its plane.
 
+## solid-depthwrite
+
+Solids draw with `transparent: true` and, while they are see-through,
+`depthWrite: false` -- so they never depth-test against each other and an
+overlapping pair composites purely by draw order. A line makes that visible: a
+line is opaque and _does_ write depth, so it occludes any transparent solid
+behind it. Where a line runs in front of a cube but inside a sphere that the
+cube is (wrongly) drawn over, the cube is depth-rejected along the line and the
+sphere-tinted line shows through as a line-shaped window in the cube.
+
+Phase 1 sidesteps this rather than relying on a sort: its generator never lets
+two solids overlap on screen (`study-phase1.md#stimuli`).
+
+A near-opaque solid writes depth instead (`solidOpacity >= 0.9`). Nothing sets
+that today -- Phase 1 pins 0.8, because its collision-accent condition needs to
+be seen through a solid -- so the guard exists for whoever raises the setting:
+past that point solids occlude each other properly and the window cannot
+appear. Nesting stays stable because `computeNestingRenderOrders` already draws
+a contained solid before its container; with depth writes the contained one is
+then hidden by the container's face, which is what a near-opaque container
+should do.
+
 ## Gotcha a refactor would reintroduce
 
 ### axis-shaft-radius-ceiling

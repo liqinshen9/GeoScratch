@@ -15,13 +15,19 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const sideLength = Math.max(0.0001, Number(sideLengthInput) || 1)
   const geometry = new THREE.BoxGeometry(sideLength, sideLength, sideLength)
+  const NEAR_OPAQUE = 0.9
+  const solidOpacity = useSettingsStore?.getState().settings.solidOpacity ?? 0.7
   const material = new THREE.MeshStandardMaterial({
     color: window.GeoScratchColors.forInstance('cube', blockId),
     roughness: 0.5,
     metalness: 0.1,
     transparent: true,
-    opacity: 0.7,
-    depthWrite: false,
+    opacity: solidOpacity,
+    // A see-through solid cannot depth-test against another one, so an
+    // overlapping pair composites by draw order and an opaque line punches a
+    // line-shaped hole through whichever is drawn last. A near-opaque solid
+    // writes depth instead. See docs/architecture/render-order.md#solid-depthwrite.
+    depthWrite: solidOpacity >= NEAR_OPAQUE,
   })
 
   const mesh = new THREE.Mesh(geometry, material)

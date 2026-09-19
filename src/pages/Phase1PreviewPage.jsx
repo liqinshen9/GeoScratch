@@ -6,11 +6,16 @@ import { getStudyStimulusSet, findStimulus, generateStimulus } from '@/study/pha
 import { resolveSequence } from '@/study/phase1/sequence'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
+import { questionPrompt, probeBandStyle } from '@/study/phase1/questionCopy'
 import {
   VIEWPORT,
+  CAMERA,
   DIFFICULTY_LEVELS,
   CLUTTER_LEVELS,
   PAIR_TYPES,
+  OCCLUSION_PAIR_TYPES,
+  PROBE_BANDS,
+  QUESTION_TYPES,
   DEPTH_SEPARATIONS,
 } from '@/study/phase1/stimulusConfig'
 import '@/components/EditorShell/editor-shell.css'
@@ -35,6 +40,8 @@ export default function Phase1PreviewPage() {
     difficulty: 'medium',
     pairType: 'line-line',
     nearer: 'A',
+    questionType: 'occlusion',
+    band: 'middle',
   })
   const [orbit, setOrbit] = useState(false)
   const [code, setCode] = useState('P01')
@@ -42,7 +49,10 @@ export default function Phase1PreviewPage() {
   const stimulus = useMemo(() => {
     if (source === 'set') return findStimulus(stimulusSet, stimulusId)
     try {
-      return generateStimulus({ id: 'custom', ...custom })
+      const { questionType, band, ...rest } = custom
+      const question =
+        questionType === 'occlusion' ? { type: questionType } : { type: questionType, band }
+      return generateStimulus({ id: 'custom', ...rest, question })
     } catch (err) {
       console.error('[GeoScratch] Preview stimulus failed:', err)
       return null
@@ -73,6 +83,7 @@ export default function Phase1PreviewPage() {
   useEffect(() => () => useSettingsStore.getState().clearExerciseOverrides(), [])
 
   const sequence = useMemo(() => resolveSequence(code, stimulusSet), [code, stimulusSet])
+  const bandStyle = probeBandStyle(stimulus)
   const setCustomField = (key) => (e) => setCustom((prev) => ({ ...prev, [key]: e.target.value }))
 
   return (
@@ -133,11 +144,31 @@ export default function Phase1PreviewPage() {
               </select>
             </label>
             <label>
+              Question
+              <select value={custom.questionType} onChange={setCustomField('questionType')}>
+                {QUESTION_TYPES.map((q) => (
+                  <option key={q}>{q}</option>
+                ))}
+              </select>
+            </label>
+            {custom.questionType === 'proximity' && (
+              <label>
+                Band
+                <select value={custom.band} onChange={setCustomField('band')}>
+                  {PROBE_BANDS.map((b) => (
+                    <option key={b.id}>{b.id}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
               Pair type
               <select value={custom.pairType} onChange={setCustomField('pairType')}>
-                {PAIR_TYPES.map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
+                {(custom.questionType === 'occlusion' ? OCCLUSION_PAIR_TYPES : PAIR_TYPES).map(
+                  (p) => (
+                    <option key={p}>{p}</option>
+                  ),
+                )}
               </select>
             </label>
             <label>
@@ -157,7 +188,7 @@ export default function Phase1PreviewPage() {
 
         <div className="phase1-preview__info">
           {stimulus
-            ? `nearer: ${stimulus.nearer}\ndepths: A ${stimulus.depths.A}, B ${stimulus.depths.B}\ngap: ${stimulus.depthGap}\ncrossing (NDC): ${stimulus.crossingNdc.join(', ')}\nobjects: ${stimulus.objects.map((o) => `${o.key}:${o.kind}`).join(' ')}`
+            ? `question: ${stimulus.question.type}${stimulus.question.band ? ` (${stimulus.question.band} band)` : ''}\n${questionPrompt(stimulus.question)}\nnearer: ${stimulus.nearer}\ndepths: A ${stimulus.depths.A}, B ${stimulus.depths.B}\ngap: ${stimulus.depthGap}\nprobe (NDC): ${stimulus.probeNdc.join(', ')}\nobjects: ${stimulus.objects.map((o) => `${o.key}:${o.kind}`).join(' ')}`
             : 'Could not place this stimulus; try another seed.'}
         </div>
 
@@ -178,9 +209,11 @@ export default function Phase1PreviewPage() {
           key={orbit ? 'orbit' : 'fixed'}
           objects={scene?.objects ?? []}
           interactive={orbit}
+          cameraPosition={CAMERA.position}
           hiddenLabelKeys={hiddenLabelKeys}
           onObjectClick={handleObjectClick}
         />
+        {bandStyle && <div className="study-phase1__band" style={bandStyle} aria-hidden="true" />}
       </div>
     </div>
   )

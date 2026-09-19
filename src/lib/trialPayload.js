@@ -44,6 +44,8 @@ export function buildTrialRow({
     clutter: stimulus.clutter,
     difficulty: stimulus.difficulty,
     pair_type: stimulus.pairType,
+    question_type: stimulus.question?.type ?? null,
+    probe_band: stimulus.question?.band ?? null,
     stimulus_id: stimulus.id,
     stimulus_seed: stimulus.seed,
     correct_target: stimulus.nearer,

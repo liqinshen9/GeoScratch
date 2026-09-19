@@ -54,6 +54,12 @@ describe('Phase 1 conditions', () => {
     expect(t1.theme).toBe('light')
   })
 
+  it('holds solids at the same opacity in every condition', () => {
+    for (const technique of TECHNIQUES) {
+      expect(technique.settings.solidOpacity, technique.id).toBe(0.8)
+    }
+  })
+
   it('switches every cue off in T1', () => {
     const t1 = getTechnique('T1').settings
     expect(t1.lineStyle).toBe('plain_line')

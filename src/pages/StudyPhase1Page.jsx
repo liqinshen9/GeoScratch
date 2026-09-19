@@ -9,6 +9,7 @@ import { getStudyStimulusSet, findStimulus } from '@/study/phase1/stimuli'
 import { resolveSequence } from '@/study/phase1/sequence'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
+import { questionPrompt, choiceLabel, probeBandStyle } from '@/study/phase1/questionCopy'
 import {
   FLOW,
   FLOW_ACTIONS,
@@ -17,7 +18,7 @@ import {
   currentTrial,
   progressCursor,
 } from '@/study/phase1/phase1Flow'
-import { VIEWPORT, FIXATION_MS, FEEDBACK_MS } from '@/study/phase1/stimulusConfig'
+import { VIEWPORT, CAMERA, FIXATION_MS, FEEDBACK_MS } from '@/study/phase1/stimulusConfig'
 import '@/components/EditorShell/editor-shell.css'
 import './StudyPhase1Page.css'
 
@@ -35,6 +36,14 @@ function loadProgress(code) {
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
+  }
+}
+
+function clearProgress(code) {
+  try {
+    window.localStorage.removeItem(progressKey(code))
+  } catch {
+    // Nothing to clear if storage is unavailable.
   }
 }
 
@@ -184,6 +193,15 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
     dispatch({ type: FLOW_ACTIONS.ANSWER, response })
   }
 
+  // The question is known as soon as the scene is built, which is during the
+  // fixation cross: a participant reads what is being asked before the scene
+  // appears, so the reaction time measures the judgement, not the reading. It
+  // is blank between trials rather than left showing the last one.
+  const questionShowing =
+    state.status === FLOW.FIXATION || state.status === FLOW.TRIAL || state.status === FLOW.FEEDBACK
+  const question = questionShowing ? (trialScene?.stimulus?.question ?? null) : null
+  const bandStyle = stimulusVisible ? probeBandStyle(trialScene?.stimulus) : null
+
   const blockCount = sequence.blocks.length
   const trialCount = block?.trials.length ?? 0
   const feedbackCorrect =
@@ -198,10 +216,15 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
         <Scene3D
           objects={objects}
           interactive={false}
+          cameraPosition={CAMERA.position}
           onPresented={handlePresented}
           hiddenLabelKeys={hiddenLabelKeys}
           onObjectClick={handleObjectClick}
         />
+
+        {stimulusVisible && bandStyle && (
+          <div className="study-phase1__band" style={bandStyle} aria-hidden="true" />
+        )}
 
         {state.status === FLOW.FIXATION && (
           <div className="study-phase1__fixation" aria-hidden="true">
@@ -211,17 +234,24 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
 
         {state.status === FLOW.INTRO && (
           <Overlay>
-            <h1 className="text-2xl font-semibold tracking-tight">Which one is in front?</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Which one is closer to you?</h1>
             <p>
               Each scene shows several objects. Two of them are labelled <strong>A</strong> and{' '}
-              <strong>B</strong>, and they cross each other on the screen: either two lines cross,
-              or a point sits over a line. They never touch. Where they cross, one passes in front
-              of the other. Decide which one is in front, then click its button on the right. Answer
-              as quickly and as accurately as you can.
+              <strong>B</strong>: lines, arrows, points or spheres. <strong>A</strong> and{' '}
+              <strong>B</strong> never touch each other, though either of them may pass through the
+              other objects around them. Each trial asks one of two questions, and the question is
+              written above the buttons before the scene appears.
             </p>
             <p>
-              Not sure which label is which? Click a labelled line or point to hide or show its
-              label.
+              When <strong>A</strong> and <strong>B</strong> cross on the screen, you are asked
+              which one <strong>passes in front of</strong> the other where they cross. When they do
+              not cross, a shaded vertical band marks part of the screen, and you are asked which
+              one is <strong>closer to you</strong> inside that band. A line runs on for ever, so it
+              is only ever the named place that the question is about.
+            </p>
+            <p>
+              Answer with the buttons on the right, as quickly and as accurately as you can. Not
+              sure which label is which? Click a labelled object to hide or show its label.
             </p>
             <p>
               There are {blockCount} blocks. The way the scene is drawn changes between blocks. The
@@ -296,7 +326,9 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
       </div>
 
       <aside className="study-phase1__panel" style={{ width: PANEL_WIDTH }}>
-        <p className="text-base font-medium">Where A and B cross, which one is in front?</p>
+        <p className="text-base font-medium">
+          {question ? questionPrompt(question) : 'The question appears here each trial.'}
+        </p>
         <div className="flex flex-col gap-3">
           {['A', 'B'].map((choice) => (
             <Button
@@ -306,12 +338,12 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
               disabled={!canAnswer}
               onClick={() => answer(choice)}
             >
-              {choice} is in front
+              {question ? choiceLabel(question, choice) : choice}
             </Button>
           ))}
         </div>
         <p className="text-sm text-muted-foreground">
-          Unsure which label is which? Click a labelled line or point to hide or show its label.
+          Unsure which label is which? Click a labelled object to hide or show its label.
         </p>
         <p
           className={`study-phase1__feedback ${feedbackCorrect ? 'is-correct' : 'is-incorrect'}`}
@@ -326,6 +358,31 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
               ? ` · Trial ${Math.min(state.trialIndex + 1, trialCount)} of ${trialCount}${trial.practice ? ' (practice)' : ''}`
               : ''}
           </p>
+        )}
+
+        {/* Dev only: never built into what a participant runs. Skipping logs
+            nothing -- a row is only written when a trial is answered. */}
+        {import.meta.env.DEV && (
+          <div className="study-phase1__dev">
+            <div className="study-phase1__dev-row">
+              <span className="study-phase1__dev-label">dev</span>
+              <span className="study-phase1__dev-technique">
+                {technique ? `${technique.id} · ${technique.label}` : 'no block'}
+              </span>
+            </div>
+            <button type="button" onClick={() => dispatch({ type: FLOW_ACTIONS.SKIP_BLOCK })}>
+              Skip to next block
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearProgress(participantCode)
+                dispatch({ type: FLOW_ACTIONS.RESTART })
+              }}
+            >
+              Back to the start
+            </button>
+          </div>
         )}
       </aside>
     </div>

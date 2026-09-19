@@ -25,6 +25,11 @@ const T1 = {
   ...DEFAULT_SETTINGS,
   theme: THEMES.LIGHT,
   autoFocusOnNewObject: false,
+  // Held constant in every condition, not a cue under test. One value for every
+  // solid type, rather than the editor's per-builder 0.7/0.8, so a cube and a
+  // sphere distractor differ only in shape.
+  // See docs/architecture/study-phase1.md#conditions.
+  solidOpacity: 0.8,
   ...NO_CUES,
 }
 

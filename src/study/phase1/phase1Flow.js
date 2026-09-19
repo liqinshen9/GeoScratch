@@ -24,6 +24,9 @@ export const FLOW_ACTIONS = Object.freeze({
   ANSWER: 'answer',
   FEEDBACK_DONE: 'feedbackDone',
   CONTINUE: 'continue',
+  // Dev only, from the buttons the trial page renders under import.meta.env.DEV.
+  SKIP_BLOCK: 'skipBlock',
+  RESTART: 'restart',
 })
 
 /**
@@ -83,6 +86,15 @@ export function createFlowReducer(sequence) {
       case FLOW_ACTIONS.FEEDBACK_DONE:
         if (state.status !== FLOW.FEEDBACK) return state
         return advanceTrial(sequence, state)
+
+      case FLOW_ACTIONS.SKIP_BLOCK: {
+        const blockIndex = state.blockIndex + 1
+        const status = blockIndex >= sequence.blocks.length ? FLOW.DONE : FLOW.BLOCK_INTRO
+        return { status, blockIndex, trialIndex: 0, lastResponse: null }
+      }
+
+      case FLOW_ACTIONS.RESTART:
+        return { status: FLOW.INTRO, blockIndex: 0, trialIndex: 0, lastResponse: null }
 
       case FLOW_ACTIONS.CONTINUE: {
         if (state.status !== FLOW.BLOCK_END) return state

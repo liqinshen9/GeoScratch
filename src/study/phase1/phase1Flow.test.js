@@ -84,3 +84,24 @@ describe('phase1Flow', () => {
     expect(progressCursor(state)).toEqual({ blockIndex: 0, trialIndex: 1 })
   })
 })
+
+describe('dev controls', () => {
+  it('skips to the next block from anywhere, and to done past the last one', () => {
+    let state = run(initialFlowState(sequence, null), FLOW_ACTIONS.START, FLOW_ACTIONS.BEGIN_BLOCK)
+    state = reduce(state, { type: FLOW_ACTIONS.SKIP_BLOCK })
+    expect(state).toMatchObject({ status: FLOW.BLOCK_INTRO, blockIndex: 1, trialIndex: 0 })
+
+    state = reduce(state, { type: FLOW_ACTIONS.SKIP_BLOCK })
+    expect(state).toMatchObject({ status: FLOW.DONE, blockIndex: 2 })
+  })
+
+  it('restarts to the intro from anywhere', () => {
+    const mid = run(
+      initialFlowState(sequence, null),
+      FLOW_ACTIONS.START,
+      FLOW_ACTIONS.BEGIN_BLOCK,
+      FLOW_ACTIONS.FIXATION_DONE,
+    )
+    expect(reduce(mid, { type: FLOW_ACTIONS.RESTART })).toEqual(initialFlowState(sequence, null))
+  })
+})

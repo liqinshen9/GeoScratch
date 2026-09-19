@@ -26,6 +26,10 @@ export const DEFAULT_SETTINGS = {
   pointShadowsEnabled: true,
   cameraShadowsEnabled: true,
   autoFocusOnNewObject: false,
+  // null = each solid keeps the opacity its builder was written with. A number
+  // overrides all of them; Phase 1 pins it, because a see-through solid tints
+  // whatever passes behind it and that is an uncontrolled depth cue.
+  solidOpacity: null,
   sphereShowGridlines: false,
   teapotShowGridlines: false,
   cubeShowEdges: false,
