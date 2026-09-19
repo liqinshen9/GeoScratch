@@ -6,6 +6,8 @@ import THREE from '@/utils/three'
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
+import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
+import { SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
 import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
@@ -201,6 +203,14 @@ export default function Scene3D({
   const resolvedTheme = useResolvedTheme()
   const backgroundColor = SCENE_BACKGROUND_COLOR[resolvedTheme] || SCENE_BACKGROUND_COLOR.light
   const gizmoAxisColors = getAxisColors(resolvedTheme)
+  const pivotHighlightAxis = usePivotPlaybackStore(
+    (state) => state.target?.userData?.pivotHighlightAxis ?? null,
+  )
+  const gizmoColors = ['X', 'Y', 'Z'].map((axis) =>
+    pivotHighlightAxis === axis
+      ? SELECTION_HIGHLIGHT_COLOR
+      : gizmoAxisColors[axis.toLowerCase()],
+  )
   const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId)
   const controlsRef = useRef(null)
   const cameraRef = useRef(null)
@@ -383,7 +393,7 @@ export default function Scene3D({
           {interactive && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
-                axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
+                axisColors={gizmoColors}
                 /* The axis-head discs are always a light colour, so the label
                    text stays dark in both themes. */
                 labelColor="#1a1a1a"

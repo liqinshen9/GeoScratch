@@ -4,6 +4,7 @@ import { matrix4FromTransformStepBlock } from '@/utils/sceneHelpers'
 export function installPivotStepAnimation(object, steps, workspace) {
   const start = object.userData.transformAnim
   if (!start || !steps.length) return
+  object.userData.pivotHighlightAxis = null
   const matrix = new THREE.Matrix4().compose(start.startPos, start.startQuat, start.startScale)
   const matrices = []
   const capture = () => {
@@ -35,6 +36,13 @@ export function installPivotStepAnimation(object, steps, workspace) {
     partial.multiply(matrices[index]).decompose(object.position, object.quaternion, object.scale)
     object.updateMatrixWorld(true)
     const blockId = p === 1 ? null : preview ? object.userData.srcBlockId : steps[index].id
+    object.userData.pivotHighlightAxis =
+      !preview && p !== 1 && steps[index]?.type === 'rot_matrix'
+        ? steps[index].getFieldValue('AXIS') || 'X'
+        : null
+    if (object.userData.pivotCenterMarker) {
+      object.userData.pivotCenterMarker.visible = p !== 1
+    }
     if (highlighted !== blockId) {
       workspace.highlightBlock?.(blockId)
       highlighted = blockId

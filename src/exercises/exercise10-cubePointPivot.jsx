@@ -5,6 +5,7 @@ import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 import { installPivotStepAnimation } from './shared/pivotStepAnimation'
 import { pipelineStepChain, rotationMatches } from './shared/transformChecks'
 import { closeNumber, blockMatchesVec3, getInputBlock, scalarInputMatches, vectorMatches } from './shared/blockQueries'
+import { createPointMarker } from '@/utils/pointMarker'
 
 const CENTRE = new THREE.Vector3(1, 1, 1)
 const POINT = new THREE.Vector3(0, 2, 2)
@@ -54,7 +55,7 @@ function Steps({ steps, passed }) {
     ['pipeline', 'Transform: connect the new block you created to a Transform Pipeline.'],
     ['toOrigin', 'Transform: translate by the negative of center C, (-1, -1, -1). The goal is to move the block to the origin.'],
     ['rotate', 'Transform: Rotate around Y axis by 90 degrees.'],
-    ['back', 'Transform: translate (1, 1, 1) back to its original center C. Compare P and C with the output image.'],
+    ['back', 'Transform: translate (1, 1, 1) back to its original center C.'],
   ]
   return <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>{tasks.map(([key, text]) => <li key={key} className={steps[key] ? 'is-complete' : ''}>{text}</li>)}</ol>
 }
@@ -99,7 +100,16 @@ function decorateObjects(objects, workspace) {
     const input = getInputBlock(pipeline, 'INPUT')
     if (input?.type !== 'geo_special_cube') continue
     const object = objects.find((o) => o.userData?.srcBlockId === input.id)
-    if (object) installPivotStepAnimation(object, pipelineStepChain(pipeline), workspace)
+    if (!object) continue
+    const cube = object.children.find((child) => child.userData?.geoType === 'geo_cube')
+    if (cube && !object.userData.pivotCenterMarker) {
+      const centerMarker = createPointMarker({ color: '#111111', geoType: 'pivot_center_point' })
+      centerMarker.position.copy(cube.position)
+      centerMarker.visible = false
+      object.add(centerMarker)
+      object.userData.pivotCenterMarker = centerMarker
+    }
+    installPivotStepAnimation(object, pipelineStepChain(pipeline), workspace)
   }
   return objects
 }

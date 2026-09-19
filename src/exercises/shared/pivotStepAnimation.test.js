@@ -10,7 +10,11 @@ describe('pivot step animation', () => {
     cube.position.set(1, 1, 1)
     const point = new THREE.Object3D()
     point.position.set(0, 2, 2)
-    object.add(cube, point)
+    const centerMarker = new THREE.Object3D()
+    centerMarker.position.set(1, 1, 1)
+    centerMarker.visible = false
+    object.add(cube, point, centerMarker)
+    object.userData.pivotCenterMarker = centerMarker
     object.userData.transformAnim = {
       startPos: new THREE.Vector3(), startQuat: new THREE.Quaternion(), startScale: new THREE.Vector3(1, 1, 1),
     }
@@ -27,6 +31,8 @@ describe('pivot step animation', () => {
     expect(object.userData.animate).toBe(normalAnimation)
     object.userData.animateSteps(0)
     expect(workspace.highlightBlock).toHaveBeenLastCalledWith('special')
+    expect(centerMarker.visible).toBe(true)
+    expect(centerMarker.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(1, 1, 1))).toBeCloseTo(0)
     object.userData.animateSteps(0.2)
     expect(cube.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(1, 1, 1))).toBeCloseTo(0)
     expect(point.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(0, 2, 2))).toBeCloseTo(0)
@@ -35,7 +41,9 @@ describe('pivot step animation', () => {
     expect(workspace.highlightBlock).toHaveBeenLastCalledWith('move')
     object.userData.animateSteps(0.5)
     expect(cube.getWorldPosition(new THREE.Vector3()).length()).toBeCloseTo(0)
+    expect(centerMarker.getWorldPosition(new THREE.Vector3()).length()).toBeCloseTo(0)
     expect(workspace.highlightBlock).toHaveBeenLastCalledWith('rotate')
+    expect(object.userData.pivotHighlightAxis).toBe('Y')
     object.userData.animateSteps(0.625)
     expect(cube.getWorldPosition(new THREE.Vector3()).length()).toBeCloseTo(0)
     expect(point.getWorldPosition(new THREE.Vector3()).length()).toBeCloseTo(Math.sqrt(3))
@@ -43,9 +51,12 @@ describe('pivot step animation', () => {
     expect(cube.getWorldPosition(new THREE.Vector3()).length()).toBeCloseTo(0)
     expect(point.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(1, 1, 1))).toBeCloseTo(0)
     expect(workspace.highlightBlock).toHaveBeenLastCalledWith('return')
+    expect(object.userData.pivotHighlightAxis).toBe(null)
     object.userData.animateSteps(1)
     expect(cube.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(1, 1, 1))).toBeCloseTo(0)
     expect(point.getWorldPosition(new THREE.Vector3()).distanceTo(new THREE.Vector3(2, 2, 2))).toBeCloseTo(0)
     expect(workspace.highlightBlock).toHaveBeenLastCalledWith(null)
+    expect(object.userData.pivotHighlightAxis).toBe(null)
+    expect(centerMarker.visible).toBe(false)
   })
 })
