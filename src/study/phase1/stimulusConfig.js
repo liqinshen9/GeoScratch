@@ -2,19 +2,20 @@
 // See docs/architecture/study-phase1.md.
 
 /** Bump the suffix to generate a new fixed stimulus set; never reuse one mid-study. */
-export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v3'
+export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v4'
 
 /** The scene viewport is this exact CSS size for every trial and participant. */
 export const VIEWPORT = Object.freeze({ width: 960, height: 640 })
 
 /**
- * The trial camera. Closer than the editor's DEFAULT_CAMERA_POSITION, because a
- * participant cannot zoom: the scene has to read at one fixed distance. Passed
- * to Scene3D as `cameraPosition`, and used to place and grade every stimulus,
- * so the two can never drift apart.
+ * The trial camera: the app's isometric viewing direction (see
+ * `sceneConstants.js`), at a closer distance than the editor's, because a
+ * participant cannot zoom and the scene has to read at one fixed distance.
+ * Passed to Scene3D as `cameraPosition`, and used to place and grade every
+ * stimulus, so the two can never drift apart.
  */
 export const CAMERA = Object.freeze({
-  position: [0, 17.5, 35],
+  position: [22.59, 22.59, 22.59],
   target: [0, 0, 0],
   fov: 45,
 })

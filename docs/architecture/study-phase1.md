@@ -72,10 +72,11 @@ itself:
   off `showAxisGizmo`: that setting also switches the in-scene axis end labels
   on, which would change the scene.
 - `cameraPosition`: the trial camera (`CAMERA.position` in `stimulusConfig.js`)
-  sits closer than the editor's `DEFAULT_CAMERA_POSITION`, because a participant
-  cannot zoom. The same constant places and grades every stimulus, so the drawn
-  camera and the ground-truth camera cannot drift apart. Changing it invalidates
-  the stimulus set: bump `STUDY_STIMULUS_SEED` with it.
+  looks down the same isometric diagonal as the editor's
+  `DEFAULT_CAMERA_POSITION` ([camera-view.md](camera-view.md)), but closer,
+  because a participant cannot zoom. The same constant places and grades every
+  stimulus, so the drawn camera and the ground-truth camera cannot drift apart.
+  Changing it invalidates the stimulus set: bump `STUDY_STIMULUS_SEED` with it.
 - `onPresented`: mounts `PresentationProbe` (draws nothing).
 - `hiddenLabelKeys`: merged into the existing right-click label-hide set, used
   to hide every label except A and B.

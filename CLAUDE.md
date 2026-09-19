@@ -174,6 +174,7 @@ non-obvious mechanism carries a one-line pointer to the relevant section.
 | `animation.md`                  | #38, `AnimationDriver.jsx`, `userData.animate`                            |
 | `shadows.md`                    | which lights cast, and why primitives skip the headlight pass             |
 | `render-order.md`               | #29, transparent-sort flicker, `nestingRenderOrder.js`                    |
+| `camera-view.md`                | the default viewing angle and what its answer keys depend on              |
 | `naming-registry.md`            | `namingRegistry.js`, variables, references, collapse-to-reference         |
 | `color-system.md`               | `store/colorSystem.js` / `colorPresets.js` / `blockColours.js`            |
 | `theming.md`                    | light/dark mode: `themeConfig.js`, `useThemeSync.js`, `data-theme` tokens |

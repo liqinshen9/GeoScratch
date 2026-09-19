@@ -40,7 +40,20 @@ export const EXTRA_LARGE_POINT_MAX_SCALE = 1.75
 export const POINT_ZOOM_MAX_SCALE = 1.3
 export const VECTOR_ZOOM_MAX_SCALE = 3.4
 
-// Default/reset camera position. Shared because the perceptual exercises grade
-// "which is closer" against it -- moving the camera must move their answer key
-// too, not silently leave it behind.
-export const DEFAULT_CAMERA_POSITION = [0, 25, 50]
+// Default/reset camera: down the (1, 1, 1) diagonal, the isometric viewing
+// direction of standard axonometry (ISO 5456-3) -- the ground plan turned 45
+// degrees, all three axes equally foreshortened and 120 degrees apart on
+// screen. The old head-on [0, 25, 50] view projected Z onto Y, so the two axes
+// overlapped and depth along Z had no screen direction of its own.
+// See docs/architecture/camera-view.md.
+//
+// Shared because the perceptual exercises grade "which is closer" against it --
+// moving the camera must move their answer key too, not silently leave it
+// behind.
+const DEFAULT_CAMERA_DISTANCE = 56
+const ISOMETRIC_COMPONENT = Math.round((DEFAULT_CAMERA_DISTANCE / Math.sqrt(3)) * 100) / 100
+export const DEFAULT_CAMERA_POSITION = [
+  ISOMETRIC_COMPONENT,
+  ISOMETRIC_COMPONENT,
+  ISOMETRIC_COMPONENT,
+]
