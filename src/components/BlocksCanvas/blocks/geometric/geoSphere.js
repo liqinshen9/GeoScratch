@@ -43,7 +43,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   edges.visible = !!useSettingsStore?.getState().settings.sphereShowGridlines
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
-      if (window.threeObjStore?.[blockId] !== mesh) {
+      if (!window.geoIsLiveObject(mesh)) {
         unsubscribe()
         return
       }

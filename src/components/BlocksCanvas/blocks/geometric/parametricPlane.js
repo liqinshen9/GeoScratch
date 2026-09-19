@@ -133,7 +133,7 @@ function geoParametricPlaneDefinition(
   applyPointNormalVisibility(window.useSettingsStore?.getState().settings)
   if (window.useSettingsStore) {
     const unsubscribe = window.useSettingsStore.subscribe((state) => {
-      if (window.threeObjStore?.[blockId] !== group) {
+      if (!window.geoIsLiveObject(group)) {
         unsubscribe()
         return
       }

@@ -408,7 +408,7 @@ export function buildVectorShaftGlyph(
 
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
-      if (window.threeObjStore?.[blockId] !== group) {
+      if (!window.geoIsLiveObject(group)) {
         unsubscribe()
         return
       }

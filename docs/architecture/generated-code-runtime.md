@@ -28,7 +28,7 @@ rendered), `window.vectorNotation`, `window.geoNaming`, `window.geoVarStore` /
 `geoSetVar` / `geoVar`, the halo surface (`HALO_LAYER`, `getHaloId`,
 `applyHaloDiscardMaterial`, `createHaloIdMaterial`, `registerHaloLine`,
 `HALO_MAX_IMMUNE_IDS`), `buildVectorShaftGlyph`, `makeStagedVectorReveal`,
-`geoPointMarker` / `geoPointMaterial`.
+`geoPointMarker` / `geoPointMaterial`, `geoIsLiveObject`.
 
 A subset (`THREE`, `threeObjStore`, `createInfinitePlaneMesh`,
 `vectorNotation`, `geoNaming`, `geoSetVar`, `geoVar`) is **also** passed
@@ -64,6 +64,20 @@ degrade to a partial scene, not take the editor down. But it MUST be loud: a
 silent failure looks identical to "the scene is just empty", and the most common
 cause is a builder referencing an imported binding from inside its stringified
 body. The console line is `[GeoScratch] Generated block code threw`.
+
+### stale-check-walks-ancestors
+
+A builder that subscribes to settings beside the object it made (edge lines,
+gridlines, glyph style) has to drop that subscription once the object is stale,
+and the obvious test -- `threeObjStore[blockId] === mine` -- is wrong. A wrapper
+block (`geo_object_with_point`, `geo_show_point_on_object`) registers its group
+under its own block id and deletes the child's entry, so a nested object reads
+as stale while it is still on screen: it unsubscribes on the first settings
+change and then never tracks that setting again. A cube inside "Object with
+Point" keeps its outline edges after the toggle goes off, until an unrelated
+workspace edit rebuilds the scene. `window.geoIsLiveObject(obj)`
+(`utils/liveSceneObject.js`) is the test: walk `obj` and its ancestors and ask
+whether any of them is in the store.
 
 ### rebuild-hook-lives-in-generateandrun
 

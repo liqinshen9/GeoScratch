@@ -184,7 +184,7 @@ export function initVec3Block() {
 
       if (window.useSettingsStore) {
         const unsubscribe = window.useSettingsStore.subscribe((state) => {
-          if (window.threeObjStore?.[${blockId}] !== visual) { unsubscribe(); return; }
+          if (!window.geoIsLiveObject(visual)) { unsubscribe(); return; }
           originMarker.visible = !!state.settings.showVectorOriginPoint;
         });
       }

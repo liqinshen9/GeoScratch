@@ -39,7 +39,7 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   edges.visible = !!useSettingsStore?.getState().settings.cubeShowEdges
   if (useSettingsStore) {
     const unsubscribeEdges = useSettingsStore.subscribe((state) => {
-      if (window.threeObjStore?.[blockId] !== mesh) {
+      if (!window.geoIsLiveObject(mesh)) {
         unsubscribeEdges()
         return
       }
@@ -71,7 +71,7 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   if (threeObjStore) threeObjStore[blockId] = mesh
 
   const unsubscribe = window.GeoScratchColors.subscribeToPreset(() => {
-    if (window.threeObjStore?.[blockId] !== mesh) {
+    if (!window.geoIsLiveObject(mesh)) {
       unsubscribe()
       return
     }

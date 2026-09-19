@@ -38,6 +38,7 @@ describe('installSceneRuntime', () => {
         'buildDistanceIllustration',
         'buildVectorShaftGlyph',
         'createHaloIdMaterial',
+        'geoIsLiveObject',
         'geoNaming',
         'geoPointMarker',
         'geoPointMaterial',

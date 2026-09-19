@@ -44,7 +44,7 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   edges.visible = !!useSettingsStore?.getState().settings.teapotShowGridlines
   if (useSettingsStore) {
     const unsubscribe = useSettingsStore.subscribe((state) => {
-      if (window.threeObjStore?.[blockId] !== mesh) {
+      if (!window.geoIsLiveObject(mesh)) {
         unsubscribe()
         return
       }

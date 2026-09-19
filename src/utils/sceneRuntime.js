@@ -17,6 +17,7 @@ import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorRe
 import { makeExtendableSegment } from '@/utils/segmentGlyph'
 import { buildDistanceIllustration } from '@/utils/distanceIllustration'
 import { planePatchHalfSize, planePatchPoint, planePatchPolygon } from '@/utils/planePatch'
+import { isLiveSceneObject } from '@/utils/liveSceneObject'
 import {
   createPointMarker,
   createPointMaterial,
@@ -47,6 +48,7 @@ import {
  * @property {Function} buildVectorShaftGlyph
  * @property {Function} geoPointMarker                Builds a point marker (geometry, matte/sheen finish, zoom tagging).
  * @property {Function} geoPointMaterial              The point finish alone, for a marker built by hand.
+ * @property {Function} geoIsLiveObject               Whether an object is still in this run's scene, wrapped or not.
  * @property {Function} buildDistanceIllustration    The point-to-plane distance picture.
  * @property {Function} planePatchPolygon            A plane's drawn outline, clipped to the scene box.
  * @property {Function} planePatchHalfSize           That outline's square before clipping.
@@ -123,6 +125,7 @@ export function installSceneRuntime(workspace, options = {}) {
   window.planePatchPoint = planePatchPoint
   window.geoPointMarker = createPointMarker
   window.geoPointMaterial = createPointMaterial
+  window.geoIsLiveObject = (object) => isLiveSceneObject(object, window.threeObjStore)
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()

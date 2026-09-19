@@ -47,6 +47,11 @@ Documented because a plausible-looking simplification reintroduces them:
   [vector-line-glyphs.md](vector-line-glyphs.md#needle-triangle). A cylinder
   spanning the whole scene with one height segment breaks texture
   interpolation on some GPUs; the fix is height segments, not ring count.
+- **Stale-object checks that ignore wrappers** -
+  [generated-code-runtime.md](generated-code-runtime.md#stale-check-walks-ancestors).
+  A wrapper block owns the store entry, so a nested object that tests
+  `threeObjStore[blockId] === mine` unsubscribes from settings while still on
+  screen and freezes at its build-time look.
 - **GPU resource leaks on rebuild** -
   [vector-line-glyphs.md](vector-line-glyphs.md#dispose-on-rebuild). `.remove()`
   doesn't free GPU buffers; a fast zoom that rebuilds glyphs many times a
