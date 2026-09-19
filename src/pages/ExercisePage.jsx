@@ -87,6 +87,7 @@ export default function ExercisePage() {
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [perceptualPicked, setPerceptualPicked] = useState(null)
   const clearWorkspaceRef = useRef(() => {})
+  const editorShellRef = useRef(null)
 
   // The URL is the source of truth for which exercise is open;
   // /exercise with no param (or an unknown id) defaults to the first one.
@@ -142,6 +143,15 @@ export default function ExercisePage() {
     [navigate, setObjects, setPendingObjects],
   )
 
+  const handleWorkspaceMaximizedChange = useCallback((maximized) => {
+    const shell = editorShellRef.current
+    if (maximized && shell) {
+      const headerHeight = shell.querySelector('.editor-header-row')?.getBoundingClientRect().height
+      if (headerHeight) shell.style.setProperty('--exercise-header-height', `${headerHeight}px`)
+    }
+    setWorkspaceMaximized(maximized)
+  }, [])
+
   // Clear a stale MCQ pick when moving between exercises.
   useEffect(() => {
     setPerceptualPicked(null)
@@ -188,6 +198,7 @@ export default function ExercisePage() {
   return (
     <div className="exercise-page exercise-page--editor" data-exercise-id={activeExercise}>
       <main
+        ref={editorShellRef}
         className={`editor-shell editor-shell--with-leading exercise-editor-shell${
           workspaceMaximized ? ' editor-shell--maximized' : ''
         }`}
@@ -237,68 +248,77 @@ export default function ExercisePage() {
           }
           workspace={workspace}
           workspaceMaximized={workspaceMaximized}
-          onWorkspaceMaximizedChange={setWorkspaceMaximized}
+          preserveColumns
+          onWorkspaceMaximizedChange={handleWorkspaceMaximizedChange}
           onClearWorkspace={() => clearWorkspaceRef.current()}
         />
 
         <div className="editor-body-row">
-          {!workspaceMaximized && (
-            <aside className={`exercise-task-panel${passed ? ' is-passed' : ''}`}>
-              <div className="exercise-task-panel__top">
-                {placement && (
-                  <p className="exercise-task-panel__crumb">
-                    {placement.unit.title} · {placement.section.title}
-                  </p>
-                )}
-                <h1>
-                  <strong>{activeExerciseConfig.title}</strong>
-                </h1>
-              </div>
-
-              <Givens />
-              {isPerceptual && exercise.mcq && (
-                <PerceptualQuestion
-                  mcq={exercise.mcq}
-                  onPick={tracking.recordMcqAnswer}
-                  onPickedChange={setPerceptualPicked}
-                />
+          <aside
+            className={`exercise-task-panel${passed ? ' is-passed' : ''}`}
+            aria-hidden={workspaceMaximized}
+          >
+            <div className="exercise-task-panel__top">
+              {placement && (
+                <p className="exercise-task-panel__crumb">
+                  {placement.unit.title} · {placement.section.title}
+                </p>
               )}
-              <Steps steps={result.steps} passed={passed} />
-              {!isPerceptual && !exercise.hideAnswerCard && <AnswerCard result={result} className={answerCardClass} />}
-              {exercise.AnimationButton ? (
-                <div className={`exercise-completion-row${passed ? ' is-passed' : ''}`}>
-                  {passed && <div className="exercise-pass-banner" role="status">
+              <h1>
+                <strong>{activeExerciseConfig.title}</strong>
+              </h1>
+            </div>
+
+            <Givens />
+            {isPerceptual && exercise.mcq && (
+              <PerceptualQuestion
+                mcq={exercise.mcq}
+                onPick={tracking.recordMcqAnswer}
+                onPickedChange={setPerceptualPicked}
+              />
+            )}
+            <Steps steps={result.steps} passed={passed} />
+            {!isPerceptual && !exercise.hideAnswerCard && (
+              <AnswerCard result={result} className={answerCardClass} />
+            )}
+            {exercise.AnimationButton ? (
+              <div className={`exercise-completion-row${passed ? ' is-passed' : ''}`}>
+                {passed && (
+                  <div className="exercise-pass-banner" role="status">
                     <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
                     <span>Passed</span>
-                  </div>}
-                  <exercise.AnimationButton objects={objects} workspace={workspace} />
-                </div>
-              ) : passed && (
+                  </div>
+                )}
+                <exercise.AnimationButton objects={objects} workspace={workspace} />
+              </div>
+            ) : (
+              passed && (
                 <div className="exercise-pass-banner" role="status">
                   <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
                   <span>Passed</span>
                 </div>
-              )}
-              {/* Dev only: import.meta.env.DEV is false in the study build, so
+              )
+            )}
+            {/* Dev only: import.meta.env.DEV is false in the study build, so
                   the control is compiled out rather than merely hidden. */}
-              {import.meta.env?.DEV && exercise.solutionXml && (
-                <button
-                  type="button"
-                  className="exercise-debug-fill"
-                  onClick={() =>
-                    fillSolution(workspace, exercise.solutionXml, exercise.seedWorkspace)
-                  }
-                >
-                  Fill solution (dev)
-                </button>
-              )}
-            </aside>
-          )}
+            {import.meta.env?.DEV && exercise.solutionXml && (
+              <button
+                type="button"
+                className="exercise-debug-fill"
+                onClick={() =>
+                  fillSolution(workspace, exercise.solutionXml, exercise.seedWorkspace)
+                }
+              >
+                Fill solution (dev)
+              </button>
+            )}
+          </aside>
 
           <BlocksCanvas
             key={`exercise-${activeExercise}`}
             id={`exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
+            preserveColumns
             reusableBlockTemplate={
               exercise.getReusableBlockTemplate?.({ workspace, result }) ??
               (result.passed ? exercise.reusableBlockTemplate : null)

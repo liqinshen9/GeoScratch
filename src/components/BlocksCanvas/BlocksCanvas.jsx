@@ -32,6 +32,7 @@ export default function BlocksCanvas({
   id,
   onObjectsChange,
   workspaceMaximized,
+  preserveColumns = false,
   onRegisterClear,
   reusableBlockTemplate,
 }) {
@@ -255,8 +256,11 @@ export default function BlocksCanvas({
         onConfirm={() => setMyBlockDialog(null)}
       />
 
-      {!workspaceMaximized && (
-        <div className="blocks-toolbox-slot">
+      {(!workspaceMaximized || preserveColumns) && (
+        <div
+          className="blocks-toolbox-slot"
+          aria-hidden={preserveColumns && workspaceMaximized}
+        >
           <aside className="blocks-col blocks-col--toolbox">
             <CategoryToolbox
               selected={paletteOpen ? categoryId : null}

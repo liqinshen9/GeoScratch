@@ -85,16 +85,6 @@
   filter: none !important;
 }
 
-@media (min-width: 1101px) {
-  .exercise-page--editor[data-exercise-id='cube-point-pivot-rotation']
-    .exercise-editor-shell:not(.editor-shell--maximized) {
-    /* Preserve the scene width from the standard exercise layout. */
-    grid-template-columns:
-      var(--exercise-task-width) 67px minmax(0, 1fr)
-      minmax(0, calc((100% - clamp(14.5rem, 15vw, 17rem) - 70px) / 2));
-  }
-}
-
 .exercise-editor-shell {
   /* Only adds to .editor-shell's own display:grid/background -- this class
      must not redeclare either here. Redeclaring display would silently
@@ -106,6 +96,76 @@
   flex: 1;
   min-height: 0;
   border-top: 1px solid var(--exercise-divider);
+  grid-template-rows: var(--exercise-header-height, auto) minmax(0, 1fr);
+  --exercise-scene-column-width: calc(
+    (100% - clamp(14.5rem, 15vw, 17rem) - 70px) / 2
+  );
+  grid-template-columns:
+    var(--exercise-task-width) 67px
+    minmax(
+      0,
+      calc(100% - var(--exercise-task-width) - 70px - var(--exercise-scene-column-width))
+    )
+    minmax(0, var(--exercise-scene-column-width));
+  transition:
+    grid-template-columns 320ms cubic-bezier(0.4, 0, 0.2, 1),
+    column-gap 320ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.exercise-editor-shell.editor-shell--maximized {
+  grid-template-columns:
+    0px 0px
+    minmax(0, calc(50% + 0.5px))
+    minmax(0, calc(50% - 0.5px));
+  column-gap: 0;
+}
+
+.exercise-editor-shell .panel-column-header,
+.exercise-editor-shell .exercise-task-panel,
+.exercise-editor-shell #blocks-canvas,
+.exercise-editor-shell .blocks-toolbox-slot {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.exercise-editor-shell.editor-shell--maximized .editor-header-row > :nth-child(-n + 2),
+.exercise-editor-shell.editor-shell--maximized .exercise-task-panel,
+.exercise-editor-shell.editor-shell--maximized .blocks-toolbox-slot {
+  pointer-events: none;
+}
+
+.exercise-editor-shell .editor-header-row > :nth-child(-n + 2) > *,
+.exercise-editor-shell .exercise-task-panel > *,
+.exercise-editor-shell .blocks-toolbox-slot > * {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity 160ms ease-out 110ms,
+    transform 220ms cubic-bezier(0.4, 0, 0.2, 1) 80ms;
+}
+
+.exercise-editor-shell.editor-shell--maximized
+  .editor-header-row
+  > :nth-child(-n + 2)
+  > *,
+.exercise-editor-shell.editor-shell--maximized .exercise-task-panel > *,
+.exercise-editor-shell.editor-shell--maximized .blocks-toolbox-slot > * {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition-delay: 0ms;
+}
+
+.exercise-editor-shell.editor-shell--maximized
+  .editor-body-row
+  > #blocks-canvas.blocks-shell {
+  grid-column: 2 / 4;
+  grid-template-columns: subgrid;
+  column-gap: 0;
+}
+
+.exercise-editor-shell.editor-shell--maximized .editor-body-3d {
+  grid-column: 4;
+  box-shadow: inset 1px 0 0 var(--geo-border-light);
 }
 
 .exercise-task-panel {

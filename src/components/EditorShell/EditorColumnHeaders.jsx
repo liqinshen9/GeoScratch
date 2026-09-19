@@ -7,17 +7,26 @@ export default function EditorColumnHeaders({
   leadingHeader,
   workspace,
   workspaceMaximized,
+  preserveColumns = false,
   onWorkspaceMaximizedChange,
   onClearWorkspace,
 }) {
   return (
     <div className="editor-header-row">
-      {!workspaceMaximized && leadingHeader && (
-        <header className="panel-column-header editor-head">{leadingHeader}</header>
+      {(!workspaceMaximized || preserveColumns) && leadingHeader && (
+        <header
+          className="panel-column-header editor-head"
+          aria-hidden={preserveColumns && workspaceMaximized}
+        >
+          {leadingHeader}
+        </header>
       )}
 
-      {!workspaceMaximized && (
-        <header className="panel-column-header editor-head">
+      {(!workspaceMaximized || preserveColumns) && (
+        <header
+          className="panel-column-header editor-head"
+          aria-hidden={preserveColumns && workspaceMaximized}
+        >
           <h2>Toolbox</h2>
         </header>
       )}
