@@ -123,7 +123,7 @@
 .exercise-editor-shell .panel-column-header,
 .exercise-editor-shell .exercise-task-panel,
 .exercise-editor-shell #blocks-canvas,
-.exercise-editor-shell .blocks-toolbox-slot {
+.exercise-editor-shell .blocks-col--toolbox {
   min-width: 0;
   overflow-x: hidden;
 }
