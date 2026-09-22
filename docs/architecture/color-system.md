@@ -68,3 +68,14 @@ The optional cube outline (`settings.cubeShowEdges`) is
 scene, lighter on the dark one. A fixed faint white (the old default) vanished
 wherever an edge had the light background behind it, so which edges showed
 depended on the camera angle. It re-tints with the cube on a preset/theme change.
+
+## Per-type color overrides
+
+Settings > Colors has a fixed-color picker per type (point, vector, line,
+sphere, cube, teapot), stored as `pointColor`, `cubeColor`, ... (`null` = Auto).
+The keys live in `OBJECT_COLOR_SETTING_KEYS` (`colorPresets.js`). `forInstance`
+returns the override as-is for every instance of that type, and
+`forInstanceVariant` tone-shifts it, so derived colors (cube edges, a line's
+light/dark bands) still work. `subscribeToPreset` also fires on an override
+change. Phase 1 conditions spread `DEFAULT_SETTINGS`, so the overrides are
+pinned to Auto in every trial.

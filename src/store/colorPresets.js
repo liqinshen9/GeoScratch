@@ -13,6 +13,18 @@ export const OBJECT_TYPES = Object.freeze({
 
 export const OBJECT_TYPE_KEYS = Object.freeze(Object.values(OBJECT_TYPES))
 
+// Settings > Colors: a fixed colour that replaces a type's whole family (object
+// and block). null = automatic, i.e. the preset. See
+// docs/architecture/color-system.md#per-type-color-overrides.
+export const OBJECT_COLOR_SETTING_KEYS = Object.freeze({
+  [OBJECT_TYPES.POINT]: 'pointColor',
+  [OBJECT_TYPES.VECTOR]: 'vectorColor',
+  [OBJECT_TYPES.LINE]: 'lineColor',
+  [OBJECT_TYPES.SPHERE]: 'sphereColor',
+  [OBJECT_TYPES.CUBE]: 'cubeColor',
+  [OBJECT_TYPES.TEAPOT]: 'teapotColor',
+})
+
 export const COLOR_ROLES = Object.freeze({
   OPERAND_A: 'operandA',
   OPERAND_B: 'operandB',

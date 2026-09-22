@@ -1,5 +1,11 @@
-import { Hct, hexFromArgb } from '@material/material-color-utilities'
-import { COLOR_PRESETS, DEFAULT_COLOR_PRESET, OBJECT_TYPE_KEYS, COLOR_ROLES } from './colorPresets'
+import { Hct, hexFromArgb, argbFromHex } from '@material/material-color-utilities'
+import {
+  COLOR_PRESETS,
+  DEFAULT_COLOR_PRESET,
+  OBJECT_TYPE_KEYS,
+  OBJECT_COLOR_SETTING_KEYS,
+  COLOR_ROLES,
+} from './colorPresets'
 
 // Deterministic FNV-1a hash: same block id -> same color, nothing persisted.
 // See docs/architecture/color-system.md.
@@ -43,7 +49,19 @@ function activePreset() {
   return preset
 }
 
+// The user's fixed colour for `type` (Settings > Colors), or null for automatic.
+function overrideFor(type) {
+  const key = OBJECT_COLOR_SETTING_KEYS[type]
+  const value = key ? settingsStore()?.getState().settings[key] : null
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : null
+}
+
 function instanceHct(type, blockId) {
+  const override = overrideFor(type)
+  if (override) {
+    const hct = Hct.fromInt(argbFromHex(override))
+    return { hue: hct.hue, chroma: hct.chroma, tone: hct.tone }
+  }
   const preset = activePreset()
   const family = preset.types[type]
   if (!family) return null
@@ -58,6 +76,8 @@ function instanceHct(type, blockId) {
 // Color for an object instance, keyed by stable blockId (per-type fallback
 // seed when absent). See docs/architecture/color-system.md.
 function forInstance(type, blockId) {
+  const override = overrideFor(type)
+  if (override) return override
   const hct = instanceHct(type, blockId)
   if (!hct) return '#94a3b8'
   return hexFromArgb(Hct.from(hct.hue, hct.chroma, hct.tone).toInt())
@@ -78,19 +98,27 @@ function forRole(role) {
   return preset.roles[role] || preset.roles[COLOR_ROLES.WARNING]
 }
 
-// Subscribe to anything that changes the active palette: the color-preset name
-// or the resolved theme (light/dark presets differ). Ignores unrelated setting
-// changes. Returns an unsubscribe function.
+// Subscribe to anything that changes the active palette: the color-preset name,
+// the resolved theme (light/dark presets differ) or a per-type fixed colour.
+// Ignores unrelated setting changes. Returns an unsubscribe function.
+const OVERRIDE_KEYS = Object.values(OBJECT_COLOR_SETTING_KEYS)
+function paletteSignature(state) {
+  return [
+    state.settings.colorPreset,
+    state.resolvedTheme,
+    ...OVERRIDE_KEYS.map((key) => state.settings[key]),
+  ].join('|')
+}
+
 function subscribeToPreset(callback) {
   const store = settingsStore()
   if (!store) return () => {}
-  let prevPreset = store.getState().settings.colorPreset
-  let prevTheme = store.getState().resolvedTheme
+  let prev = paletteSignature(store.getState())
   return store.subscribe((state) => {
-    if (state.settings.colorPreset !== prevPreset || state.resolvedTheme !== prevTheme) {
-      prevPreset = state.settings.colorPreset
-      prevTheme = state.resolvedTheme
-      callback(prevPreset)
+    const next = paletteSignature(state)
+    if (next !== prev) {
+      prev = next
+      callback(state.settings.colorPreset)
     }
   })
 }

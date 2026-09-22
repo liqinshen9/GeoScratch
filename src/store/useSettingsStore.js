@@ -12,6 +12,14 @@ export const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
   colorPreset: DEFAULT_COLOR_PRESET,
+  // Per-type fixed colours ('#rrggbb'), null = follow the preset. Keys match
+  // OBJECT_COLOR_SETTING_KEYS in colorPresets.js.
+  pointColor: null,
+  vectorColor: null,
+  lineColor: null,
+  sphereColor: null,
+  cubeColor: null,
+  teapotColor: null,
   showLabels: true,
   showGrid: true,
   showBox: true,

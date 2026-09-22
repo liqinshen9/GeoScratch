@@ -14,6 +14,7 @@
 :root[data-theme='dark'] .settings-geometry-tile,
 :root[data-theme='dark'] .settings-select,
 :root[data-theme='dark'] .settings-number,
+:root[data-theme='dark'] .settings-color__auto,
 :root[data-theme='dark'] .settings-reset-button {
   background: var(--geo-surface) !important;
   border-color: var(--geo-border) !important;
@@ -182,8 +183,38 @@
   font-size: 12px;
 }
 
+.settings-color {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-color__swatch {
+  width: 34px;
+  height: 22px;
+  padding: 1px;
+  border: 1px solid rgba(0, 46, 166, 0.22);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.settings-color__auto {
+  padding: 2px 8px;
+  border: 1px solid rgba(0, 46, 166, 0.22);
+  border-radius: 6px;
+  background: #fff;
+  color: #102a6b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .settings-switch:disabled,
 .settings-number:disabled,
+.settings-color__swatch:disabled,
+.settings-color__auto:disabled,
 .settings-select:disabled {
   opacity: 0.5;
   cursor: not-allowed;

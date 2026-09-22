@@ -1,7 +1,8 @@
 import React, { useState } from 'react' // Import useState for feedback
 import useSettingsStore from '@/store/useSettingsStore'
 import { LINE_STYLES, LINE_COLLISION_STYLES } from '../store/lineStyles'
-import { COLOR_PRESETS } from '../store/colorPresets'
+import { COLOR_PRESETS, OBJECT_TYPES, OBJECT_COLOR_SETTING_KEYS } from '../store/colorPresets'
+import { forInstance } from '../store/colorSystem'
 import { OBJECT_HIGHLIGHT_STYLES } from '../store/highlightStyles'
 import { ANIMATION_EASINGS, ANIMATION_SPEED_PRESETS } from '../store/animationConfig'
 import { NAMING_STYLES, LABEL_DETAIL_LEVELS } from '../store/namingConfig'
@@ -69,6 +70,52 @@ function NumberRow({ label, description, value, onChange, settingKey, min, max, 
         }}
         className="settings-number"
       />
+    </div>
+  )
+}
+
+// Order and names for Settings > Colors' per-type pickers.
+const OBJECT_COLOR_ROWS = [
+  [OBJECT_TYPES.POINT, 'Point'],
+  [OBJECT_TYPES.VECTOR, 'Vector'],
+  [OBJECT_TYPES.LINE, 'Line'],
+  [OBJECT_TYPES.SPHERE, 'Sphere'],
+  [OBJECT_TYPES.CUBE, 'Cube'],
+  [OBJECT_TYPES.TEAPOT, 'Teapot'],
+]
+
+// A fixed colour for one object type (object + block), or Auto to follow the
+// preset. While on Auto the swatch shows the preset family's typical colour.
+function ColorRow({ label, type, value, onChange, settingKey }) {
+  const locked = useSettingLocked(settingKey)
+  const inputId = `settings-color-${type}`
+  return (
+    <div className="settings-row">
+      <div className="settings-row__copy">
+        <label className="settings-label" htmlFor={inputId}>
+          {label}
+        </label>
+        <p className="settings-description">{value ? 'Fixed color' : 'Automatic (from the preset)'}</p>
+        {locked && <LockedHint />}
+      </div>
+      <div className="settings-color">
+        <input
+          id={inputId}
+          type="color"
+          value={value ?? forInstance(type)}
+          disabled={locked}
+          onChange={(e) => onChange(e.target.value)}
+          className="settings-color__swatch"
+        />
+        <button
+          type="button"
+          className="settings-color__auto"
+          disabled={locked || !value}
+          onClick={() => onChange(null)}
+        >
+          Auto
+        </button>
+      </div>
     </div>
   )
 }
@@ -398,7 +445,7 @@ export default function SettingsPage() {
               <GeometryTile title="Colors">
                 <SelectField
                   label="Color Preset"
-                  description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders."
+                  description="Each object type (Point, Vector, Line, Plane, Sphere, Cube, Teapot) gets its own color family, and every block matches the color of the object it renders. A fixed color below replaces the preset for that type."
                   value={settings.colorPreset}
                   settingKey="colorPreset"
                   onChange={(e) => updateSetting('colorPreset', e.target.value)}
@@ -409,6 +456,19 @@ export default function SettingsPage() {
                     </option>
                   ))}
                 </SelectField>
+                {OBJECT_COLOR_ROWS.map(([type, label]) => {
+                  const settingKey = OBJECT_COLOR_SETTING_KEYS[type]
+                  return (
+                    <ColorRow
+                      key={type}
+                      label={label}
+                      type={type}
+                      value={settings[settingKey]}
+                      settingKey={settingKey}
+                      onChange={(v) => updateSetting(settingKey, v)}
+                    />
+                  )
+                })}
               </GeometryTile>
 
               <GeometryTile title="Halos">
