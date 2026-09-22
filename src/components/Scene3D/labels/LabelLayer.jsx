@@ -77,6 +77,11 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                 anchorName={lbl.anchor}
                 clearObject={lbl.clearSilhouette ? object3D : null}
                 revealed={typeof lbl.revealed === 'function' ? lbl.revealed : null}
+                // Re-read while something is playing, so a value computed from
+                // the moving object (e.g. a point's coordinates) stays current.
+                liveText={
+                  formatLabelText(lbl, labelDetail) ? () => formatLabelText(lbl, labelDetail) : null
+                }
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}
               >

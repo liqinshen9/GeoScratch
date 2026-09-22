@@ -130,6 +130,11 @@ function AxisArrow({
     )
     shaft.position.copy(direction).multiplyScalar((shaftStart + shaftEnd) / 2)
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction)
+    // Lets SelectionHighlight's GLOW trace the shaft (local Y is the axis).
+    shaft.userData.glowLine = {
+      start: new THREE.Vector3(0, -shaftLength / 2, 0),
+      end: new THREE.Vector3(0, shaftLength / 2, 0),
+    }
 
     const head = new THREE.Mesh(new THREE.ConeGeometry(0.28, headHeight, 18), material)
     head.position.copy(direction).multiplyScalar(length - headHeight / 2)
@@ -141,6 +146,8 @@ function AxisArrow({
     head.renderOrder = -100
 
     group.add(shaft, head)
+    // Highlight target for useSceneHighlightStore.highlightedAxis.
+    group.userData.sceneAxis = dir[0] ? 'x' : dir[1] ? 'y' : 'z'
     return group
   }, [dir, color, length, opacity])
 

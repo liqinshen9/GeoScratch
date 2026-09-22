@@ -36,10 +36,21 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   mesh.castShadow = true
   mesh.receiveShadow = true
 
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geometry),
-    new THREE.LineBasicMaterial({ transparent: true, opacity: 0.25, color: 0xffffff }),
-  )
+  // A tone-shifted variant of the cube's own colour, darker on the light scene
+  // and lighter on the dark one, so every edge reads against the faces AND the
+  // background. See docs/architecture/color-system.md#cube-edges.
+  const edgeColor = () =>
+    window.GeoScratchColors.forInstanceVariant(
+      'cube',
+      blockId,
+      useSettingsStore?.getState().resolvedTheme === 'dark' ? 28 : -28,
+    )
+  const edgeMaterial = new THREE.LineBasicMaterial({
+    transparent: true,
+    opacity: 0.85,
+    color: edgeColor(),
+  })
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial)
   mesh.add(edges)
 
   edges.visible = !!useSettingsStore?.getState().settings.cubeShowEdges
@@ -82,6 +93,7 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
       return
     }
     material.color.set(window.GeoScratchColors.forInstance('cube', blockId))
+    edgeMaterial.color.set(edgeColor())
   })
 
   return mesh

@@ -67,14 +67,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
         pointerId: event.pointerId,
       }
       if (down.moved || classifyGesture(down, up) !== 'click') return
-      const hits = raycastAt(event)
-      let marker = hits[0]?.object
-      while (marker && !marker.userData?.togglePointCoordinates) marker = marker.parent
-      if (marker) {
-        marker.userData.pointCoordinatesVisible = !marker.userData.pointCoordinatesVisible
-        onToggleLabels([])
-      }
-      onSelectBlock(resolveSelectedBlockId(hits))
+      onSelectBlock(resolveSelectedBlockId(raycastAt(event)))
     }
 
     const handlePointerCancel = () => {

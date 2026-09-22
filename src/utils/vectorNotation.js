@@ -1,3 +1,11 @@
+// Always exactly one decimal ("[1.0, 2.0, 2.0]"), so a label read live during
+// an animation keeps a steady width instead of flickering between lengths.
+// Anything that rounds to zero prints as 0.0, never -0.0.
+export function formatVectorLive(vector) {
+  const fixed = (value) => (Math.abs(value) < 0.05 ? 0 : value).toFixed(1)
+  return `[${fixed(vector.x)}, ${fixed(vector.y)}, ${fixed(vector.z)}]`
+}
+
 export function createVectorNotationRuntime() {
   const getLabel = (value, fallback) => value?.userData?.label || fallback
   const hasLabel = (value) => Boolean(value?.userData?.label)
@@ -21,6 +29,7 @@ export function createVectorNotationRuntime() {
       '[' +
       [vector.x, vector.y, vector.z].map((value) => Number(value.toFixed(3))).join(', ') +
       ']',
+    formatVectorLive,
     getLabel,
     hasLabel,
     hasVisibleLabel,

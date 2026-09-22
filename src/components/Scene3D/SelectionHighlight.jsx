@@ -6,6 +6,7 @@ import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
+import useSceneHighlightStore from '@/store/useSceneHighlightStore'
 import { OBJECT_HIGHLIGHT_STYLES, SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
 import { collectSelectionTargets } from '@/utils/scenePicking'
 
@@ -31,6 +32,13 @@ const GLOW_PLANE_EDGE_LAYERS = [
   [0.2, 0.18],
 ]
 const GLOW_PLANE_FILL_OPACITY = 0.42
+
+const GLOW_LINE_LAYERS = [
+  [0.12, 0.55],
+  [0.32, 0.2],
+]
+// Below the axis shaft's fixed -100 so the line keeps its own colour on top.
+const GLOW_LINE_RENDER_ORDER = -110
 const GLOW_PLANE_FILL_INNER = 0.32
 
 // Radial white gradient, tinted per use. Built once, shared.
@@ -292,6 +300,41 @@ function addPlaneEdgeGlow(planeMesh, accent, size) {
   return out
 }
 
+// Meshes tagged with `userData.glowLine = { start, end }` (local space), e.g.
+// the world-axis shafts. See docs/architecture/selection-and-picking.md#scene-axis-highlight.
+function collectGlowLines(targets) {
+  const meshes = []
+  targets.forEach((t) =>
+    t.traverse((child) => {
+      if (child.userData?.glowLine) meshes.push(child)
+    }),
+  )
+  return meshes
+}
+
+// Layered fat lines along the tagged segment, parented onto the mesh and drawn
+// behind it, so the halo surrounds the line without recolouring it.
+function addLineGlow(mesh, accent, size) {
+  const { start, end } = mesh.userData.glowLine
+  const geom = new LineSegmentsGeometry().setPositions([...start.toArray(), ...end.toArray()])
+  return GLOW_LINE_LAYERS.map(([width, opacity], i) => {
+    const mat = new LineMaterial({
+      color: accent.getHex(),
+      linewidth: width,
+      worldUnits: true,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    })
+    if (size) mat.resolution.set(size.width, size.height)
+    const line = new LineSegments2(geom, mat)
+    line.raycast = () => {}
+    line.renderOrder = GLOW_LINE_RENDER_ORDER - i
+    mesh.add(line)
+    return { obj: line, mat, geom: i === 0 ? geom : null }
+  })
+}
+
 function applyGlow(targets, scene, size) {
   const accent = new THREE.Color(SELECTION_HIGHLIGHT_COLOR)
   const parts = [] // { light, sprite, spriteMat }
@@ -300,7 +343,8 @@ function applyGlow(targets, scene, size) {
   const hidden = [] // objects temporarily hidden for the duration of the glow
 
   const planeMeshes = collectPlaneMeshes(targets)
-  const heads = planeMeshes.length ? [] : collectVectorHeads(targets)
+  const glowLines = planeMeshes.length ? [] : collectGlowLines(targets)
+  const heads = planeMeshes.length || glowLines.length ? [] : collectVectorHeads(targets)
 
   // Set by whichever glow path ran, so tick() can follow a moving object.
   //   follow      -- bbox path: { anchor, items:[{obj,offset}] }
@@ -320,6 +364,9 @@ function applyGlow(targets, scene, size) {
       })
       added.push(...addPlaneEdgeGlow(pm, accent, size))
     })
+  } else if (glowLines.length) {
+    // Line (e.g. a world axis): a halo only; the line keeps its colour.
+    glowLines.forEach((mesh) => added.push(...addLineGlow(mesh, accent, size)))
   } else if (heads.length) {
     // Vector(s): head ring + shaft trail + emissive bump. Softer per-head when
     // several share the selection.
@@ -496,20 +543,21 @@ function applyHighlight(style, targets, scene, size) {
   return applyBlink(targets)
 }
 
-// Headless, mounted under <Scene>. See docs/architecture/selection-and-picking.md.
-export default function SelectionHighlight({ objects = [] }) {
+// World-axis arrow groups tagged `userData.sceneAxis` by SceneFurniture.
+function collectSceneAxes(scene, axis) {
+  if (!axis) return []
+  const found = []
+  scene.traverse((child) => {
+    if (child.userData?.sceneAxis === axis) found.push(child)
+  })
+  return found
+}
+
+// Applies the user's highlight style to `targets` for as long as they're set.
+function useHighlight(targets) {
   const { scene, invalidate, size } = useThree()
-  const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
   const enabled = useSettingsStore((s) => s.settings.objectHighlightEnabled)
   const style = useSettingsStore((s) => s.settings.objectHighlightStyle)
-
-  // Matched by srcBlockId (stable across rebuilds, unlike uuid), nested
-  // objects included. See docs/architecture/selection-and-picking.md.
-  const targets = useMemo(
-    () => collectSelectionTargets(objects, selectedBlockId),
-    [objects, selectedBlockId],
-  )
-
   const activeRef = useRef(null)
 
   useEffect(() => {
@@ -528,6 +576,27 @@ export default function SelectionHighlight({ objects = [] }) {
   useFrame(({ clock }) => {
     if (activeRef.current?.tick?.(clock.elapsedTime)) invalidate()
   })
+}
+
+// Headless, mounted under <Scene>. See docs/architecture/selection-and-picking.md.
+export default function SelectionHighlight({ objects = [] }) {
+  const { scene } = useThree()
+  const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
+  const highlightedAxis = useSceneHighlightStore((s) => s.highlightedAxis)
+
+  // Matched by srcBlockId (stable across rebuilds, unlike uuid), nested
+  // objects included. See docs/architecture/selection-and-picking.md.
+  const selectionTargets = useMemo(
+    () => collectSelectionTargets(objects, selectedBlockId),
+    [objects, selectedBlockId],
+  )
+  const axisTargets = useMemo(
+    () => collectSceneAxes(scene, highlightedAxis),
+    [scene, highlightedAxis],
+  )
+
+  useHighlight(selectionTargets)
+  useHighlight(axisTargets)
 
   return null
 }

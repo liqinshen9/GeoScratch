@@ -6,6 +6,8 @@ import { installPivotStepAnimation } from './shared/pivotStepAnimation'
 import { pipelineStepChain, rotationMatches } from './shared/transformChecks'
 import { closeNumber, blockMatchesVec3, getInputBlock, scalarInputMatches, vectorMatches } from './shared/blockQueries'
 import { createPointMarker } from '@/utils/pointMarker'
+import { formatVectorLive } from '@/utils/vectorNotation'
+import { COLOR_ROLES } from '@/store/colorPresets'
 
 const CENTRE = new THREE.Vector3(1, 1, 1)
 const POINT = new THREE.Vector3(0, 2, 2)
@@ -103,11 +105,27 @@ function decorateObjects(objects, workspace) {
     if (!object) continue
     const cube = object.children.find((child) => child.userData?.geoType === 'geo_cube')
     if (cube && !object.userData.pivotCenterMarker) {
-      const centerMarker = createPointMarker({ color: '#111111', geoType: 'pivot_center_point' })
+      const color = window.GeoScratchColors.forRole(COLOR_ROLES.ACCENT)
+      const centerMarker = createPointMarker({ color, geoType: 'pivot_center_point' })
       centerMarker.position.copy(cube.position)
       centerMarker.visible = false
       object.add(centerMarker)
       object.userData.pivotCenterMarker = centerMarker
+      // A normal label on the top-level group, shown only while the marker is.
+      object.userData.labelAnchors = {
+        ...object.userData.labelAnchors,
+        c: { type: 'local', position: cube.position.toArray() },
+      }
+      object.userData.labels = [
+        ...(object.userData.labels ?? []),
+        {
+          anchor: 'c',
+          name: 'C',
+          get value() { return formatVectorLive(centerMarker.getWorldPosition(new THREE.Vector3())) },
+          color,
+          revealed: () => centerMarker.visible,
+        },
+      ]
     }
     installPivotStepAnimation(object, pipelineStepChain(pipeline), workspace)
   }
@@ -129,4 +147,7 @@ export default { id: 'cube-point-pivot-rotation', kind: 'transform', hideAnswerC
   primitivesCastShadows: false,
   pointShadowsEnabled: false,
   cameraShadowsEnabled: false,
+  objectHighlightStyle: 'glow',
+  showLabels: true,
+  labelDetail: 'nameAndValue',
 } }

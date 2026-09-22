@@ -60,3 +60,11 @@ The `WORKSPACE_VARIABLE` style (variable wrapper + references) is deliberately
 outside the object color system - those blocks draw nothing in 3D and carry no
 geometric type, so they get a neutral near-black rather than a color implying
 kinship with an object family.
+
+## Cube edges
+
+The optional cube outline (`settings.cubeShowEdges`) is
+`forInstanceVariant('cube', blockId, ±28)`: darker than the faces on the light
+scene, lighter on the dark one. A fixed faint white (the old default) vanished
+wherever an edge had the light background behind it, so which edges showed
+depended on the camera angle. It re-tints with the cube on a preset/theme change.

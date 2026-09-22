@@ -49,17 +49,26 @@ export default function initObjectCompositionBlocks() {
       const point = (${point});
       if (!object?.isObject3D || !point?.isVector3) return null;
       const group = new window.THREE.Group();
-      const marker = window.geoPointMarker({ color: '#e63946', geoType: 'attached_corner_point' });
+      const pointColor = window.GeoScratchColors.forInstance('point', ${id});
+      const marker = window.geoPointMarker({ color: pointColor, geoType: 'attached_corner_point' });
       marker.position.copy(point);
       marker.userData.coordinate = point.clone();
-      marker.userData.togglePointCoordinates = ${block.type === 'geo_special_cube'};
-      marker.userData.pointCoordinatesVisible = false;
       group.add(object, marker);
       group.userData.geoType = 'object_with_point';
       group.userData.srcBlockId = ${id};
       group.userData.point = point.clone();
-      marker.userData.labelAnchors = { p: { type: 'local', position: [0, 0, 0] } };
-      marker.userData.labels = [{ anchor: 'p', name: 'P', distanceFactor: 8, offset: [0.12, 0.12, 0], color: '#e63946' }];
+      // On the group (only top-level objects' labels render), anchored in its
+      // local frame so the label rides along with any transform. The value is
+      // read when the label renders, i.e. after the pipeline has moved P.
+      group.userData.labelAnchors = { p: { type: 'local', position: [point.x, point.y, point.z] } };
+      group.userData.labels = [{
+        anchor: 'p',
+        name: 'P',
+        get value() { return vectorNotation.formatVectorLive(marker.getWorldPosition(new THREE.Vector3())); },
+        distanceFactor: 8,
+        offset: [0.12, 0.12, 0],
+        color: pointColor,
+      }];
       delete window.threeObjStore[${childId}];
       window.threeObjStore[${id}] = group;
       return group;

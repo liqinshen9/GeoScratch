@@ -1,5 +1,4 @@
 import { fmtVec } from './labelAnchors'
-import THREE from '@/utils/three'
 
 /**
  * Derives the label descriptors and visibility keys for a scene object.
@@ -15,11 +14,6 @@ function getLabelVisibilityKey(labelIdBase, lbl, index) {
 
 function getLabelsForObject(object3D) {
   const ud = object3D.userData || {}
-  if (ud.togglePointCoordinates) {
-    if (!ud.pointCoordinatesVisible) return []
-    const position = object3D.getWorldPosition(new THREE.Vector3())
-    return [{ anchor: 'p', text: `P = ${fmtVec(position)}`, distanceFactor: 8, color: '#e63946' }]
-  }
   const labels = Array.isArray(ud.labels) ? ud.labels : []
   const needsDefault = labels.length === 0 && ud.geoType === 'geo_vector_line'
   return needsDefault

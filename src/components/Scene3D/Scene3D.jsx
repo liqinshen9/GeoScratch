@@ -6,8 +6,6 @@ import THREE from '@/utils/three'
 import './Scene3D.css'
 import useSettingsStore from '@/store/useSettingsStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
-import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
-import { SELECTION_HIGHLIGHT_COLOR } from '@/store/highlightStyles'
 import HaloDepthPrepass from './HaloDepthPrepass'
 import HaloDilatePass from './HaloDilatePass'
 import HaloUniformSync from './HaloUniformSync'
@@ -153,17 +151,6 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
                 set on their meshes, or they won't cast shadows! `receiveShadow` is
                 managed above based on settings.objectsReceiveShadows. */}
             <primitive object={o} />
-            {o.children
-              .filter((child) => child.userData?.togglePointCoordinates)
-              .map((point) => (
-                <LabelLayer
-                  key={point.uuid}
-                  object3D={point}
-                  hiddenLabelKeys={hiddenLabelKeys}
-                  onHideLabel={onHideLabel}
-                  labelDetail={settings.labelDetail}
-                />
-              ))}
             {settings.showLabels && (
               <LabelLayer
                 object3D={o}
@@ -203,14 +190,6 @@ export default function Scene3D({
   const resolvedTheme = useResolvedTheme()
   const backgroundColor = SCENE_BACKGROUND_COLOR[resolvedTheme] || SCENE_BACKGROUND_COLOR.light
   const gizmoAxisColors = getAxisColors(resolvedTheme)
-  const pivotHighlightAxis = usePivotPlaybackStore(
-    (state) => state.target?.userData?.pivotHighlightAxis ?? null,
-  )
-  const gizmoColors = ['X', 'Y', 'Z'].map((axis) =>
-    pivotHighlightAxis === axis
-      ? SELECTION_HIGHLIGHT_COLOR
-      : gizmoAxisColors[axis.toLowerCase()],
-  )
   const setSelectedBlockId = useWorkspaceStore((s) => s.setSelectedBlockId)
   const controlsRef = useRef(null)
   const cameraRef = useRef(null)
@@ -393,7 +372,7 @@ export default function Scene3D({
           {interactive && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
-                axisColors={gizmoColors}
+                axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
                 /* The axis-head discs are always a light colour, so the label
                    text stays dark in both themes. */
                 labelColor="#1a1a1a"

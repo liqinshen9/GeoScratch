@@ -56,6 +56,17 @@ Sprites are cheap, lights are not - trailing/secondary glows pass
 `withLight: false`. `depthTest: false` on a sprite stops a flat billboard
 cutting hard against a cone it overlaps.
 
+### scene-axis-highlight
+
+Anything that needs a world axis highlighted (e.g. the cube-pivot exercise's
+rotate step) sets `useSceneHighlightStore.highlightedAxis` rather than drawing
+its own geometry, so the user's highlight toggle and BLINK/GLOW choice apply
+uniformly. `SceneFurniture`'s `AxisArrow` tags its group `userData.sceneAxis`
+and its shaft `userData.glowLine`; GLOW has a line sub-path that traces any
+`glowLine` mesh with layered fat lines drawn *behind* it (renderOrder below
+the shaft's -100), so the axis keeps its own colour inside the halo. The axes
+only exist while `settings.showAxes` is on.
+
 ## Gotchas a refactor would reintroduce
 
 ### nested-selection-targets

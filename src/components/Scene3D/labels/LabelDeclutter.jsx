@@ -5,6 +5,7 @@ import { hexToRgba, resolveAnchor } from './labelAnchors'
 import { stepLabelSim } from './labelSim'
 import { clearanceAnchor } from './silhouetteClearance'
 import useAnimationStore from '@/store/useAnimationStore'
+import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 
 // Module-level registry, not React context: drei's <Html> mounts into a
 // separate ReactDOM root. See docs/architecture/label-declutter.md.
@@ -59,6 +60,7 @@ function LabelAnchor({
   anchorName,
   clearObject,
   revealed,
+  liveText,
   emphasis,
   onHide,
   children,
@@ -76,6 +78,7 @@ function LabelAnchor({
       anchorName,
       clearObject,
       revealed,
+      liveText,
       cx: 0,
       cy: 0,
       hw: 0,
@@ -124,6 +127,7 @@ function LabelAnchor({
     entry.anchorName = anchorName
     entry.clearObject = clearObject
     entry.revealed = revealed
+    entry.liveText = liveText
     entry.mass = mass
     if (!anchorMoved && !massChanged) return
     labelRegistryRevision += 1
@@ -132,7 +136,7 @@ function LabelAnchor({
       entry.velX = 0
       entry.velY = 0
     }
-  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject, revealed])
+  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject, revealed, liveText])
 
   const background = color ? hexToRgba(color, 0.55) : undefined
 
@@ -148,6 +152,17 @@ function LabelAnchor({
       </div>
     </div>
   )
+}
+
+// Rewrites the label's text in place from `liveText`. Mutates React's own text
+// node (never replaces it), so the next render still reconciles against it.
+function refreshLabelText(entry) {
+  const node = entry.bodyRef.current?.firstChild
+  if (!entry.liveText || node?.nodeType !== Node.TEXT_NODE) return false
+  const text = entry.liveText()
+  if (node.nodeValue === text) return false
+  node.nodeValue = text
+  return true
 }
 
 function applyLabelTransform(entry, x, y, scale) {
@@ -204,15 +219,21 @@ function LabelDeclutter() {
   // on the resting anchors rather than on the last in-between frame.
   const playingRef = useRef(false)
   const settleAnchorsRef = useRef(false)
-  useEffect(
-    () =>
-      useAnimationStore.subscribe((state) => {
-        const animating = state.playing || state.progress < 1
-        if (playingRef.current && !animating) settleAnchorsRef.current = true
-        playingRef.current = animating
-      }),
-    [],
-  )
+  // An exercise's step-by-step pivot playback moves objects too.
+  useEffect(() => {
+    const update = () => {
+      const { playing, progress } = useAnimationStore.getState()
+      const animating =
+        playing || progress < 1 || usePivotPlaybackStore.getState().target != null
+      if (playingRef.current && !animating) settleAnchorsRef.current = true
+      playingRef.current = animating
+    }
+    const unsubscribers = [
+      useAnimationStore.subscribe(update),
+      usePivotPlaybackStore.subscribe(update),
+    ]
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
+  }, [])
 
   const invalidate = useThree((state) => state.invalidate)
   useEffect(() => {
@@ -269,6 +290,9 @@ function LabelDeclutter() {
           labelGroups.get(entry.id)?.current?.position.set(live[0], live[1], live[2])
           anyMoved = true
         }
+      })
+      entries.forEach((entry) => {
+        if (refreshLabelText(entry)) anyMoved = true
       })
       if (anyMoved) settleFrameRef.current = 0
     }
