@@ -572,6 +572,62 @@
   color: #ffffff;
 }
 
+.exercise-task-steps li.is-partial {
+  color: var(--state-warn-fg);
+}
+
+.exercise-task-steps li.is-partial::before {
+  outline: 1px solid var(--state-warn-border);
+  background: var(--state-warn-bg);
+  color: var(--state-warn-fg);
+}
+
+.exercise-step-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.45rem;
+}
+
+.exercise-step-check {
+  min-width: 3.2rem;
+  min-height: 1.65rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 6px;
+  background: var(--geo-surface);
+  color: var(--geo-text);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.exercise-step-check:hover:not([data-complete='true']) {
+  border-color: var(--geo-highlight);
+  background: var(--geo-tint-weak);
+}
+
+.exercise-step-check:focus-visible {
+  outline: 2px solid var(--geo-highlight);
+  outline-offset: 2px;
+}
+
+.exercise-step-check[data-complete='true'] {
+  border-color: var(--state-pass-border);
+  background: var(--state-pass-bg);
+  color: var(--state-pass-fg);
+}
+
+.exercise-step-feedback {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--state-warn-fg);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
 .exercise-subtask-list {
   display: grid;
   gap: 0.55rem;

@@ -70,6 +70,7 @@ export function installConnectionTypeFeedback(workspace, onFeedback) {
   const originalCanConnectWithReason = checker.canConnectWithReason
   let recentMismatch = null
   let draggedBlockIds = new Set()
+  let feedbackFrame = 0
 
   const trackedCanConnectWithReason = function (first, second, isDragging, distance) {
     const reason = originalCanConnectWithReason.call(this, first, second, isDragging, distance)
@@ -89,8 +90,10 @@ export function installConnectionTypeFeedback(workspace, onFeedback) {
       reason === Blockly.Connection.REASON_CHECKS_FAILED
     ) {
       recentMismatch = {
+        draggedConnection,
         message: formatTypeMismatch(first, second),
         recordedAt: performance.now(),
+        targetConnection,
       }
     }
     return reason
@@ -100,6 +103,7 @@ export function installConnectionTypeFeedback(workspace, onFeedback) {
 
   const listener = (event) => {
     if (event?.type === Blockly.Events.BLOCK_DELETE) {
+      cancelAnimationFrame(feedbackFrame)
       recentMismatch = null
       draggedBlockIds = new Set()
       onFeedback?.('')
@@ -107,9 +111,13 @@ export function installConnectionTypeFeedback(workspace, onFeedback) {
     }
     if (event?.type !== Blockly.Events.BLOCK_DRAG) return
     if (event.isStart) {
+      cancelAnimationFrame(feedbackFrame)
       recentMismatch = null
       const draggedRoot = workspace.getBlockById?.(event.blockId)
-      const draggedBlocks = event.blocks || draggedRoot?.getDescendants?.(false) || []
+      const draggedBlocks = [
+        ...(event.blocks || []),
+        ...(draggedRoot?.getDescendants?.(false) || []),
+      ]
       draggedBlockIds = new Set(draggedBlocks.map((block) => block.id))
       onFeedback?.('')
       return
@@ -118,14 +126,26 @@ export function installConnectionTypeFeedback(workspace, onFeedback) {
     const mismatch = recentMismatch
     recentMismatch = null
     draggedBlockIds = new Set()
-    if (event.blockId && connectedOutsideDraggedGroup(workspace, event.blockId)) return
-    if (mismatch && performance.now() - mismatch.recordedAt <= RECENT_MISMATCH_MS) {
+    cancelAnimationFrame(feedbackFrame)
+    feedbackFrame = requestAnimationFrame(() => {
+      if (!mismatch || performance.now() - mismatch.recordedAt > RECENT_MISMATCH_MS) return
+      if (event.blockId && connectedOutsideDraggedGroup(workspace, event.blockId)) return
+      if (
+        mismatch.draggedConnection.targetConnection === mismatch.targetConnection ||
+        mismatch.targetConnection.targetConnection === mismatch.draggedConnection
+      ) {
+        return
+      }
+
+      const finalDistance = mismatch.draggedConnection.distanceFrom?.(mismatch.targetConnection)
+      if (!Number.isFinite(finalDistance) || finalDistance > INSERT_INTENT_DISTANCE) return
       onFeedback?.(mismatch.message)
-    }
+    })
   }
 
   workspace.addChangeListener(listener)
   return () => {
+    cancelAnimationFrame(feedbackFrame)
     workspace.removeChangeListener(listener)
     if (checker.canConnectWithReason === trackedCanConnectWithReason) {
       checker.canConnectWithReason = originalCanConnectWithReason
