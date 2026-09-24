@@ -41,6 +41,8 @@ export default function BlocksCanvas({
   const [categoryId, setCategoryId] = useState('create')
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [myBlockDialog, setMyBlockDialog] = useState(null)
+  const [connectionFeedback, setConnectionFeedback] = useState('')
+  const feedbackTimerRef = useRef(0)
 
   const addUserBlock = useWorkspaceStore((state) => state.addUserBlock)
   const deleteUserBlock = useWorkspaceStore((state) => state.deleteUserBlock)
@@ -52,11 +54,25 @@ export default function BlocksCanvas({
     onObjectsChangeRef.current = onObjectsChange
   }, [onObjectsChange])
 
+  const showConnectionFeedback = useCallback((message) => {
+    window.clearTimeout(feedbackTimerRef.current)
+    setConnectionFeedback(message)
+    feedbackTimerRef.current = window.setTimeout(() => setConnectionFeedback(''), 3500)
+  }, [])
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(feedbackTimerRef.current)
+    },
+    [],
+  )
+
   const { workspace, syncScene, clearObjects } = useBlocksWorkspace({
     workspaceHostRef,
     onObjectsChangeRef,
     workspaceMaximized,
     runtimeMode: id,
+    onConnectionFeedback: showConnectionFeedback,
   })
 
   useWorkspaceAutosave(workspace, id, syncScene)
@@ -257,10 +273,7 @@ export default function BlocksCanvas({
       />
 
       {(!workspaceMaximized || preserveColumns) && (
-        <div
-          className="blocks-toolbox-slot"
-          aria-hidden={preserveColumns && workspaceMaximized}
-        >
+        <div className="blocks-toolbox-slot" aria-hidden={preserveColumns && workspaceMaximized}>
           <aside className="blocks-col blocks-col--toolbox">
             <CategoryToolbox
               selected={paletteOpen ? categoryId : null}
@@ -291,6 +304,11 @@ export default function BlocksCanvas({
           onDragOver={handleWorkspaceDragOver}
           onDrop={handleWorkspaceDrop}
         />
+        {connectionFeedback && (
+          <div className="connection-type-feedback" role="status" aria-live="polite">
+            {connectionFeedback}
+          </div>
+        )}
         <WorkspaceControls
           workspace={workspace}
           trashTargetRef={trashTargetRef}

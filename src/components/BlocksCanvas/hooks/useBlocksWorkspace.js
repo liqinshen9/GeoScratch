@@ -17,12 +17,14 @@ import attachResizeObserver from '@/utils/attachResizeOberver'
 import setupChangeListener from '@/utils/setupChangeListener'
 import initWorkSpace from '@/components/BlocksCanvas/core/Workspace'
 import applyExampleXml from '@/utils/applyExampleXml'
+import { installConnectionTypeFeedback } from '@/utils/connectionTypeFeedback'
 
 export function useBlocksWorkspace({
   workspaceHostRef,
   onObjectsChangeRef,
   workspaceMaximized,
   runtimeMode,
+  onConnectionFeedback,
 }) {
   const registryRef = useRef(null)
   const { workspace, setWorkspace, exampleXml, clearExampleXml } = useWorkspaceStore()
@@ -52,6 +54,7 @@ export function useBlocksWorkspace({
       clearObjects()
       syncScene(changedWorkspace)
     })
+    const cleanupConnectionFeedback = installConnectionTypeFeedback(ws, onConnectionFeedback)
 
     syncScene(ws)
     ws.scrollCenter?.()
@@ -61,6 +64,7 @@ export function useBlocksWorkspace({
 
     return () => {
       cleanupListener()
+      cleanupConnectionFeedback()
       cleanupResize()
       ws.dispose()
     }

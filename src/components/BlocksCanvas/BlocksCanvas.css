@@ -24,6 +24,30 @@
   position: relative;
 }
 
+.blocks-col--workspace {
+  position: relative;
+}
+
+.connection-type-feedback {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 20;
+  max-width: min(30rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--state-warn-border);
+  border-radius: 8px;
+  background: var(--state-warn-bg);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000000 18%, transparent);
+  color: var(--state-warn-fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+
 /* Toolbox column + its palette flyout. The slot is a real, correctly-sized
    flex box (height comes straight from the shared editor-shell grid row),
    so the flyout below is positioned/sized against it directly -- no vh or
