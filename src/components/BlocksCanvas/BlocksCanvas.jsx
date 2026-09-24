@@ -57,6 +57,7 @@ export default function BlocksCanvas({
   const showConnectionFeedback = useCallback((message) => {
     window.clearTimeout(feedbackTimerRef.current)
     setConnectionFeedback(message)
+    if (!message) return
     feedbackTimerRef.current = window.setTimeout(() => setConnectionFeedback(''), 3500)
   }, [])
 
