@@ -18,6 +18,10 @@ import setupChangeListener from '@/utils/setupChangeListener'
 import initWorkSpace from '@/components/BlocksCanvas/core/Workspace'
 import applyExampleXml from '@/utils/applyExampleXml'
 import { installConnectionTypeFeedback } from '@/utils/connectionTypeFeedback'
+import {
+  applyMyBlockColours,
+  isMyBlockInstance,
+} from '@/components/BlocksCanvas/blocks/myBlockAppearance'
 
 export function useBlocksWorkspace({
   workspaceHostRef,
@@ -51,6 +55,7 @@ export function useBlocksWorkspace({
     setWorkspace(ws)
 
     const cleanupListener = setupChangeListener(ws, (changedWorkspace) => {
+      applyMyBlockColours(changedWorkspace)
       clearObjects()
       syncScene(changedWorkspace)
     })
@@ -94,10 +99,12 @@ export function useBlocksWorkspace({
     if (!workspace) return
     let prev = useSettingsStore.getState().resolvedTheme
     workspace.setTheme(getBlockTheme(prev))
+    applyMyBlockColours(workspace)
     return useSettingsStore.subscribe((state) => {
       if (state.resolvedTheme !== prev) {
         prev = state.resolvedTheme
         workspace.setTheme(getBlockTheme(prev))
+        applyMyBlockColours(workspace)
       }
     })
   }, [workspace])
@@ -112,6 +119,7 @@ export function useBlocksWorkspace({
     if (!workspace) return
     return subscribeToPreset(() => {
       workspace.getAllBlocks(false).forEach((block) => {
+        if (isMyBlockInstance(block)) return
         const objectType = BLOCK_TYPE_OBJECT_TYPES[block.type]
         if (objectType) {
           block.setColour(forInstance(objectType, block.id))

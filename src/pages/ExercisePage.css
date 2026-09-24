@@ -662,7 +662,7 @@
   margin: 0 0.45rem 0.45rem;
   min-height: 38px;
   border-radius: 6px;
-  background: #ffffff;
+  background: transparent;
 }
 
 .exercise-page--editor .palette-group-label {
@@ -733,7 +733,7 @@
 }
 
 :root[data-theme='dark'] .exercise-page--editor .palette-block-preview {
-  background: var(--geo-block-card);
+  background: transparent;
 }
 
 :root[data-theme='dark'] .exercise-page--editor .palette-group-label {

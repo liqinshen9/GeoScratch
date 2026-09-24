@@ -1,4 +1,5 @@
 import * as Blockly from 'blockly/core'
+import { markMyBlockInstance } from '@/components/BlocksCanvas/blocks/myBlockAppearance'
 
 const FALLBACK_OFFSET = 28
 
@@ -56,8 +57,15 @@ export default function addCompositeBlockToWorkspace(workspace, xmlText, options
   const group = Blockly.utils.idGenerator.genUid()
   Blockly.Events.setGroup(group)
   try {
+    const existingBlockIds = new Set(workspace.getAllBlocks(false).map((block) => block.id))
     const dom = Blockly.utils.xml.textToDom(xmlText)
     Blockly.Xml.domToWorkspace(prepareCompositeDom(dom, workspace, options), workspace)
+    if (options.myBlockId) {
+      workspace
+        .getAllBlocks(false)
+        .filter((block) => !existingBlockIds.has(block.id))
+        .forEach((block) => markMyBlockInstance(block, options.myBlockId))
+    }
     Blockly.svgResize(workspace)
     return true
   } catch (err) {

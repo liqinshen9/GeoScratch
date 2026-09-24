@@ -4,6 +4,7 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useAuthStore from '@/store/useAuthStore'
 import setupChangeListener from '@/utils/setupChangeListener'
 import { shouldSync, chooseSnapshot, fetchSnapshot, pushSnapshot } from '@/lib/workspaceSync'
+import { applyMyBlockColours } from '@/components/BlocksCanvas/blocks/myBlockAppearance'
 
 const CLOUD_PUSH_DELAY_MS = 3000
 
@@ -57,6 +58,7 @@ export function useWorkspaceAutosave(workspace, id, syncScene) {
           Blockly.Events.disable()
           const dom = Blockly.utils.xml.textToDom(xml)
           Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, workspace)
+          applyMyBlockColours(workspace)
           syncScene(workspace)
         } catch (err) {
           console.error('[GeoScratch] Failed to restore workspace state:', err)

@@ -177,7 +177,12 @@ export default function BlocksCanvas({
         .getState()
         .userBlocks.find((block) => block.id === blockId)
       if (!userBlock) return
-      if (addCompositeBlockToWorkspace(workspace, userBlock.xmlText, options)) {
+      if (
+        addCompositeBlockToWorkspace(workspace, userBlock.xmlText, {
+          ...options,
+          myBlockId: blockId,
+        })
+      ) {
         syncScene(workspace)
       }
     },
