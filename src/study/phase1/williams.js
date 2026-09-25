@@ -21,15 +21,17 @@ export function williamsSquare(n) {
 }
 
 /**
- * Which square row a participant gets. A trailing number in the code (P01,
- * P02, ...) maps to rows in order, so handing out numbered codes fills the
- * square evenly; anything else falls back to a hash, which is reproducible but
- * not balanced.
+ * Which square row a participant gets. A study session passes the researcher's
+ * counterbalancing slot, which maps to rows in order (slot 1 -> row 0). Without
+ * one, a trailing number in the code (P01, P02, ...) does the same; anything
+ * else falls back to a hash, which is reproducible but not balanced.
  *
  * @param {string} participantCode
  * @param {number} rows
+ * @param {number|null} [slot]  1-based counterbalancing slot
  */
-export function participantRow(participantCode, rows) {
+export function participantRow(participantCode, rows, slot = null) {
+  if (Number.isInteger(slot) && slot >= 1) return (slot - 1) % rows
   const match = /(\d+)\s*$/.exec(String(participantCode ?? ''))
   if (match) {
     const number = Number.parseInt(match[1], 10)

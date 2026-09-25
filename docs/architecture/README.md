@@ -25,6 +25,7 @@ you" summary; this is the depth.
 | [blockly-integration.md](blockly-integration.md)               | The variable wrapper's block layout, My Block duplicate detection, autosave restore, event filtering                                                                                          |
 | [backend.md](backend.md)                                       | The optional Supabase backend: anonymous auth + participant gate, `exercise_attempts` logging, RLS model, Phase 2 workspace snapshots, study-data export                                      |
 | [study-phase1.md](study-phase1.md)                             | Study Phase 1 trial runner: T1-T10 settings map, procedural stimuli and ground truth, headless scene build through the real pipeline, Williams-square sequencing, onset timing, trial logging |
+| [study-session.md](study-session.md)                           | Study session flow: slot + generated research ID, session plan and cursor, Qualtrics handoff/return, holistic task conditions and order, `study_events`                                       |
 
 ## Recurring bug classes
 

@@ -86,6 +86,9 @@ export const TECHNIQUES = Object.freeze([
 
 export const TECHNIQUE_IDS = Object.freeze(TECHNIQUES.map((t) => t.id))
 
+/** The settings a technique varies; everything else is held at the app default. */
+export const CUE_SETTING_KEYS = Object.freeze(Object.keys(NO_CUES))
+
 export function getTechnique(id) {
   return TECHNIQUES.find((t) => t.id === id) ?? null
 }

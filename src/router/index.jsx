@@ -8,6 +8,9 @@ import SettingsPage from '@/pages/SettingsPage'
 import SandboxPage from '@/pages/SandboxPage'
 import StudyLayout from '@/layout/StudyLayout'
 import StudyPhase1Page from '@/pages/StudyPhase1Page'
+import StudySessionPage from '@/pages/StudySessionPage'
+import StudyReturnPage from '@/pages/StudyReturnPage'
+import StudyTaskPage from '@/pages/StudyTaskPage'
 import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
 
 const router = createBrowserRouter([
@@ -55,8 +58,20 @@ const router = createBrowserRouter([
     element: <StudyLayout />,
     children: [
       {
+        index: true,
+        element: <StudySessionPage />,
+      },
+      {
         path: 'phase1',
         element: <StudyPhase1Page />,
+      },
+      {
+        path: 'task',
+        element: <StudyTaskPage />,
+      },
+      {
+        path: 'return',
+        element: <StudyReturnPage />,
       },
       ...(import.meta.env.DEV ? [{ path: 'phase1/preview', element: <Phase1PreviewPage /> }] : []),
     ],

@@ -36,3 +36,12 @@ describe('resolveSequence', () => {
     expect(new Set(orders).size).toBeGreaterThan(1)
   })
 })
+
+describe('resolveSequence with a slot', () => {
+  it('takes the Williams row from the slot, not the code', () => {
+    const sequence = resolveSequence('K7QX3M', stimulusSet, 13)
+    expect(sequence.squareRow).toBe(2)
+    expect(sequence.slot).toBe(13)
+    expect(sequence.techniqueOrder).toEqual(williamsSquare(10)[2].map((i) => TECHNIQUE_IDS[i]))
+  })
+})

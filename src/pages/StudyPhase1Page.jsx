@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import { Button } from '@/components/ui/button'
 import useAuthStore from '@/store/useAuthStore'
@@ -7,6 +8,8 @@ import usePhase1TrackingStore from '@/store/usePhase1TrackingStore'
 import { getTechnique } from '@/study/phase1/conditions'
 import { getStudyStimulusSet, findStimulus } from '@/study/phase1/stimuli'
 import { resolveSequence } from '@/study/phase1/sequence'
+import useStudySession from '@/study/session/useStudySession'
+import { STEP_KINDS } from '@/study/session/sessionPlan'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
 import { questionPrompt, choiceLabel, probeBandStyle } from '@/study/phase1/questionCopy'
@@ -69,10 +72,12 @@ export default function StudyPhase1Page() {
   const participantCode = useAuthStore(
     (s) => s.profile?.participant_code || s.participantCode || '',
   )
+  const session = useStudySession()
+  const slot = session.study?.slot ?? null
   const stimulusSet = useMemo(() => getStudyStimulusSet(), [])
   const sequence = useMemo(
-    () => resolveSequence(participantCode, stimulusSet),
-    [participantCode, stimulusSet],
+    () => resolveSequence(participantCode, stimulusSet, slot),
+    [participantCode, stimulusSet, slot],
   )
   return (
     <Phase1Session
@@ -80,17 +85,35 @@ export default function StudyPhase1Page() {
       participantCode={participantCode}
       sequence={sequence}
       stimulusSet={stimulusSet}
+      session={session.plan ? session : null}
     />
   )
 }
 
-function Phase1Session({ participantCode, sequence, stimulusSet }) {
+/**
+ * In a study session the session cursor, not this page's own, says which block
+ * to run: a saved cursor still on the block before (the page unmounted on its
+ * way to the block's questionnaire) moves on to the session's block.
+ */
+function resumeCursor(participantCode, sessionBlockIndex) {
+  const saved = loadProgress(participantCode)
+  if (sessionBlockIndex > (saved?.blockIndex ?? 0)) {
+    return { blockIndex: sessionBlockIndex, trialIndex: 0 }
+  }
+  return saved
+}
+
+function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
+  const navigate = useNavigate()
+  const sessionStep = session?.step
+  const sessionBlockIndex =
+    sessionStep?.kind === STEP_KINDS.PHASE1_BLOCK ? sessionStep.blockIndex : null
   const authStatus = useAuthStore((s) => s.status)
   const recordTrial = usePhase1TrackingStore((s) => s.recordTrial)
   const recordSequence = usePhase1TrackingStore((s) => s.recordSequence)
   const reducer = useMemo(() => createFlowReducer(sequence), [sequence])
   const [state, dispatch] = useReducer(reducer, null, () =>
-    initialFlowState(sequence, loadProgress(participantCode)),
+    initialFlowState(sequence, resumeCursor(participantCode, sessionBlockIndex ?? 0)),
   )
   const [trialScene, setTrialScene] = useState(null)
   const [labelsOff, setLabelsOff] = useState(() => new Set())
@@ -144,6 +167,15 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
     const timer = setTimeout(() => dispatch({ type: FLOW_ACTIONS.FEEDBACK_DONE }), FEEDBACK_MS)
     return () => clearTimeout(timer)
   }, [state.status])
+
+  // Hand the finished block to its questionnaire. Progress is saved here, not
+  // left to the effect above, because navigating away unmounts this page first.
+  const finishBlockForSession = () => {
+    const nextBlock = { blockIndex: state.blockIndex + 1, trialIndex: 0 }
+    saveProgress(participantCode, nextBlock)
+    session.complete(sessionStep.stepIndex, { technique: block.technique })
+    navigate('/study')
+  }
 
   const handlePresented = useCallback((perf) => {
     presentedRef.current = { perf, iso: new Date().toISOString() }
@@ -206,6 +238,8 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
   const trialCount = block?.trials.length ?? 0
   const feedbackCorrect =
     state.status === FLOW.FEEDBACK && state.lastResponse === trialScene?.stimulus?.nearer
+
+  if (session && sessionBlockIndex == null) return <Navigate to="/study" replace />
 
   return (
     <div className="study-phase1">
@@ -280,7 +314,10 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
             <Button
               className="h-11 text-base"
               disabled={!windowFits}
-              onClick={() => dispatch({ type: FLOW_ACTIONS.BEGIN_BLOCK })}
+              onClick={() => {
+                if (session) session.start(sessionStep.stepIndex)
+                dispatch({ type: FLOW_ACTIONS.BEGIN_BLOCK })
+              }}
             >
               {state.trialIndex > 0 ? 'Continue block' : 'Begin block'}
             </Button>
@@ -295,7 +332,9 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
             <p>Please answer the short questionnaire for this block, then continue.</p>
             <Button
               className="h-11 text-base"
-              onClick={() => dispatch({ type: FLOW_ACTIONS.CONTINUE })}
+              onClick={() =>
+                session ? finishBlockForSession() : dispatch({ type: FLOW_ACTIONS.CONTINUE })
+              }
             >
               Continue
             </Button>
@@ -370,7 +409,12 @@ function Phase1Session({ participantCode, sequence, stimulusSet }) {
                 {technique ? `${technique.id} · ${technique.label}` : 'no block'}
               </span>
             </div>
-            <button type="button" onClick={() => dispatch({ type: FLOW_ACTIONS.SKIP_BLOCK })}>
+            <button
+              type="button"
+              onClick={() =>
+                session ? finishBlockForSession() : dispatch({ type: FLOW_ACTIONS.SKIP_BLOCK })
+              }
+            >
               Skip to next block
             </button>
             <button

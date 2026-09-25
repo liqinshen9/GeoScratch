@@ -1,23 +1,25 @@
 import { useEffect } from 'react'
-import { Outlet } from 'react-router-dom'
-import ParticipantGate from '@/components/ParticipantGate/ParticipantGate'
+import { Outlet, useLocation } from 'react-router-dom'
+import StudyGate from '@/components/StudyGate/StudyGate'
 import useThemeSync from '@/hooks/useThemeSync'
 import useAuthStore from '@/store/useAuthStore'
 
-// The study shell: same auth bootstrap and participant gate as Layout, but no
-// header or navigation, so a participant has nowhere to go but the task.
+// The study shell: same auth bootstrap as Layout, but no header or navigation,
+// so a participant has nowhere to go but the task. The dev-only preview skips
+// the session gate.
 export default function StudyLayout() {
   useThemeSync()
+  const { pathname } = useLocation()
 
   useEffect(() => {
     useAuthStore.getState().bootstrap()
   }, [])
 
-  return (
-    <ParticipantGate>
-      <main className="flex min-h-screen flex-col">
-        <Outlet />
-      </main>
-    </ParticipantGate>
+  const content = (
+    <main className="flex min-h-screen flex-col">
+      <Outlet />
+    </main>
   )
+  if (pathname.endsWith('/preview')) return content
+  return <StudyGate>{content}</StudyGate>
 }

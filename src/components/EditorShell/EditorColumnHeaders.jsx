@@ -8,6 +8,7 @@ export default function EditorColumnHeaders({
   workspace,
   workspaceMaximized,
   preserveColumns = false,
+  hideAnimationTransport = false,
   onWorkspaceMaximizedChange,
   onClearWorkspace,
 }) {
@@ -67,7 +68,7 @@ export default function EditorColumnHeaders({
 
       <header className="panel-column-header editor-head editor-head--last">
         <h2>3D View</h2>
-        <AnimationTransport />
+        {!hideAnimationTransport && <AnimationTransport />}
       </header>
     </div>
   )

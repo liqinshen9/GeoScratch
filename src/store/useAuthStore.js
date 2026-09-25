@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
 import { normalizeParticipantCode, normalizeCohort } from '@/lib/participantCode'
+import { generateResearchId } from '@/study/session/researchId'
 
 // Anonymous-only auth: on first load we sign in an anonymous user (a real
 // auth.users row with a normal auth.uid(), so RLS works) and attach a
@@ -10,6 +11,7 @@ import { normalizeParticipantCode, normalizeCohort } from '@/lib/participantCode
 
 const CODE_STORAGE_KEY = 'geoscratch:participantCode'
 const COHORT_STORAGE_KEY = 'geoscratch:cohort'
+const STUDY_STORAGE_KEY = 'geoscratch:studyIdentity'
 
 function loadStored(key, label) {
   if (typeof window === 'undefined') return null
@@ -36,6 +38,17 @@ const storeCode = (code) => persistStored(CODE_STORAGE_KEY, code, 'participant c
 const loadStoredCohort = () => loadStored(COHORT_STORAGE_KEY, 'cohort')
 const storeCohort = (cohort) => persistStored(COHORT_STORAGE_KEY, cohort, 'cohort')
 
+function loadStoredStudy() {
+  try {
+    const parsed = JSON.parse(loadStored(STUDY_STORAGE_KEY, 'study identity') || 'null')
+    return Number.isInteger(parsed?.slot) ? parsed : null
+  } catch {
+    return null
+  }
+}
+const storeStudy = (study) =>
+  persistStored(STUDY_STORAGE_KEY, study ? JSON.stringify(study) : null, 'study identity')
+
 /** The `?c=` link parameter, normalised. Falls back to the stored value. */
 function resolveCohort() {
   let fromUrl = ''
@@ -46,11 +59,7 @@ function resolveCohort() {
 }
 
 async function fetchProfile(userId) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, participant_code, cohort, user_agent')
-    .eq('id', userId)
-    .maybeSingle()
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
   if (error) {
     console.error('[GeoScratch] Failed to load profile:', error)
     return null
@@ -66,6 +75,9 @@ const useAuthStore = create((set, get) => ({
   profile: null,
   participantCode: loadStoredCode(),
   cohort: loadStoredCohort(),
+  // { slot, setting, researchId } of the /study session on this device. Local
+  // only: a session resumes on the device it started on, never by lookup.
+  study: loadStoredStudy(),
 
   /** Idempotent. Safe to call from Layout's mount effect. */
   bootstrap: async () => {
@@ -158,6 +170,62 @@ const useAuthStore = create((set, get) => ({
     }))
     storeCode(code)
     return { ok: true }
+  },
+
+  /**
+   * Start a study session: generate a research ID and attach it, with the
+   * researcher's counterbalancing slot and the study setting, to the profile.
+   * The ID becomes the participant code, so every existing row joins on it.
+   */
+  startStudySession: async ({ slot, setting }) => {
+    // A browser that already carries a code (a previous participant on a lab
+    // machine) must not reuse that anonymous user, or this participant's
+    // slot and plan would overwrite the last one's profile.
+    if (get().participantCode || get().profile?.participant_code) await get().resetIdentity()
+
+    const researchId = generateResearchId()
+    const res = await get().setParticipantCode(researchId)
+    if (!res.ok) return res
+
+    const study = { slot, setting, researchId }
+    storeStudy(study)
+    set({ study })
+
+    const { userId } = get()
+    if (isSupabaseConfigured && userId) {
+      supabase
+        .from('profiles')
+        .update({ study_slot: slot, study_setting: setting })
+        .eq('id', userId)
+        .then(({ error }) => {
+          if (error) console.error('[GeoScratch] Failed to record study slot:', error)
+        })
+    }
+    return { ok: true, researchId }
+  },
+
+  /** Forget this device's participant: a new anonymous user, no code, no study. */
+  resetIdentity: async () => {
+    storeCode(null)
+    storeStudy(null)
+    if (!isSupabaseConfigured) {
+      set({ participantCode: null, study: null })
+      return
+    }
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('[GeoScratch] Sign-out failed:', err)
+    }
+    set({
+      status: 'idle',
+      session: null,
+      userId: null,
+      profile: null,
+      participantCode: null,
+      study: null,
+    })
+    await get().bootstrap()
   },
 }))
 

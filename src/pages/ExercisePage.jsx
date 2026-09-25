@@ -78,7 +78,14 @@ function AnswerCard({ result, className }) {
   )
 }
 
-export default function ExercisePage() {
+/**
+ * `study` turns this into a holistic study task (docs/architecture/study-session.md):
+ * `{ exerciseId, settings, animated, workspaceId, onPassedChange, footer }`.
+ * The exercise comes from `study` rather than the URL, the condition's settings
+ * win over the exercise's own, navigation is hidden, and a static condition
+ * hides every animation control.
+ */
+export default function ExercisePage({ study = null }) {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
@@ -93,7 +100,7 @@ export default function ExercisePage() {
 
   // The URL is the source of truth for which exercise is open;
   // /exercise with no param (or an unknown id) defaults to the first one.
-  const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
+  const activeExerciseConfig = getExercise(study?.exerciseId ?? exerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
@@ -130,6 +137,12 @@ export default function ExercisePage() {
   // Perceptual exercises have no checker pass -- a correct MCQ pick is the pass.
   const isPerceptual = exercise.kind === 'perceptual'
   const passed = result.passed || (isPerceptual && perceptualPicked === exercise.mcq?.correctId)
+  const hideAnimation = Boolean(study) && !study.animated
+
+  const onStudyPassedChange = study?.onPassedChange
+  useEffect(() => {
+    onStudyPassedChange?.(passed)
+  }, [passed, onStudyPassedChange])
 
   const tracking = useExerciseTracking(activeExercise, exercise.kind)
   useEffect(() => {
@@ -187,10 +200,11 @@ export default function ExercisePage() {
 
   // An exercise can force certain settings while it is open (its
   // settingsOverrides export); reverted when the student leaves or switches.
+  const studySettings = study?.settings
   useEffect(() => {
-    setExerciseOverrides(exercise.settingsOverrides ?? {})
+    setExerciseOverrides({ ...exercise.settingsOverrides, ...studySettings })
     return () => clearExerciseOverrides()
-  }, [exercise, setExerciseOverrides, clearExerciseOverrides])
+  }, [exercise, studySettings, setExerciseOverrides, clearExerciseOverrides])
 
   const handleObjectsChange = useCallback(
     (objs) => {
@@ -228,48 +242,51 @@ export default function ExercisePage() {
           leadingHeader={
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
-              <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
-                <button
-                  type="button"
-                  className="exercise-nav-button exercise-nav-button--wide"
-                  onClick={() => navigate(unit ? `/exercises/${unit.id}` : '/exercises')}
-                  title="Browse all exercises"
-                  aria-label="Browse all exercises"
-                >
-                  <AllApplication
-                    theme="outline"
-                    size="13"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  />
-                  <span>Browse</span>
-                </button>
-                <button
-                  type="button"
-                  className="exercise-nav-button"
-                  onClick={() => previousExercise && handleSelectExercise(previousExercise.id)}
-                  disabled={!previousExercise}
-                  title="Previous exercise"
-                  aria-label="Previous exercise"
-                >
-                  <ArrowLeft theme="outline" size="13" fill="currentColor" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="exercise-nav-button"
-                  onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
-                  disabled={!nextExercise}
-                  title="Next exercise"
-                  aria-label="Next exercise"
-                >
-                  <ArrowRight theme="outline" size="13" fill="currentColor" aria-hidden="true" />
-                </button>
-              </div>
+              {!study && (
+                <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
+                  <button
+                    type="button"
+                    className="exercise-nav-button exercise-nav-button--wide"
+                    onClick={() => navigate(unit ? `/exercises/${unit.id}` : '/exercises')}
+                    title="Browse all exercises"
+                    aria-label="Browse all exercises"
+                  >
+                    <AllApplication
+                      theme="outline"
+                      size="13"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    />
+                    <span>Browse</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="exercise-nav-button"
+                    onClick={() => previousExercise && handleSelectExercise(previousExercise.id)}
+                    disabled={!previousExercise}
+                    title="Previous exercise"
+                    aria-label="Previous exercise"
+                  >
+                    <ArrowLeft theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="exercise-nav-button"
+                    onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
+                    disabled={!nextExercise}
+                    title="Next exercise"
+                    aria-label="Next exercise"
+                  >
+                    <ArrowRight theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
             </div>
           }
           workspace={workspace}
           workspaceMaximized={workspaceMaximized}
           preserveColumns
+          hideAnimationTransport={hideAnimation}
           onWorkspaceMaximizedChange={handleWorkspaceMaximizedChange}
           onClearWorkspace={() => clearWorkspaceRef.current()}
         />
@@ -280,7 +297,7 @@ export default function ExercisePage() {
             aria-hidden={workspaceMaximized}
           >
             <div className="exercise-task-panel__top">
-              {placement && (
+              {placement && !study && (
                 <p className="exercise-task-panel__crumb">
                   {placement.unit.title} · {placement.section.title}
                 </p>
@@ -308,7 +325,7 @@ export default function ExercisePage() {
             {!isPerceptual && !exercise.hideAnswerCard && (
               <AnswerCard result={result} className={answerCardClass} />
             )}
-            {exercise.AnimationButton ? (
+            {exercise.AnimationButton && !hideAnimation ? (
               <div className={`exercise-completion-row${passed ? ' is-passed' : ''}`}>
                 {passed && (
                   <div className="exercise-pass-banner" role="status">
@@ -339,11 +356,12 @@ export default function ExercisePage() {
                 Fill solution (dev)
               </button>
             )}
+            {study?.footer}
           </aside>
 
           <BlocksCanvas
-            key={`exercise-${activeExercise}`}
-            id={`exercise-${activeExercise}`}
+            key={study?.workspaceId ?? `exercise-${activeExercise}`}
+            id={study?.workspaceId ?? `exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
             preserveColumns
             reusableBlockTemplate={

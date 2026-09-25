@@ -241,8 +241,9 @@ Export:
 select * from phase1_export where cohort = '<cohort>' and not is_practice;
 ```
 
-## Not built yet
+## In a study session
 
-- Generated research IDs (the typed participant code is used for now).
-- Qualtrics handoff and return between blocks.
-- Session-level rows (study setting, viewport at session start).
+Under `/study`, research IDs, the slot that picks the Williams row, the
+questionnaire after each block, and session-level rows are handled by the
+session flow: see [study-session.md](study-session.md). Outside a session (no
+slot), the numbered-code fallback above still applies.
