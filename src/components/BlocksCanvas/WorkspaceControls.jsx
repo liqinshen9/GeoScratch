@@ -1,4 +1,5 @@
 import { Delete, ZoomIn, ZoomOut } from '@icon-park/react'
+import { DEFAULT_WORKSPACE_SCALE } from './core/Workspace'
 
 const WORKSPACE_CONTROL_ICON_COLOR = 'currentColor'
 
@@ -28,6 +29,14 @@ function WorkspaceControls({
     workspace.zoomCenter(amount)
   }
 
+  const recenterBlocks = () => {
+    if (!workspace) return
+    workspace.markFocused?.()
+    workspace.setScale(DEFAULT_WORKSPACE_SCALE)
+    workspace.cleanUp()
+    workspace.scrollCenter()
+  }
+
   return (
     <div
       className="workspace-controls"
@@ -35,6 +44,32 @@ function WorkspaceControls({
       onPointerDown={stopWorkspaceGesture}
     >
       <div className="workspace-control-group">
+        <button
+          type="button"
+          className="workspace-control-button"
+          aria-label="Recenter blocks"
+          title="Recenter blocks"
+          onClick={recenterBlocks}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle
+              cx="12"
+              cy="12"
+              r="6.2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            />
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+            <path
+              d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
         <button
           type="button"
           className="workspace-control-button"

@@ -12,6 +12,8 @@ import { registerGeoScratchRenderer } from '@/components/BlocksCanvas/renderers/
 
 let CONTEXT_MENU_CONFIGURED = false
 
+export const DEFAULT_WORKSPACE_SCALE = 0.72
+
 function configureContextMenu() {
   if (CONTEXT_MENU_CONFIGURED) return
   CONTEXT_MENU_CONFIGURED = true
@@ -35,7 +37,13 @@ const Workspace = (hostElement) => {
     // the live per-theme colour comes from CSS -- see the
     // .blocklyGridPattern rule in BlocksCanvas.css.
     grid: { spacing: 20, length: 3, colour: '#e2e8f0', snap: false },
-    zoom: { controls: false, wheel: true, startScale: 0.72, minScale: 0.3, maxScale: 2 },
+    zoom: {
+      controls: false,
+      wheel: true,
+      startScale: DEFAULT_WORKSPACE_SCALE,
+      minScale: 0.3,
+      maxScale: 2,
+    },
     trashcan: false,
     theme: getBlockTheme(resolvedTheme),
     // Blockly ties drag-to-pan to `scrollbars` internally -- if scrollbars is

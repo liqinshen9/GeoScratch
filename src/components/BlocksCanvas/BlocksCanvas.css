@@ -24,6 +24,30 @@
   position: relative;
 }
 
+.blocks-col--workspace {
+  position: relative;
+}
+
+.connection-type-feedback {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 20;
+  max-width: min(30rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--state-warn-border);
+  border-radius: 8px;
+  background: var(--state-warn-bg);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000000 18%, transparent);
+  color: var(--state-warn-fg);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+}
+
 /* Toolbox column + its palette flyout. The slot is a real, correctly-sized
    flex box (height comes straight from the shared editor-shell grid row),
    so the flyout below is positioned/sized against it directly -- no vh or
@@ -35,7 +59,7 @@
   min-height: 0;
 }
 
-.blocks-col--palette-flyout {
+.blocks-col.blocks-col--palette-flyout {
   position: absolute;
   top: 0;
   left: 100%;
@@ -44,7 +68,7 @@
   width: min(24rem, calc(100vw - 14rem));
   border: 1px solid var(--geo-border-light);
   border-radius: 0 8px 8px 0;
-  background: var(--geo-panel-muted);
+  background: color-mix(in srgb, var(--geo-panel-muted) 72%, transparent);
 }
 
 .blocks-col--palette-flyout .block-palette {
@@ -151,6 +175,14 @@
   margin-bottom: 14px;
 }
 
+.block-palette:not(.my-box-palette) .palette-group {
+  margin: 0 10px 14px;
+  padding: 8px 0 2px;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 8px;
+  background: transparent;
+}
+
 .palette-group-label {
   margin: 0 0 8px;
   padding: 0 14px;
@@ -163,21 +195,16 @@
 
 .palette-block-preview {
   position: relative;
-  margin: 0 10px 10px;
+  margin: 0 0 6px;
   min-height: 48px;
-  background: var(--geo-block-card);
-  border: 1px solid var(--geo-border-light);
-  border-radius: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   overflow: hidden;
   cursor: grab;
   transition:
     border-color 0.15s,
     background 0.15s;
-}
-
-.palette-block-preview:hover {
-  background: #dfeeff;
-  border-color: #9ec7ff;
 }
 
 .palette-block-preview:active {
@@ -229,6 +256,14 @@
   padding: 10px;
 }
 
+.my-box-palette .palette-group {
+  margin: 0;
+  padding: 8px 6px 6px;
+  border: 1px solid var(--geo-border-light);
+  border-radius: 8px;
+  background: transparent;
+}
+
 .make-block-button {
   width: 100%;
   min-height: 2.75rem;
@@ -248,15 +283,11 @@
 }
 
 .my-block-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 2rem;
-  align-items: stretch;
+  display: block;
   min-height: 3.25rem;
-  margin-bottom: 10px;
-  border: 1px solid var(--geo-border-light);
-  border-radius: 8px;
-  background: var(--geo-block-card);
-  overflow: hidden;
+  margin-bottom: 6px;
+  border: 0;
+  background: transparent;
   cursor: grab;
 }
 
@@ -264,8 +295,8 @@
   cursor: grabbing;
 }
 
-.my-block-card__main,
-.my-block-card__delete {
+.my-block-card__main {
+  width: 100%;
   border: 0;
   background: transparent;
   color: var(--geo-text-on-light);
@@ -274,38 +305,55 @@
 
 .my-block-card__main {
   min-width: 0;
-  padding: 8px 10px;
+  padding: 0;
   text-align: left;
 }
 
-.my-block-card__main strong,
-.my-block-card__main span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.my-block-card__main strong {
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.my-block-card__main span,
 .my-box-empty {
   font-size: 11px;
   color: var(--geo-text-muted-on-light);
 }
 
-.my-block-card__delete {
-  border-left: 1px solid var(--geo-border-light);
-  font-size: 14px;
-  font-weight: 700;
+.my-block-card__preview {
+  display: block;
+  width: 100%;
+  min-height: 3.25rem;
+  pointer-events: none;
 }
 
-.my-block-card__main:hover,
-.my-block-card__delete:hover {
-  background: rgba(255, 255, 255, 0.06);
+.my-block-card__preview .injectionDiv,
+.my-block-card__preview .blocklySvg {
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+}
+
+.my-block-card__preview .blocklyMainBackground {
+  fill: transparent !important;
+  stroke: transparent !important;
+}
+
+.my-block-trash-row {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 6px;
+}
+
+.my-block-trash {
+  color: var(--geo-text-muted-on-light);
+}
+
+.my-block-trash.is-active {
+  background: color-mix(in srgb, var(--state-fail-accent) 10%, transparent);
+  color: var(--state-fail-accent);
+}
+
+.workspace-trash-panel.my-block-trash-panel {
+  position: static;
+  width: 100%;
+  margin-top: 6px;
+  box-shadow: none;
 }
 
 .my-box-empty {
@@ -754,6 +802,7 @@
 .palette-block-preview .blocklyMainBackground {
   background-color: transparent !important;
   fill: transparent !important;
+  stroke: transparent !important;
 }
 
 #blocks-canvas .blocklyFlyoutBackground {
@@ -848,13 +897,7 @@
 }
 
 :root[data-theme='dark'] .palette-block-preview {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(148, 163, 184, 0.12);
-}
-
-:root[data-theme='dark'] .palette-block-preview:hover {
-  background: var(--geo-tint-weak);
-  border-color: rgba(148, 163, 184, 0.22);
+  background: transparent;
 }
 
 :root[data-theme='dark'] .make-block-button:hover {

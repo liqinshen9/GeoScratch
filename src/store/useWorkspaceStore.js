@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 const USER_BLOCKS_STORAGE_KEY = 'geoscratch:userBlocks'
+const MAX_RECENT_DELETED_USER_BLOCKS = 8
 const SAVED_XML_STORAGE_KEY = 'geoscratch:workspace-xml'
 
 function loadUserBlocks() {
@@ -61,6 +62,7 @@ const useWorkspaceStore = create((set) => ({
   // persisted to localStorage (see loadSavedXml).
   savedXml: loadSavedXml(),
   userBlocks: loadUserBlocks(),
+  recentDeletedUserBlocks: [],
 
   // Block id shared between the Blockly workspace and the 3D scene: selecting
   // a block or its 3D object drives the other side's highlight. null = nothing
@@ -105,9 +107,25 @@ const useWorkspaceStore = create((set) => ({
   },
   deleteUserBlock: (blockId) =>
     set((state) => {
+      const deletedBlock = state.userBlocks.find((block) => block.id === blockId)
+      if (!deletedBlock) return state
       const userBlocks = state.userBlocks.filter((block) => block.id !== blockId)
+      const recentDeletedUserBlocks = [
+        deletedBlock,
+        ...state.recentDeletedUserBlocks.filter((block) => block.id !== blockId),
+      ].slice(0, MAX_RECENT_DELETED_USER_BLOCKS)
       persistUserBlocks(userBlocks)
-      return { userBlocks }
+      return { userBlocks, recentDeletedUserBlocks }
+    }),
+  restoreUserBlock: (block) =>
+    set((state) => {
+      if (!block?.id || !block.name || !block.xmlText) return state
+      const userBlocks = [block, ...state.userBlocks.filter((item) => item.id !== block.id)]
+      const recentDeletedUserBlocks = state.recentDeletedUserBlocks.filter(
+        (item) => item.id !== block.id,
+      )
+      persistUserBlocks(userBlocks)
+      return { userBlocks, recentDeletedUserBlocks }
     }),
 }))
 

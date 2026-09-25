@@ -1,10 +1,17 @@
 import THREE from '@/utils/three'
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 import { installPivotStepAnimation } from './shared/pivotStepAnimation'
 import { pipelineStepChain, rotationMatches } from './shared/transformChecks'
-import { closeNumber, blockMatchesVec3, getInputBlock, scalarInputMatches, vectorMatches } from './shared/blockQueries'
+import {
+  POINT_VECTOR_BLOCK_TYPES,
+  closeNumber,
+  blockMatchesVec3,
+  getInputBlock,
+  scalarInputMatches,
+  vectorMatches,
+} from './shared/blockQueries'
 import { createPointMarker } from '@/utils/pointMarker'
 import { formatVectorLive } from '@/utils/vectorNotation'
 import { COLOR_ROLES } from '@/store/colorPresets'
@@ -13,6 +20,9 @@ const CENTRE = new THREE.Vector3(1, 1, 1)
 const POINT = new THREE.Vector3(0, 2, 2)
 function cubeMatches(block) {
   return block?.type === 'geo_cube' && blockMatchesVec3(getInputBlock(block, 'CENTRE'), CENTRE) && scalarInputMatches(block, 'SIDE_LENGTH_INPUT', 2, 1)
+}
+function cubeHasRequiredInputs(block) {
+  return block?.type === 'geo_cube' && POINT_VECTOR_BLOCK_TYPES.includes(getInputBlock(block, 'CENTRE')?.type) && getInputBlock(block, 'SIDE_LENGTH_INPUT')?.type === 'scalar'
 }
 function pointMatches(block) {
   return block?.type === 'linalg_point' && blockMatchesVec3(block, POINT)
@@ -49,7 +59,28 @@ function Givens() {
     <section><p>please manipulate blocks in the toolbox to rotate this cube as illustrated in the image below.</p><Diagram output /></section>
   </div>
 }
-function Steps({ steps, passed }) {
+function Steps({ steps, partialSteps, partialMessages, feedbackRevision, passed }) {
+  const [checkedSteps, setCheckedSteps] = useState({})
+  const pendingCheckRef = useRef(0)
+
+  useEffect(() => {
+    setCheckedSteps({})
+  }, [feedbackRevision])
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(pendingCheckRef.current)
+    },
+    [],
+  )
+
+  const checkStep = (key) => {
+    window.clearTimeout(pendingCheckRef.current)
+    pendingCheckRef.current = window.setTimeout(() => {
+      setCheckedSteps((checked) => ({ ...checked, [key]: true }))
+    }, 100)
+  }
+
   const tasks = [
     ['cube', 'Create: a Cube with Scalar 2 for side length and Vector (1, 1, 1) for its centre.'],
     ['point', 'Create: a Point at the input corner P = (0, 2, 2).'],
@@ -59,7 +90,26 @@ function Steps({ steps, passed }) {
     ['rotate', 'Transform: Rotate around Y axis by 90 degrees.'],
     ['back', 'Transform: translate (1, 1, 1) back to its original center C.'],
   ]
-  return <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>{tasks.map(([key, text]) => <li key={key} className={steps[key] ? 'is-complete' : ''}>{text}</li>)}</ol>
+  return <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>{tasks.map(([key, text]) => {
+    const wasChecked = checkedSteps[key]
+    const showValueFeedback = wasChecked && !steps[key] && partialSteps?.[key]
+    const showIncompleteFeedback = wasChecked && !steps[key] && !partialSteps?.[key]
+    return <li key={key} className={steps[key] ? 'is-complete' : wasChecked ? 'is-partial' : ''}>
+      <div className="exercise-step-row">
+        <span>{text}</span>
+        <button
+          type="button"
+          className="exercise-step-check"
+          data-complete={steps[key] ? 'true' : undefined}
+          onClick={() => checkStep(key)}
+        >
+          {steps[key] ? 'Complete' : 'Check'}
+        </button>
+      </div>
+      {showValueFeedback && <span className="exercise-step-feedback" role="status">{partialMessages?.[key] || 'One of the values does not match the diagram.'}</span>}
+      {showIncompleteFeedback && <span className="exercise-step-feedback" role="status">This step is not complete yet.</span>}
+    </li>
+  })}</ol>
 }
 function evaluate({ objects, workspace }) {
   const blocks = (type) => workspace?.getBlocksByType(type, false) ?? []
@@ -81,7 +131,20 @@ function evaluate({ objects, workspace }) {
     rotate: chain[1]?.type === 'rot_matrix' && chain[1].getFieldValue('AXIS') === 'Y' && closeNumber(chain[1].getFieldValue('DEGREES'), 90),
     back: translateMatches(chain[2], 1),
   }
-  return { passed: poseIsCorrect && chain.length === 3 && Object.values(steps).every(Boolean), correct: poseIsCorrect, incorrect: false, target, answer: { type: 'scaleAndRotation' }, steps }
+  const partialSteps = {
+    cube: !steps.cube && blocks('geo_cube').some(cubeHasRequiredInputs),
+    point: !steps.point && blocks('linalg_point').some((block) => block.getParent?.()?.type !== 'geo_cube'),
+    toOrigin: !steps.toOrigin && chain[0]?.type === 'trans_matrix',
+    rotate: !steps.rotate && chain[1]?.type === 'rot_matrix',
+    back: !steps.back && chain[2]?.type === 'trans_matrix',
+  }
+  const partialMessages = {
+    rotate:
+      partialSteps.rotate && chain[1].getFieldValue('AXIS') !== 'Y'
+        ? 'The rotation axis does not match the diagram.'
+        : null,
+  }
+  return { passed: poseIsCorrect && chain.length === 3 && Object.values(steps).every(Boolean), correct: poseIsCorrect, incorrect: false, target, answer: { type: 'scaleAndRotation' }, steps, partialSteps, partialMessages }
 }
 const solutionXml = `<xml xmlns="https://developers.google.com/blockly/xml">
   <block type="transform_pipeline" x="60" y="60"><value name="INPUT"><block type="geo_special_cube" /></value><statement name="STEPS"><block type="trans_matrix"><field name="TX">-1</field><field name="TY">-1</field><field name="TZ">-1</field><next><block type="rot_matrix"><field name="AXIS">Y</field><field name="DEGREES">90</field><next><block type="trans_matrix"><field name="TX">1</field><field name="TY">1</field><field name="TZ">1</field></block></next></block></next></block></statement></block>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import * as Blockly from 'blockly/core'
 import { useNavigate, useParams } from 'react-router-dom'
 import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
@@ -86,6 +87,7 @@ export default function ExercisePage() {
   const { exerciseId } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [perceptualPicked, setPerceptualPicked] = useState(null)
+  const [stepFeedbackRevision, setStepFeedbackRevision] = useState(0)
   const clearWorkspaceRef = useRef(() => {})
   const editorShellRef = useRef(null)
 
@@ -94,6 +96,25 @@ export default function ExercisePage() {
   const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
+
+  useEffect(() => {
+    setStepFeedbackRevision((revision) => revision + 1)
+    if (!workspace) return undefined
+
+    const editableEvents = new Set([
+      Blockly.Events.BLOCK_CHANGE,
+      Blockly.Events.BLOCK_CREATE,
+      Blockly.Events.BLOCK_DELETE,
+      Blockly.Events.BLOCK_MOVE,
+    ])
+    const clearSubmittedFeedback = (event) => {
+      if (editableEvents.has(event?.type)) {
+        setStepFeedbackRevision((revision) => revision + 1)
+      }
+    }
+    workspace.addChangeListener(clearSubmittedFeedback)
+    return () => workspace.removeChangeListener(clearSubmittedFeedback)
+  }, [activeExercise, workspace])
 
   const { previous: previousExercise, next: nextExercise } = getAdjacentExercises(activeExercise)
   const placement = getSectionForExercise(activeExercise)
@@ -277,7 +298,13 @@ export default function ExercisePage() {
                 onPickedChange={setPerceptualPicked}
               />
             )}
-            <Steps steps={result.steps} passed={passed} />
+            <Steps
+              steps={result.steps}
+              partialSteps={result.partialSteps}
+              partialMessages={result.partialMessages}
+              feedbackRevision={stepFeedbackRevision}
+              passed={passed}
+            />
             {!isPerceptual && !exercise.hideAnswerCard && (
               <AnswerCard result={result} className={answerCardClass} />
             )}
