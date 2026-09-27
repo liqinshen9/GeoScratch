@@ -72,7 +72,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
       value: formatCenterPoint(centre),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
-      color: '#111827',
+      color: window.GeoScratchColors.forInstance('sphere', blockId),
       clearSilhouette: true,
     },
   ]

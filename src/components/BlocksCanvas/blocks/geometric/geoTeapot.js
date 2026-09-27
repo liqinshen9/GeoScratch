@@ -73,7 +73,7 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
       value: 'size ' + Number(size.toFixed(3)),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
-      color: '#111827',
+      color: window.GeoScratchColors.forInstance('teapot', blockId),
       clearSilhouette: true,
     },
   ]

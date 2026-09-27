@@ -80,7 +80,7 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
       value: 'side ' + Number(sideLength.toFixed(3)),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
-      color: '#111827',
+      color: window.GeoScratchColors.forInstance('cube', blockId),
       clearSilhouette: true,
     },
   ]
