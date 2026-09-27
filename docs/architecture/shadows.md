@@ -13,6 +13,28 @@ Three settings, all in `useSettingsStore`:
 | `cameraShadowsEnabled`  | The headlight casts                                   |
 | `primitivesCastShadows` | Lines, vectors and points cast, not just solid bodies |
 
+## Where the overhead light sits
+
+`OVERHEAD_LIGHT_POSITION` in `Scene3D/sceneConstants.js`: above the scene and to
+the viewer's left, as seen from the default camera. Its azimuth is the camera's
+minus 90 degrees, so editing `DEFAULT_CAMERA_VIEW` keeps it on the left. It is
+a fixed world position, computed once: orbiting the camera does not move it
+(the headlight is the light that follows the camera).
+
+The reason is the perceptual light-from-above prior. When shading is ambiguous,
+people assume light comes from above, and the assumption is biased to the
+left: about 26 degrees left of vertical on average (Sun & Perona 1998,
+Mamassian & Goutcher 2001). Lighting that agrees with the prior makes shading
+and shadows read as shape and depth more easily; lighting from the lower right
+can make the same bumps read as dents. At 64 degrees elevation and 20 degrees
+camera elevation, the light lands about 27 degrees left of screen vertical.
+
+It has to stay inside the 40-unit bounding box (height under 20), or the box's
+walls shadow the whole room.
+
+Before this it sat at `[8, 18, 0]`, which from the default view is above and to
+the right.
+
 ## Who casts
 
 `castShadow` is set at build time on cube, sphere and teapot meshes only, so

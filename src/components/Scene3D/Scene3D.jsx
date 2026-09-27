@@ -12,7 +12,7 @@ import HaloUniformSync from './HaloUniformSync'
 import SelectionHighlight from './SelectionHighlight'
 import AnswerTint from './AnswerTint'
 import AnimationDriver from './AnimationDriver'
-import { getAxisColors, DEFAULT_CAMERA_POSITION } from './sceneConstants'
+import { getAxisColors, DEFAULT_CAMERA_POSITION, OVERHEAD_LIGHT_POSITION } from './sceneConstants'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
 import { CameraHandle, HeadLight } from './HeadLight'
 import { BoundingBoxRoom, Axes, FadedGrid } from './SceneFurniture'
@@ -112,7 +112,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
 
       {/* 2. The Point Light */}
       <pointLight
-        position={[8, 18, 0]}
+        position={OVERHEAD_LIGHT_POSITION}
         color="#fff4e0"
         intensity={isDark ? 3 : 2.5}
         decay={0}

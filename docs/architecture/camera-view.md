@@ -1,14 +1,22 @@
 # The default viewing angle
 
-`DEFAULT_CAMERA_POSITION` in `Scene3D/sceneConstants.js` is where the camera
+`DEFAULT_CAMERA_VIEW` in `Scene3D/sceneConstants.js` is where the camera
 starts, where "Reset view" returns to, and what `Scene3D`'s `cameraPosition`
-prop defaults to. It is `[32.33, 32.33, 32.33]`: distance 56 down the
-`(1, 1, 1)` diagonal.
+prop defaults to. It is an orbit around the origin, and those three numbers are
+the only thing to edit:
+
+- `distance`: how far from the origin (44);
+- `azimuthDeg`: rotation around the vertical, from +Z towards +X (45);
+- `elevationDeg`: angle up from the ground plane (20).
+
+`positionFromOrbit` turns them into `DEFAULT_CAMERA_POSITION`, which is
+what the rest of the code reads.
 
 ## Why that direction
 
-That is the **isometric viewing direction** of standard axonometry (ISO 5456-3,
-and every drafting text that covers axonometric projection). Looking down
+The 45-degree azimuth comes from the **isometric viewing direction** of
+standard axonometry (ISO 5456-3, and every drafting text that covers
+axonometric projection), which the default view started as. Looking down
 `(1, 1, 1)`:
 
 - the ground plan is turned 45 degrees, so the X and Z axes leave the origin
@@ -31,8 +39,11 @@ can do, and it keeps the 45-degree plan rotation that made military projection
 attractive in the first place.
 
 Elevation is a trade-off, not a fact: 35.26 degrees (isometric) balances the
-three axes, while a steeper 45 degrees favours the ground plan at the cost of
-compressing the vertical. This app picks the balanced one.
+three axes, a steeper 45 favours the ground plan at the cost of compressing the
+vertical, and a lower angle favours the vertical and reads more like standing
+beside the scene. The app started at isometric (distance 56) and was lowered to
+20 degrees at distance 44, keeping the 45-degree azimuth so X and Z still leave
+the origin symmetrically.
 
 ## Who depends on it
 
@@ -45,3 +56,6 @@ compressing the vertical. This app picks the balanced one.
   (`study/phase1/stimulusConfig.js`), and every stimulus is placed and graded
   against that camera. Changing it invalidates the fixed stimulus set, so bump
   `STUDY_STIMULUS_SEED` with it. See [study-phase1.md](study-phase1.md).
+- **The overhead light** is placed relative to this view's azimuth, so editing
+  the default view keeps it on the viewer's left. It is fixed in world space
+  and does not move when the user orbits. See [shadows.md](shadows.md#where-the-overhead-light-sits).
