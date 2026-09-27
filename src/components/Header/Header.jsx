@@ -50,7 +50,8 @@ function navLinkClass(isActive) {
   }`
 }
 
-export default function Header() {
+/** `studyMode`: a study task is open, so there is nowhere else to go. */
+export default function Header({ studyMode = false }) {
   const location = useLocation()
   // Both /exercises (the browser) and /exercise/:n (an open exercise) should
   // read as "you're in the exercise area" -- NavLink's own isActive only
@@ -59,25 +60,36 @@ export default function Header() {
 
   return (
     <header className="app-nav flex h-14 w-full items-center justify-between bg-[var(--nav-bg)] px-6 sm:px-8 shadow-md border-b border-white/10 z-[999] shrink-0 select-none">
-      <Link to="/landing" className="app-nav__logo flex items-center gap-2 no-underline text-white">
-        <GeoScratchLogo showWordmark compact />
-      </Link>
+      {studyMode ? (
+        <div className="app-nav__logo flex items-center gap-2 text-white">
+          <GeoScratchLogo showWordmark compact />
+        </div>
+      ) : (
+        <Link
+          to="/landing"
+          className="app-nav__logo flex items-center gap-2 no-underline text-white"
+        >
+          <GeoScratchLogo showWordmark compact />
+        </Link>
+      )}
 
-      <nav
-        className="landing-nav__links flex h-full items-center justify-center gap-2 pr-2 py-2"
-        aria-label="Main Navigation"
-      >
-        <NavLink to="/exercises" className={navLinkClass(isExerciseAreaActive)}>
-          Exercises
-        </NavLink>
-        <NavLink to="/sandbox" className={({ isActive }) => navLinkClass(isActive)}>
-          Sandbox
-        </NavLink>
-        <NavLink to="/settings" className={({ isActive }) => navLinkClass(isActive)}>
-          Settings
-        </NavLink>
-        <ThemeToggle />
-      </nav>
+      {!studyMode && (
+        <nav
+          className="landing-nav__links flex h-full items-center justify-center gap-2 pr-2 py-2"
+          aria-label="Main Navigation"
+        >
+          <NavLink to="/exercises" className={navLinkClass(isExerciseAreaActive)}>
+            Exercises
+          </NavLink>
+          <NavLink to="/sandbox" className={({ isActive }) => navLinkClass(isActive)}>
+            Sandbox
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => navLinkClass(isActive)}>
+            Settings
+          </NavLink>
+          <ThemeToggle />
+        </nav>
+      )}
     </header>
   )
 }

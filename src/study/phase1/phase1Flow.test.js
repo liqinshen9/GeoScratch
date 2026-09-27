@@ -95,6 +95,15 @@ describe('dev controls', () => {
     expect(state).toMatchObject({ status: FLOW.DONE, blockIndex: 2 })
   })
 
+  it('skips to the start of the last block from anywhere', () => {
+    const mid = run(initialFlowState(sequence, null), FLOW_ACTIONS.START, FLOW_ACTIONS.BEGIN_BLOCK)
+    expect(reduce(mid, { type: FLOW_ACTIONS.SKIP_TO_LAST_BLOCK })).toMatchObject({
+      status: FLOW.BLOCK_INTRO,
+      blockIndex: sequence.blocks.length - 1,
+      trialIndex: 0,
+    })
+  })
+
   it('restarts to the intro from anywhere', () => {
     const mid = run(
       initialFlowState(sequence, null),

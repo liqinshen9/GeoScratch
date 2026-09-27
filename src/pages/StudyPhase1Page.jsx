@@ -177,6 +177,20 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
     navigate('/study')
   }
 
+  // Dev only. In a session the session moves too, skipping the blocks and
+  // questionnaires in between; resumeCursor would pull the page back otherwise.
+  const skipToLastBlock = () => {
+    const lastBlock = sequence.blocks.length - 1
+    if (session) {
+      const lastStep = session.plan.steps.find(
+        (s) => s.kind === STEP_KINDS.PHASE1_BLOCK && s.blockIndex === lastBlock,
+      )
+      session.jumpTo(lastStep.stepIndex)
+    }
+    saveProgress(participantCode, { blockIndex: lastBlock, trialIndex: 0 })
+    dispatch({ type: FLOW_ACTIONS.SKIP_TO_LAST_BLOCK })
+  }
+
   const handlePresented = useCallback((perf) => {
     presentedRef.current = { perf, iso: new Date().toISOString() }
   }, [])
@@ -416,6 +430,9 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
               }
             >
               Skip to next block
+            </button>
+            <button type="button" onClick={skipToLastBlock}>
+              Skip to final block
             </button>
             <button
               type="button"

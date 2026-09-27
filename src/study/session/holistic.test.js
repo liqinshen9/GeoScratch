@@ -72,6 +72,11 @@ describe('configurationSettings', () => {
     expect(configurationSettings(CONFIGURATIONS.PERCEPTION).colorInstanceVariation).toBe(false)
   })
 
+  it('forces the light theme in both configurations', () => {
+    expect(configurationSettings(CONFIGURATIONS.BASELINE).theme).toBe('light')
+    expect(configurationSettings(CONFIGURATIONS.PERCEPTION).theme).toBe('light')
+  })
+
   it('raises label detail only in the perception-driven configuration', () => {
     expect(configurationSettings(CONFIGURATIONS.BASELINE).labelDetail).toBe('nameOnly')
     expect(configurationSettings(CONFIGURATIONS.PERCEPTION).labelDetail).toBe('nameAndValue')

@@ -68,6 +68,9 @@ export function positionFromOrbit({ distance, azimuthDeg, elevationDeg }) {
 
 export const DEFAULT_CAMERA_POSITION = positionFromOrbit(DEFAULT_CAMERA_VIEW)
 
+// Shared with the study's trial camera, which grades stimuli against it.
+export const CAMERA_FOV = 45
+
 // Above and to the viewer's left of the default view: the light-from-above
 // prior, which is biased roughly 26 degrees left of vertical. Fixed in world
 // space; it is derived from the default view's azimuth only so that editing

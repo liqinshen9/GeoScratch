@@ -26,6 +26,7 @@ export const FLOW_ACTIONS = Object.freeze({
   CONTINUE: 'continue',
   // Dev only, from the buttons the trial page renders under import.meta.env.DEV.
   SKIP_BLOCK: 'skipBlock',
+  SKIP_TO_LAST_BLOCK: 'skipToLastBlock',
   RESTART: 'restart',
 })
 
@@ -92,6 +93,14 @@ export function createFlowReducer(sequence) {
         const status = blockIndex >= sequence.blocks.length ? FLOW.DONE : FLOW.BLOCK_INTRO
         return { status, blockIndex, trialIndex: 0, lastResponse: null }
       }
+
+      case FLOW_ACTIONS.SKIP_TO_LAST_BLOCK:
+        return {
+          status: FLOW.BLOCK_INTRO,
+          blockIndex: sequence.blocks.length - 1,
+          trialIndex: 0,
+          lastResponse: null,
+        }
 
       case FLOW_ACTIONS.RESTART:
         return { status: FLOW.INTRO, blockIndex: 0, trialIndex: 0, lastResponse: null }

@@ -1,23 +1,31 @@
+import {
+  DEFAULT_CAMERA_VIEW,
+  CAMERA_FOV,
+  positionFromOrbit,
+} from '@/components/Scene3D/sceneConstants'
+
 // Every tunable number in the Phase 1 procedure lives here.
 // See docs/architecture/study-phase1.md.
 
 /** Bump the suffix to generate a new fixed stimulus set; never reuse one mid-study. */
-export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v4'
+export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v5'
 
 /** The scene viewport is this exact CSS size for every trial and participant. */
 export const VIEWPORT = Object.freeze({ width: 960, height: 640 })
 
 /**
- * The trial camera: the app's isometric viewing direction (see
- * `sceneConstants.js`), at a closer distance than the editor's, because a
- * participant cannot zoom and the scene has to read at one fixed distance.
- * Passed to Scene3D as `cameraPosition`, and used to place and grade every
- * stimulus, so the two can never drift apart.
+ * The trial camera: the editor's default viewing angle and field of view (see
+ * `sceneConstants.js`), at the study's own distance, because a participant
+ * cannot zoom and the scene has to read at one fixed framing. Passed to Scene3D
+ * as `cameraPosition`, and used to place and grade every stimulus, so the two
+ * can never drift apart. Changing the editor's angle changes this too: bump
+ * `STUDY_STIMULUS_SEED` with it.
  */
+export const STUDY_CAMERA_DISTANCE = 39
 export const CAMERA = Object.freeze({
-  position: [22.59, 22.59, 22.59],
+  position: positionFromOrbit({ ...DEFAULT_CAMERA_VIEW, distance: STUDY_CAMERA_DISTANCE }),
   target: [0, 0, 0],
-  fov: 45,
+  fov: CAMERA_FOV,
 })
 
 /**

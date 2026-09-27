@@ -20,6 +20,9 @@ import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
 import { fillSolution } from '@/exercises/shared/fillSolution'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
 import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
+import { useCurrentStudyTask } from '@/study/session/useStudySession'
+import { configurationSettings, RENDER_MODES } from '@/study/session/holistic'
+import StudyTaskBar from '@/components/StudyTaskBar/StudyTaskBar'
 
 import '@/components/EditorShell/editor-shell.css'
 import './ExercisePage.css'
@@ -78,14 +81,7 @@ function AnswerCard({ result, className }) {
   )
 }
 
-/**
- * `study` turns this into a holistic study task (docs/architecture/study-session.md):
- * `{ exerciseId, settings, animated, workspaceId, onPassedChange, footer }`.
- * The exercise comes from `study` rather than the URL, the condition's settings
- * win over the exercise's own, navigation is hidden, and a static condition
- * hides every animation control.
- */
-export default function ExercisePage({ study = null }) {
+export default function ExercisePage() {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
@@ -100,7 +96,7 @@ export default function ExercisePage({ study = null }) {
 
   // The URL is the source of truth for which exercise is open;
   // /exercise with no param (or an unknown id) defaults to the first one.
-  const activeExerciseConfig = getExercise(study?.exerciseId ?? exerciseId) ?? orderedExercises()[0]
+  const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
@@ -137,12 +133,14 @@ export default function ExercisePage({ study = null }) {
   // Perceptual exercises have no checker pass -- a correct MCQ pick is the pass.
   const isPerceptual = exercise.kind === 'perceptual'
   const passed = result.passed || (isPerceptual && perceptualPicked === exercise.mcq?.correctId)
-  const hideAnimation = Boolean(study) && !study.animated
 
-  const onStudyPassedChange = study?.onPassedChange
-  useEffect(() => {
-    onStudyPassedChange?.(passed)
-  }, [passed, onStudyPassedChange])
+  // Study mode: this exercise is the session's current holistic task. The
+  // condition's settings win over the exercise's own, navigation is hidden,
+  // and a static condition hides every animation control.
+  // See docs/architecture/study-session.md#holistic-tasks.
+  const currentTask = useCurrentStudyTask()
+  const studyTask = currentTask?.exerciseId === activeExercise ? currentTask : null
+  const hideAnimation = Boolean(studyTask) && studyTask.mode !== RENDER_MODES.ANIMATED
 
   const tracking = useExerciseTracking(activeExercise, exercise.kind)
   useEffect(() => {
@@ -200,7 +198,11 @@ export default function ExercisePage({ study = null }) {
 
   // An exercise can force certain settings while it is open (its
   // settingsOverrides export); reverted when the student leaves or switches.
-  const studySettings = study?.settings
+  const studyConfiguration = studyTask?.configuration
+  const studySettings = useMemo(
+    () => (studyConfiguration ? configurationSettings(studyConfiguration) : null),
+    [studyConfiguration],
+  )
   useEffect(() => {
     setExerciseOverrides({ ...exercise.settingsOverrides, ...studySettings })
     return () => clearExerciseOverrides()
@@ -242,7 +244,7 @@ export default function ExercisePage({ study = null }) {
           leadingHeader={
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
-              {!study && (
+              {!studyTask && (
                 <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                   <button
                     type="button"
@@ -297,7 +299,7 @@ export default function ExercisePage({ study = null }) {
             aria-hidden={workspaceMaximized}
           >
             <div className="exercise-task-panel__top">
-              {placement && !study && (
+              {placement && !studyTask && (
                 <p className="exercise-task-panel__crumb">
                   {placement.unit.title} · {placement.section.title}
                 </p>
@@ -356,12 +358,12 @@ export default function ExercisePage({ study = null }) {
                 Fill solution (dev)
               </button>
             )}
-            {study?.footer}
+            {studyTask && <StudyTaskBar task={studyTask} passed={passed} />}
           </aside>
 
           <BlocksCanvas
-            key={study?.workspaceId ?? `exercise-${activeExercise}`}
-            id={study?.workspaceId ?? `exercise-${activeExercise}`}
+            key={`exercise-${activeExercise}`}
+            id={`exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
             preserveColumns
             reusableBlockTemplate={

@@ -16,19 +16,20 @@ const plan = buildSessionPlan({ researchId: 'K7QX3M', slot: 3 })
 const kinds = (steps) => steps.map((s) => s.kind)
 
 describe('buildSessionPlan', () => {
-  it('runs 10 blocks, 4 holistic conditions and the post survey, each task followed by its survey', () => {
+  it('runs 10 blocks, the identification task, 4 holistic conditions and the post survey', () => {
     const { steps } = plan
-    expect(steps).toHaveLength(10 * 2 + 4 * 2 + 2)
+    expect(steps).toHaveLength(10 * 2 + 1 + 4 * 2 + 2)
     for (let i = 0; i < 20; i += 2) {
       expect(kinds(steps.slice(i, i + 2))).toEqual([STEP_KINDS.PHASE1_BLOCK, STEP_KINDS.SURVEY])
       expect(steps[i + 1].survey).toBe('perBlock')
     }
-    for (let i = 20; i < 28; i += 2) {
+    expect(steps[20].kind).toBe(STEP_KINDS.IDENTIFICATION)
+    for (let i = 21; i < 29; i += 2) {
       expect(kinds(steps.slice(i, i + 2))).toEqual([STEP_KINDS.HOLISTIC, STEP_KINDS.SURVEY])
       expect(steps[i + 1].survey).toBe('holistic')
     }
-    expect(steps[28].survey).toBe('post')
-    expect(steps[29].kind).toBe(STEP_KINDS.DONE)
+    expect(steps[29].survey).toBe('post')
+    expect(steps[30].kind).toBe(STEP_KINDS.DONE)
     expect(steps.map((s) => s.stepIndex)).toEqual([...steps.keys()])
   })
 
@@ -98,11 +99,11 @@ describe('session cursor', () => {
   })
 
   it('does not skip the post survey when the holistic survey return is replayed', () => {
-    let cursor = { ...initialCursor(), stepIndex: 27 }
-    cursor = handOff(cursor, 27, 'now')
+    let cursor = { ...initialCursor(), stepIndex: 28 }
+    cursor = handOff(cursor, 28, 'now')
     cursor = acceptReturn(cursor, plan).cursor
     expect(plan.steps[cursor.stepIndex].survey).toBe('post')
-    expect(acceptReturn(cursor, plan).cursor.stepIndex).toBe(28)
+    expect(acceptReturn(cursor, plan).cursor.stepIndex).toBe(29)
   })
 
   it('keeps the first start time of a step', () => {

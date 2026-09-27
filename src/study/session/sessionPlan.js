@@ -1,13 +1,15 @@
 import { resolveTechniqueOrder } from '@/study/phase1/sequence'
 import { resolveHolisticOrder } from './holistic'
+import { resolveIdentificationOrder } from '@/study/identification/sequence'
 
 // The whole study session as a flat list of steps, and the cursor that walks
 // it. See docs/architecture/study-session.md.
 
-export const SESSION_PLAN_VERSION = 1
+export const SESSION_PLAN_VERSION = 2
 
 export const STEP_KINDS = Object.freeze({
   PHASE1_BLOCK: 'phase1Block',
+  IDENTIFICATION: 'identification',
   HOLISTIC: 'holistic',
   SURVEY: 'survey',
   DONE: 'done',
@@ -27,6 +29,7 @@ export const SURVEYS = Object.freeze({
 export function buildSessionPlan({ researchId, slot }) {
   const { squareRow, techniqueOrder } = resolveTechniqueOrder(researchId, slot)
   const holistic = resolveHolisticOrder(slot)
+  const identification = resolveIdentificationOrder(slot)
   const steps = []
 
   techniqueOrder.forEach((technique, blockIndex) => {
@@ -37,6 +40,9 @@ export function buildSessionPlan({ researchId, slot }) {
       params: { participantID: researchId, blockOrder: blockIndex + 1, technique },
     })
   })
+
+  // Opens the holistic section; no questionnaire of its own.
+  steps.push({ kind: STEP_KINDS.IDENTIFICATION })
 
   holistic.conditions.forEach((condition, conditionIndex) => {
     steps.push({ kind: STEP_KINDS.HOLISTIC, conditionIndex, ...condition })
@@ -71,6 +77,8 @@ export function buildSessionPlan({ researchId, slot }) {
     techniqueOrder,
     holisticGroup: holistic.group,
     holisticTaskRow: holistic.taskRow,
+    identificationCellOrder: identification.cellOrder,
+    identificationSetRotation: identification.setRotation,
     steps: steps.map((step, stepIndex) => ({ ...step, stepIndex })),
   }
 }

@@ -71,12 +71,19 @@ itself:
   the camera and would look clickable. This is done in `Scene3D`, not by turning
   off `showAxisGizmo`: that setting also switches the in-scene axis end labels
   on, which would change the scene.
+- `showOrientationGizmo`: brings the gizmo back in a non-interactive view with
+  drei's `disabled`, so it shows the axis directions but ignores clicks. Phase 1
+  leaves it off; the identification task turns it on
+  ([study-session.md](study-session.md#identification-task)).
 - `cameraPosition`: the trial camera (`CAMERA.position` in `stimulusConfig.js`)
-  looks down the same isometric diagonal as the editor's
-  `DEFAULT_CAMERA_POSITION` ([camera-view.md](camera-view.md)), but closer,
-  because a participant cannot zoom. The same constant places and grades every
-  stimulus, so the drawn camera and the ground-truth camera cannot drift apart.
-  Changing it invalidates the stimulus set: bump `STUDY_STIMULUS_SEED` with it.
+  is derived from the editor's `DEFAULT_CAMERA_VIEW`, with the same azimuth,
+  elevation and `CAMERA_FOV` ([camera-view.md](camera-view.md)), at the study's
+  own `STUDY_CAMERA_DISTANCE`, because a participant cannot zoom. The angle is
+  derived rather than copied, because a hard-coded copy silently kept the old
+  isometric view after the editor's view changed. The same constant places and
+  grades every stimulus, so the drawn camera and the ground-truth camera cannot
+  drift apart. **Changing the editor's default view changes the trial camera and
+  invalidates the stimulus set: bump `STUDY_STIMULUS_SEED` with it.**
 - `onPresented`: mounts `PresentationProbe` (draws nothing).
 - `hiddenLabelKeys`: merged into the existing right-click label-hide set, used
   to hide every label except A and B.

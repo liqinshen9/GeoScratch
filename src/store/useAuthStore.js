@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
 import { normalizeParticipantCode, normalizeCohort } from '@/lib/participantCode'
 import { generateResearchId } from '@/study/session/researchId'
+import { HOLISTIC_TASKS } from '@/study/session/holistic'
+import useWorkspaceStore from '@/store/useWorkspaceStore'
 
 // Anonymous-only auth: on first load we sign in an anonymous user (a real
 // auth.users row with a normal auth.uid(), so RLS works) and attach a
@@ -178,10 +180,12 @@ const useAuthStore = create((set, get) => ({
    * The ID becomes the participant code, so every existing row joins on it.
    */
   startStudySession: async ({ slot, setting }) => {
-    // A browser that already carries a code (a previous participant on a lab
-    // machine) must not reuse that anonymous user, or this participant's
-    // slot and plan would overwrite the last one's profile.
-    if (get().participantCode || get().profile?.participant_code) await get().resetIdentity()
+    // Every session is a fresh anonymous user with no saved work on the task
+    // exercises. Otherwise a previous participant on a lab machine (or a dev
+    // who opened those exercises) leaks a profile, cloud snapshots or local
+    // autosaves into this participant's holistic tasks.
+    await get().resetIdentity()
+    useWorkspaceStore.getState().clearSavedWorkspaces(HOLISTIC_TASKS.map((id) => `exercise-${id}`))
 
     const researchId = generateResearchId()
     const res = await get().setParticipantCode(researchId)

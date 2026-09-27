@@ -85,6 +85,13 @@ const useWorkspaceStore = create((set) => ({
       persistSavedXml(savedXml)
       return { savedXml }
     }),
+  clearSavedWorkspaces: (ids) =>
+    set((state) => {
+      const savedXml = { ...state.savedXml }
+      for (const id of ids) delete savedXml[id]
+      persistSavedXml(savedXml)
+      return { savedXml }
+    }),
   addUserBlock: ({ name, xmlText, source = 'workspace' }) => {
     const trimmedName = String(name || '').trim()
     if (!trimmedName || !xmlText) return null

@@ -12,7 +12,12 @@ import HaloUniformSync from './HaloUniformSync'
 import SelectionHighlight from './SelectionHighlight'
 import AnswerTint from './AnswerTint'
 import AnimationDriver from './AnimationDriver'
-import { getAxisColors, DEFAULT_CAMERA_POSITION, OVERHEAD_LIGHT_POSITION } from './sceneConstants'
+import {
+  getAxisColors,
+  DEFAULT_CAMERA_POSITION,
+  OVERHEAD_LIGHT_POSITION,
+  CAMERA_FOV,
+} from './sceneConstants'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
 import { CameraHandle, HeadLight } from './HeadLight'
 import { BoundingBoxRoom, Axes, FadedGrid } from './SceneFurniture'
@@ -185,6 +190,9 @@ export default function Scene3D({
   // Where the camera starts. Only a non-interactive view has any business
   // changing it: with no orbiting, the fixed distance is the whole framing.
   cameraPosition = DEFAULT_CAMERA_POSITION,
+  // Non-interactive only: show the orientation gizmo anyway, with its clicks
+  // disabled, for a task where the axis directions matter.
+  showOrientationGizmo = false,
 }) {
   const { settings, updateSetting } = useSettingsStore()
   const resolvedTheme = useResolvedTheme()
@@ -328,7 +336,7 @@ export default function Scene3D({
         <Canvas
           shadows
           frameloop="demand"
-          camera={{ position: cameraPosition, fov: 45, near: 0.1, far: 5000 }}
+          camera={{ position: cameraPosition, fov: CAMERA_FOV, near: 0.1, far: 5000 }}
           dpr={[1, 2]}
           style={{ width: '100%', height: '100%' }}
         >
@@ -369,9 +377,10 @@ export default function Scene3D({
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
-          {interactive && settings.showAxisGizmo && (
+          {(interactive || showOrientationGizmo) && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
+                disabled={!interactive}
                 axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
                 /* The axis-head discs are always a light colour, so the label
                    text stays dark in both themes. */

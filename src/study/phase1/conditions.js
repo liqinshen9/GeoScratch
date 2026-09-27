@@ -22,16 +22,19 @@ const NO_CUES = {
 }
 
 /**
- * Held off in every part of the study, Phase 1 and holistic tasks alike, whatever
- * the device's own settings. Not under test: per-instance colour variation is a
- * random lightness difference between objects, which reads as a depth cue.
+ * Pinned in every part of the study, Phase 1 and holistic tasks alike, whatever
+ * the device's own settings. Neither is under test: per-instance colour
+ * variation is a random lightness difference between objects, which reads as a
+ * depth cue, and the theme changes every colour and contrast in the scene.
  */
-export const STUDY_PINNED_SETTINGS = Object.freeze({ colorInstanceVariation: false })
+export const STUDY_PINNED_SETTINGS = Object.freeze({
+  colorInstanceVariation: false,
+  theme: THEMES.LIGHT,
+})
 
 const T1 = {
   ...DEFAULT_SETTINGS,
   ...STUDY_PINNED_SETTINGS,
-  theme: THEMES.LIGHT,
   autoFocusOnNewObject: false,
   // Held constant in every condition, not a cue under test. One value for every
   // solid type, rather than the editor's per-builder 0.7/0.8, so a cube and a
