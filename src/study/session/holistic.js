@@ -1,4 +1,4 @@
-import { getTechnique, CUE_SETTING_KEYS } from '@/study/phase1/conditions'
+import { getTechnique, CUE_SETTING_KEYS, STUDY_PINNED_SETTINGS } from '@/study/phase1/conditions'
 import { LABEL_DETAIL_LEVELS } from '@/store/namingConfig'
 
 // Phases 2 and 3 (dissertation Method, "Holistic Authoring Tasks" and
@@ -36,14 +36,22 @@ function cueSettings(techniqueId) {
 /**
  * Baseline matches T1 and perception-driven matches T10, on the cue keys only:
  * the rest of the editor keeps the participant's normal settings, since this is
- * authoring rather than a controlled probe. Perception-driven also raises label
- * detail.
+ * authoring rather than a controlled probe, except `STUDY_PINNED_SETTINGS`.
+ * Perception-driven also raises label detail.
  */
 export function configurationSettings(configuration) {
   if (configuration === CONFIGURATIONS.PERCEPTION) {
-    return { ...cueSettings('T10'), labelDetail: LABEL_DETAIL_LEVELS.NAME_AND_VALUE }
+    return {
+      ...cueSettings('T10'),
+      ...STUDY_PINNED_SETTINGS,
+      labelDetail: LABEL_DETAIL_LEVELS.NAME_AND_VALUE,
+    }
   }
-  return { ...cueSettings('T1'), labelDetail: LABEL_DETAIL_LEVELS.NAME_ONLY }
+  return {
+    ...cueSettings('T1'),
+    ...STUDY_PINNED_SETTINGS,
+    labelDetail: LABEL_DETAIL_LEVELS.NAME_ONLY,
+  }
 }
 
 /**

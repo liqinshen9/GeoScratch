@@ -21,8 +21,16 @@ const NO_CUES = {
   cameraShadowsEnabled: false,
 }
 
+/**
+ * Held off in every part of the study, Phase 1 and holistic tasks alike, whatever
+ * the device's own settings. Not under test: per-instance colour variation is a
+ * random lightness difference between objects, which reads as a depth cue.
+ */
+export const STUDY_PINNED_SETTINGS = Object.freeze({ colorInstanceVariation: false })
+
 const T1 = {
   ...DEFAULT_SETTINGS,
+  ...STUDY_PINNED_SETTINGS,
   theme: THEMES.LIGHT,
   autoFocusOnNewObject: false,
   // Held constant in every condition, not a cue under test. One value for every

@@ -11,8 +11,8 @@ const BLOCK_TYPES = {
 }
 
 /**
- * Colour is a hash of the block id (colorSystem.js), so the per-stimulus salt
- * randomises colours while keeping them identical across every technique.
+ * The salt only affects colour with per-instance variation on, which the study
+ * pins off. See docs/architecture/color-system.md#per-instance-variation.
  */
 export function blockIdFor(stimulus, key) {
   return `p1-${stimulus.id}-${stimulus.colourSalt}-${key}`

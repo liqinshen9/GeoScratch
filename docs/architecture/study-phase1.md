@@ -179,9 +179,11 @@ geometry is re-rendered under every technique.
 loads them into a headless `Blockly.Workspace` and runs `runAndSync`, so the
 generator, runtime, builders and tube collisions are the editor's own.
 
-- Block ids are `p1-<stimulusId>-<colourSalt>-<key>`. Colour is a hash of the
-  block id (`color-system.md`), so colours are random per stimulus but identical
-  across techniques.
+- Block ids are `p1-<stimulusId>-<colourSalt>-<key>`. With per-instance colour
+  variation on, colour would be a hash of the block id; `STUDY_PINNED_SETTINGS`
+  holds it off, so every object of a type renders its family's midpoint colour
+  and the salt no longer affects colour
+  ([color-system.md](color-system.md#per-instance-variation)).
 - A and B are written as `custom` names in the naming registry's `block.data`
   record, so the label layer shows them like any user-chosen name.
 - XML loads with events disabled, **then** `installNamingRegistry` runs, which

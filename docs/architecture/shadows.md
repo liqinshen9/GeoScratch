@@ -26,8 +26,8 @@ people assume light comes from above, and the assumption is biased to the
 left: about 26 degrees left of vertical on average (Sun & Perona 1998,
 Mamassian & Goutcher 2001). Lighting that agrees with the prior makes shading
 and shadows read as shape and depth more easily; lighting from the lower right
-can make the same bumps read as dents. At 64 degrees elevation and 20 degrees
-camera elevation, the light lands about 27 degrees left of screen vertical.
+can make the same bumps read as dents. At 64 degrees elevation and 27 degrees
+camera elevation, the light lands about 29 degrees left of screen vertical.
 
 It has to stay inside the 40-unit bounding box (height under 20), or the box's
 walls shadow the whole room.

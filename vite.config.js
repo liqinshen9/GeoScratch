@@ -30,5 +30,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{js,jsx,ts,tsx}'],
+    // Its ESM build has extensionless internal imports that Node cannot resolve.
+    server: { deps: { inline: ['@material/material-color-utilities'] } },
   },
 })

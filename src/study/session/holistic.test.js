@@ -67,6 +67,11 @@ describe('configurationSettings', () => {
     }
   })
 
+  it('turns per-instance colour variation off in both configurations', () => {
+    expect(configurationSettings(CONFIGURATIONS.BASELINE).colorInstanceVariation).toBe(false)
+    expect(configurationSettings(CONFIGURATIONS.PERCEPTION).colorInstanceVariation).toBe(false)
+  })
+
   it('raises label detail only in the perception-driven configuration', () => {
     expect(configurationSettings(CONFIGURATIONS.BASELINE).labelDetail).toBe('nameOnly')
     expect(configurationSettings(CONFIGURATIONS.PERCEPTION).labelDetail).toBe('nameAndValue')

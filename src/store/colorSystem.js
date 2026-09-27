@@ -26,8 +26,16 @@ function lerp([min, max], t) {
   return min + (max - min) * t
 }
 
+function midpoint([min, max]) {
+  return (min + max) / 2
+}
+
 function settingsStore() {
   return typeof window !== 'undefined' ? window.useSettingsStore : null
+}
+
+function instanceVariationEnabled() {
+  return settingsStore()?.getState().settings.colorInstanceVariation === true
 }
 
 function activePresetName() {
@@ -65,6 +73,13 @@ function instanceHct(type, blockId) {
   const preset = activePreset()
   const family = preset.types[type]
   if (!family) return null
+  if (!instanceVariationEnabled()) {
+    return {
+      hue: family.hue,
+      chroma: midpoint(family.chromaRange),
+      tone: midpoint(family.toneRange),
+    }
+  }
   const seed = blockId != null ? String(blockId) : `${type}:default`
   const toneHash = hashString(`${seed}:tone`)
   const chromaHash = hashString(`${seed}:chroma`)
@@ -99,12 +114,14 @@ function forRole(role) {
 }
 
 // Subscribe to anything that changes the active palette: the color-preset name,
-// the resolved theme (light/dark presets differ) or a per-type fixed colour.
+// instance variation, the resolved theme (light/dark presets differ) or a
+// per-type fixed colour.
 // Ignores unrelated setting changes. Returns an unsubscribe function.
 const OVERRIDE_KEYS = Object.values(OBJECT_COLOR_SETTING_KEYS)
 function paletteSignature(state) {
   return [
     state.settings.colorPreset,
+    state.settings.colorInstanceVariation,
     state.resolvedTheme,
     ...OVERRIDE_KEYS.map((key) => state.settings[key]),
   ].join('|')

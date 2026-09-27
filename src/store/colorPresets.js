@@ -36,20 +36,63 @@ export const COLOR_ROLES = Object.freeze({
 
 export const DEFAULT_COLOR_PRESET = 'vivid'
 
+// Vivid and High Contrast type hues: optimizeHues (utils/categoricalPalette.js),
+// every type at one shared tone, then assignHues. colorPresets.test.js re-runs
+// the optimiser and fails if these drift from it.
+// See docs/architecture/color-system.md#how-the-type-hues-are-chosen.
+export const PALETTE_TONES = Object.freeze({ light: 50, dark: 56 })
+
+export const VIVID_PALETTE = Object.freeze({
+  chroma: 50,
+  hues: Object.freeze({
+    [OBJECT_TYPES.POINT]: 272,
+    [OBJECT_TYPES.VECTOR]: 63,
+    [OBJECT_TYPES.PLANE]: 114,
+    [OBJECT_TYPES.SPHERE]: 21,
+    [OBJECT_TYPES.CUBE]: 333,
+    [OBJECT_TYPES.TEAPOT]: 168,
+  }),
+})
+
+// Assigned against VIVID_PALETTE's hues, so a type keeps its colour family
+// across presets.
+export const HIGH_CONTRAST_PALETTE = Object.freeze({
+  chroma: 85,
+  hues: Object.freeze({
+    [OBJECT_TYPES.POINT]: 261,
+    [OBJECT_TYPES.VECTOR]: 51,
+    [OBJECT_TYPES.PLANE]: 105,
+    [OBJECT_TYPES.SPHERE]: 9,
+    [OBJECT_TYPES.CUBE]: 321,
+    [OBJECT_TYPES.TEAPOT]: 156,
+  }),
+})
+
+const MONOCHROME_PALETTE = Object.freeze({
+  chroma: 0,
+  hues: Object.fromEntries(Object.keys(VIVID_PALETTE.hues).map((type) => [type, 0])),
+})
+
+// Midpoints sit on the palette's chroma and tone; the ranges only matter with
+// per-instance variation on. Lines stay neutral.
+const TONE_SPREAD = 10
+function equalLightnessTypes({ chroma, hues }, tone, chromaSpread) {
+  const toneRange = [tone - TONE_SPREAD, tone + TONE_SPREAD]
+  return {
+    ...Object.fromEntries(
+      Object.entries(hues).map(([type, hue]) => [
+        type,
+        { hue, chromaRange: [chroma - chromaSpread, chroma + chromaSpread], toneRange },
+      ]),
+    ),
+    [OBJECT_TYPES.LINE]: { hue: 0, chromaRange: [0, 0], toneRange },
+  }
+}
+
 export const COLOR_PRESETS = Object.freeze({
   vivid: {
     label: 'Vivid',
-    // The // ~#hex comments are each family's midpoint color, not what every
-    // instance renders. See docs/architecture/color-system.md#preset-hex-comments.
-    types: {
-      [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [40, 55], toneRange: [35, 60] }, // ~#4570bb
-      [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [45, 60], toneRange: [30, 50] }, // ~#1f6d23
-      [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [18, 42] }, // ~#474747
-      [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [35, 50], toneRange: [45, 68] }, // ~#0996a0
-      [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [45, 60], toneRange: [45, 68] }, // ~#d5665b
-      [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [40, 55], toneRange: [45, 68] }, // ~#af70bc
-      [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [35, 50], toneRange: [40, 62] }, // ~#5c76d0
-    },
+    types: equalLightnessTypes(VIVID_PALETTE, PALETTE_TONES.light, 7),
     roles: {
       [COLOR_ROLES.OPERAND_A]: '#1e40af',
       [COLOR_ROLES.OPERAND_B]: '#b91c1c',
@@ -58,18 +101,8 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.ACCENT]: '#71717a',
       [COLOR_ROLES.DISTANCE]: '#ca8a04',
     },
-    // Dark-mode variant: same family hues, tones lifted so instances read
-    // against the dark scene ground. See docs/architecture/theming.md.
     dark: {
-      types: {
-        [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [42, 56], toneRange: [40, 58] },
-        [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [46, 60], toneRange: [36, 52] },
-        [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [38, 56] },
-        [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [36, 50], toneRange: [44, 62] },
-        [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [46, 60], toneRange: [44, 62] },
-        [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [42, 56], toneRange: [44, 62] },
-        [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [34, 48], toneRange: [42, 60] },
-      },
+      types: equalLightnessTypes(VIVID_PALETTE, PALETTE_TONES.dark, 7),
       roles: {
         [COLOR_ROLES.OPERAND_A]: '#6f9bff',
         [COLOR_ROLES.OPERAND_B]: '#f26d6d',
@@ -83,16 +116,9 @@ export const COLOR_PRESETS = Object.freeze({
 
   monochrome: {
     label: 'Monochrome',
-    // Capped at tone 58 -- lighter washed out against the light background.
-    types: {
-      [OBJECT_TYPES.POINT]: { hue: 0, chromaRange: [0, 0], toneRange: [40, 48] }, // ~#707070
-      [OBJECT_TYPES.VECTOR]: { hue: 0, chromaRange: [0, 0], toneRange: [31, 39] }, // ~#595959
-      [OBJECT_TYPES.LINE]: { hue: 0, chromaRange: [0, 0], toneRange: [2, 7] }, // ~#0b0b0b
-      [OBJECT_TYPES.PLANE]: { hue: 0, chromaRange: [0, 0], toneRange: [22, 30] }, // ~#424242
-      [OBJECT_TYPES.SPHERE]: { hue: 0, chromaRange: [0, 0], toneRange: [14, 21] }, // ~#2d2d2d
-      [OBJECT_TYPES.CUBE]: { hue: 0, chromaRange: [0, 0], toneRange: [50, 58] }, // ~#8a8a8a
-      [OBJECT_TYPES.TEAPOT]: { hue: 0, chromaRange: [0, 0], toneRange: [8, 13] }, // ~#1b1b1b
-    },
+    // Every type one grey at the palette tone: Vivid minus hue and chroma, with
+    // lightness unchanged. See docs/architecture/color-system.md#monochrome.
+    types: equalLightnessTypes(MONOCHROME_PALETTE, PALETTE_TONES.light, 0),
     roles: {
       [COLOR_ROLES.OPERAND_A]: '#374151',
       [COLOR_ROLES.OPERAND_B]: '#71717a',
@@ -101,18 +127,8 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.ACCENT]: '#4b5563',
       [COLOR_ROLES.DISTANCE]: '#57534e',
     },
-    // Dark-mode variant: the light preset's cap existed because light tones
-    // washed out on the light background; on dark the ramp runs high instead.
     dark: {
-      types: {
-        [OBJECT_TYPES.POINT]: { hue: 0, chromaRange: [0, 0], toneRange: [44, 52] },
-        [OBJECT_TYPES.VECTOR]: { hue: 0, chromaRange: [0, 0], toneRange: [50, 58] },
-        [OBJECT_TYPES.LINE]: { hue: 0, chromaRange: [0, 0], toneRange: [62, 72] },
-        [OBJECT_TYPES.PLANE]: { hue: 0, chromaRange: [0, 0], toneRange: [38, 46] },
-        [OBJECT_TYPES.SPHERE]: { hue: 0, chromaRange: [0, 0], toneRange: [56, 64] },
-        [OBJECT_TYPES.CUBE]: { hue: 0, chromaRange: [0, 0], toneRange: [34, 42] },
-        [OBJECT_TYPES.TEAPOT]: { hue: 0, chromaRange: [0, 0], toneRange: [66, 74] },
-      },
+      types: equalLightnessTypes(MONOCHROME_PALETTE, PALETTE_TONES.dark, 0),
       roles: {
         [COLOR_ROLES.OPERAND_A]: '#d1d5db',
         [COLOR_ROLES.OPERAND_B]: '#9ca3af',
@@ -126,15 +142,7 @@ export const COLOR_PRESETS = Object.freeze({
 
   highContrast: {
     label: 'High Contrast',
-    types: {
-      [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [70, 90], toneRange: [30, 65] }, // ~#006de1
-      [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [75, 95], toneRange: [25, 55] }, // ~#006e17
-      [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [8, 45] }, // ~#3f3f3f
-      [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [65, 85], toneRange: [40, 72] }, // ~#00959f
-      [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [75, 95], toneRange: [40, 72] }, // ~#f4453c
-      [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [70, 90], toneRange: [40, 72] }, // ~#ca4fe9
-      [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [60, 80], toneRange: [35, 65] }, // ~#3a5fd9
-    },
+    types: equalLightnessTypes(HIGH_CONTRAST_PALETTE, PALETTE_TONES.light, 10),
     roles: {
       [COLOR_ROLES.OPERAND_A]: '#1d4ed8',
       [COLOR_ROLES.OPERAND_B]: '#dc2626',
@@ -144,15 +152,7 @@ export const COLOR_PRESETS = Object.freeze({
       [COLOR_ROLES.DISTANCE]: '#b45309',
     },
     dark: {
-      types: {
-        [OBJECT_TYPES.POINT]: { hue: 265, chromaRange: [72, 92], toneRange: [42, 66] },
-        [OBJECT_TYPES.VECTOR]: { hue: 145, chromaRange: [78, 98], toneRange: [40, 62] },
-        [OBJECT_TYPES.LINE]: { hue: 250, chromaRange: [0, 0], toneRange: [46, 70] },
-        [OBJECT_TYPES.PLANE]: { hue: 205, chromaRange: [68, 88], toneRange: [44, 70] },
-        [OBJECT_TYPES.SPHERE]: { hue: 25, chromaRange: [78, 98], toneRange: [44, 70] },
-        [OBJECT_TYPES.CUBE]: { hue: 325, chromaRange: [72, 92], toneRange: [44, 70] },
-        [OBJECT_TYPES.TEAPOT]: { hue: 235, chromaRange: [64, 84], toneRange: [42, 66] },
-      },
+      types: equalLightnessTypes(HIGH_CONTRAST_PALETTE, PALETTE_TONES.dark, 10),
       roles: {
         [COLOR_ROLES.OPERAND_A]: '#3b82f6',
         [COLOR_ROLES.OPERAND_B]: '#f87171',

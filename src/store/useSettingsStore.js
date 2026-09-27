@@ -12,6 +12,11 @@ export const DEFAULT_SETTINGS = {
   lineStyle: LINE_STYLES.PLAIN_TUBE,
   lineCollisionStyle: LINE_COLLISION_STYLES.DASHED,
   colorPreset: DEFAULT_COLOR_PRESET,
+  // Off: every instance of a type gets the family's midpoint colour. On: tone and
+  // chroma vary per block. Off by default because the tone spread is a lightness
+  // difference, which reads as a depth cue.
+  // See docs/architecture/color-system.md#per-instance-variation.
+  colorInstanceVariation: false,
   // Per-type fixed colours ('#rrggbb'), null = follow the preset. Keys match
   // OBJECT_COLOR_SETTING_KEYS in colorPresets.js.
   pointColor: null,

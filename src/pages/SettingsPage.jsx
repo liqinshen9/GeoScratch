@@ -456,6 +456,13 @@ export default function SettingsPage() {
                     </option>
                   ))}
                 </SelectField>
+                <ToggleRow
+                  label="Vary Color per Object"
+                  description="Give each object a slightly different lightness and saturation within its type's color family, so two spheres look distinct. Off, every object of a type shares one color. Lightness differences can make an object look nearer than it is."
+                  checked={settings.colorInstanceVariation}
+                  settingKey="colorInstanceVariation"
+                  onChange={(v) => updateSetting('colorInstanceVariation', v)}
+                />
                 {OBJECT_COLOR_ROWS.map(([type, label]) => {
                   const settingKey = OBJECT_COLOR_SETTING_KEYS[type]
                   return (

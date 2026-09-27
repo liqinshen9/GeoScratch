@@ -5,9 +5,9 @@ starts, where "Reset view" returns to, and what `Scene3D`'s `cameraPosition`
 prop defaults to. It is an orbit around the origin, and those three numbers are
 the only thing to edit:
 
-- `distance`: how far from the origin (44);
+- `distance`: how far from the origin (30);
 - `azimuthDeg`: rotation around the vertical, from +Z towards +X (45);
-- `elevationDeg`: angle up from the ground plane (20).
+- `elevationDeg`: angle up from the ground plane (27).
 
 `positionFromOrbit` turns them into `DEFAULT_CAMERA_POSITION`, which is
 what the rest of the code reads.
@@ -42,8 +42,23 @@ Elevation is a trade-off, not a fact: 35.26 degrees (isometric) balances the
 three axes, a steeper 45 favours the ground plan at the cost of compressing the
 vertical, and a lower angle favours the vertical and reads more like standing
 beside the scene. The app started at isometric (distance 56) and was lowered to
-20 degrees at distance 44, keeping the 45-degree azimuth so X and Z still leave
+27 degrees at distance 30, keeping the 45-degree azimuth so X and Z still leave
 the origin symmetrically.
+
+27 was chosen by eye. The literature supports a range, not a number: people
+prefer a three-quarter view from slightly above (Palmer, Rosch & Chase 1981;
+Blanz, Tarr & Bulthoff 1999), and perceive surfaces as if viewed from above
+(Mamassian & Landy 1998). Secord et al. 2011 ("Perceptual models of viewpoint
+preference", ACM TOG) score elevation with a Gaussian peaking at 22.5 degrees
+with a 45-degree width. That peak is the authors' encoding of Blanz et al.'s
+qualitative finding, not a fitted optimum, and anything from about 10 to 35
+degrees scores within a few percent of it. Do not tune the angle towards 22.5
+on the literature's account.
+
+For depth and relative-position judgments, which the perceptual exercises and
+the study ask for, 3D perspective views are worse than for shape understanding
+(St. John et al. 2001, Human Factors), so no viewing angle removes the need for
+depth cues.
 
 ## Who depends on it
 

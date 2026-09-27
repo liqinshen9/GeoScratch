@@ -54,6 +54,12 @@ describe('Phase 1 conditions', () => {
     expect(t1.theme).toBe('light')
   })
 
+  it('turns per-instance colour variation off in every condition', () => {
+    for (const technique of TECHNIQUES) {
+      expect(technique.settings.colorInstanceVariation, technique.id).toBe(false)
+    }
+  })
+
   it('holds solids at the same opacity in every condition', () => {
     for (const technique of TECHNIQUES) {
       expect(technique.settings.solidOpacity, technique.id).toBe(0.8)
