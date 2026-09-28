@@ -85,6 +85,7 @@ function Steps({ steps, partialSteps, partialMessages, feedbackRevision, passed 
     ['cube', 'Create: a Cube with Scalar 2 for side length and Vector (1, 1, 1) for its centre.'],
     ['point', 'Create: a Point at the input corner P = (0, 2, 2).'],
     ['pair', 'My Blocks: save the cube and point as a composite block in My Blocks. Name it however you like. Then select it from My Blocks.'],
+    ['cleanup', 'Drag the block of cube and point you created to the bin, leaving only the My Block you just created.'],
     ['pipeline', 'Transform: connect the new block you created to a Transform Pipeline.'],
     ['toOrigin', 'Transform: translate by the negative of center C, (-1, -1, -1). The goal is to move the block to the origin.'],
     ['rotate', 'Transform: Rotate around Y axis by 90 degrees.'],
@@ -122,10 +123,12 @@ function evaluate({ objects, workspace }) {
   const marker = target?.children.find((o) => o.userData?.geoType === 'attached_corner_point')
   target?.updateMatrixWorld(true)
   const poseIsCorrect = Boolean(cube && marker) && vectorMatches(cube.getWorldPosition(new THREE.Vector3()), CENTRE) && vectorMatches(marker.getWorldPosition(new THREE.Vector3()), new THREE.Vector3(2, 2, 2)) && rotationMatches(target, 'Y', 90)
+  const hasOriginalCubeAndPoint = blocks('geo_cube').some(cubeMatches) || blocks('linalg_point').some(pointMatches) || blocks('geo_object_with_point').some(pairMatches)
   const steps = {
     cube: special || blocks('geo_cube').some(cubeMatches),
     point: special || blocks('linalg_point').some(pointMatches),
     pair: special,
+    cleanup: special && !hasOriginalCubeAndPoint,
     pipeline: Boolean(pipeline),
     toOrigin: translateMatches(chain[0], -1),
     rotate: chain[1]?.type === 'rot_matrix' && chain[1].getFieldValue('AXIS') === 'Y' && closeNumber(chain[1].getFieldValue('DEGREES'), 90),
