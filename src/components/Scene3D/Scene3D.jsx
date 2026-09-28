@@ -187,6 +187,7 @@ export default function Scene3D({
   onPresented,
   hiddenLabelKeys: extraHiddenLabelKeys,
   onObjectClick,
+  toggleLabelsOnLeftClick = false,
   // Where the camera starts. Only a non-interactive view has any business
   // changing it: with no orbiting, the fixed distance is the whole framing.
   cameraPosition = DEFAULT_CAMERA_POSITION,
@@ -349,6 +350,7 @@ export default function Scene3D({
             <ScenePicker
               onSelectBlock={handleSelectBlockFrom3D}
               onToggleLabels={handleToggleObjectLabels}
+              toggleLabelsOnLeftClick={toggleLabelsOnLeftClick}
             />
           ) : (
             onObjectClick && (

@@ -11,6 +11,7 @@ import StudyPhase1Page from '@/pages/StudyPhase1Page'
 import StudySessionPage from '@/pages/StudySessionPage'
 import StudyReturnPage from '@/pages/StudyReturnPage'
 import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
+import UserStudyLiPage from '@/pages/UserStudyLiPage'
 
 const router = createBrowserRouter([
   {
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
         element: <SandboxPage />,
       },
     ],
+  },
+  {
+    path: '/userstudy-Li',
+    element: <UserStudyLiPage />,
   },
   {
     // No header or navigation: participants cannot wander out of the task.

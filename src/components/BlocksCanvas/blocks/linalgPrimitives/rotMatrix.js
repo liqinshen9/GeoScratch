@@ -7,6 +7,7 @@ import {
 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { attachSingleStepDrag } from './pipelineTransformDragStrategy.js'
+import { createTransformStepLabel } from './transformStepWidth.js'
 
 let REGISTERED = false
 const AXIS_OPTIONS = [
@@ -21,7 +22,7 @@ export function initRotMatrixBlock() {
 
   Blockly.Blocks['rot_matrix'] = {
     init() {
-      this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
+      this.appendDummyInput().appendField(createTransformStepLabel(), 'PIPE_STEP')
       this.appendDummyInput().appendField('Rotation')
       this.appendDummyInput()
         .appendField('Rotate around')

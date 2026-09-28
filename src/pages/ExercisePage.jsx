@@ -81,13 +81,22 @@ function AnswerCard({ result, className }) {
   )
 }
 
-export default function ExercisePage() {
+export default function ExercisePage({
+  exerciseId: fixedExerciseId,
+  standalone = false,
+  workspaceId,
+  settingsOverrides,
+  showAnswerHighlight = true,
+  hideAnimationTransport = false,
+  transformObjects,
+  toggleLabelsOnLeftClick = false,
+}) {
   const { objects, autoRender, setPendingObjects, setObjects } = useSceneStore()
   const { workspace } = useWorkspaceStore()
   const setExerciseOverrides = useSettingsStore((s) => s.setExerciseOverrides)
   const clearExerciseOverrides = useSettingsStore((s) => s.clearExerciseOverrides)
   const navigate = useNavigate()
-  const { exerciseId } = useParams()
+  const { exerciseId: routeExerciseId } = useParams()
   const [workspaceMaximized, setWorkspaceMaximized] = useState(false)
   const [perceptualPicked, setPerceptualPicked] = useState(null)
   const [stepFeedbackRevision, setStepFeedbackRevision] = useState(0)
@@ -96,7 +105,7 @@ export default function ExercisePage() {
 
   // The URL is the source of truth for which exercise is open;
   // /exercise with no param (or an unknown id) defaults to the first one.
-  const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
+  const activeExerciseConfig = getExercise(fixedExerciseId ?? routeExerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
 
@@ -139,7 +148,8 @@ export default function ExercisePage() {
   // and a static condition hides every animation control.
   // See docs/architecture/study-session.md#holistic-tasks.
   const currentTask = useCurrentStudyTask()
-  const studyTask = currentTask?.exerciseId === activeExercise ? currentTask : null
+  const studyTask =
+    !standalone && currentTask?.exerciseId === activeExercise ? currentTask : null
   const hideAnimation = Boolean(studyTask) && studyTask.mode !== RENDER_MODES.ANIMATED
 
   const tracking = useExerciseTracking(activeExercise, exercise.kind)
@@ -204,19 +214,20 @@ export default function ExercisePage() {
     [studyConfiguration],
   )
   useEffect(() => {
-    setExerciseOverrides({ ...exercise.settingsOverrides, ...studySettings })
+    setExerciseOverrides({ ...exercise.settingsOverrides, ...settingsOverrides, ...studySettings })
     return () => clearExerciseOverrides()
-  }, [exercise, studySettings, setExerciseOverrides, clearExerciseOverrides])
+  }, [exercise, settingsOverrides, studySettings, setExerciseOverrides, clearExerciseOverrides])
 
   const handleObjectsChange = useCallback(
     (objs) => {
       const exerciseObjects = exercise.decorateObjects
         ? exercise.decorateObjects(objs, workspace)
         : objs
-      setPendingObjects(exerciseObjects)
-      if (autoRender) setObjects(exerciseObjects)
+      const finalObjects = transformObjects?.(exerciseObjects) ?? exerciseObjects
+      setPendingObjects(finalObjects)
+      if (autoRender) setObjects(finalObjects)
     },
-    [exercise, autoRender, setPendingObjects, setObjects, workspace],
+    [exercise, autoRender, setPendingObjects, setObjects, transformObjects, workspace],
   )
 
   // The exercise names the object holding its answer; the scene glows it green
@@ -244,7 +255,7 @@ export default function ExercisePage() {
           leadingHeader={
             <div className="exercise-column-heading">
               <h2>Exercise</h2>
-              {!studyTask && (
+              {!studyTask && !standalone && (
                 <div className="exercise-column-heading__nav" aria-label="Exercise navigation">
                   <button
                     type="button"
@@ -288,7 +299,7 @@ export default function ExercisePage() {
           workspace={workspace}
           workspaceMaximized={workspaceMaximized}
           preserveColumns
-          hideAnimationTransport={hideAnimation}
+          hideAnimationTransport={hideAnimationTransport || hideAnimation}
           onWorkspaceMaximizedChange={handleWorkspaceMaximizedChange}
           onClearWorkspace={() => clearWorkspaceRef.current()}
         />
@@ -299,7 +310,7 @@ export default function ExercisePage() {
             aria-hidden={workspaceMaximized}
           >
             <div className="exercise-task-panel__top">
-              {placement && !studyTask && (
+              {placement && !studyTask && !standalone && (
                 <p className="exercise-task-panel__crumb">
                   {placement.unit.title} · {placement.section.title}
                 </p>
@@ -362,8 +373,8 @@ export default function ExercisePage() {
           </aside>
 
           <BlocksCanvas
-            key={`exercise-${activeExercise}`}
-            id={`exercise-${activeExercise}`}
+            key={workspaceId ?? `exercise-${activeExercise}`}
+            id={workspaceId ?? `exercise-${activeExercise}`}
             workspaceMaximized={workspaceMaximized}
             preserveColumns
             reusableBlockTemplate={
@@ -375,7 +386,11 @@ export default function ExercisePage() {
               clearWorkspaceRef.current = fn
             }}
           />
-          <Scene3D objects={objects} answer={answerHighlight} />
+          <Scene3D
+            objects={objects}
+            answer={showAnswerHighlight ? answerHighlight : undefined}
+            toggleLabelsOnLeftClick={toggleLabelsOnLeftClick}
+          />
         </div>
       </main>
     </div>

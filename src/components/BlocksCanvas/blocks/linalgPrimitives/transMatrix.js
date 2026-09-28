@@ -4,6 +4,7 @@ import { javascriptGenerator } from 'blockly/javascript'
 import { translationMatrix, translationMatrix3x3 } from './homogeneousMatrix.js'
 import { appendMatrixPreviewUI } from './matrixPreview.js'
 import { attachSingleStepDrag } from './pipelineTransformDragStrategy.js'
+import { createTransformStepLabel } from './transformStepWidth.js'
 
 let REGISTERED = false
 
@@ -13,7 +14,7 @@ export function initTransMatrixBlock() {
 
   Blockly.Blocks['trans_matrix'] = {
     init() {
-      this.appendDummyInput().appendField(new Blockly.FieldLabelSerializable(''), 'PIPE_STEP')
+      this.appendDummyInput().appendField(createTransformStepLabel(), 'PIPE_STEP')
       this.appendDummyInput().appendField('Translate (x, y, z)')
       this.appendDummyInput()
         .appendField('x')
