@@ -11,8 +11,6 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
   if (!THREE) return null
   const centre = centreInput?.isVector3 ? centreInput.clone() : new THREE.Vector3()
   const radius = Math.max(0.01, Number(radiusInput) || 1)
-  const formatCenterPoint = (point) =>
-    '[' + [point.x, point.y, point.z].map((value) => Number(value.toFixed(3))).join(', ') + ']'
   const geometry = new THREE.SphereGeometry(radius, 32, 16)
   const NEAR_OPAQUE = 0.9
   const solidOpacity = useSettingsStore?.getState().settings.solidOpacity ?? 0.8
@@ -69,7 +67,7 @@ function geoSphereDefinition(centreInput, radiusInput, blockId) {
     {
       anchor: 'centre',
       name: window.geoNaming?.nameFor?.(blockId) || 'Sphere',
-      value: formatCenterPoint(centre),
+      value: window.vectorNotation.formatVector(centre),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: window.GeoScratchColors.forInstance('sphere', blockId),

@@ -70,7 +70,7 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
     {
       anchor: 'centre',
       name: window.geoNaming?.nameFor?.(blockId) || 'Teapot',
-      value: 'size ' + Number(size.toFixed(3)),
+      value: window.vectorNotation.formatVector(centre),
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: window.GeoScratchColors.forInstance('teapot', blockId),
