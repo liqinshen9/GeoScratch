@@ -71,8 +71,8 @@ export function initVectorMagnitude() {
     if (isPointToPointDistance && len > 1e-8) {
       const distanceVector = arrowTip.clone().sub(arrowOrigin);
       highlight = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.055, 0.055, len, 24),
-        new THREE.MeshBasicMaterial({ color: window.GeoScratchColors.forRole('warning'), transparent: true, opacity: 0.9, depthWrite: false })
+        new THREE.CylinderGeometry(0.022, 0.022, len, 18),
+        new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.94, depthWrite: false })
       );
       highlight.position.copy(arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5));
       highlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());

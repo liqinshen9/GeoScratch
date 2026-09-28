@@ -218,17 +218,17 @@ export function initScalarArithmeticBlock() {
       const distanceVector = resultMeta.end.clone().sub(resultMeta.start);
       const distanceLength = distanceVector.length();
       const distanceMid = resultMeta.start.clone().add(resultMeta.end).multiplyScalar(0.5);
-      const highlightYellow = window.GeoScratchColors.forRole('warning');
+      const distanceColor = window.GeoScratchColors.forRole('distance');
       let distanceHighlight;
       if (distanceLength > 1e-8) {
         distanceHighlight = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.055, 0.055, distanceLength, 24),
-          new THREE.MeshBasicMaterial({ color: highlightYellow, transparent: true, opacity: 0.96, depthWrite: false })
+          new THREE.CylinderGeometry(0.022, 0.022, distanceLength, 18),
+          new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.94, depthWrite: false })
         );
         distanceHighlight.position.copy(distanceMid);
         distanceHighlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());
       } else {
-        distanceHighlight = window.geoPointMarker({ color: highlightYellow, radius: 0.07, widthSegments: 18 });
+        distanceHighlight = window.geoPointMarker({ color: distanceColor, radius: 0.06, widthSegments: 18 });
         distanceHighlight.position.copy(distanceMid);
       }
       distanceHighlight.userData.geoType = 'distance_segment';

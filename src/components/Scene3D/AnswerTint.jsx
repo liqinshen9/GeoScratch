@@ -1,16 +1,15 @@
 import { useEffect } from 'react'
+import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
 import { ANSWER_GEOMETRY_TYPES } from '@/utils/answerGeometry'
+import { applyGlow } from './highlightEffects'
 
 /**
- * Recolours the geometry an exercise names as its answer: green when the value
- * is right, red when it is wrong, its own colour in the Sandbox where there is
- * no answer.
- *
- * Deliberately a recolour rather than the selection glow. The glow lights the
- * surroundings, and on a thin distance bar it washed a large patch of the plane
- * green, which read as "this region" rather than "this bar".
+ * Glows the geometry an exercise names as its answer: green when the value is
+ * right, red when it is wrong, nothing in the Sandbox where there is no answer.
+ * It is the selection glow's line halo in the answer's colour, so the bar keeps
+ * its own (neutral) colour and the verdict reads as light around it.
  *
  * The matching `d = ...` label is recoloured separately, by LabelLayer, because
  * a label belongs to the object holding the distance VALUE while the bar
@@ -18,33 +17,43 @@ import { ANSWER_GEOMETRY_TYPES } from '@/utils/answerGeometry'
  * docs/architecture/selection-and-picking.md#the-answer-is-not-where-the-number-is.
  */
 export default function AnswerTint({ objects = [], state }) {
-  const { invalidate } = useThree()
+  const { scene, size, invalidate } = useThree()
 
   useEffect(() => {
     const accent = ANSWER_HIGHLIGHT_COLORS[state]
     if (!accent) return undefined
 
-    // Restore by saved value rather than by recomputing the original: the
-    // scene rebuilds on every edit, so the "original" is whatever this run
-    // built, not anything derivable here.
-    const restores = []
+    const targets = []
     const visit = (node) => {
       if (!node) return
-      if (ANSWER_GEOMETRY_TYPES.has(node.userData?.geoType) && node.material?.color) {
-        restores.push({ material: node.material, color: node.material.color.clone() })
-        node.material.color.set(accent)
+      if (ANSWER_GEOMETRY_TYPES.has(node.userData?.geoType)) {
+        targets.push(node)
+        return
       }
       node.children?.forEach(visit)
     }
     objects.forEach(visit)
-    if (!restores.length) return undefined
+    if (!targets.length) return undefined
 
+    // A distance bar is a cylinder along its local Y; the line halo needs its
+    // two ends. The scene rebuilds on every edit, so this is never stale.
+    targets.forEach((target) => {
+      const height = target.geometry?.parameters?.height
+      if (Number.isFinite(height)) {
+        target.userData.glowLine = {
+          start: new THREE.Vector3(0, -height / 2, 0),
+          end: new THREE.Vector3(0, height / 2, 0),
+        }
+      }
+    })
+
+    const glow = applyGlow(targets, scene, size, accent)
     invalidate()
     return () => {
-      restores.forEach(({ material, color }) => material.color.copy(color))
+      glow.restore()
       invalidate()
     }
-  }, [objects, state, invalidate])
+  }, [objects, state, scene, size, invalidate])
 
   return null
 }

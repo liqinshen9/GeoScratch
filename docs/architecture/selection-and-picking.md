@@ -2,7 +2,7 @@
 
 `components/Scene3D/ScenePicker.jsx`, `utils/scenePicking.js`,
 `components/BlocksCanvas/hooks/useBlockSelectionSync.js`,
-`components/Scene3D/SelectionHighlight.jsx`,
+`components/Scene3D/SelectionHighlight.jsx`, `components/Scene3D/highlightEffects.js`,
 `components/BlocksCanvas/hooks/useBlockTrash.js`, `utils/sceneFocus.js`,
 `utils/blockReferenceLabels.js`.
 
@@ -63,7 +63,7 @@ rotate step) sets `useSceneHighlightStore.highlightedAxis` rather than drawing
 its own geometry, so the user's highlight toggle and BLINK/GLOW choice apply
 uniformly. `SceneFurniture`'s `AxisArrow` tags its group `userData.sceneAxis`
 and its shaft `userData.glowLine`; GLOW has a line sub-path that traces any
-`glowLine` mesh with layered fat lines drawn *behind* it (renderOrder below
+`glowLine` mesh with layered fat lines drawn _behind_ it (renderOrder below
 the shaft's -100), so the axis keeps its own colour inside the halo. The axes
 only exist while `settings.showAxes` is on.
 
@@ -176,20 +176,28 @@ programmatic end) would otherwise miss.
 
 ## Marking the answer
 
-An exercise's answer is recoloured green when its value is right and red when it
-is wrong, and left alone in the Sandbox where there is no answer. Two pieces,
+An exercise's answer glows green when its value is right and red when it is
+wrong, and is left alone in the Sandbox where there is no answer. Two pieces,
 because the answer is drawn in two places:
 
-- `Scene3D/AnswerTint.jsx` recolours the geometry, walking for the geoTypes in
-  `utils/answerGeometry.js` and restoring the saved colours on cleanup.
+- `Scene3D/AnswerTint.jsx` glows the geometry, walking for the geoTypes in
+  `utils/answerGeometry.js`. It tags each bar with `userData.glowLine` (its two
+  ends, from the cylinder's height) and runs `applyGlow` from
+  `Scene3D/highlightEffects.js` in the answer's colour.
 - `LabelLayer` recolours the `d = ...` readout, overriding the colour of any
   label whose descriptor carries `role: 'distance'`.
 
-This was tried first as the selection glow in green/red, and it looked bad. The
-glow lights its surroundings, and on a thin distance bar it washed a large patch
-of the plane, reading as "this region" rather than "this bar". A recolour says
-the same thing without touching anything else, and leaves the glow meaning
-"selected" and nothing more.
+The bars themselves are neutral: the `distance` colour role, near-black in light
+themes. A distance is drawn by the scene, not by a block of its own, so it
+should not take an object colour.
+
+A green/red glow was tried once before and dropped: that version used the
+glow's bounding-box path, a point light plus a haze sprite, which lit a large
+patch of the plane around a thin bar and read as "this region". The line-halo
+path used now (the one the world axes use) adds no light and draws only along
+the bar, so the verdict reads as light around the bar itself. It was an earlier
+recolour of the bar that this replaced, so that an answer uses the same glow as
+the rest of the app.
 
 Correctness reaches the scene through a contract that already existed:
 `evaluate()` returned a `target` that nothing consumed. `ExercisePage` now
