@@ -404,6 +404,16 @@ describe('vector_arithmetic point difference', () => {
     const labelAtRest = group.userData.labelAnchors.rTip.position
     ;[-3, 3.35, 6].forEach((c, i) => expect(labelAtRest[i]).toBeCloseTo(c, 9))
   })
+
+  // A finished sphere-distance answer hides the difference arrow and clears its
+  // labels; playing the derivation afterwards used to throw (#116).
+  it('still plays once another block has cleared its labels', () => {
+    const { group, result } = pointDifference()
+    group.userData.labelAnchors = {}
+    expect(() => group.userData.animate(3.5 / 4)).not.toThrow()
+    expect(() => group.userData.animate(1)).not.toThrow()
+    expect(length(result)).toBeCloseTo(DIFFERENCE, 9)
+  })
 })
 
 describe('vector_scale staged reveal', () => {

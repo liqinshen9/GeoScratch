@@ -378,7 +378,9 @@ export function initVectorArithmeticBlock() {
         const length = resultFull * ez(grow);
         resObj.userData.setVectorSegment(start, resultDirection, length);
         const mid = start.clone().addScaledVector(resultDirection, length / 2).add(labelLift);
-        group.userData.labelAnchors.rTip.position = progress >= 1 ? restingLabel.slice() : [mid.x, mid.y, mid.z];
+        // Gone once a sphere-distance answer hides this arrow (scalarArithmetic.js).
+        const labelAnchor = group.userData.labelAnchors.rTip;
+        if (labelAnchor) labelAnchor.position = progress >= 1 ? restingLabel.slice() : [mid.x, mid.y, mid.z];
       };
       pointDifferenceReveal.stages = slots;
     }
