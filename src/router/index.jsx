@@ -11,6 +11,7 @@ import StudyPhase1Page from '@/pages/StudyPhase1Page'
 import StudySessionPage from '@/pages/StudySessionPage'
 import StudyReturnPage from '@/pages/StudyReturnPage'
 import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
+import SurveyShowcasePage from '@/pages/SurveyShowcasePage'
 
 const router = createBrowserRouter([
   {
@@ -68,7 +69,12 @@ const router = createBrowserRouter([
         path: 'return',
         element: <StudyReturnPage />,
       },
-      ...(import.meta.env.DEV ? [{ path: 'phase1/preview', element: <Phase1PreviewPage /> }] : []),
+      ...(import.meta.env.DEV
+        ? [
+            { path: 'phase1/preview', element: <Phase1PreviewPage /> },
+            { path: 'showcase', element: <SurveyShowcasePage /> },
+          ]
+        : []),
     ],
   },
 ])
