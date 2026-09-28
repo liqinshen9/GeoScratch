@@ -22,8 +22,8 @@ export const COMBINATIONS = Object.freeze([
 
 /** Two transform problems, then two derivation problems (exercise ids). */
 export const HOLISTIC_TASKS = Object.freeze([
-  'scale-object',
   'transform-object',
+  'cube-point-pivot-rotation',
   'point-plane-distance',
   'sphere-distance',
 ])

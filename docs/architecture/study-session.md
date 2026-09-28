@@ -42,7 +42,6 @@ button that does the same.
 
 ```
 phase1Block, survey(perBlock)   x10
-identification                   (no questionnaire)
 holistic,    survey(holistic)   x4
 survey(post)
 done
@@ -100,80 +99,6 @@ the return URL would skip a step, and after the fourth holistic survey the step
 it would skip is the post-study questionnaire. A return carrying a different
 `participantID` is refused with a message for the researcher.
 
-## Identification task
-
-Opens the holistic section, at `/study/identify`
-(`src/study/identification/`, `StudyIdentificationPage`). It is the study's
-controlled test of **selection highlighting and labels**, the two cues the
-holistic conditions cannot isolate: highlighting is on in every holistic
-condition because it arms the animation target, and labels change only as part
-of the configuration.
-
-Each trial shows a scene's blocks in a read-only workspace beside the scene,
-with one block outlined; the participant clicks the object that block makes. A
-wrong click counts as an error and the trial goes on until the right one, so
-the measures are time to a correct identification and the error count.
-
-- **Design:** a 2 x 2 of highlight (off / on) x labels (off / name only), 8
-  measured trials per cell, blocked by cell. Each block opens with 2 practice
-  trials with feedback, logged with `is_practice`.
-- **Cues are the real ones.** Highlight on sets the shared selected block id
-  to the target, which is what selecting it in the editor does, so the scene
-  shows the app's own `SelectionHighlight`. Labels on is `showLabels` with
-  `labelDetail` nameOnly. Everything else is T1's complete settings.
-- **The only cues are these two.** Every object in a scene is one type
-  (spheres or cubes), because with per-instance colour variation
-  pinned off all objects of a type share a colour, and a block takes its
-  object's colour: a mixed scene would give the answer away by type or colour.
-  Without a cue, a participant has to match the block's values to the scene.
-- **Spheres and cubes only, no points.** A point is a few pixels across at the
-  study camera and a floating dot has no size or perspective to place it in
-  depth. Trying it, a no-cue point scene could only be solved by projecting
-  coordinates by hand (screen x follows x - z on this camera), and clicking one
-  measured pointing precision as much as identification.
-- **Scenes:** 32 measured scenes in 4 sets of 8, plus practice scenes, fixed by
-  `IDENTIFICATION_SEED`. Distinct scenes in every cell, so a later block cannot
-  be answered from memory of an earlier one. Whole-number positions (readable
-  off a block), every object whole on screen and apart from the others.
-  `identificationScene.test.js` builds every scene through the real pipeline.
-- **Order** (`resolveIdentificationOrder`): cell order from a 4 x 4 Williams
-  square by slot; which scene set goes with which cell rotates on
-  `(s + floor(s / 4)) % 4`, crossed with the cell order. Over 20 slots each set
-  meets each cell five times.
-- **Orientation gizmo shown, not clickable** (`showOrientationGizmo`).
-  Without a cue, a participant matches a block's x, y and z to the scene, which
-  needs the axis directions; the camera stays fixed.
-- **Scene size:** 840 x 560, smaller than Phase 1's so the blocks beside it can
-  be drawn large enough to read, and the same 3:2 shape, so the study camera
-  frames it identically.
-
-### The block panel
-
-`ReadOnlyWorkspace` is a real Blockly workspace (the editor's renderer, theme
-and naming), so a block reads as it does in the editor. Three things about it
-are easy to get wrong:
-
-- **A fresh workspace per scene.** The naming registry numbers blocks per
-  workspace, and the scene's labels come from a fresh headless build. A reused
-  workspace drifts to S6, S7... while the labels say S1, S2..., which breaks
-  exactly the name match the labels cell tests.
-- **Layout by hand, after sizes settle.** `cleanUp()` and `zoomToFit()` do not
-  work in a read-only workspace, and a block's size is not final at load: the
-  naming registry adds its name chip, and the web font arrives, afterwards. The
-  panel re-lays out on every workspace change, measures the drawn SVG
-  (`getBBox()`; Blockly's own `getHeightWidth()` and `getBoundingRectangle()`
-  come out narrower), and picks one or two columns by whichever draws larger.
-- **Built during the fixation cross, hidden,** so the layout has settled before
-  the trial appears and never shifts inside a reaction time.
-
-Logged to `identification_trials` (migration `0005`), one row per answered
-trial: cell, highlight, labels, scene set and id, target, `errors` and the
-wrong block ids, `rt_ms` from the first presented frame to the correct click.
-
-```sql
-select * from identification_export where cohort = '<cohort>' and not is_practice;
-```
-
 ## Holistic tasks
 
 A holistic task is the ordinary exercise at `/exercise/<id>`, in the normal
@@ -210,6 +135,13 @@ shell and every difference between it and the normal page.
   and kept in the cursor, so a reload does not reset it. Continue unlocks when
   the checker first passes or the cap runs out.
 
+Selection highlighting and labels are not isolated anywhere in the study:
+highlighting is on in every condition because it arms the animation target,
+and labels change only as part of the configuration. The holistic questionnaire
+asks about them instead. A controlled task was tried and dropped because both
+cues exist to show which object a block makes, so any task whose answer is
+that mapping is answered by the cue itself.
+
 ### Holistic order
 
 `resolveHolisticOrder(slot)`: `(slot - 1) % 4` picks whether static or
@@ -219,10 +151,16 @@ order group (slots 1-16 cover all 16 pairs) instead of locking the two
 together. Over 20 slots each task meets each combination five times;
 `holistic.test.js` pins that.
 
-Tasks: `scale-object`, `transform-object` (composed transformation),
-`point-plane-distance`, `sphere-distance`. `cube-point-pivot-rotation` was
-not used for the composed task because its own overrides pin shadows and label
-detail, which the configuration needs to control.
+Tasks: `transform-object` and `cube-point-pivot-rotation` (transform
+problems), `point-plane-distance` and `sphere-distance` (derivation problems).
+
+`cube-point-pivot-rotation` has its own `settingsOverrides`. The condition's
+settings are layered over them, so its shadows-off and label detail give way
+to the configuration like any other task's. Two of its own settings still
+apply, because no condition sets them: `cubeShowEdges` (the rotation reads
+from the edges) and `objectHighlightStyle: 'glow'`, where every other task
+uses the default blink. Its step animation (`AnimationButton`) is hidden in
+the static conditions like the transport.
 
 ## Logging
 

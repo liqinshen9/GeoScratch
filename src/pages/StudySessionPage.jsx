@@ -52,7 +52,6 @@ export default function StudySessionPage() {
   }
 
   if (step.kind === STEP_KINDS.PHASE1_BLOCK) return <Navigate to="/study/phase1" replace />
-  if (step.kind === STEP_KINDS.IDENTIFICATION) return <Navigate to="/study/identify" replace />
   if (step.kind === STEP_KINDS.HOLISTIC) {
     return <Navigate to={`/exercise/${step.exerciseId}`} replace />
   }

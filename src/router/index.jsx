@@ -10,7 +10,6 @@ import StudyLayout from '@/layout/StudyLayout'
 import StudyPhase1Page from '@/pages/StudyPhase1Page'
 import StudySessionPage from '@/pages/StudySessionPage'
 import StudyReturnPage from '@/pages/StudyReturnPage'
-import StudyIdentificationPage from '@/pages/StudyIdentificationPage'
 import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
 
 const router = createBrowserRouter([
@@ -64,10 +63,6 @@ const router = createBrowserRouter([
       {
         path: 'phase1',
         element: <StudyPhase1Page />,
-      },
-      {
-        path: 'identify',
-        element: <StudyIdentificationPage />,
       },
       {
         path: 'return',

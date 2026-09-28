@@ -190,9 +190,6 @@ export default function Scene3D({
   // Where the camera starts. Only a non-interactive view has any business
   // changing it: with no orbiting, the fixed distance is the whole framing.
   cameraPosition = DEFAULT_CAMERA_POSITION,
-  // Non-interactive only: show the orientation gizmo anyway, with its clicks
-  // disabled, for a task where the axis directions matter.
-  showOrientationGizmo = false,
 }) {
   const { settings, updateSetting } = useSettingsStore()
   const resolvedTheme = useResolvedTheme()
@@ -377,10 +374,9 @@ export default function Scene3D({
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
-          {(interactive || showOrientationGizmo) && settings.showAxisGizmo && (
+          {interactive && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
-                disabled={!interactive}
                 axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
                 /* The axis-head discs are always a light colour, so the label
                    text stays dark in both themes. */

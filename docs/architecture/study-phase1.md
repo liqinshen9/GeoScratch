@@ -71,10 +71,6 @@ itself:
   the camera and would look clickable. This is done in `Scene3D`, not by turning
   off `showAxisGizmo`: that setting also switches the in-scene axis end labels
   on, which would change the scene.
-- `showOrientationGizmo`: brings the gizmo back in a non-interactive view with
-  drei's `disabled`, so it shows the axis directions but ignores clicks. Phase 1
-  leaves it off; the identification task turns it on
-  ([study-session.md](study-session.md#identification-task)).
 - `cameraPosition`: the trial camera (`CAMERA.position` in `stimulusConfig.js`)
   is derived from the editor's `DEFAULT_CAMERA_VIEW`, with the same azimuth,
   elevation and `CAMERA_FOV` ([camera-view.md](camera-view.md)), at the study's

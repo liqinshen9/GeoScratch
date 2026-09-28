@@ -49,22 +49,3 @@ export function sessionContext(setting) {
     user_agent: navigator.userAgent,
   }
 }
-
-/** One `identification_trials` row. Fire-and-forget: it must never delay the next trial. */
-export function recordIdentificationTrial(fields) {
-  if (!canTrack()) return
-  const { userId, participantCode } = useAuthStore.getState()
-  if (!userId) return
-  supabase
-    .from('identification_trials')
-    .insert({
-      profile_id: userId,
-      client_session_id: CLIENT_SESSION_ID,
-      build_commit: BUILD_COMMIT,
-      participant_code: participantCode,
-      ...fields,
-    })
-    .then(({ error }) => {
-      if (error) console.error('[GeoScratch] Failed to record identification trial:', error)
-    })
-}
