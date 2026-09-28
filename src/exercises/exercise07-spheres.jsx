@@ -17,13 +17,15 @@ const SPHERE_DISTANCE = Math.max(
   SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
 )
 
-const v3 = (x, y, z) =>
-  `<block type="linalg_vec3"><field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field></block>`
+// Points, not vectors, as step 1 asks: a difference of two points draws from
+// one centre to the other, and only then does the answer draw its bar.
+const point = ({ x, y, z }) =>
+  `<block type="linalg_point"><field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field></block>`
 const scalar = (n) => `<block type="scalar"><field name="scalar">${n}</field></block>`
 const sphere = (centre, radius, x, y) => `
   <block type="geo_sphere" x="${x}" y="${y}">
     <value name="RADIUS_INPUT">${scalar(radius)}</value>
-    <value name="CENTRE">${v3(centre.x, centre.y, centre.z)}</value>
+    <value name="CENTRE">${point(centre)}</value>
   </block>`
 
 // The worked solution, loaded by the dev-only "Fill solution" control. Kept
@@ -39,8 +41,8 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
         <value name="V">
           <block type="vector_arithmetic">
             <field name="OP">subtract</field>
-            <value name="U">${v3(SPHERE_B_CENTRE.x, SPHERE_B_CENTRE.y, SPHERE_B_CENTRE.z)}</value>
-            <value name="V">${v3(SPHERE_A_CENTRE.x, SPHERE_A_CENTRE.y, SPHERE_A_CENTRE.z)}</value>
+            <value name="U">${point(SPHERE_B_CENTRE)}</value>
+            <value name="V">${point(SPHERE_A_CENTRE)}</value>
           </block>
         </value>
       </block>

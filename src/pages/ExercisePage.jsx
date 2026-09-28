@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import THREE from '@/utils/three'
 import BlocksCanvas from '@/components/BlocksCanvas/BlocksCanvas'
 import Scene3D from '@/components/Scene3D/Scene3D'
+import { positionFromOrbit, DEFAULT_CAMERA_VIEW } from '@/components/Scene3D/sceneConstants'
 import EditorColumnHeaders from '@/components/EditorShell/EditorColumnHeaders'
 import { ArrowLeft, ArrowRight, AllApplication, CheckOne } from '@icon-park/react'
 import useSceneStore from '@/store/useSceneStore'
@@ -99,6 +100,10 @@ export default function ExercisePage() {
   const activeExerciseConfig = getExercise(exerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
+  const cameraPosition = useMemo(
+    () => positionFromOrbit({ ...DEFAULT_CAMERA_VIEW, ...exercise.cameraView }),
+    [exercise],
+  )
 
   useEffect(() => {
     setStepFeedbackRevision((revision) => revision + 1)
@@ -375,7 +380,7 @@ export default function ExercisePage() {
               clearWorkspaceRef.current = fn
             }}
           />
-          <Scene3D objects={objects} answer={answerHighlight} />
+          <Scene3D objects={objects} answer={answerHighlight} cameraPosition={cameraPosition} />
         </div>
       </main>
     </div>

@@ -12,10 +12,14 @@ import {
   POINT_VECTOR_BLOCK_TYPES,
 } from './shared/blockQueries'
 
-const POINT_P = new THREE.Vector3(-9, 8, 7)
-const PLANE_POINT_A = new THREE.Vector3(-5, 0, 2)
-const PLANE_NORMAL = new THREE.Vector3(0.5, 1, 0.5)
-// Derived, not typed: |n| is sqrt(1.5), so the distance is not a round number
+const POINT_P = new THREE.Vector3(4, 5, -3)
+const PLANE_POINT_A = new THREE.Vector3(-2, -3, 1)
+const PLANE_NORMAL = new THREE.Vector3(0.5, 2, 0.5)
+// Given rather than picked: Show Point on Object picks at random, so every
+// participant would build a different scene. Lies on the plane, away from P's
+// foot, so P - Q leans clear of the normal.
+const POINT_Q = new THREE.Vector3(-7, -2, 2)
+// Derived, not typed: |n| is sqrt(4.5), so the distance is not a round number
 // and hardcoding it would drift the moment any of the three above changed.
 const CORRECT_DISTANCE =
   Math.abs(POINT_P.clone().sub(PLANE_POINT_A).dot(PLANE_NORMAL)) / PLANE_NORMAL.length()
@@ -24,7 +28,6 @@ const CORRECT_DISTANCE =
 // while PLANE_NORMAL happened to be a unit vector.
 const PLANE_NORMAL_UNIT = PLANE_NORMAL.clone().normalize()
 
-const POINT_P_COLOR_SEED = 'exercise:point-plane-distance:P'
 const POINT_MARKER_FALLBACK_COLOR = '#94a3b8'
 
 const vectorNotation = createVectorNotationRuntime()
@@ -32,42 +35,34 @@ const vectorNotation = createVectorNotationRuntime()
 // The worked solution, loaded by the dev-only "Fill solution" control. Kept
 // beside the checker so a change to what counts as correct is made next to the
 // blocks that are supposed to satisfy it.
+const xyzFields = (v) =>
+  `<field name="X">${v.x}</field><field name="Y">${v.y}</field><field name="Z">${v.z}</field>`
+
 const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
-  <block type="vector_magnitude" x="60" y="60">
+  <block type="parametric_plane" x="60" y="60">
+    <value name="point">
+      <block type="linalg_point">${xyzFields(PLANE_POINT_A)}</block>
+    </value>
+    <value name="norm">
+      <block type="linalg_vec3">${xyzFields(PLANE_NORMAL)}</block>
+    </value>
+  </block>
+  <block type="vector_magnitude" x="60" y="220">
     <value name="V">
       <block type="vector_project">
         <value name="U">
           <block type="vector_arithmetic">
             <field name="OP">subtract</field>
             <value name="U">
-              <block type="linalg_point">
-                <field name="X">-9</field><field name="Y">8</field><field name="Z">7</field>
-              </block>
+              <block type="linalg_point">${xyzFields(POINT_P)}</block>
             </value>
             <value name="V">
-              <block type="geo_show_point_on_object">
-                <value name="OBJECT">
-                  <block type="parametric_plane">
-                    <value name="point">
-                      <block type="linalg_point">
-                        <field name="X">-5</field><field name="Y">0</field><field name="Z">2</field>
-                      </block>
-                    </value>
-                    <value name="norm">
-                      <block type="linalg_vec3">
-                        <field name="X">0.5</field><field name="Y">1</field><field name="Z">0.5</field>
-                      </block>
-                    </value>
-                  </block>
-                </value>
-              </block>
+              <block type="linalg_point">${xyzFields(POINT_Q)}</block>
             </value>
           </block>
         </value>
         <value name="V">
-          <block type="linalg_vec3">
-            <field name="X">0.5</field><field name="Y">1</field><field name="Z">0.5</field>
-          </block>
+          <block type="linalg_vec3">${xyzFields(PLANE_NORMAL)}</block>
         </value>
       </block>
     </value>
@@ -92,19 +87,19 @@ function isExercisePlaneObject(object) {
   )
 }
 
-function findPointPBlock(workspace) {
+function findPointBlock(workspace, point) {
   if (!workspace) return null
   for (const type of POINT_VECTOR_BLOCK_TYPES) {
     const match = workspace
       .getBlocksByType(type, false)
-      .find((block) => blockMatchesVec3(block, POINT_P))
+      .find((block) => blockMatchesVec3(block, point))
     if (match) return match
   }
   return null
 }
 
 function workspaceHasPointPVector(workspace) {
-  return Boolean(findPointPBlock(workspace))
+  return Boolean(findPointBlock(workspace, POINT_P))
 }
 
 function isExercisePlaneBlock(block) {
@@ -117,8 +112,9 @@ function isExercisePlaneBlock(block) {
 
 function isExercisePointQBlock(block) {
   return (
-    block?.type === 'geo_show_point_on_object' &&
-    isExercisePlaneBlock(getInputBlock(block, 'OBJECT'))
+    blockMatchesVec3(block, POINT_Q) ||
+    (block?.type === 'geo_show_point_on_object' &&
+      isExercisePlaneBlock(getInputBlock(block, 'OBJECT')))
   )
 }
 
@@ -139,33 +135,34 @@ function isPointDifferenceBlock(block) {
   )
 }
 
-function objectIsAtPointP(object) {
+function objectIsAt(object, point) {
   const position = object?.userData?.point ?? object?.position
   return (
     position?.isVector3 &&
-    closeNumber(position.x, POINT_P.x) &&
-    closeNumber(position.y, POINT_P.y) &&
-    closeNumber(position.z, POINT_P.z)
+    closeNumber(position.x, point.x) &&
+    closeNumber(position.y, point.y) &&
+    closeNumber(position.z, point.z)
   )
 }
 
-function createPointPMarker(name) {
+function createExercisePointMarker(point, name, geoType) {
   // Colour comes off the window surface rather than a static import so this
   // module stays importable outside the browser (its checker logic is
   // unit-tested in a node environment).
   const color =
-    window.GeoScratchColors?.forInstance('point', POINT_P_COLOR_SEED) ?? POINT_MARKER_FALLBACK_COLOR
-  const marker = createPointMarker({ color, geoType: 'exercise_point_p' })
+    window.GeoScratchColors?.forInstance('point', `exercise:point-plane-distance:${geoType}`) ??
+    POINT_MARKER_FALLBACK_COLOR
+  const marker = createPointMarker({ color, geoType })
 
-  marker.position.copy(POINT_P)
+  marker.position.copy(point)
   marker.userData.labelAnchors = {
-    p: { type: 'world', position: [POINT_P.x, POINT_P.y, POINT_P.z] },
+    p: { type: 'world', position: [point.x, point.y, point.z] },
   }
   marker.userData.labels = [
     {
       anchor: 'p',
       name,
-      value: vectorNotation.formatVector(POINT_P),
+      value: vectorNotation.formatVector(point),
       distanceFactor: 8,
       offset: [0.12, 0.12, 0],
       color,
@@ -175,14 +172,21 @@ function createPointPMarker(name) {
   return marker
 }
 
-function addExercisePointPIfNeeded(objects, workspace) {
-  // A point block plugged into a socket draws no glyph of its own, so the
-  // exercise supplies the marker. Label it with that block's own name rather
-  // than a hardcoded "P", so the scene and the workspace agree.
-  const block = findPointPBlock(workspace)
-  if (!block) return objects
-  if (objects.some(objectIsAtPointP)) return objects
-  return [...objects, createPointPMarker(window.geoNaming?.nameFor(block.id) || 'P')]
+// A point block plugged into a socket draws no glyph of its own, so the
+// exercise supplies the markers for P and Q. Each is labelled with its block's
+// own name rather than a hardcoded letter, so the scene and the workspace agree.
+function addExercisePointMarkers(objects, workspace) {
+  const markers = [
+    [POINT_P, 'P', 'exercise_point_p'],
+    [POINT_Q, 'Q', 'exercise_point_q'],
+  ].flatMap(([point, fallback, geoType]) => {
+    const block = findPointBlock(workspace, point)
+    if (!block || objects.some((object) => objectIsAt(object, point))) return []
+    return [
+      createExercisePointMarker(point, window.geoNaming?.nameFor(block.id) || fallback, geoType),
+    ]
+  })
+  return markers.length ? [...objects, ...markers] : objects
 }
 
 function hasExercisePlane(objects) {
@@ -227,24 +231,27 @@ function hasProjectionDistanceBlock(workspace) {
 }
 
 // Projection only. The dot product of (P - Q) and n equals the distance just
-// when |n| = 1, and this plane's normal is (0.5, 1, 0.5), so |n| is sqrt(1.5).
-// A student taking that route would read 8.5 instead of 6.94, fail the value
+// when |n| = 1, and this plane's normal is (0.5, 2, 0.5), so |n| is sqrt(4.5).
+// A student taking that route would read 17 instead of 8.01, fail the value
 // check, and have nothing to tell them why.
 function hasValidDistanceComputation(workspace) {
   return hasProjectionDistanceBlock(workspace)
 }
+
+const givenVector = (v) => `(${v.x}, ${v.y}, ${v.z})`
 
 function Givens() {
   return (
     <div className="exercise-given-values" aria-label="Given values">
       <section>
         <h3>Plane</h3>
-        <p>Point A = (-5, 0, 2)</p>
-        <p>Normal n = (0.5, 1, 0.5)</p>
+        <p>Point A = {givenVector(PLANE_POINT_A)}</p>
+        <p>Normal n = {givenVector(PLANE_NORMAL)}</p>
+        <p>Point Q = {givenVector(POINT_Q)}</p>
       </section>
       <section>
         <h3>Point</h3>
-        <p>P = (-9, 8, 7)</p>
+        <p>P = {givenVector(POINT_P)}</p>
       </section>
     </div>
   )
@@ -255,7 +262,7 @@ function Steps({ steps, passed }) {
     <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>
       <li className={steps.plane ? 'is-complete' : ''}>Create: plane</li>
       <li className={steps.pointP ? 'is-complete' : ''}>Create: Point P</li>
-      <li className={steps.pointQ ? 'is-complete' : ''}>Create: any point Q on the plane</li>
+      <li className={steps.pointQ ? 'is-complete' : ''}>Create: Point Q on the plane</li>
       <li className={steps.difference ? 'is-complete' : ''}>
         Compute: P - Q with the Vector Arithmetic block.
       </li>
@@ -295,7 +302,7 @@ function evaluate({ objects, workspace }) {
   const passed = distanceIsCorrect && hasValidDistanceComputation(workspace)
 
   const hasPointP = workspaceHasPointPVector(workspace)
-  const hasPointQ = hasPointQOnExercisePlane(objects)
+  const hasPointQ = Boolean(findPointBlock(workspace, POINT_Q)) || hasPointQOnExercisePlane(objects)
 
   return {
     passed,
@@ -321,10 +328,15 @@ function evaluate({ objects, workspace }) {
 export default {
   id: 'point-plane-distance',
   kind: 'distance',
+  // Far enough out to see the plane meet the room's walls, which is what shows
+  // it has no edge of its own.
+  cameraView: { distance: 48 },
+  // From this far out the room's front edges cross the scene.
+  settingsOverrides: { showBoxFrontWireframe: false },
   Givens,
   Steps,
   evaluate,
-  decorateObjects: addExercisePointPIfNeeded,
+  decorateObjects: addExercisePointMarkers,
   solutionXml: SOLUTION_XML,
   reusableBlockTemplate: {
     defaultName: 'Distance from point to plane',

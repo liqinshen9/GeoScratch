@@ -93,8 +93,7 @@ const quatAbout = (axis, degrees) =>
   new THREE.Quaternion().setFromAxisAngle(axis, THREE.MathUtils.degToRad(degrees))
 
 const teapotBlock = () => fakeBlock('geo_teapot', {}, { SIZE_INPUT: scalar(1) })
-const specialCubeBlock = () =>
-  fakeBlock('geo_special_cube')
+const specialCubeBlock = () => fakeBlock('geo_special_cube')
 
 function pipelineTo(target, steps) {
   const chain = steps.reduceRight((next, step) => ({ ...step, getNextBlock: () => next }), null)
@@ -309,7 +308,10 @@ describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
 describe('Cube and corner point pivot rotation exercise', () => {
   const mod = EXERCISE_MODULES['cube-point-pivot-rotation']
   const posed = () =>
-    posedCubeWithPoint({ quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 90), position: [1, 1, 1] })
+    posedCubeWithPoint({
+      quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 90),
+      position: [1, 1, 1],
+    })
 
   it('passes when the cube is moved to the origin, rotated, then moved back', () => {
     const workspace = fakeWorkspace([
@@ -329,6 +331,7 @@ describe('Cube and corner point pivot rotation exercise', () => {
       cube: true,
       point: true,
       pair: true,
+      cleanup: true,
       pipeline: true,
       toOrigin: true,
       rotate: true,
@@ -450,7 +453,7 @@ describe('exercise 5 (point to plane)', () => {
   const mod = EXERCISE_MODULES['point-plane-distance']
 
   it('recognises the point P vector in the workspace', () => {
-    const workspace = fakeWorkspace([vec3(-9, 8, 7)])
+    const workspace = fakeWorkspace([vec3(4, 5, -3)])
     expect(mod.evaluate({ objects: [], workspace }).steps.pointP).toBe(true)
   })
 

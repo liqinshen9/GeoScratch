@@ -39,8 +39,9 @@ function geoParametricPlaneDefinition(
   const u = new THREE.Vector3(1, 0, 0).applyQuaternion(planeRotation)
   const v = new THREE.Vector3(0, 1, 0).applyQuaternion(planeRotation)
   const planeSettings = window.useSettingsStore?.getState().settings || {}
+  const fillsBox = planeSettings.planeFillsBoundingBox !== false
   const halfSize = window.planePatchHalfSize({
-    fillBox: planeSettings.planeFillsBoundingBox !== false,
+    fillBox: fillsBox,
     size: planeSettings.planeSize,
     centre: planeCenter,
   })
@@ -84,11 +85,15 @@ function geoParametricPlaneDefinition(
     depthWrite: false,
   })
   const plane = new THREE.Mesh(planeGeom, planeMat)
-  const planeEdges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(planeGeom),
-    new THREE.LineBasicMaterial({ color: planeColor, transparent: true, opacity: 0.9 }),
-  )
-  plane.add(planeEdges)
+  // A plane cut off at the room's walls is infinite, like a line; an outline
+  // there would read as the plane's own edge. A finite patch keeps it.
+  if (!fillsBox) {
+    const planeEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(planeGeom),
+      new THREE.LineBasicMaterial({ color: planeColor, transparent: true, opacity: 0.9 }),
+    )
+    plane.add(planeEdges)
+  }
   plane.setRotationFromQuaternion(planeRotation)
   plane.position.copy(planeCenter)
 

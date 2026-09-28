@@ -263,15 +263,24 @@ export default function Scene3D({
     controls.update()
   }, [objects, refsReadyTick, settings.autoFocusOnNewObject])
 
-  const resetDefaultView = () => {
+  const resetDefaultView = useCallback(() => {
     if (!cameraRef.current || !controlsRef.current) return
-    cameraRef.current.position.set(...DEFAULT_CAMERA_POSITION)
+    cameraRef.current.position.set(...cameraPosition)
     cameraRef.current.up.set(0, 1, 0)
     cameraRef.current.zoom = 1
     cameraRef.current.updateProjectionMatrix()
     controlsRef.current.target.set(0, 0, 0)
     controlsRef.current.update()
-  }
+  }, [cameraPosition])
+
+  // The Canvas only reads cameraPosition when it mounts, so a new starting view
+  // (the next exercise) is applied here.
+  const appliedCameraRef = useRef(cameraPosition)
+  useEffect(() => {
+    if (appliedCameraRef.current === cameraPosition) return
+    appliedCameraRef.current = cameraPosition
+    resetDefaultView()
+  }, [cameraPosition, resetDefaultView])
 
   const visibleHiddenLabelKeys = useMemo(
     () =>

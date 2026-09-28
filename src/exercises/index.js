@@ -43,6 +43,9 @@ import exercise10 from './exercise10-cubePointPivot'
  *   seedWorkspace(workspace)          Drops starter/decorative blocks in on entry.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.
+ *   cameraView                        { distance?, azimuthDeg?, elevationDeg? }
+ *                                     overriding DEFAULT_CAMERA_VIEW for where
+ *                                     the camera starts and "Reset view" returns.
  *   settingsOverrides                 { <settingKey>: value } forced while this
  *                                     exercise is open; the matching Settings
  *                                     controls render as locked. Keys must be
