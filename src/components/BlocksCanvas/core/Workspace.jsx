@@ -45,6 +45,10 @@ const Workspace = (hostElement) => {
       maxScale: 2,
     },
     trashcan: false,
+    // Blockly edits a field in a browser prompt() instead of inline whenever
+    // its user-agent check thinks the device is a phone or tablet, and that
+    // check misfires on some desktop browsers. Inline everywhere.
+    modalInputs: false,
     theme: getBlockTheme(resolvedTheme),
     // Blockly ties drag-to-pan to `scrollbars` internally -- if scrollbars is
     // false, drag silently collapses to false too, no matter what it's set to

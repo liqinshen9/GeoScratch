@@ -119,8 +119,10 @@ app layout, with **study mode** on while it is the session's current step
 
 An earlier version ran the tasks inside the `/study` shell, and number fields
 there opened Blockly's `window.prompt` editor instead of the inline one. The
-cause was not traced, because running the literal exercise page removed that
-shell and every difference between it and the normal page.
+cause turned out not to be the shell: Blockly uses the prompt whenever
+`modalInputs` is on (its default) and its user-agent check classes the browser
+as a phone or tablet, and the same happened later on the normal exercise page.
+The workspace now sets `modalInputs: false` (`core/Workspace.jsx`).
 
 - **Configuration** (`configurationSettings`): baseline is T1 and
   perception-driven is T10, on the cue keys only (`CUE_SETTING_KEYS`), plus
