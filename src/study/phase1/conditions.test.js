@@ -66,14 +66,21 @@ describe('Phase 1 conditions', () => {
     }
   })
 
-  it('switches every cue off in T1', () => {
+  it('draws tubes with every other cue off in T1', () => {
     const t1 = getTechnique('T1').settings
-    expect(t1.lineStyle).toBe('plain_line')
+    expect(t1.lineStyle).toBe('plain_tube')
+    expect(t1.vectorStyle).toBe('plain_tube')
     expect(t1.lineCollisionStyle).toBe('none')
     expect(t1.haloEnabled).toBe(false)
     expect(t1.pointShadowsEnabled).toBe(false)
     expect(t1.cameraShadowsEnabled).toBe(false)
     expect(t1.colorPreset).toBe('vivid')
+  })
+
+  it('draws unshaded lines in T2', () => {
+    const t2 = getTechnique('T2').settings
+    expect(t2.lineStyle).toBe('plain_line')
+    expect(t2.vectorStyle).toBe('plain_line')
   })
 
   it('only names colour presets that exist', () => {

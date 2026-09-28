@@ -32,6 +32,9 @@ export const STUDY_PINNED_SETTINGS = Object.freeze({
   theme: THEMES.LIGHT,
 })
 
+const TUBES = { lineStyle: LINE_STYLES.PLAIN_TUBE, vectorStyle: LINE_STYLES.PLAIN_TUBE }
+
+// The reference is the app's default glyph, tubes, with every other cue off.
 const T1 = {
   ...DEFAULT_SETTINGS,
   ...STUDY_PINNED_SETTINGS,
@@ -42,9 +45,9 @@ const T1 = {
   // See docs/architecture/study-phase1.md#conditions.
   solidOpacity: 0.8,
   ...NO_CUES,
+  ...TUBES,
 }
 
-const TUBES = { lineStyle: LINE_STYLES.PLAIN_TUBE, vectorStyle: LINE_STYLES.PLAIN_TUBE }
 const ACCENTS = { lineCollisionStyle: LINE_COLLISION_STYLES.DASHED }
 const HALOS = { haloEnabled: true, haloLineVectorEnabled: true }
 const OVERHEAD_SHADOW = {
@@ -54,12 +57,16 @@ const OVERHEAD_SHADOW = {
 }
 const CAMERA_SHADOW = { cameraShadowsEnabled: true }
 
-const T2 = { ...T1, ...TUBES }
-const T6 = { ...T2, ...OVERHEAD_SHADOW }
+const T6 = { ...T1, ...OVERHEAD_SHADOW }
 
 export const TECHNIQUES = Object.freeze([
-  { id: 'T1', label: 'Unshaded line primitives', base: null, settings: T1 },
-  { id: 'T2', label: 'Tube geometry', base: 'T1', settings: T2 },
+  { id: 'T1', label: 'Tube geometry', base: null, settings: T1 },
+  {
+    id: 'T2',
+    label: 'Unshaded line primitives',
+    base: 'T1',
+    settings: { ...T1, lineStyle: LINE_STYLES.PLAIN_LINE, vectorStyle: LINE_STYLES.PLAIN_LINE },
+  },
   {
     id: 'T3',
     label: 'Ringed tube geometry',
@@ -68,7 +75,7 @@ export const TECHNIQUES = Object.freeze([
   },
   { id: 'T4', label: 'Collision accents', base: 'T1', settings: { ...T1, ...ACCENTS } },
   { id: 'T5', label: 'Depth-dependent halos', base: 'T1', settings: { ...T1, ...HALOS } },
-  { id: 'T6', label: 'Overhead shadow', base: 'T2', settings: T6 },
+  { id: 'T6', label: 'Overhead shadow', base: 'T1', settings: T6 },
   {
     id: 'T7',
     label: 'Overhead + camera shadow',
@@ -90,8 +97,8 @@ export const TECHNIQUES = Object.freeze([
   {
     id: 'T10',
     label: 'Combined',
-    base: 'T2',
-    settings: { ...T2, ...ACCENTS, ...HALOS, ...OVERHEAD_SHADOW, ...CAMERA_SHADOW },
+    base: 'T1',
+    settings: { ...T1, ...ACCENTS, ...HALOS, ...OVERHEAD_SHADOW, ...CAMERA_SHADOW },
   },
 ])
 

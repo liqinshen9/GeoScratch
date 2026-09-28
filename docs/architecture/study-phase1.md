@@ -37,9 +37,11 @@ setting. Pinning every key (not only the cue keys) means nothing a participant
 set on this device can leak into a trial. Non-cue keys keep `DEFAULT_SETTINGS`,
 so the scene looks like the normal 3D view; only `theme` (light) and
 `autoFocusOnNewObject` (off, it would move the camera) are forced.
-A glyph cue sets `lineStyle` **and** `vectorStyle`, so T2's tubes and T3's
-ringed tubes apply to line and vector targets alike; so do T5's halos
-(`haloEnabled` + `haloLineVectorEnabled`).
+A glyph cue sets `lineStyle` **and** `vectorStyle`, so T2's unshaded lines and
+T3's ringed tubes apply to line and vector targets alike; so do T5's halos
+(`haloEnabled` + `haloLineVectorEnabled`). T1, the reference, draws the app's
+default tubes, so every single-cue condition adds its cue to tubes and T2
+measures what the flat lines of conventional tools cost.
 
 `solidOpacity: 0.8` is held constant in every condition: one value for every
 solid type, where the editor uses each builder's own (cube 0.7, sphere and
