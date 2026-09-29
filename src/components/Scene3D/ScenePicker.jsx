@@ -11,11 +11,20 @@ import {
 } from '@/utils/scenePicking'
 import { getLabelsForObject, getLabelVisibilityKeysForObject } from './labels/labelData'
 
+function findClickLabelMarker(object) {
+  let current = object
+  while (current) {
+    if (current.userData?.clickLabelAnchor) return current
+    current = current.parent
+  }
+  return null
+}
+
 // Owns raw pointer routing on the canvas. NEVER stopPropagation/preventDefault
 // on pointerdown (OrbitControls shares the element). Click vs drag is decided
-// on pointerup (#92). Left click -> select; right click -> toggle labels (#75).
+// on pointerup (#92). Left click selects; right click toggles labels (#75).
 // See docs/architecture/selection-and-picking.md#scenepicker.
-function ScenePicker({ onSelectBlock, onToggleLabels }) {
+function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = false }) {
   const { camera, gl, scene } = useThree()
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const pointer = useMemo(() => new THREE.Vector2(), [])
@@ -31,6 +40,16 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
       raycaster.setFromCamera(pointer, camera)
       raycaster.params.Line.threshold = 0.18
       return raycaster.intersectObjects(scene.children, true).filter((hit) => hit.object.visible)
+    }
+
+    const toggleClickedMarkerLabel = (hits) => {
+      const marker = hits.map((hit) => findClickLabelMarker(hit.object)).find(Boolean)
+      const anchor = marker?.userData?.clickLabelAnchor
+      const owner = marker && findLabelOwner(marker, getLabelsForObject)
+      if (!anchor || !owner) return
+      const index = getLabelsForObject(owner).findIndex((label) => label.anchor === anchor)
+      const keys = getLabelVisibilityKeysForObject(owner)
+      if (index >= 0) onToggleLabels([keys[index]])
     }
 
     // Kept alive until the next pointerdown so contextmenu can consult it
@@ -67,7 +86,9 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
         pointerId: event.pointerId,
       }
       if (down.moved || classifyGesture(down, up) !== 'click') return
-      onSelectBlock(resolveSelectedBlockId(raycastAt(event)))
+      const hits = raycastAt(event)
+      onSelectBlock(resolveSelectedBlockId(hits))
+      if (toggleLabelsOnLeftClick) toggleClickedMarkerLabel(hits)
     }
 
     const handlePointerCancel = () => {
@@ -75,6 +96,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
     }
 
     const handleContextMenu = (event) => {
+      if (toggleLabelsOnLeftClick) return
       // A right-drag (OrbitControls pan) also ends with a contextmenu event --
       // leave the native menu alone then, only act on an in-place right-click.
       if (downRef.current?.moved) return
@@ -105,7 +127,16 @@ function ScenePicker({ onSelectBlock, onToggleLabels }) {
       window.removeEventListener('pointercancel', handlePointerCancel)
       canvas.removeEventListener('contextmenu', handleContextMenu)
     }
-  }, [camera, gl, scene, pointer, raycaster, onSelectBlock, onToggleLabels])
+  }, [
+    camera,
+    gl,
+    scene,
+    pointer,
+    raycaster,
+    onSelectBlock,
+    onToggleLabels,
+    toggleLabelsOnLeftClick,
+  ])
 
   return null
 }
