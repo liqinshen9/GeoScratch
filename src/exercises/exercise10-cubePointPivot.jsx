@@ -16,6 +16,11 @@ import {
 import { createPointMarker } from '@/utils/pointMarker'
 import { formatVectorLive } from '@/utils/vectorNotation'
 import { COLOR_ROLES } from '@/store/colorPresets'
+import { useResolvedTheme } from '@/hooks/useThemeSync'
+import startLight from './assets/pivot-start-light.png'
+import startDark from './assets/pivot-start-dark.png'
+import goalLight from './assets/pivot-goal-light.png'
+import goalDark from './assets/pivot-goal-dark.png'
 
 const CENTRE = new THREE.Vector3(1, 1, 1)
 const POINT = new THREE.Vector3(0, 2, 2)
@@ -51,63 +56,22 @@ function translateMatches(block, value) {
   )
 }
 
-function Diagram({ output }) {
-  const project = ([x, y, z]) => [130 + x * 52 - z * 30, 205 - y * 55 + z * 20]
-  const vertices = [
-    [0, 0, 0],
-    [2, 0, 0],
-    [2, 2, 0],
-    [0, 2, 0],
-    [0, 0, 2],
-    [2, 0, 2],
-    [2, 2, 2],
-    [0, 2, 2],
-  ]
-  const polygon = (indices) => indices.map((i) => project(vertices[i]).join(',')).join(' ')
-  const p = project(output ? [2, 2, 2] : [0, 2, 2])
-  const c = project([1, 1, 1])
+// Screenshots of the real scene (scripts/pivotDiagrams.mjs), so the colours,
+// labels and view match the 3D view; re-run the script if those change.
+const DIAGRAMS = {
+  start: { light: startLight, dark: startDark, alt: 'Start: P at (0, 2, 2)' },
+  goal: { light: goalLight, dark: goalDark, alt: 'Goal: P at (2, 2, 2)' },
+}
+
+function Diagram({ pose }) {
+  const theme = useResolvedTheme()
+  const diagram = DIAGRAMS[pose]
   return (
-    <svg
-      viewBox="0 0 330 295"
-      role="img"
-      aria-label={output ? 'Output cube: P at (2, 2, 2)' : 'Input cube: upper-left P at (0, 2, 2)'}
-      style={{ width: '100%', maxWidth: 185, display: 'block' }}
-    >
-      <rect width="330" height="295" fill="#f8fafc" />
-      {[
-        [3, 0, 0],
-        [0, 3, 0],
-        [0, 0, 3],
-      ].map((end, i) => {
-        const a = project([0, 0, 0])
-        const b = project(end)
-        return (
-          <g key={i}>
-            <line x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#475569" />
-            <text x={b[0] + 5} y={b[1]} fontSize="14">
-              {['X', 'Y', 'Z'][i]}
-            </text>
-          </g>
-        )
-      })}
-      <polygon
-        points={polygon([0, 1, 2, 3])}
-        fill="#e4cce9"
-        stroke="#475569"
-        strokeDasharray="4 3"
-      />
-      <polygon points={polygon([1, 5, 6, 2])} fill="#9256a0" stroke="#334155" />
-      <polygon points={polygon([3, 2, 6, 7])} fill="#c99ad3" stroke="#334155" />
-      <polygon points={polygon([4, 5, 6, 7])} fill="#af70bc" fillOpacity="0.8" stroke="#334155" />
-      <circle cx={c[0]} cy={c[1]} r="4" fill="#334155" />
-      <text x={c[0] + 8} y={c[1] + 18} fontSize="12">
-        C (1, 1, 1)
-      </text>
-      <circle cx={p[0]} cy={p[1]} r="7" fill="#e63946" stroke="white" strokeWidth="2" />
-      <text x={p[0] - 20} y={p[1] - 14} fontSize="13" fill="#b91c1c">
-        P {output ? '(2, 2, 2)' : '(0, 2, 2)'}
-      </text>
-    </svg>
+    <img
+      className="exercise-given-diagram"
+      src={theme === 'dark' ? diagram.dark : diagram.light}
+      alt={diagram.alt}
+    />
   )
 }
 // Non-breaking, so a narrow panel never wraps a coordinate mid-tuple.
@@ -122,14 +86,14 @@ function Givens() {
           A cube with side length 2 and centre C = {tuple(1, 1, 1)}. P is the corner at{' '}
           {tuple(0, 2, 2)}.
         </p>
-        <Diagram />
+        <Diagram pose="start" />
       </section>
       <section>
         <h3>Goal</h3>
         <p className="exercise-given-prose">
           Use the blocks in the toolbox to rotate the cube so that it ends up as shown below.
         </p>
-        <Diagram output />
+        <Diagram pose="goal" />
       </section>
     </div>
   )
@@ -310,7 +274,7 @@ function addPivotCentre(object) {
       get value() {
         return formatVectorLive(centerMarker.getWorldPosition(new THREE.Vector3()))
       },
-      color,
+      color: window.GeoScratchColors.forInstance('cube', cube.userData.srcBlockId),
       revealed: () =>
         centerMarker.visible || Boolean(useSettingsStore.getState().settings.cubeShowCentre),
     },
@@ -373,7 +337,7 @@ export default {
     primitivesCastShadows: false,
     pointShadowsEnabled: false,
     cameraShadowsEnabled: false,
-    objectHighlightStyle: 'glow',
+    objectHighlightStyle: 'blink',
     showLabels: true,
     labelDetail: 'nameAndValue',
   },

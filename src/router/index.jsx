@@ -12,6 +12,7 @@ import StudySessionPage from '@/pages/StudySessionPage'
 import StudyReturnPage from '@/pages/StudyReturnPage'
 import Phase1PreviewPage from '@/pages/Phase1PreviewPage'
 import SurveyShowcasePage from '@/pages/SurveyShowcasePage'
+import PivotDiagramPage from '@/pages/PivotDiagramPage'
 import UserStudyLiPage from '@/pages/UserStudyLiPage'
 
 const router = createBrowserRouter([
@@ -78,6 +79,7 @@ const router = createBrowserRouter([
         ? [
             { path: 'phase1/preview', element: <Phase1PreviewPage /> },
             { path: 'showcase', element: <SurveyShowcasePage /> },
+            { path: 'pivot-diagrams', element: <PivotDiagramPage /> },
           ]
         : []),
     ],

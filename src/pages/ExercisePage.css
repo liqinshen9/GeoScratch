@@ -370,6 +370,13 @@
   font-family: inherit;
 }
 
+.exercise-given-diagram {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
+  border-radius: 6px;
+}
+
 .exercise-answer-card {
   display: grid;
   gap: 0.3rem;

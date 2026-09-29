@@ -9,8 +9,9 @@ import { stimulusToXml, targetBlockIds } from './stimulusToXml'
 /**
  * Scene objects for block XML, built in a headless workspace through the
  * editor's own pipeline. The caller applies the condition's settings first.
+ * `prepare(workspace)` runs after naming is installed and before the run.
  */
-export function buildSceneFromXml(xml) {
+export function buildSceneFromXml(xml, prepare) {
   defineBlocks()
   const workspace = new Blockly.Workspace()
   let objects = []
@@ -22,6 +23,7 @@ export function buildSceneFromXml(xml) {
       Blockly.Events.enable()
     }
     installNamingRegistry(workspace)
+    prepare?.(workspace)
     runAndSync(workspace, (built) => (objects = built), new BlockRegistry(), {
       runtimeMode: 'study',
     })
