@@ -46,6 +46,7 @@ export const DEFAULT_SETTINGS = {
   sphereShowGridlines: false,
   teapotShowGridlines: false,
   cubeShowEdges: false,
+  cubeShowCentre: false,
   zoomInvariantSizing: true,
   extraThickLines: false,
   extraLargePoints: false,

@@ -405,6 +405,13 @@ export default function SettingsPage() {
                   settingKey="cubeShowEdges"
                   onChange={(v) => updateSetting('cubeShowEdges', v)}
                 />
+                <ToggleRow
+                  label="Show Centre"
+                  description="Mark the centre point of cube objects"
+                  checked={settings.cubeShowCentre}
+                  settingKey="cubeShowCentre"
+                  onChange={(v) => updateSetting('cubeShowCentre', v)}
+                />
               </GeometryTile>
             </div>
           </SettingsSection>

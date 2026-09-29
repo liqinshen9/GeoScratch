@@ -53,14 +53,25 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geometry), edgeMaterial)
   mesh.add(edges)
 
-  edges.visible = !!useSettingsStore?.getState().settings.cubeShowEdges
+  const centreMarker = window.geoPointMarker({
+    color: 0x111827,
+    geoType: 'cube_center_marker',
+    srcBlockId: blockId,
+  })
+  mesh.add(centreMarker)
+
+  const applyDisplaySettings = (settings) => {
+    edges.visible = !!settings?.cubeShowEdges
+    centreMarker.visible = !!settings?.cubeShowCentre
+  }
+  applyDisplaySettings(useSettingsStore?.getState().settings)
   if (useSettingsStore) {
-    const unsubscribeEdges = useSettingsStore.subscribe((state) => {
+    const unsubscribeSettings = useSettingsStore.subscribe((state) => {
       if (!window.geoIsLiveObject(mesh)) {
-        unsubscribeEdges()
+        unsubscribeSettings()
         return
       }
-      edges.visible = !!state.settings.cubeShowEdges
+      applyDisplaySettings(state.settings)
     })
   }
 
@@ -81,7 +92,11 @@ export function geoCubeDefinition(centreInput, sideLengthInput, blockId) {
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: window.GeoScratchColors.forInstance('cube', blockId),
-      clearSilhouette: true,
+      // With the centre marked, the label names that point, so it sits beside
+      // it like a point label instead of clearing the outline.
+      get clearSilhouette() {
+        return !useSettingsStore?.getState().settings.cubeShowCentre
+      },
     },
   ]
 
