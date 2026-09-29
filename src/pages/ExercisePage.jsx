@@ -406,6 +406,7 @@ export default function ExercisePage({
           <Scene3D
             objects={objects}
             answer={showAnswerHighlight ? answerHighlight : undefined}
+            cameraPosition={cameraPosition}
             toggleLabelsOnLeftClick={toggleLabelsOnLeftClick}
           />
         </div>
