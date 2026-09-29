@@ -18,6 +18,17 @@ export function allowOverflowingInputs(block, ...inputNames) {
   block.geoScratchOverflowInputs = new Set(inputNames)
 }
 
+/**
+ * Lets a block's value and end-row inputs align their rows with setAlign().
+ * Geras honours that only for dummy inputs; opt-in, since some blocks already
+ * set alignments that were silently ignored and look right without them.
+ *
+ * @param {import('blockly/core').Block} block
+ */
+export function alignRowsByInput(block) {
+  block.geoScratchAlignRows = true
+}
+
 function overflows(block, input) {
   return Boolean(input?.name) && Boolean(block?.geoScratchOverflowInputs?.has(input.name))
 }
@@ -29,6 +40,9 @@ export function registerGeoScratchRenderer() {
   class GeoScratchRenderInfo extends Blockly.geras.RenderInfo {
     addInput_(input, activeRow) {
       super.addInput_(input, activeRow)
+      if (this.block_?.geoScratchAlignRows && activeRow.align === null) {
+        activeRow.align = input.align
+      }
       if (!overflows(this.block_, input)) return
 
       const elem = activeRow.elements[activeRow.elements.length - 1]

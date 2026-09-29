@@ -10,7 +10,7 @@ Assorted Blockly-specific knowledge. See also
 Most operators keep **inline** inputs: short and readable, and an operand that is
 itself short sits happily beside its sibling.
 
-Two do not.
+A few do not.
 
 `vector_project` uses **external** inputs, so `u:` and `onto v:` stack. Both of
 its operands routinely hold whole nested chains -- a point difference on one
@@ -23,6 +23,15 @@ input, another end row, inline throughout. Blockly then draws the child as a
 puzzle hole inside the block's outline instead of hanging it off the right edge.
 Both read as a container around the thing they act on, which is what they are --
 one measures its operand, the other puts a point on it.
+
+`scalar_arithmetic` stacks the same way, a row each: title, `A`, the operator,
+`B`. Its rows are centred. Geras honours `setAlign()` only on dummy inputs, so
+the block opts in with `alignRowsByInput` (`renderers/geoScratchRenderer.js`),
+which copies a value or end-row input's alignment onto its row. It is opt-in
+because some blocks already set alignments that were silently ignored, and
+Vector Arithmetic's "show" jumped to the right when every block got it. A sphere-distance answer holds the
+whole `|VB - VA|` chain on its left, so the radius sum beside it sat far off to
+the right.
 
 Measured on the solved point-plane chain, the widest block went from 1022px
 (everything inline) to 693px. Stacking all six two-operand operators instead

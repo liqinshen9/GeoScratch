@@ -41,13 +41,16 @@ export function makeStagedVectorReveal(parts) {
   }
   // What a consumer's slot has to be worth for this reveal to keep its pace.
   reveal.stages = total
-  // A reveal that hands a stage to a slower closure has to ask for that time
-  // too. AnimationDriver reads this off the SELECTED object's closure, and the
-  // block a student selects is usually the outermost one, which delegates.
-  reveal.durationScale = parts.reduce(
-    (slowest, part) => Math.max(slowest, Number(part.animate?.durationScale) || 1),
-    1,
-  )
+  // A base duration per stage, like one step-by-step pipeline step. A
+  // delegated reveal keeps its own pace inside the slots it claims, so a slower
+  // one (the point-plane sweep) stretches the whole run. AnimationDriver reads
+  // this off the SELECTED object's closure, and the block a student selects is
+  // usually the outermost one, which delegates.
+  // See docs/architecture/animation.md#pace.
+  reveal.durationScale = parts.reduce((slowest, part, i) => {
+    const own = Number(part.animate?.durationScale)
+    return Number.isFinite(own) && own > 0 ? Math.max(slowest, (own * total) / weights[i]) : slowest
+  }, total)
   return reveal
 }
 

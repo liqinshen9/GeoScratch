@@ -220,8 +220,8 @@ describe('vector_arithmetic subtraction', () => {
   it('grows u first, on its own', () => {
     const { group, arrowU, arrowV, negated, result } = subtract()
     expect(group.userData.animate.stages).toBe(5)
-    // The fade's extra slot adds time rather than squeezing the others.
-    expect(group.userData.animate.durationScale).toBeCloseTo(5 / 4, 9)
+    // A base duration per slot, so the fade's extra slot adds time.
+    expect(group.userData.animate.durationScale).toBe(5)
 
     group.userData.animate(0.5 / 5)
     expect(arrowU.visible).toBe(true)

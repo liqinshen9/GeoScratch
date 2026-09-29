@@ -57,19 +57,6 @@ export function initVectorProjectBlock() {
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const projectionLabel = 'proj ' + uLabel + ' on ' + vLabel;
     const baseId = ${JSON.stringify(block.id)};
-    const makeSegment = (start, end, color, radius = 0.022) => {
-      const delta = end.clone().sub(start);
-      const length = delta.length();
-      const segment = new THREE.Mesh(
-        new THREE.CylinderGeometry(radius, radius, safeLen(length), 18),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, depthWrite: false })
-      );
-      segment.position.copy(start).add(end).multiplyScalar(0.5);
-      if (length > 1e-8) {
-        segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
-      }
-      return segment;
-    };
     const makeProjectionShadow = (foot) => {
       const shadowGroup = new THREE.Group();
       const footDot = window.geoPointMarker({ color: window.GeoScratchColors.forRole('warning'), radius: 0.04 });
@@ -119,12 +106,10 @@ export function initVectorProjectBlock() {
       projOrigin = pointEnd ? pointEnd.clone().sub(projVec) : new THREE.Vector3(0,0,0);
       if (projLen>1e-8) {
         const projTip = projOrigin.clone().add(projVec);
+        // The distance is a finite line, so it follows the line settings.
+        // See docs/architecture/vector-line-glyphs.md#finite-segments.
         projObj = isPointPlaneDistanceProjection
-          ? window.makeExtendableSegment(
-              makeSegment(projOrigin.clone(), projTip.clone(), distanceColor),
-              projOrigin.clone(),
-              projTip.clone()
-            )
+          ? window.geoLineSegment(projOrigin.clone(), projTip.clone(), baseId + '_distance', distanceColor)
           : window.buildVectorShaftGlyph(
             THREE, baseId + '_proj', projOrigin.clone(), projVec.clone().normalize(), safeLen(projLen), resultColor
           );

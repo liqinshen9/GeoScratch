@@ -17,10 +17,12 @@ const SPHERE_DISTANCE = Math.max(
   SPHERE_A_CENTRE.distanceTo(SPHERE_B_CENTRE) - SPHERE_A_RADIUS - SPHERE_B_RADIUS,
 )
 
-// Points, not vectors, as step 1 asks: a difference of two points draws from
-// one centre to the other, and only then does the answer draw its bar.
-const point = ({ x, y, z }) =>
-  `<block type="linalg_point"><field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field></block>`
+// The centres are Points, drawn as each sphere's centre; B - A is taken between
+// separate Vector blocks, which draw from the origin to each centre.
+const fields = ({ x, y, z }) =>
+  `<field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field>`
+const point = (v) => `<block type="linalg_point">${fields(v)}</block>`
+const vector = (v) => `<block type="linalg_vec3">${fields(v)}</block>`
 const scalar = (n) => `<block type="scalar"><field name="scalar">${n}</field></block>`
 const sphere = (centre, radius, x, y) => `
   <block type="geo_sphere" x="${x}" y="${y}">
@@ -41,8 +43,8 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
         <value name="V">
           <block type="vector_arithmetic">
             <field name="OP">subtract</field>
-            <value name="U">${point(SPHERE_B_CENTRE)}</value>
-            <value name="V">${point(SPHERE_A_CENTRE)}</value>
+            <value name="U">${vector(SPHERE_B_CENTRE)}</value>
+            <value name="V">${vector(SPHERE_A_CENTRE)}</value>
           </block>
         </value>
       </block>
@@ -165,18 +167,25 @@ function hasValidSphereDistanceComputation(workspace) {
   )
 }
 
+const givenVector = (v) => `(${v.x}, ${v.y}, ${v.z})`
+
 function Givens() {
   return (
     <div className="exercise-given-values" aria-label="Given values">
       <section>
         <h3>Sphere A</h3>
-        <p>Center A = (-4, 2, 1)</p>
-        <p>Radius rA = 1.3</p>
+        <p>Centre = {givenVector(SPHERE_A_CENTRE)}</p>
+        <p>Radius rA = {SPHERE_A_RADIUS}</p>
       </section>
       <section>
         <h3>Sphere B</h3>
-        <p>Center B = (3, -1, 6)</p>
-        <p>Radius rB = 0.9</p>
+        <p>Centre = {givenVector(SPHERE_B_CENTRE)}</p>
+        <p>Radius rB = {SPHERE_B_RADIUS}</p>
+      </section>
+      <section>
+        <h3>Vectors</h3>
+        <p>VA = {givenVector(SPHERE_A_CENTRE)}</p>
+        <p>VB = {givenVector(SPHERE_B_CENTRE)}</p>
       </section>
     </div>
   )
@@ -186,22 +195,28 @@ function Steps({ steps, passed }) {
   return (
     <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>
       <li className={steps.spheres ? 'is-complete' : ''}>
-        Create: Sphere A, Sphere B, Center A, Center B. Use Scalar blocks for each radius, and Point
-        blocks for the centers so the center-to-center vector draws in the right place.
+        Create: Sphere A and Sphere B. Use a Point block for each centre and a Scalar block for each
+        radius.
       </li>
       <li className={steps.difference ? 'is-complete' : ''}>
-        Compute: center difference with the Vector Arithmetic block, B - A or A - B. This vector
-        should run from one sphere center to the other.
+        Compute: VB - VA with the Vector Arithmetic block, where VA and VB are Vector blocks for the
+        centres of A and B.
       </li>
       <li className={steps.magnitude ? 'is-complete' : ''}>
-        Compute: center distance with the Vector Magnitude block, |B - A|.
+        Compute: the Vector Magnitude of VB - VA. This is the distance between the centres.
       </li>
       <li className={steps.distance ? 'is-complete' : ''}>
-        Compute: sphere distance with the Scalar Arithmetic block, i.e., |B - A| - rA - rB.
+        Compute: |VB - VA| - (rA + rB) with the Scalar Arithmetic block. This is the distance
+        between the spheres.
       </li>
     </ol>
   )
 }
+
+const isScalar = (value) => (block) =>
+  block.type === 'scalar' && closeNumber(block.getFieldValue('scalar'), value)
+const isCentreVector = (centre) => (block) =>
+  block.type === 'linalg_vec3' && blockMatchesVec3(block, centre)
 
 /**
  * Reads the answer from the scalar block that actually subtracts both radii,
@@ -260,6 +275,14 @@ export default {
   id: 'sphere-distance',
   kind: 'distance',
   solutionXml: SOLUTION_XML,
+  givenNames: [
+    { name: 'A', matches: isSphereABlock },
+    { name: 'B', matches: isSphereBBlock },
+    { name: 'rA', matches: isScalar(SPHERE_A_RADIUS) },
+    { name: 'rB', matches: isScalar(SPHERE_B_RADIUS) },
+    { name: 'VA', matches: isCentreVector(SPHERE_A_CENTRE) },
+    { name: 'VB', matches: isCentreVector(SPHERE_B_CENTRE) },
+  ],
   Givens,
   Steps,
   evaluate,

@@ -46,7 +46,6 @@ export function initSphereDistanceBlock() {
     const surfaceA = centreA.clone().addScaledVector(direction, radiusA);
     const surfaceB = centreB.clone().addScaledVector(direction, -radiusB);
     const midpoint = surfaceA.clone().add(surfaceB).multiplyScalar(0.5);
-    const safeLength = surfaceDistance > 1e-8 ? surfaceDistance : 1;
     const distanceColor = window.GeoScratchColors.forRole('distance');
     const centerLineColor = window.GeoScratchColors.forRole('accent');
 
@@ -59,15 +58,12 @@ export function initSphereDistanceBlock() {
     );
     centerLine.computeLineDistances();
 
-    let distanceSegment;
-    if (surfaceDistance > 1e-8) {
-      distanceSegment = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.022, 0.022, safeLength, 18),
-        new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.94, depthWrite: false })
-      );
-      distanceSegment.position.copy(midpoint);
-      distanceSegment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-    } else {
+    // A finite line, so it follows the line settings.
+    // See docs/architecture/vector-line-glyphs.md#finite-segments.
+    let distanceSegment = surfaceDistance > 1e-8
+      ? window.geoLineSegment(surfaceA.clone(), surfaceB.clone(), ${blockId} + '_distance', distanceColor)
+      : null;
+    if (!distanceSegment) {
       distanceSegment = window.geoPointMarker({ color: distanceColor, radius: 0.06 });
       distanceSegment.position.copy(midpoint);
     }

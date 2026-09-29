@@ -97,6 +97,11 @@ export function initVectorArithmeticBlock() {
     const vFallback = JSON.stringify(operandName(block, 'V') || 'b')
     const uColorExpr = operandColorExpr(block, 'U', 'operandA')
     const vColorExpr = operandColorExpr(block, 'V', 'operandB')
+    // A difference whose length is taken, |B - A|, measures the distance between
+    // two positions. See docs/architecture/animation.md#a-measured-vector-difference.
+    let measurer = block.getParent()
+    while (measurer?.type === 'geo_variable') measurer = measurer.getParent()
+    const measured = op === 'subtract' && measurer?.type === 'vector_magnitude'
 
     const code = `(function(){
     const uVal = ${u};
@@ -194,12 +199,19 @@ export function initVectorArithmeticBlock() {
       value?.userData?.geoType === 'point_on_object_vector' ||
       value?.userData?.geoType === 'linalg_point_vector'
     );
+    // Two position vectors measured as a distance are drawn like two points: the
+    // difference rests between their tips.
+    const measuredVectorDifference = ${measured} &&
+      uAnchor.lengthSq() < 1e-12 && vAnchor.lengthSq() < 1e-12;
     const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && (
       vVal.userData?.geoType === 'point_on_object_vector' ||
-      (isPointLike(uVal) && isPointLike(vVal))
+      (isPointLike(uVal) && isPointLike(vVal)) ||
+      measuredVectorDifference
     );
     const pointLabel = vVal.userData?.label || 'Q';
-    const pointDifferenceLabel = vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
+    const pointDifferenceLabel = measuredVectorDifference
+      ? vectorNotation.binaryLabel(uVal, '-', vVal, ${uFallback}, ${vFallback})
+      : vectorNotation.binaryLabel(uVal, '-', vVal, 'P', pointLabel);
     // Name the result by its expression ("a + b"), never a generic "result" --
     // Scale Vector labels its result "3\u00b7a", and the two should read alike.
     const genericResultLabel = vectorNotation.binaryLabel(
@@ -232,6 +244,17 @@ export function initVectorArithmeticBlock() {
       )
       : null;
     if (negatedV) negatedV.visible = false;
+    // Two measured vectors play B - A as B + (-A): -A grows from the origin,
+    // along A's line the other way, while A stays. Only while it plays.
+    // See docs/architecture/animation.md#a-measured-vector-difference.
+    const flippedV = measuredVectorDifference && arrowV && lenV > 1e-8
+      ? window.buildVectorShaftGlyph(
+        THREE, baseId + '_flipv', origin.clone(), vVal.clone().negate().normalize(),
+        safeLen(lenV), operandBColor, glyphOptions
+      )
+      : null;
+    let flippedGrown = false;
+    if (flippedV) flippedV.visible = false;
 
     // Tag metadata on part objects
     const tag = (obj) => {
@@ -239,7 +262,7 @@ export function initVectorArithmeticBlock() {
       obj.userData.srcBlockId=${JSON.stringify(block.id)};
       return obj;
     };
-    if (arrowU) tag(arrowU); if (arrowV) tag(arrowV); if (negatedV) tag(negatedV); tag(resObj);
+    if (arrowU) tag(arrowU); if (arrowV) tag(arrowV); if (negatedV) tag(negatedV); if (flippedV) tag(flippedV); tag(resObj);
 
     // Group return
     const group = new THREE.Group();
@@ -247,11 +270,13 @@ export function initVectorArithmeticBlock() {
       group.add(resObj);
       // P and Q as position vectors, shown only while the reveal plays: they are
       // what the difference is taken between, and the resting scene is just P - Q.
+      // Two measured vectors keep theirs: they are blocks the student built.
       [arrowU, arrowV].forEach((guide) => {
         if (!guide) return;
-        guide.visible = false;
+        guide.visible = measuredVectorDifference;
         group.add(guide);
       });
+      if (flippedV) group.add(flippedV);
     } else {
       if (arrowU) group.add(arrowU);
       group.add(resObj);
@@ -284,6 +309,13 @@ export function initVectorArithmeticBlock() {
       : [];
     group.userData.labels = isPointDifference
       ? [
+        ...(measuredVectorDifference
+          ? [
+            ...(arrowU ? [{ anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) }] : []),
+            ...(arrowV ? [{ anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV) }] : []),
+            ...(flippedV ? [{ anchor:'negTip', name: '\u2212' + vLabel, value: fmt(vVal.clone().negate()), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: () => flippedV.visible === true && flippedGrown && !flippedV.userData.fadingOut }] : []),
+          ]
+          : []),
         { anchor:'rTip', name: pointDifferenceLabel, value: fmt(res), distanceFactor:8, offset:[0.12,0.12,0], color: resultColor, revealed: shownWith(resObj) },
       ]
       : showOperandLabels
@@ -360,21 +392,51 @@ export function initVectorArithmeticBlock() {
       const resultDirection = lenR > 1e-8 ? res.clone().normalize() : new THREE.Vector3(1, 0, 0);
       const labelLift = resultLabelPosition.clone().sub(resultOrigin.clone().add(resultTip).multiplyScalar(0.5));
       const restingLabel = group.userData.labelAnchors.rTip.position.slice();
-      const slots = guides.length + (canSlide ? 2 : 1);
+      // Slots: each guide grows; -v grows; -v moves onto u's tip (u + (-v) head
+      // to tail); the result grows; -v fades; the result slides into place.
+      const flipSlot = guides.length;
+      const moveSlot = flipSlot + 1;
+      const growSlot = flipSlot + (flippedV ? 2 : 0);
+      const fadeSlot = growSlot + 1;
+      const slideSlot = fadeSlot + (flippedV ? 1 : 0);
+      const slots = slideSlot + (canSlide ? 1 : 0);
+      const vDirection = lenV > 1e-8 ? vVal.clone().normalize() : new THREE.Vector3(1, 0, 0);
+      const uTip = uAnchor.clone().add(uVal);
+      const restingNegatedLabel = group.userData.labelAnchors.negTip.position.slice();
       pointDifferenceReveal = (progress, ease) => {
         const ez = typeof ease === 'function' ? ease : (t) => t;
         const local = (i) => Math.max(0, Math.min(1, progress * slots - i));
         guides.forEach(([guide, len], i) => {
           guide.userData.setVectorLength?.(len * ez(local(i)));
-          guide.visible = progress < 1 && local(i) > 1e-3;
+          guide.visible = progress >= 1 ? measuredVectorDifference : local(i) > 1e-3;
         });
-        const grow = local(guides.length);
+        if (flippedV) {
+          const flip = local(flipSlot);
+          const fade = local(fadeSlot);
+          // Its label names -v, so it waits for -v to be all there.
+          flippedGrown = flip >= 1;
+          flippedV.visible = progress < 1 && flip > 1e-3 && fade < 1;
+          const tail = origin.clone().lerp(uTip, ez(local(moveSlot)));
+          flippedV.userData.setVectorSegment?.(
+            tail,
+            vDirection.clone().negate(),
+            Math.max(1e-4, safeLen(lenV) * ez(flip))
+          );
+          const negatedLabel = group.userData.labelAnchors.negTip;
+          if (negatedLabel) {
+            const tip = tail.clone().addScaledVector(vDirection, -safeLen(lenV));
+            negatedLabel.position = progress >= 1 ? restingNegatedLabel.slice() : [tip.x, tip.y, tip.z];
+          }
+          flippedV.userData.setGlyphOpacity?.(progress >= 1 ? 1 : 1 - fade);
+          flippedV.userData.fadingOut = fade > 0.5;
+        }
+        const grow = local(growSlot);
         resObj.visible = resultFull === 0 || grow > 1e-3;
         if (!canSlide) {
           if (resultFull > 0) resObj.userData.setVectorLength?.(resultFull * ez(grow));
           return;
         }
-        const start = origin.clone().lerp(resultOrigin, ez(local(guides.length + 1)));
+        const start = origin.clone().lerp(resultOrigin, ez(local(slideSlot)));
         const length = resultFull * ez(grow);
         resObj.userData.setVectorSegment(start, resultDirection, length);
         const mid = start.clone().addScaledVector(resultDirection, length / 2).add(labelLift);
@@ -383,6 +445,9 @@ export function initVectorArithmeticBlock() {
         if (labelAnchor) labelAnchor.position = progress >= 1 ? restingLabel.slice() : [mid.x, mid.y, mid.z];
       };
       pointDifferenceReveal.stages = slots;
+      // A base duration per stage, like one pipeline step, rather than the
+      // whole build in one base duration.
+      pointDifferenceReveal.durationScale = slots;
     }
     // The last two slots hold -v against the finished result for a moment, then
     // fade it out slowly.
@@ -413,9 +478,8 @@ export function initVectorArithmeticBlock() {
         }
       }, {
         stages: staged.stages,
-        // The second fade slot is extra time, not a squeeze on the others: scale
-        // the run so every other slot keeps the length it had with one.
-        durationScale: staged.durationScale * (staged.stages / (staged.stages - 1)),
+        // A base duration per slot, so the fade's second slot is extra time.
+        durationScale: staged.durationScale,
       })
       : staged;
 
@@ -440,7 +504,7 @@ export function initVectorArithmeticBlock() {
         start: resultOrigin.clone(),
         end: resultTip.clone(),
         label: pointDifferenceLabel,
-        pointToPoint: isPointLike(uVal) && isPointLike(vVal),
+        pointToPoint: (isPointLike(uVal) && isPointLike(vVal)) || measuredVectorDifference,
       };
     } else if (!showOperandLabels) {
       vectorNotation.setVectorMetadata(resultVector, {

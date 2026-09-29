@@ -9,6 +9,7 @@ import { validateVariableOrdering } from '@/utils/validateVariableOrdering'
 import { installSceneRuntime, RUNTIME_PARAM_NAMES } from '@/utils/sceneRuntime'
 import { bakeLineTransformAnimation } from '@/utils/lineTransformAnimation'
 import { makePipelineStepAnimation } from '@/utils/pipelineStepAnimation'
+import { buildLineSegment } from '@/utils/lineSegment'
 import useSettingsStore from '@/store/useSettingsStore'
 import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
@@ -176,9 +177,22 @@ export function generateAndRun(workspace, options = {}) {
     // Set here, not in sceneRuntime.js, to avoid an import cycle (#77).
     // See docs/architecture/transform-and-line-rebuild.md#the-77-problem.
     window.__geoScratchRebuildTransformedLine = rebuildTransformedLine
+    // A distance bar drawn as a finite line, for the same reason.
+    // See docs/architecture/vector-line-glyphs.md#finite-segments.
+    window.geoLineSegment = buildLineSegment
 
     const runWorkspace = new Function(...RUNTIME_PARAM_NAMES, generatedUserCode)
     runWorkspace(...runtimeArgs)
+
+    // Before the pipelines, so it sees objects where their blocks built them.
+    // See docs/architecture/generated-code-runtime.md#after-run.
+    for (const afterRun of window.geoAfterRunQueue ?? []) {
+      try {
+        afterRun()
+      } catch (error) {
+        console.error("[GeoScratch] A block's after-run step threw:", error)
+      }
+    }
 
     // Run pipelines modifying those exact object instances in place
     runConnectedTransformPipelines(workspace)

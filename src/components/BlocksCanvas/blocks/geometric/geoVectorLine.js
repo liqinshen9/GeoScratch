@@ -10,7 +10,11 @@ import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldOb
 // Both .toString()-serialized into generated code AND called directly by
 // generateAndRun.js to rebuild a transformed line. See
 // docs/architecture/vector-line-glyphs.md.
-export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
+// `options` draws a piece of a line as part of another object (a distance bar):
+// `extent: [tStart, tEnd]` along the unit direction instead of the room's
+// clip, `color` in place of the Line family, and `part: true` to skip the
+// label and the threeObjStore entry. See docs/architecture/vector-line-glyphs.md#finite-segments.
+export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, options = {}) {
   // Pull variables securely from the active window runtime frame
   const THREE = window.THREE
   const threeObjStore = window.threeObjStore
@@ -22,9 +26,15 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   // "Line" family + light/dark variants for the ringed texture, "Point" for
   // the t-marker.
   const colorInt = (hex) => parseInt(hex.slice(1), 16)
-  const lineColor = window.GeoScratchColors.forInstance('line', blockId)
-  const lineColorLight = window.GeoScratchColors.forInstanceVariant('line', blockId, 28)
-  const lineColorDark = window.GeoScratchColors.forInstanceVariant('line', blockId, -14)
+  const shadeOf = (hex, lightness) =>
+    '#' + new THREE.Color(hex).offsetHSL(0, 0, lightness).getHexString()
+  const lineColor = options.color || window.GeoScratchColors.forInstance('line', blockId)
+  const lineColorLight = options.color
+    ? shadeOf(options.color, 0.14)
+    : window.GeoScratchColors.forInstanceVariant('line', blockId, 28)
+  const lineColorDark = options.color
+    ? shadeOf(options.color, -0.08)
+    : window.GeoScratchColors.forInstanceVariant('line', blockId, -14)
   const pointColor = window.GeoScratchColors.forInstanceVariant('point', blockId, 24)
   let tSphereRef = null
 
@@ -69,7 +79,9 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
     if (!Number.isFinite(tEnter) || !Number.isFinite(tExit) || tExit < tEnter) return null
     return [tEnter, tExit]
   }
-  const [tEnter, tExit] = lineBoxInterval(origin, normalised) || [-FALLBACK_EXTENT, FALLBACK_EXTENT]
+  const [tEnter, tExit] = Array.isArray(options.extent)
+    ? options.extent
+    : lineBoxInterval(origin, normalised) || [-FALLBACK_EXTENT, FALLBACK_EXTENT]
 
   const p1 = origin.clone().addScaledVector(normalised, tEnter)
   const p2 = origin.clone().addScaledVector(normalised, tExit)
@@ -571,7 +583,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
       applyGlyphVisibility(state.settings)
       // Live recolor of the flat-color glyphs only; textured glyphs pick up
       // a new preset on the next rebuild.
-      const newLineColor = window.GeoScratchColors.forInstance('line', blockId)
+      const newLineColor = options.color || window.GeoScratchColors.forInstance('line', blockId)
       plainLineThickMat.color.set(newLineColor)
       cylMat.color.set(newLineColor)
       dashedTubeMat.color.set(newLineColor)
@@ -638,7 +650,12 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId) {
   group.userData.boxExtent = [tEnter, tExit]
   group.userData.tMarker = tSphereRef
 
-  if (threeObjStore) threeObjStore[blockId] = group
+  if (options.part) {
+    group.userData.labels = []
+    group.userData.labelAnchors = {}
+  } else if (threeObjStore) {
+    threeObjStore[blockId] = group
+  }
   return group
 }
 

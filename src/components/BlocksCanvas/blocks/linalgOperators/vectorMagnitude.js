@@ -69,18 +69,15 @@ export function initVectorMagnitude() {
     if (!isPointPlaneProjection && !isPointToPointDistance) group.add(obj);
     let highlight = null;
     if (isPointToPointDistance && len > 1e-8) {
-      const distanceVector = arrowTip.clone().sub(arrowOrigin);
-      highlight = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.022, 0.022, len, 18),
-        new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.94, depthWrite: false })
-      );
-      highlight.position.copy(arrowOrigin.clone().add(arrowTip).multiplyScalar(0.5));
-      highlight.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceVector.normalize());
+      // A finite line, so it follows the line settings.
+      // See docs/architecture/vector-line-glyphs.md#finite-segments.
+      highlight = window.geoLineSegment(arrowOrigin.clone(), arrowTip.clone(), baseId + '_distance', distanceColor);
+    }
+    if (highlight) {
       highlight.userData.geoType = 'sphere_distance_candidate_highlight';
       highlight.userData.srcBlockId = ${JSON.stringify(block.id)};
       highlight.userData.start = arrowOrigin.clone();
       highlight.userData.end = arrowTip.clone();
-      window.makeExtendableSegment(highlight, arrowOrigin.clone(), arrowTip.clone());
       group.add(highlight);
     }
 
@@ -114,7 +111,7 @@ export function initVectorMagnitude() {
         text: isPointPlaneProjection
           ? 'd = ' + fmtLen
           : isPointToPointDistance
-            ? 'center distance = ' + fmtLen
+            ? 'centre distance = ' + fmtLen
           : '|' + valueLabel + '| = ' + fmtLen,
         distanceFactor: isPointPlaneProjection || isPointToPointDistance ? 6 : 8,
         offset: isPointPlaneProjection || isPointToPointDistance ? [0, 0, 0] : [0.12, 0.12, 0],

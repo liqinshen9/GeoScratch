@@ -47,6 +47,37 @@ it should foreshorten with normal perspective like the glyph. Instead
 `DashZoomSync` scales the dash _length_ by camera distance, which is what makes
 the dash **count** respond to zoom (see `dash-length-vs-count` below).
 
+## Finite segments
+
+A distance is a piece of a line, so its bar is drawn by the line builder and
+follows every line setting: style, thickness, halo, zoom-invariant sizing and
+live setting changes. This applies to the magnitude's centre-to-centre bar,
+the point-plane projection bar, the sphere-distance answer, the Sphere Distance
+and Point-Plane Distance blocks, and the dot-product picture. They used to be
+fixed 0.022-radius cylinders.
+
+`geoVectorLineDefinition(pos, dir, t, id, options)` takes an optional
+`options`:
+
+- `extent: [tStart, tEnd]` draws that stretch along the unit direction instead
+  of clipping to the room;
+- `color` replaces the Line family colour, with the ringed texture's bands
+  shaded from it;
+- `part: true` leaves out the label and the `threeObjStore` entry, since the
+  segment belongs to another block's object.
+
+`utils/lineSegment.js`'s `buildLineSegment(start, end, id, color)`, published as
+`window.geoLineSegment` from `generateAndRun.js` (the same import-cycle reason
+as the rebuild hook), builds one at its resting span and nests it in three
+groups. The outer group sits at the segment's start, turned so +Y runs along the
+line. The middle group's Y scale is the span. The inner group undoes both, so
+the line keeps its own world coordinates. So `userData.setSegment(from, to)`
+re-spans it along the same line without a rebuild, and `setVectorLength` grows
+it out of `start` for a staged reveal. The answer glow's `glowLine` sits on the
+middle group, so the halo stretches with the bar. Halo registration uses the
+resting span in world coordinates, which is correct at rest; while an animation
+stretches the bar, the ringed texture stretches with it.
+
 ## Halo companions
 
 Per-style inflated companion meshes for the halo depth-trick (full mechanism in

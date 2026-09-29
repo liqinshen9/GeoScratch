@@ -28,7 +28,8 @@ rendered), `window.vectorNotation`, `window.geoNaming`, `window.geoVarStore` /
 `geoSetVar` / `geoVar`, the halo surface (`HALO_LAYER`, `getHaloId`,
 `applyHaloDiscardMaterial`, `createHaloIdMaterial`, `registerHaloLine`,
 `HALO_MAX_IMMUNE_IDS`), `buildVectorShaftGlyph`, `makeStagedVectorReveal`,
-`geoPointMarker` / `geoPointMaterial`, `geoIsLiveObject`.
+`geoPointMarker` / `geoPointMaterial`, `geoIsLiveObject`, `geoAfterRun` (and
+its `geoAfterRunQueue`).
 
 A subset (`THREE`, `threeObjStore`, `createInfinitePlaneMesh`,
 `vectorNotation`, `geoNaming`, `geoSetVar`, `geoVar`) is **also** passed
@@ -41,6 +42,17 @@ Most of the surface is rebuilt per run, matching "the whole scene regenerates on
 every workspace edit". `window.geoNaming` is the exception - a thin view over
 `namingRegistry.js`, which assigns names once at block-creation time, so a block
 reports the same name regardless of run order.
+
+### after-run
+
+Top-level stacks run in workspace position order (`workspaceToCode` sorts them
+top to bottom). So a block that looks up objects another stack builds, such as
+a sphere-distance answer finding the spheres at its ends, sees nothing if that
+stack sits lower in the workspace. It queues the lookup with
+`window.geoAfterRun(fn)` instead. `generateAndRun` drains the queue after the
+generated code and before `runConnectedTransformPipelines`, so objects are
+still where their own blocks built them. Each step is caught on its own, so one
+throwing does not take the pipelines down with it.
 
 ## Gotchas a refactor would reintroduce
 
@@ -84,3 +96,7 @@ whether any of them is in the store.
 `window.__geoScratchRebuildTransformedLine` is set in `generateAndRun.js`, not
 here, because it's defined there and `sceneRuntime.js` must not import
 `generateAndRun.js` back (cycle).
+`window.geoLineSegment` (`utils/lineSegment.js`, a finite line for distance
+bars) is set there too. It is built by the line block's
+`geoVectorLineDefinition`, which `sceneRuntime.js` should not pull in, for the
+same reason.

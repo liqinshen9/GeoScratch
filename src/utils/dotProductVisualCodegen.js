@@ -16,19 +16,6 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const headLenRatio = 0.25, headWidthRatio = 0.10;
     const fmt = vectorNotation.formatVector;
     const fmtN = vectorNotation.formatNumber;
-    const makeSegment = (start, end, color, radius = 0.022) => {
-      const delta = end.clone().sub(start);
-      const length = delta.length();
-      const segment = new THREE.Mesh(
-        new THREE.CylinderGeometry(radius, radius, safeLen(length), 18),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92, depthWrite: false })
-      );
-      segment.position.copy(start).add(end).multiplyScalar(0.5);
-      if (length > 1e-8) {
-        segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
-      }
-      return segment;
-    };
     const origin = new THREE.Vector3(0, 0, 0);
     const pointDifferenceVal = uVal.userData?.geoType === 'point_difference_vector' ? uVal : (
       vVal.userData?.geoType === 'point_difference_vector' ? vVal : null
@@ -54,9 +41,12 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
 
       const distanceColor = window.GeoScratchColors.forRole('distance');
       let distanceVector;
+      // A finite line, so it follows the line settings.
+      // See docs/architecture/vector-line-glyphs.md#finite-segments.
       if (distance > 1e-8) {
-        distanceVector = makeSegment(distanceStart.clone(), distanceEnd.clone(), distanceColor);
-      } else {
+        distanceVector = window.geoLineSegment(distanceStart.clone(), distanceEnd.clone(), ${id} + '_distance', distanceColor);
+      }
+      if (!distanceVector) {
         distanceVector = window.geoPointMarker({ color: distanceColor, radius: 0.04 });
         distanceVector.position.copy(distanceStart);
       }

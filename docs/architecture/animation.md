@@ -127,16 +127,24 @@ used, because those are the terms that vanish at progress 0, 0.5 and 1. The
 variation therefore never disturbs either fixed point. Choosing frequencies
 freely loses the resting position, the foot, or both.
 
-The closure sets `durationScale = 4`. A staged reveal is a short build-up and the
-configured 1.5s suits it; a path has to be followed rather than watched go past.
-`AnimationDriver` divides its per-frame step by that scale, so the speed control
-still applies on top.
+The closure sets `durationScale = 4`: a path has to be followed rather than
+watched go past. `AnimationDriver` divides its per-frame step by that scale, so
+the speed control still applies on top.
 
-`makeStagedVectorReveal` propagates the largest `durationScale` among the
-closures it delegates to. Without that the scale never reaches the driver: it
-reads the value off the **selected** object, and the block a student selects is
-the outermost one, which delegates to the sweep rather than being it. The sweep
-ran at 1x until that was fixed.
+### pace
+
+Every staged reveal takes a base duration per stage (`durationScale = stages`),
+the same as one step-by-step pipeline step. Fitting a whole build-up into one
+base duration, the original rule, went past too fast to follow once reveals
+grew to five or more stages.
+
+`makeStagedVectorReveal` also keeps a delegated closure's own pace inside the
+slots it claims: its scale is `max(total, own * total / claimed)` over the
+delegates. So a slower closure like the sweep stretches the whole run. Without
+that the scale never reaches the driver: it reads the value off the
+**selected** object, and the block a student selects is the outermost one,
+which delegates to the sweep rather than being it. The sweep ran at 1x until
+that was fixed.
 
 The sweep reaches across blocks, which a reveal never has to: the marker belongs
 to `geo_show_point_on_object`, the arrow to `vector_arithmetic`, the guide line
@@ -157,12 +165,11 @@ rebuild.
 distance derivation animate end to end rather than only through its first step.
 Two things made that possible.
 
-**Segments grow like arrows.** Both blocks draw plain cylinders rather than shaft
-glyphs in their distance forms -- the projection segment, the centre-to-centre
-highlight -- and a cylinder has no `setVectorLength`. `utils/segmentGlyph.js`'s
-`makeExtendableSegment(mesh, start, end)` attaches one, scaling the mesh along
-its own axis and walking the midpoint back so it grows out of `start` instead of
-its own centre. The reveal machinery then treats it like any other part.
+**Segments grow like arrows.** Both blocks draw a finite line rather than a
+shaft glyph in their distance forms (the projection segment, the
+centre-to-centre bar). `window.geoLineSegment` gives it a `setVectorLength`
+that grows it out of `start` ([vector-line-glyphs.md](vector-line-glyphs.md#finite-segments)),
+so the reveal machinery treats it like any other part.
 
 **A consumer can hand its stage upstream.** A block measuring something another
 block drew has nothing of its own to grow for that step. It looks its input's
@@ -235,9 +242,8 @@ said why it was the difference.
 It now reveals `u`; then `v` and `-v` together; then the result; then two last
 slots (`holdNegated`, `stages = 2`) that hold `-v` against the finished result
 for their first 20% and fade it out slowly over the rest; and `-v` is hidden at
-progress 1. The second fade slot is extra time: the reveal's `durationScale` is
-multiplied by `stages / (stages - 1)`, so `u`, `v` and the result keep the pace
-they had with a one-slot fade instead of being squeezed to make room.
+progress 1. At a base duration per slot ([pace](#pace)), the second fade slot
+is simply extra time.
 
 `-v` grows inside `v`'s slot rather than taking one of its own. `v`'s stage is
 tagged `isSubtrahend` before `orderRevealParts` runs, then wrapped in a closure
@@ -299,6 +305,65 @@ for the upstream projection's `distance_segment`.
 Anchors re-resolve while playing **or scrubbed below progress 1**, plus one
 frame after coming to rest. Scrubbing sets `playing` false, so a playing-only
 check left a moving label behind for the whole scrub.
+
+### A measured vector difference
+
+`u - v` of two plain vectors is a free vector and rests at the origin. The
+exception is a subtraction plugged straight into Vector Magnitude (looking
+through variable wrappers), with both operands drawn from the origin: `|B - A|`
+measures the distance between two positions. `vector_arithmetic` then takes the
+point-difference path. The difference rests between the two tips. Unlike a
+point difference, the two position vectors stay at rest, with their labels:
+they are blocks the student built, and origin, A and B form the triangle that
+shows why B - A runs between the centres. Its reveal plays B - A as B + (-A):
+it grows B and A from the origin; then -A grows from the origin along A's
+line, the other way (A stays, since it stays at rest too; a copy of A
+shrinking through the origin looked odd beside the A that remained); -A moves
+onto B's tip, B + (-A) head to tail, its label riding along; then
+B - A grows from the origin to -A's head; -A fades; and B - A slides into
+place. The
+`-A` label waits until -A is fully grown. It passes on `start`, `end` and `pointToPoint`, so everything downstream (the
+magnitude's centre-distance bar, the answer bar, hiding the working) behaves as
+it does for two Points. The label uses the operands' names, because plain
+vectors carry none of their own and the point path's P and Q fallbacks would be
+wrong.
+
+The signal is "measured", not "these tips are sphere centres". Matching sphere
+centres would depend on whether the spheres' blocks ran first, which depends on
+where they sit in the workspace.
+
+### The answer plays its working
+
+A sphere-distance answer (`scalar_arithmetic` subtracting from a measured
+distance) replaces the centre-to-centre working with its own bar at rest: the
+B - A arrow, the magnitude's bar, and their labels. The position vectors stay.
+It hides the working rather than deleting it. Its labels are wrapped in a
+`revealed` that is false at rest, and the block's own `animate` plays them:
+
+1. the magnitude's reveal, which delegates to the difference's (A, B, B - A,
+   the slide), then grows the centre-distance bar;
+2. the difference arrow fades out;
+3. the answer bar appears at the full centre distance, holds, and shrinks by
+   the subtracted radii to the answer.
+
+Which radius belongs at which end is settled after the run
+([generated-code-runtime.md](generated-code-runtime.md#after-run)), from the
+spheres at the two ends and the values subtracted. Looked up while the block
+ran, a sphere stack sitting lower in the workspace was not built yet, and the
+whole sum was trimmed off one end.
+
+Both this and the point-difference reveal follow the [pace](#pace) rule: a
+base duration per stage.
+
+The answer bar exists from the moment the subtraction takes the distance, even
+with nothing subtracted yet (full length). So the answer shows, and glows red,
+as soon as the student starts the last step.
+
+While the bar is full length or trimming, it sets `userData.answerStateOverride`
+to `'incorrect'` (`'none'` while hidden). `AnswerTint` polls that per frame and
+glows red until the bar reaches the answer, then shows the exercise's real
+verdict. The answer label waits for the override to clear, so its number never
+sits next to a red bar.
 
 ## Gotcha a refactor would reintroduce
 

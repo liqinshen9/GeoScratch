@@ -14,7 +14,6 @@ import {
 } from '@/utils/haloIntersectionRegistry'
 import { buildVectorShaftGlyph } from '@/utils/vectorShaftGlyph'
 import { makeStagedVectorReveal, orderRevealParts } from '@/utils/stagedVectorReveal'
-import { makeExtendableSegment } from '@/utils/segmentGlyph'
 import { buildDistanceIllustration } from '@/utils/distanceIllustration'
 import { planePatchHalfSize, planePatchPoint, planePatchPolygon } from '@/utils/planePatch'
 import { isLiveSceneObject } from '@/utils/liveSceneObject'
@@ -118,7 +117,6 @@ export function installSceneRuntime(workspace, options = {}) {
   window.registerVectorGlyph = registerVectorGlyph
   window.makeStagedVectorReveal = makeStagedVectorReveal
   window.orderRevealParts = orderRevealParts
-  window.makeExtendableSegment = makeExtendableSegment
   window.buildDistanceIllustration = buildDistanceIllustration
   window.planePatchPolygon = planePatchPolygon
   window.planePatchHalfSize = planePatchHalfSize
@@ -126,6 +124,12 @@ export function installSceneRuntime(workspace, options = {}) {
   window.geoPointMarker = createPointMarker
   window.geoPointMaterial = createPointMaterial
   window.geoIsLiveObject = (object) => isLiveSceneObject(object, window.threeObjStore)
+
+  // Work that needs objects another stack builds, which may not have run yet:
+  // top-level stacks run in workspace position order. generateAndRun drains it
+  // once every stack has run. See docs/architecture/generated-code-runtime.md#after-run.
+  window.geoAfterRunQueue = []
+  window.geoAfterRun = (fn) => window.geoAfterRunQueue.push(fn)
 
   // Fresh per run -- stale entries are harmless but pointless to keep.
   resetHaloIntersectionRegistry()

@@ -57,7 +57,6 @@ export function initPointPlaneDistanceBlock() {
     // length drawn in the wrong place. vector_project does the same thing.
     const distanceStart = point.clone().addScaledVector(normal, -signedDistance);
     const distanceEnd = point.clone();
-    const safeLength = Number.isFinite(distance) && distance > 1e-8 ? distance : 1;
     const midpoint = distanceStart.clone().add(distanceEnd).multiplyScalar(0.5);
     const difference = point.clone().sub(planePoint);
     const fmt = vectorNotation.formatVector;
@@ -83,15 +82,12 @@ export function initPointPlaneDistanceBlock() {
       differenceArrow.userData.srcBlockId = ${JSON.stringify(block.id)};
     }
 
-    let segment;
-    if (distance > 1e-8) {
-      segment = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.022, 0.022, safeLength, 18),
-        new THREE.MeshBasicMaterial({ color: distanceColor, transparent: true, opacity: 0.92, depthWrite: false })
-      );
-      segment.position.copy(midpoint);
-      segment.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), distanceEnd.clone().sub(distanceStart).normalize());
-    } else {
+    // A finite line, so it follows the line settings.
+    // See docs/architecture/vector-line-glyphs.md#finite-segments.
+    let segment = distance > 1e-8
+      ? window.geoLineSegment(distanceStart.clone(), distanceEnd.clone(), ${JSON.stringify(block.id)} + '_distance', distanceColor)
+      : null;
+    if (!segment) {
       segment = window.geoPointMarker({ color: distanceColor, radius: 0.05 });
       segment.position.copy(point);
     }
