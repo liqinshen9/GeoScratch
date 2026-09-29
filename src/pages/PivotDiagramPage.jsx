@@ -14,7 +14,7 @@ import './StudyPhase1Page.css'
 
 const PIVOT_DIAGRAM_CANVAS = { width: 460, height: 368 }
 
-const CAMERA_POSITION = positionFromOrbit({ ...DEFAULT_CAMERA_VIEW, distance: 8.5 })
+const CAMERA_POSITION = positionFromOrbit({ distance: 9.5, azimuthDeg: 30, elevationDeg: 24 })
 
 // The goal is the start rotated 90 degrees about Y through the cube's centre,
 // which leaves the cube itself looking the same, so only P moves.
