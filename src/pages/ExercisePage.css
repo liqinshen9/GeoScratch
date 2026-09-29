@@ -24,8 +24,9 @@
     sans-serif;
 }
 
+/* Two stacked diagrams and eight steps; at the standard width the panel scrolls. */
 .exercise-page--editor[data-exercise-id='cube-point-pivot-rotation'] {
-  --exercise-task-width: clamp(20rem, 20vw, 25rem);
+  --exercise-task-width: clamp(18rem, 18vw, 22rem);
 }
 
 .exercise-step-animation {
@@ -365,6 +366,10 @@
   line-height: 1.4;
 }
 
+.exercise-given-values .exercise-given-prose {
+  font-family: inherit;
+}
+
 .exercise-answer-card {
   display: grid;
   gap: 0.3rem;
@@ -582,11 +587,12 @@
   color: var(--state-warn-fg);
 }
 
-.exercise-step-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 0.45rem;
+.exercise-step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.5rem;
+  margin-top: 0.35rem;
 }
 
 .exercise-step-check {
@@ -604,7 +610,7 @@
   cursor: pointer;
 }
 
-.exercise-step-check:hover:not([data-complete='true']) {
+.exercise-step-check:hover {
   border-color: var(--geo-highlight);
   background: var(--geo-tint-weak);
 }
@@ -614,15 +620,7 @@
   outline-offset: 2px;
 }
 
-.exercise-step-check[data-complete='true'] {
-  border-color: var(--state-pass-border);
-  background: var(--state-pass-bg);
-  color: var(--state-pass-fg);
-}
-
 .exercise-step-feedback {
-  display: block;
-  margin-top: 0.2rem;
   color: var(--state-warn-fg);
   font-size: 0.76rem;
   font-weight: 600;
