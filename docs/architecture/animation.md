@@ -45,6 +45,47 @@ wrapper is identity). See
 [transform-and-line-rebuild.md](transform-and-line-rebuild.md#rotation-past-180)
 for the >180-degree rotation limitation.
 
+### Step-by-step pipelines
+
+With the `pipelineStepAnimation` setting on, a pipeline plays one step at a time
+instead of lerping straight from the start pose to the end pose.
+`utils/pipelineStepAnimation.js` gives each step an equal slice of the
+timeline and eases it within that slice. Each step is applied in world space,
+the way the pipeline applies it, so a rotation turns the object about the
+origin. That is the point of it: translate to the origin, rotate, translate
+back reads as a turn about the object's own centre, while the pose lerp
+collapses it into one slide-and-turn and never visits the origin.
+
+`runConnectedTransformPipelines` bakes both closures. `anim.stepMatrices` and
+`anim.stepBlockIds` accumulate across chained pipelines like
+`pipelineBlockIds`. `animate` reads the setting on every call rather than when
+it is baked, so toggling the setting needs no rebuild. `durationScale` is a
+getter for the same reason: one step gets the time a whole pipeline used to.
+
+The setting is off by default. An exercise turns it on through
+`settingsOverrides` when its steps are the pipeline's steps (the pivot,
+transform-object). The animation then mirrors the task panel, one step after
+another.
+
+The stepwise closure names the step playing in `userData.animActiveBlockId`
+(null at rest). `AnimationDriver` passes it to `workspace.highlightBlock`
+whenever it changes, and `editor-shell.css` styles that highlight. Snapping a
+target back to progress 1 clears it.
+
+This replaced the pivot exercise's separate playback (`usePivotPlaybackStore`,
+`PivotPlaybackDriver`, a "Show animation" button). That playback did not
+drive the transport, so the scrub bar sat still while it played.
+
+### fallback-target
+
+On an exercise page (`Scene3D animationFallback`), when the selection does not
+resolve to anything animatable, the driver plays the animatable object whose
+block (or pipeline alias) sits nearest the top of its stack. That is a
+pipeline's object, or the outermost block of a derivation, which plays every
+stage beneath it. Play therefore always does something once there is something
+to play, so a study participant can be told "press Play" without first being
+taught selection. The sandbox keeps selection-only.
+
 ## Staged vector reveal
 
 `utils/stagedVectorReveal.js`. `makeStagedVectorReveal(parts)` builds an

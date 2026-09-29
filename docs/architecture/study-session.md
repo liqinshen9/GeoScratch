@@ -131,8 +131,11 @@ The workspace now sets `modalInputs: false` (`core/Workspace.jsx`).
   settings stay as the editor has them, since this is authoring and not a
   controlled probe. The condition wins over the exercise's own
   `settingsOverrides`.
-- **Mode**: static hides the animation transport in the 3D View header and
-  the exercise's own `AnimationButton`.
+- **Mode**: static hides the animation transport in the 3D View header. In
+  an animated condition an unplayed condition means nothing, so the task bar
+  says to press Play, Play pulses until it is first pressed, and every play is
+  logged (`animation_play`). With nothing selected, Play falls back to the
+  task's main object ([animation.md](animation.md#fallback-target)).
 - **Cap**: six minutes from the step's first start. That time is wall-clock
   and kept in the cursor, so a reload does not reset it. Continue unlocks when
   the checker first passes or the cap runs out.
@@ -158,11 +161,11 @@ problems), `point-plane-distance` and `sphere-distance` (derivation problems).
 
 `cube-point-pivot-rotation` has its own `settingsOverrides`. The condition's
 settings are layered over them, so its shadows-off and label detail give way
-to the configuration like any other task's. Two of its own settings still
-apply, because no condition sets them: `cubeShowEdges` (the rotation reads
-from the edges) and `objectHighlightStyle: 'glow'`, where every other task
-uses the default blink. Its step animation (`AnimationButton`) is hidden in
-the static conditions like the transport.
+to the configuration like any other task's. The settings no condition sets
+still apply: `cubeShowEdges` and `cubeShowCentre` (the rotation reads from the
+edges and the centre), and `pipelineStepAnimation`, which it shares with
+`transform-object` so both play their pipelines step by step
+([animation.md](animation.md#step-by-step-pipelines)).
 
 ## Logging
 
@@ -173,6 +176,8 @@ the static conditions like the transport.
 - `step_complete`: a block or task finished. A task's detail has `passed`,
   `time_to_pass_ms`, `elapsed_ms`, `timed_out`
 - `survey_return`: with `handed_off_at`, the time of the handoff click
+- `animation_play`: Play pressed in an animated task, with `exercise_id` and
+  `from_progress` (0 for a fresh play, less than 1 when resuming a pause)
 
 The handoff click itself is logged only locally, and its time arrives with the
 return. A participant who drops out inside a questionnaire shows up as a

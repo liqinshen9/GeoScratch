@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import useAnimationStore from '@/store/useAnimationStore'
 import useSettingsStore from '@/store/useSettingsStore'
@@ -11,7 +12,8 @@ import './animation-transport.css'
 // resolves to something animatable. Speed writes the same setting the Settings
 // page's "Animation & Highlighting" card edits.
 
-export default function AnimationTransport() {
+// `promptPlay` pulses Play until it is first pressed.
+export default function AnimationTransport({ promptPlay = false }) {
   const playing = useAnimationStore((s) => s.playing)
   const progress = useAnimationStore((s) => s.progress)
   const hasTarget = useAnimationStore((s) => s.hasTarget)
@@ -21,13 +23,18 @@ export default function AnimationTransport() {
 
   const durationMs = useSettingsStore((s) => s.settings.animationDurationMs)
   const updateSetting = useSettingsStore((s) => s.updateSetting)
+  const [pressedPlay, setPressedPlay] = useState(false)
+  const prompting = promptPlay && hasTarget && !pressedPlay
 
   return (
     <div className="animation-transport" data-disabled={!hasTarget}>
       <button
         type="button"
-        className="animation-transport__btn"
-        onClick={toggle}
+        className={`animation-transport__btn${prompting ? ' is-prompting' : ''}`}
+        onClick={() => {
+          setPressedPlay(true)
+          toggle()
+        }}
         disabled={!hasTarget}
         title={playing ? 'Pause' : 'Play'}
         aria-label={playing ? 'Pause animation' : 'Play animation'}

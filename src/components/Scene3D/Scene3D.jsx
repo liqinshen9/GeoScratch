@@ -25,7 +25,6 @@ import ScenePicker from './ScenePicker'
 import PresentationProbe from './PresentationProbe'
 import LabelDeclutter from './labels/LabelDeclutter'
 import LabelLayer from './labels/LabelLayer'
-import PivotPlaybackDriver from './PivotPlaybackDriver'
 import { getLabelVisibilityKeysForObject } from './labels/labelData'
 import { ZoomInvariantScaler, DashZoomSync, FatLineSync } from './sizing/GlyphSizing'
 import { computeNestingRenderOrders } from '@/utils/nestingRenderOrder'
@@ -57,7 +56,15 @@ function restoreShadowDrawRange(renderer, object, camera, shadowCamera, geometry
 
 const globalThreeObjStore = {}
 
-function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme, answer }) {
+function Scene({
+  objects = [],
+  hiddenLabelKeys,
+  controlsRef,
+  onHideLabel,
+  theme,
+  answer,
+  animationFallback,
+}) {
   const { settings } = useSettingsStore()
   const isDark = theme === 'dark'
 
@@ -107,8 +114,7 @@ function Scene({ objects = [], hiddenLabelKeys, controlsRef, onHideLabel, theme,
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
       <AnswerTint objects={objects} state={answer?.state} />
-      <AnimationDriver objects={objects} />
-      <PivotPlaybackDriver objects={objects} />
+      <AnimationDriver objects={objects} fallback={animationFallback} />
       <LabelDeclutter />
       <ambientLight intensity={isDark ? 0.6 : 0.4} />
 
@@ -188,6 +194,8 @@ export default function Scene3D({
   hiddenLabelKeys: extraHiddenLabelKeys,
   onObjectClick,
   toggleLabelsOnLeftClick = false,
+  // Play an exercise's main object when nothing animatable is selected.
+  animationFallback = false,
   // Where the camera starts. Only a non-interactive view has any business
   // changing it: with no orbiting, the fixed distance is the whole framing.
   cameraPosition = DEFAULT_CAMERA_POSITION,
@@ -377,6 +385,7 @@ export default function Scene3D({
             onHideLabel={interactive ? handleHideLabel : handleLabelClickFrom3D}
             theme={resolvedTheme}
             answer={answer}
+            animationFallback={animationFallback}
           />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />

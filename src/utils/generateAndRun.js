@@ -8,6 +8,8 @@ import {
 import { validateVariableOrdering } from '@/utils/validateVariableOrdering'
 import { installSceneRuntime, RUNTIME_PARAM_NAMES } from '@/utils/sceneRuntime'
 import { bakeLineTransformAnimation } from '@/utils/lineTransformAnimation'
+import { makePipelineStepAnimation } from '@/utils/pipelineStepAnimation'
+import useSettingsStore from '@/store/useSettingsStore'
 import { geoVectorLineDefinition } from '@/components/BlocksCanvas/blocks/geometric/geoVectorLine'
 
 function disposeObject3D(root) {
@@ -129,18 +131,35 @@ function runConnectedTransformPipelines(workspace) {
       endQuat: object.quaternion.clone(),
       endScale: object.scale.clone(),
       pipelineBlockIds: [...(priorAnim?.pipelineBlockIds || []), pipeline.id],
+      stepMatrices: [
+        ...(priorAnim?.stepMatrices || []),
+        ...steps.map((step) => matrix4FromTransformStepBlock(step, { fallbackToIdentity: true })),
+      ],
+      stepBlockIds: [...(priorAnim?.stepBlockIds || []), ...steps.map((step) => step.id)],
     }
     object.userData.transformAnim = anim
     object.userData.animAliasBlockIds = anim.pipelineBlockIds
     // Pose lerp: linear pos/scale, shortest-path quaternion slerp.
     // See docs/architecture/transform-and-line-rebuild.md#rotation-past-180.
-    object.userData.animate = (p, ease) => {
+    const poseLerp = (p, ease) => {
       const e = typeof ease === 'function' ? ease(p) : p
       object.position.lerpVectors(anim.startPos, anim.endPos, e)
       object.quaternion.slerpQuaternions(anim.startQuat, anim.endQuat, e)
       object.scale.lerpVectors(anim.startScale, anim.endScale, e)
       object.updateMatrixWorld(true)
     }
+    const stepwise = anim.stepMatrices.length
+      ? makePipelineStepAnimation(object, anim, anim.stepMatrices, anim.stepBlockIds)
+      : null
+    // Read per call, so the setting applies without a rebuild.
+    // See docs/architecture/animation.md#step-by-step-pipelines.
+    const playsStepwise = () =>
+      Boolean(stepwise) && Boolean(useSettingsStore.getState().settings.pipelineStepAnimation)
+    const animate = (p, ease) => (playsStepwise() ? stepwise(p, ease) : poseLerp(p, ease))
+    Object.defineProperty(animate, 'durationScale', {
+      get: () => (playsStepwise() ? stepwise.durationScale : 1),
+    })
+    object.userData.animate = animate
   }
 }
 

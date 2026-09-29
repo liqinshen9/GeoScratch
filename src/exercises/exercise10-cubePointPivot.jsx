@@ -1,9 +1,6 @@
 import THREE from '@/utils/three'
 import { useEffect, useRef, useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 import useSettingsStore from '@/store/useSettingsStore'
-import { installPivotStepAnimation } from './shared/pivotStepAnimation'
 import { pipelineStepChain, rotationMatches } from './shared/transformChecks'
 import {
   POINT_VECTOR_BLOCK_TYPES,
@@ -13,9 +10,7 @@ import {
   scalarInputMatches,
   vectorMatches,
 } from './shared/blockQueries'
-import { createPointMarker } from '@/utils/pointMarker'
 import { formatVectorLive } from '@/utils/vectorNotation'
-import { COLOR_ROLES } from '@/store/colorPresets'
 import { useResolvedTheme } from '@/hooks/useThemeSync'
 import startLight from './assets/pivot-start-light.png'
 import startDark from './assets/pivot-start-dark.png'
@@ -252,16 +247,11 @@ function getReusableBlockTemplate({ workspace }) {
       '<xml xmlns="https://developers.google.com/blockly/xml"><block type="geo_special_cube" /></xml>',
   }
 }
-function addPivotCentre(object) {
+// On the top-level group, since a nested cube's own label does not render.
+function labelPivotCentre(object) {
   const cube = object.children.find((child) => child.userData?.geoType === 'geo_cube')
-  if (!cube || object.userData.pivotCenterMarker) return
-  const color = window.GeoScratchColors.forRole(COLOR_ROLES.ACCENT)
-  const centerMarker = createPointMarker({ color, geoType: 'pivot_center_point' })
-  centerMarker.position.copy(cube.position)
-  centerMarker.visible = false
-  object.add(centerMarker)
-  object.userData.pivotCenterMarker = centerMarker
-  // On the top-level group, since a nested cube's own label does not render.
+  if (!cube || object.userData.pivotCentreLabelled) return
+  object.userData.pivotCentreLabelled = true
   object.userData.labelAnchors = {
     ...object.userData.labelAnchors,
     c: { type: 'local', position: cube.position.toArray() },
@@ -272,46 +262,19 @@ function addPivotCentre(object) {
       anchor: 'c',
       name: 'C',
       get value() {
-        return formatVectorLive(centerMarker.getWorldPosition(new THREE.Vector3()))
+        return formatVectorLive(cube.getWorldPosition(new THREE.Vector3()))
       },
       color: window.GeoScratchColors.forInstance('cube', cube.userData.srcBlockId),
-      revealed: () =>
-        centerMarker.visible || Boolean(useSettingsStore.getState().settings.cubeShowCentre),
+      revealed: () => Boolean(useSettingsStore.getState().settings.cubeShowCentre),
     },
   ]
 }
 function decorateObjects(objects, workspace) {
-  const pipelines = workspace?.getBlocksByType('transform_pipeline', false) ?? []
   for (const special of workspace?.getBlocksByType('geo_special_cube', false) ?? []) {
     const object = objects.find((o) => o.userData?.srcBlockId === special.id)
-    if (!object) continue
-    addPivotCentre(object)
-    const pipeline = pipelines.find((p) => getInputBlock(p, 'INPUT')?.id === special.id)
-    if (pipeline) installPivotStepAnimation(object, pipelineStepChain(pipeline), workspace)
+    if (object) labelPivotCentre(object)
   }
   return objects
-}
-function AnimationButton({ objects, workspace }) {
-  const target = objects.find((o) => typeof o?.userData?.animateSteps === 'function')
-  useEffect(
-    () => () => {
-      usePivotPlaybackStore.getState().stop()
-      workspace?.highlightBlock?.(null)
-    },
-    [workspace],
-  )
-  return (
-    <button
-      type="button"
-      className="exercise-step-animation"
-      disabled={!target}
-      onClick={() => {
-        usePivotPlaybackStore.getState().play(target)
-      }}
-    >
-      <FontAwesomeIcon icon="fa-solid fa-play" /> Show animation
-    </button>
-  )
 }
 export default {
   id: 'cube-point-pivot-rotation',
@@ -323,7 +286,6 @@ export default {
   solutionXml,
   getReusableBlockTemplate,
   decorateObjects,
-  AnimationButton,
   // The cube, not its centre point, is C: a plugged-in point draws no label,
   // and the cube's label shows its centre, so it reads C = (1, 1, 1).
   givenNames: [
@@ -338,6 +300,7 @@ export default {
     pointShadowsEnabled: false,
     cameraShadowsEnabled: false,
     objectHighlightStyle: 'blink',
+    pipelineStepAnimation: true,
     showLabels: true,
     labelDetail: 'nameAndValue',
   },

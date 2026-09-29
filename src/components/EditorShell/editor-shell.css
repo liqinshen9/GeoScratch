@@ -100,3 +100,11 @@
 .editor-shell--maximized .editor-body-3d {
   grid-column: 2;
 }
+
+/* The step a step-by-step pipeline is playing (AnimationDriver highlights it). */
+.editor-shell .blocklyHighlighted > .blocklyPath {
+  fill: #facc15 !important;
+  stroke: #eab308 !important;
+  stroke-width: 3px;
+  filter: none !important;
+}

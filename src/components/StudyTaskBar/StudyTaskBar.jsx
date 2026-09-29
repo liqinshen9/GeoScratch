@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import useStudySession from '@/study/session/useStudySession'
-import { HOLISTIC_TASK_CAP_MS } from '@/study/session/holistic'
+import { HOLISTIC_TASK_CAP_MS, RENDER_MODES } from '@/study/session/holistic'
 
 const formatClock = (ms) => {
   const total = Math.max(0, Math.ceil(ms / 1000))
@@ -59,6 +59,11 @@ export default function StudyTaskBar({ task, passed }) {
 
   return (
     <div className="flex flex-col gap-2 border-t pt-3">
+      {task.mode === RENDER_MODES.ANIMATED && (
+        <p className="text-sm">
+          Press &#9654; above the 3D view to watch your blocks play step by step.
+        </p>
+      )}
       <p className="text-sm text-muted-foreground">
         {hasPassed
           ? 'Solved. Continue when you are ready.'

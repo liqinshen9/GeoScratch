@@ -540,6 +540,13 @@ export default function SettingsPage() {
                   settingKey="animationLoop"
                   onChange={(v) => updateSetting('animationLoop', v)}
                 />
+                <ToggleRow
+                  label="Pipelines Step by Step"
+                  description="Play a transform pipeline one step at a time, highlighting each step's block, instead of moving straight to the result."
+                  checked={settings.pipelineStepAnimation}
+                  settingKey="pipelineStepAnimation"
+                  onChange={(v) => updateSetting('pipelineStepAnimation', v)}
+                />
               </GeometryTile>
 
               <GeometryTile title="Highlighting">

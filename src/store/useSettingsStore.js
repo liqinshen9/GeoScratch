@@ -65,6 +65,9 @@ export const DEFAULT_SETTINGS = {
   animationDurationMs: DEFAULT_ANIMATION_DURATION_MS,
   animationEasing: ANIMATION_EASINGS.EASE_IN_OUT,
   animationLoop: false,
+  // Off: a transform pipeline animates start pose to end pose in one motion.
+  // On: one step at a time. See docs/architecture/animation.md#step-by-step-pipelines.
+  pipelineStepAnimation: false,
   namingStyle: NAMING_STYLES.SHORT,
   labelDetail: LABEL_DETAIL_LEVELS.NAME_ONLY,
 }

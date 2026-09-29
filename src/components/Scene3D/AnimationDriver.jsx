@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useAnimationStore from '@/store/useAnimationStore'
-import usePivotPlaybackStore from '@/store/usePivotPlaybackStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { getEasingFn } from '@/store/animationConfig'
 
@@ -10,9 +9,39 @@ import { getEasingFn } from '@/store/animationConfig'
 // (by stable srcBlockId / animAliasBlockIds), calls its userData.animate(p,
 // ease) each frame, invalidate()s. See docs/architecture/animation.md.
 
-export default function AnimationDriver({ objects = [] }) {
+const isAnimatable = (object) => typeof object?.userData?.animate === 'function'
+
+function blockDepth(workspace, blockId) {
+  let block = workspace?.getBlockById?.(String(blockId))
+  if (!block) return Infinity
+  let depth = 0
+  while ((block = block.getParent?.())) depth++
+  return depth
+}
+
+// With nothing animatable selected, the object nearest the top of its block
+// stack: a pipeline's object, or the outermost block of a derivation, which
+// plays every stage beneath it. The last such object wins a tie.
+// See docs/architecture/animation.md#fallback-target.
+function fallbackTarget(objects, workspace) {
+  let best = null
+  let bestDepth = Infinity
+  for (const object of objects) {
+    if (!isAnimatable(object)) continue
+    const ids = [object.userData.srcBlockId, ...(object.userData.animAliasBlockIds ?? [])]
+    const depth = Math.min(...ids.map((id) => blockDepth(workspace, id)))
+    if (depth <= bestDepth) {
+      best = object
+      bestDepth = depth
+    }
+  }
+  return best
+}
+
+export default function AnimationDriver({ objects = [], fallback = false }) {
   const { invalidate } = useThree()
   const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
+  const workspace = useWorkspaceStore((s) => s.workspace)
 
   const playing = useAnimationStore((s) => s.playing)
   const progress = useAnimationStore((s) => s.progress)
@@ -25,32 +54,45 @@ export default function AnimationDriver({ objects = [] }) {
   const easing = useSettingsStore((s) => s.settings.animationEasing)
 
   const target = useMemo(() => {
-    if (!selectedBlockId) return null
-    return (
-      objects.find((o) => {
-        if (typeof o?.userData?.animate !== 'function') return false
-        const ud = o.userData
-        return (
-          String(ud.srcBlockId) === selectedBlockId ||
-          ud.animAliasBlockIds?.some((id) => String(id) === selectedBlockId)
-        )
-      }) || null
-    )
-  }, [objects, selectedBlockId])
+    const selected = selectedBlockId
+      ? objects.find((o) => {
+          if (!isAnimatable(o)) return false
+          const ud = o.userData
+          return (
+            String(ud.srcBlockId) === selectedBlockId ||
+            ud.animAliasBlockIds?.some((id) => String(id) === selectedBlockId)
+          )
+        })
+      : null
+    return selected || (fallback ? fallbackTarget(objects, workspace) : null)
+  }, [objects, selectedBlockId, fallback, workspace])
+
+  // The block of the step playing, highlighted in the workspace
+  // (userData.animActiveBlockId, set by a step-by-step pipeline).
+  const highlightedRef = useRef(null)
+  const highlightActiveBlock = useCallback(
+    (obj) => {
+      const blockId = obj?.userData?.animActiveBlockId ?? null
+      if (highlightedRef.current === blockId) return
+      highlightedRef.current = blockId
+      workspace?.highlightBlock?.(blockId)
+    },
+    [workspace],
+  )
 
   const applyAnimation = useCallback(
     (obj, p) => {
       const fn = obj?.userData?.animate
       if (typeof fn !== 'function') return
       fn(Math.max(0, Math.min(1, p)), getEasingFn(easing))
+      highlightActiveBlock(obj)
     },
-    [easing],
+    [easing, highlightActiveBlock],
   )
 
   useEffect(() => {
     setHasTarget(!!target)
   }, [target, setHasTarget])
-
 
   // On selection change / unmount, snap the previous target back to progress 1.
   useEffect(() => {
@@ -69,7 +111,6 @@ export default function AnimationDriver({ objects = [] }) {
 
   useFrame((_, delta) => {
     if (!playing || !target) return
-    if (usePivotPlaybackStore.getState().target === target) return
     // Cap the first-after-idle delta or the animation skips to the end.
     // See docs/architecture/animation.md#cap-the-first-delta.
     const dt = Math.min(delta, 0.05)

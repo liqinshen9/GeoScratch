@@ -168,6 +168,8 @@ function evaluate({ objects, workspace }) {
 export default {
   id: 'transform-object',
   kind: 'transform',
+  // Its steps add the scale and the rotation separately, so play them that way.
+  settingsOverrides: { pipelineStepAnimation: true },
   Givens,
   Steps,
   evaluate,

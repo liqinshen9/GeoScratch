@@ -57,3 +57,27 @@
   padding: 1px 3px;
   cursor: pointer;
 }
+
+/* A ring that swells out of Play, until it is first pressed. */
+.animation-transport__btn.is-prompting {
+  border-color: var(--geo-highlight);
+  color: var(--geo-highlight);
+  animation: animation-transport-prompt 1.6s ease-out infinite;
+}
+
+@keyframes animation-transport-prompt {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--geo-highlight) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--geo-highlight) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animation-transport__btn.is-prompting {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--geo-highlight);
+  }
+}

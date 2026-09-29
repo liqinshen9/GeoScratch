@@ -10,6 +10,7 @@ import { ArrowLeft, ArrowRight, AllApplication, CheckOne } from '@icon-park/reac
 import useSceneStore from '@/store/useSceneStore'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useSettingsStore from '@/store/useSettingsStore'
+import useAnimationStore from '@/store/useAnimationStore'
 import {
   getExercise,
   orderedExercises,
@@ -24,6 +25,7 @@ import useExerciseTracking from '@/hooks/useExerciseTracking'
 import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
 import { useCurrentStudyTask } from '@/study/session/useStudySession'
 import { configurationSettings, RENDER_MODES } from '@/study/session/holistic'
+import { logStudyEvent } from '@/study/session/studyEvents'
 import StudyTaskBar from '@/components/StudyTaskBar/StudyTaskBar'
 
 import '@/components/EditorShell/editor-shell.css'
@@ -168,6 +170,20 @@ export default function ExercisePage({
   const studyTask =
     !standalone && currentTask?.exerciseId === activeExercise ? currentTask : null
   const hideAnimation = Boolean(studyTask) && studyTask.mode !== RENDER_MODES.ANIMATED
+  // An animated condition only means something if the participant plays it:
+  // prompt for it, and log each play. See docs/architecture/study-session.md#holistic-tasks.
+  const promptPlay = Boolean(studyTask) && !hideAnimation && !hideAnimationTransport
+  useEffect(() => {
+    if (!promptPlay) return undefined
+    return useAnimationStore.subscribe((state, previous) => {
+      if (state.playing && !previous.playing) {
+        logStudyEvent('animation_play', studyTask, {
+          exercise_id: activeExercise,
+          from_progress: previous.progress,
+        })
+      }
+    })
+  }, [promptPlay, studyTask, activeExercise])
 
   const tracking = useExerciseTracking(activeExercise, exercise.kind)
   useEffect(() => {
@@ -317,6 +333,7 @@ export default function ExercisePage({
           workspaceMaximized={workspaceMaximized}
           preserveColumns
           hideAnimationTransport={hideAnimationTransport || hideAnimation}
+          promptPlay={promptPlay}
           onWorkspaceMaximizedChange={handleWorkspaceMaximizedChange}
           onClearWorkspace={() => clearWorkspaceRef.current()}
         />
@@ -355,23 +372,11 @@ export default function ExercisePage({
             {!isPerceptual && !exercise.hideAnswerCard && (
               <AnswerCard result={result} className={answerCardClass} />
             )}
-            {exercise.AnimationButton && !hideAnimation ? (
-              <div className={`exercise-completion-row${passed ? ' is-passed' : ''}`}>
-                {passed && (
-                  <div className="exercise-pass-banner" role="status">
-                    <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
-                    <span>Passed</span>
-                  </div>
-                )}
-                <exercise.AnimationButton objects={objects} workspace={workspace} />
+            {passed && (
+              <div className="exercise-pass-banner" role="status">
+                <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                <span>Passed</span>
               </div>
-            ) : (
-              passed && (
-                <div className="exercise-pass-banner" role="status">
-                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
-                  <span>Passed</span>
-                </div>
-              )
             )}
             {/* Dev only: import.meta.env.DEV is false in the study build, so
                   the control is compiled out rather than merely hidden. */}
@@ -407,6 +412,7 @@ export default function ExercisePage({
             objects={objects}
             answer={showAnswerHighlight ? answerHighlight : undefined}
             cameraPosition={cameraPosition}
+            animationFallback
             toggleLabelsOnLeftClick={toggleLabelsOnLeftClick}
           />
         </div>
