@@ -110,6 +110,18 @@ compute-result operand) is stored the same way as a real object's custom name -
 purely as `custom` with no `kind`/`number` - so both share one uniqueness check
 (`isNameTaken`) and can never collide.
 
+## Exercise given names
+
+An exercise's givens name their objects (P, Q, n), but a block's number comes
+from creation order, so "P1" in a task panel would be wrong for anyone who
+built in another order or remade a block. Instead an exercise module can export
+`givenNames` (`[{ name, matches(block) }]`), and `ExercisePage` runs
+`exercises/shared/givenNames.js` on every workspace change: a block matching a
+given, and not already custom-named, is `setCustomName`d after it. A block
+edited away from its given gives the name back; a name typed by the student is
+left alone. Names stay unique, so a second match (a duplicated normal) keeps
+its number.
+
 ## Variable references (variableReference.js)
 
 `geo_variable_ref` blocks store which wrapper they point at under their own

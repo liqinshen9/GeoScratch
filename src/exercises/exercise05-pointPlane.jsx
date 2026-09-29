@@ -98,6 +98,10 @@ function findPointBlock(workspace, point) {
   return null
 }
 
+function isPointBlockAt(block, point) {
+  return POINT_VECTOR_BLOCK_TYPES.includes(block?.type) && blockMatchesVec3(block, point)
+}
+
 function workspaceHasPointPVector(workspace) {
   return Boolean(findPointBlock(workspace, POINT_P))
 }
@@ -244,14 +248,14 @@ function Givens() {
   return (
     <div className="exercise-given-values" aria-label="Given values">
       <section>
-        <h3>Plane</h3>
+        <h3>Plane S</h3>
         <p>Point A = {givenVector(PLANE_POINT_A)}</p>
-        <p>Normal n = {givenVector(PLANE_NORMAL)}</p>
-        <p>Point Q = {givenVector(POINT_Q)}</p>
+        <p>Normal vector n = {givenVector(PLANE_NORMAL)}</p>
       </section>
       <section>
-        <h3>Point</h3>
+        <h3>Points</h3>
         <p>P = {givenVector(POINT_P)}</p>
+        <p>Q = {givenVector(POINT_Q)}, a point on the plane</p>
       </section>
     </div>
   )
@@ -260,14 +264,16 @@ function Givens() {
 function Steps({ steps, passed }) {
   return (
     <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>
-      <li className={steps.plane ? 'is-complete' : ''}>Create: plane</li>
+      <li className={steps.plane ? 'is-complete' : ''}>
+        Create: plane S through A with normal vector n
+      </li>
       <li className={steps.pointP ? 'is-complete' : ''}>Create: Point P</li>
       <li className={steps.pointQ ? 'is-complete' : ''}>Create: Point Q on the plane</li>
       <li className={steps.difference ? 'is-complete' : ''}>
         Compute: P - Q with the Vector Arithmetic block.
       </li>
       <li className={steps.projection ? 'is-complete' : ''}>
-        Project: P - Q onto n with the Vector Project block.
+        Project: P - Q onto n with the Vector Project block. Hint: right-click n and Duplicate it.
       </li>
       <li className={steps.distance ? 'is-complete' : ''}>
         Compute: the Vector Magnitude of that projection. This is the distance from P to the plane.
@@ -333,6 +339,13 @@ export default {
   cameraView: { distance: 48 },
   // From this far out the room's front edges cross the scene.
   settingsOverrides: { showBoxFrontWireframe: false },
+  givenNames: [
+    { name: 'S', matches: isExercisePlaneBlock },
+    { name: 'A', matches: (block) => isPointBlockAt(block, PLANE_POINT_A) },
+    { name: 'n', matches: (block) => block.type === 'linalg_vec3' && isNormalVectorBlock(block) },
+    { name: 'P', matches: (block) => isPointBlockAt(block, POINT_P) },
+    { name: 'Q', matches: (block) => isPointBlockAt(block, POINT_Q) },
+  ],
   Givens,
   Steps,
   evaluate,

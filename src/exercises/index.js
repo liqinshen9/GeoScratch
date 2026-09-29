@@ -46,6 +46,10 @@ import exercise10 from './exercise10-cubePointPivot'
  *   cameraView                        { distance?, azimuthDeg?, elevationDeg? }
  *                                     overriding DEFAULT_CAMERA_VIEW for where
  *                                     the camera starts and "Reset view" returns.
+ *   givenNames                        [{ name, matches(block) }]: a block that
+ *                                     matches a given is named after it, so
+ *                                     scene labels read like the task panel
+ *                                     (shared/givenNames.js).
  *   settingsOverrides                 { <settingKey>: value } forced while this
  *                                     exercise is open; the matching Settings
  *                                     controls render as locked. Keys must be

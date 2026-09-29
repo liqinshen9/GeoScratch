@@ -19,6 +19,7 @@ import {
 import { getExerciseModule } from '@/exercises'
 import PerceptualQuestion from '@/exercises/shared/PerceptualQuestion'
 import { fillSolution } from '@/exercises/shared/fillSolution'
+import { applyGivenNames } from '@/exercises/shared/givenNames'
 import useExerciseTracking from '@/hooks/useExerciseTracking'
 import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgress'
 import { useCurrentStudyTask } from '@/study/session/useStudySession'
@@ -123,6 +124,17 @@ export default function ExercisePage() {
     workspace.addChangeListener(clearSubmittedFeedback)
     return () => workspace.removeChangeListener(clearSubmittedFeedback)
   }, [activeExercise, workspace])
+
+  useEffect(() => {
+    if (!workspace || !exercise.givenNames) return undefined
+    const apply = (event) => {
+      if (event?.isUiEvent) return
+      applyGivenNames(workspace, exercise.givenNames)
+    }
+    apply()
+    workspace.addChangeListener(apply)
+    return () => workspace.removeChangeListener(apply)
+  }, [exercise, workspace])
 
   const { previous: previousExercise, next: nextExercise } = getAdjacentExercises(activeExercise)
   const placement = getSectionForExercise(activeExercise)
