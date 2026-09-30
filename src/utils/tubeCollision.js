@@ -228,6 +228,38 @@ function clipToConvexPolygon(interval, u0, v0, du, dv, polygon, radius) {
   return [start, end]
 }
 
+// A teapot collides as its own surface, not its box: the box reaches far past
+// the spout, handle and lid. The line's centreline is cast through the mesh
+// and each entry/exit pair of hits is one zone. Both sides count, since a
+// front-face-only cast misses the exit.
+// See docs/architecture/collision.md#teapot-mesh.
+const meshRaycaster = new THREE.Raycaster()
+function findMeshTubeCollisionZones(origin, direction, tMin, tMax, mesh, radius) {
+  meshRaycaster.set(origin.clone().addScaledVector(direction, tMin), direction)
+  meshRaycaster.near = 0
+  meshRaycaster.far = tMax - tMin
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+  const sides = materials.map((material) => material.side)
+  materials.forEach((material) => (material.side = THREE.DoubleSide))
+  let hits
+  try {
+    hits = meshRaycaster.intersectObject(mesh, false)
+  } finally {
+    materials.forEach((material, i) => (material.side = sides[i]))
+  }
+  // A shared edge reports the same crossing twice.
+  const ts = []
+  for (const hit of hits) {
+    const t = tMin + hit.distance
+    if (!ts.length || t - ts[ts.length - 1] > 1e-4) ts.push(t)
+  }
+  const zones = []
+  for (let i = 0; i + 1 < ts.length; i += 2) {
+    zones.push({ tEntry: ts[i] - radius, tExit: ts[i + 1] + radius })
+  }
+  return zones
+}
+
 function mergeZones(zones) {
   if (zones.length === 0) return []
   const sorted = [...zones].sort((a, b) => a.start - b.start)
@@ -278,6 +310,9 @@ export function applyTubeCollisions(threeObjStore) {
         const worldRadius = (obj.userData.radius * (worldScale.x + worldScale.y + worldScale.z)) / 3
         return { type: 'sphere', center: worldCenter, radius: worldRadius }
       }
+      if (obj.userData?.geoType === 'geo_teapot' && obj.isMesh) {
+        return { type: 'mesh', mesh: obj }
+      }
       if (obj.userData?.geoType === 'point_normal_plane_group') {
         const frame = worldPlaneFrame(obj)
         return frame ? { type: 'plane', ...frame } : null
@@ -291,6 +326,22 @@ export function applyTubeCollisions(threeObjStore) {
 
   for (const { group, segment } of lineEntries) {
     for (const collider of colliders) {
+      if (collider.type === 'mesh') {
+        findMeshTubeCollisionZones(
+          segment.origin,
+          segment.direction,
+          -segment.halfExtent,
+          segment.halfExtent,
+          collider.mesh,
+          SOLID_INFLATE,
+        ).forEach((zone) =>
+          zonesByLine.get(group).push({
+            start: Math.max(-segment.halfExtent, zone.tEntry),
+            end: Math.min(segment.halfExtent, zone.tExit),
+          }),
+        )
+        continue
+      }
       const hit =
         collider.type === 'sphere'
           ? raySegmentSphereIntersection(

@@ -265,43 +265,99 @@ describe('exercise 2 (rotate 90 about Z)', () => {
   })
 })
 
-describe('exercise 3 (scale 2 and rotate 45 about Y)', () => {
+describe('exercise 3 (thread lines through objects)', () => {
   const mod = EXERCISE_MODULES['transform-object']
+  const v = (x, y, z) => new THREE.Vector3(x, y, z)
 
-  const bothSteps = () => [
-    fakeBlock('scale_matrix', { SX: 2, SY: 2, SZ: 2 }),
-    fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 45 }),
-  ]
-  const posed = () =>
-    posedTeapot({ scale: 2, quaternion: quatAbout(new THREE.Vector3(0, 1, 0), 45) })
+  const lineObject = (srcBlockId, origin, direction) => ({
+    userData: { geoType: 'geo_vector_line', srcBlockId, origin, direction },
+  })
+  const l1Block = () => fakeBlock('geo_vector', {}, { POS: point(-5, 3, 4), DIR: vec3(1, 0, 0) })
+  const shift = fakeBlock('trans_matrix', { TX: 0, TY: -3, TZ: -4 })
+  const turn = fakeBlock('rot_matrix', { AXIS: 'Y', DEGREES: 45 })
+  const crossProduct = (p, q) => fakeBlock('vector_cross_product', {}, { U: p, V: q })
+  // L2 runs along (0, 1, 1) through the spout tip once the teapot sits at 2n.
+  const l2 = lineObject('ex-L2', v(4.18, 0, 3.43), v(0, 1, 1))
 
-  it('passes when both steps are present', () => {
-    const workspace = fakeWorkspace([pipelineTo(teapotBlock(), bothSteps())])
-    const result = mod.evaluate({ objects: [posed()], workspace })
+  function teapotAt(position) {
+    const teapot = new THREE.Object3D()
+    teapot.userData = { geoType: 'geo_teapot', srcBlockId: 'ex-teapot', size: 1 }
+    teapot.position.copy(position)
+    return teapot
+  }
 
+  function solved({
+    steps = [shift, turn],
+    l1 = lineObject('ex-L1', v(0, 0, 0), v(1, 0, -1)),
+    teapot = teapotAt(v(2, -2, 2)),
+    cross = crossProduct(vec3(1, 0, -1), vec3(0, 1, 1)),
+    doubled = fakeBlock('vector_scale', {}, { K: scalar(2), V: vec3(1, -1, 1) }),
+  } = {}) {
+    const workspace = fakeWorkspace([pipelineTo(l1Block(), steps), cross, doubled])
+    const objects = [l1, l2, lineObject('block-n', v(0, 0, 0), v(1, -1, 1)), teapot]
+    return mod.evaluate({ objects, workspace })
+  }
+
+  it('passes when both parts are done', () => {
+    const result = solved()
+    expect(result.steps).toEqual({
+      pipelineL1: true,
+      throughOrigin: true,
+      throughTargets: true,
+      crossProduct: true,
+      lineN: true,
+      doubled: true,
+      teapot: true,
+    })
     expect(result.passed).toBe(true)
-    expect(result.steps.scale).toBe(true)
-    expect(result.steps.rotate).toBe(true)
   })
 
-  it('accepts the two steps in either order', () => {
-    const workspace = fakeWorkspace([pipelineTo(teapotBlock(), bothSteps().reverse())])
-    expect(mod.evaluate({ objects: [posed()], workspace }).passed).toBe(true)
+  it('accepts the cross product in either order', () => {
+    expect(solved({ cross: crossProduct(vec3(0, 1, 1), vec3(1, 0, -1)) }).steps.crossProduct).toBe(
+      true,
+    )
   })
 
-  it('does not pass with only the scale step', () => {
-    const workspace = fakeWorkspace([
-      pipelineTo(teapotBlock(), [fakeBlock('scale_matrix', { SX: 2, SY: 2, SZ: 2 })]),
-    ])
-    const result = mod.evaluate({ objects: [posedTeapot({ scale: 2 })], workspace })
-
+  it('does not pass when L1 is turned before it is moved', () => {
+    // Turning first swings L1's point round the origin, so the shift misses.
+    const result = solved({
+      steps: [turn, shift],
+      l1: lineObject('ex-L1', v(-0.71, 0, 2.36), v(1, 0, -1)),
+    })
+    expect(result.steps.throughOrigin).toBe(false)
+    expect(result.steps.throughTargets).toBe(false)
     expect(result.passed).toBe(false)
-    expect(result.steps.scale).toBe(true)
-    expect(result.steps.rotate).toBe(false)
   })
 
-  it('exposes seedWorkspace for its decorative blocks', () => {
+  it('does not pass until the teapot has moved onto N and L2', () => {
+    const result = solved({ teapot: teapotAt(v(0, 0, 0)) })
+    expect(result.steps.teapot).toBe(false)
+    expect(result.passed).toBe(false)
+  })
+
+  it('counts 2n from a Vector block or from the Cross Product itself', () => {
+    const fromCross = fakeBlock(
+      'vector_scale',
+      {},
+      {
+        K: scalar(2),
+        V: crossProduct(vec3(1, 0, -1), vec3(0, 1, 1)),
+      },
+    )
+    expect(solved({ doubled: fromCross }).steps.doubled).toBe(true)
+    const wrong = fakeBlock('vector_scale', {}, { K: scalar(3), V: vec3(1, -1, 1) })
+    expect(solved({ doubled: wrong }).steps.doubled).toBe(false)
+  })
+
+  it('does not count a cross product of the wrong directions', () => {
+    expect(solved({ cross: crossProduct(vec3(1, 0, 0), vec3(0, 1, 1)) }).steps.crossProduct).toBe(
+      false,
+    )
+  })
+
+  it('seeds its givens and keeps them present', () => {
     expect(mod.seedWorkspace).toBeTypeOf('function')
+    expect(mod.ensureWorkspace).toBeTypeOf('function')
   })
 })
 

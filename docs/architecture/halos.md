@@ -97,6 +97,15 @@ once vectors are wired. That pairing is put behind its own setting
 - `HaloUniformSync.jsx` pushes `haloCrossTypeEnabled` from
   `settings.haloLineVectorEnabled` every frame.
 
+## Coincident lines
+
+A parallel pair is not normally touching, but one line drawn twice is: a vector
+drawn along a line (a cross product's result along the line built from it, a
+direction vector along its line). `closestApproach` has no single point for it,
+so `linesIntersect` checks the distance between the two parallel lines instead.
+Without that each one's halo cut the other along their whole shared length, and
+the thinner vector flickered in and out of the line's tube.
+
 ## Remaining scope (not built)
 
 - **Near-coincident/parallel vector pairs**: #46 flags this as "not yet

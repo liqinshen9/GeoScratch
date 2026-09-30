@@ -48,6 +48,26 @@ describe('registerHaloLine / resetHaloIntersectionRegistry', () => {
     expect(addImmuneB).toHaveBeenCalledTimes(1)
   })
 
+  it('treats a line and a vector drawn along it as touching', () => {
+    const addImmuneLine = vi.fn()
+    const addImmuneVector = vi.fn()
+    registerHaloLine(
+      'line',
+      new THREE.Vector3(-2, 2, -2),
+      new THREE.Vector3(1, -1, 1).normalize(),
+      addImmuneLine,
+    )
+    registerHaloLine(
+      'vector',
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(1, -1, 1).normalize(),
+      addImmuneVector,
+    )
+
+    expect(addImmuneLine).toHaveBeenCalledTimes(1)
+    expect(addImmuneVector).toHaveBeenCalledTimes(1)
+  })
+
   it('clears all registered lines so a later run starts immune-free', () => {
     const addImmuneA = vi.fn()
     const addImmuneB = vi.fn()

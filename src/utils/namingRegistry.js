@@ -10,7 +10,11 @@ const DATA_NAMESPACE = 'geoScratchNaming'
 export const NAMEABLE_KIND_CONFIG = Object.freeze({
   line: { blockTypes: ['geo_vector'], short: 'L', descriptive: 'Line' },
   point: { blockTypes: ['linalg_point'], short: 'P', descriptive: 'Point' },
-  vector: { blockTypes: ['linalg_vec3'], short: 'V', descriptive: 'Vector' },
+  vector: {
+    blockTypes: ['linalg_vec3', 'vector_cross_product', 'vector_scale'],
+    short: 'V',
+    descriptive: 'Vector',
+  },
   sphere: { blockTypes: ['geo_sphere'], short: 'Sp', descriptive: 'Sphere' },
   plane: { blockTypes: ['parametric_plane'], short: 'Pl', descriptive: 'Plane' },
   cube: { blockTypes: ['geo_cube'], short: 'C', descriptive: 'Cube' },

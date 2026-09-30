@@ -1,5 +1,6 @@
 import { generateAndRun } from '@/utils/generateAndRun'
 import { applyTubeCollisions } from '@/utils/tubeCollision'
+import { hideLinesUnderVectors } from '@/utils/vectorsAlongLines'
 import { SCENE_RUN_EVENT } from '@/utils/sceneRunEvent'
 
 const runAndSync = (workspace, onObjectsChange, registry, options = {}) => {
@@ -11,6 +12,7 @@ const runAndSync = (workspace, onObjectsChange, registry, options = {}) => {
 
   // Flag vector-line tubes that pass into a solid object so they render ringed there
   applyTubeCollisions(window.threeObjStore)
+  hideLinesUnderVectors(window.threeObjStore)
 
   // Extract the generated meshes directly from the window container
   const objects = Object.values(window.threeObjStore || {})

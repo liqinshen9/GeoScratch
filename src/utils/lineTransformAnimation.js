@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import useSettingsStore from '@/store/useSettingsStore'
 
 /**
  * Animation opt-in for a line driven by a transform pipeline (#38). Drives the
@@ -6,7 +7,19 @@ import * as THREE from 'three'
  * rotate, stretch along the line, slide) rather than re-baking per frame.
  * See docs/architecture/transform-and-line-rebuild.md#line-transform-animation.
  */
-export function bakeLineTransformAnimation(line, startOrigin, startDirection, pipelineBlockIds) {
+/**
+ * `steps` ({ matrices, blockIds }, one world matrix per pipeline step) lets it
+ * play one step at a time when the pipelineStepAnimation setting is on, the
+ * line counterpart of utils/pipelineStepAnimation.js.
+ * See docs/architecture/animation.md#step-by-step-pipelines.
+ */
+export function bakeLineTransformAnimation(
+  line,
+  startOrigin,
+  startDirection,
+  pipelineBlockIds,
+  steps = null,
+) {
   const boxInterval = line?.userData?.boxInterval
   const extent = line?.userData?.boxExtent
   const endOrigin = line?.userData?.origin
@@ -64,23 +77,73 @@ export function bakeLineTransformAnimation(line, startOrigin, startDirection, pi
     line.updateMatrixWorld(true)
   }
 
+  // Pose before each step, and each step split into parts to interpolate.
+  const stepCount = steps?.matrices?.length ?? 0
+  const stepOrigins = []
+  const stepDirections = []
+  const stepParts = []
+  if (stepCount) {
+    const origin = o0.clone()
+    const direction = u0.clone()
+    steps.matrices.forEach((matrix) => {
+      stepOrigins.push(origin.clone())
+      stepDirections.push(direction.clone())
+      const part = {
+        translation: new THREE.Vector3(),
+        rotation: new THREE.Quaternion(),
+        scale: new THREE.Vector3(),
+      }
+      matrix.decompose(part.translation, part.rotation, part.scale)
+      stepParts.push(part)
+      origin.applyMatrix4(matrix)
+      direction.transformDirection(matrix)
+    })
+  }
+  const partial = new THREE.Matrix4()
+  const one = new THREE.Vector3(1, 1, 1)
+  const playsStepwise = () =>
+    stepCount > 0 && Boolean(useSettingsStore.getState().settings.pipelineStepAnimation)
+
   line.userData.lineTransformAnim = {
     startOrigin: o0,
     startDirection: d0,
     pipelineBlockIds,
   }
   line.userData.animAliasBlockIds = pipelineBlockIds
-  line.userData.animate = (p, ease) => {
-    const e = typeof ease === 'function' ? ease(p) : p
-    const back = 1 - e
-    if (back <= 0) {
-      rest()
-      return
+  const animate = (p, ease) => {
+    let length = len1
+    if (playsStepwise()) {
+      if (p >= 1) {
+        line.userData.animActiveBlockId = null
+        rest()
+        return
+      }
+      const stage = Math.max(0, p) * stepCount
+      const index = Math.min(stepCount - 1, Math.floor(stage))
+      const local = stage - index
+      const t = typeof ease === 'function' ? ease(local) : local
+      const { translation, rotation, scale } = stepParts[index]
+      partial.compose(
+        translation.clone().multiplyScalar(t),
+        identityQuat.clone().slerp(rotation, t),
+        one.clone().lerp(scale, t),
+      )
+      op.copy(stepOrigins[index]).applyMatrix4(partial)
+      up.copy(stepDirections[index]).transformDirection(partial)
+      qp.setFromUnitVectors(u1, up)
+      line.userData.animActiveBlockId = steps.blockIds?.[index] ?? null
+    } else {
+      const e = typeof ease === 'function' ? ease(p) : p
+      const back = 1 - e
+      if (back <= 0) {
+        rest()
+        return
+      }
+      qp.slerpQuaternions(identityQuat, qToStart, back)
+      up.copy(u1).applyQuaternion(qp)
+      op.lerpVectors(o1, o0, back)
+      length = THREE.MathUtils.lerp(len1, len0, back)
     }
-
-    qp.slerpQuaternions(identityQuat, qToStart, back)
-    up.copy(u1).applyQuaternion(qp)
-    op.lerpVectors(o1, o0, back)
 
     // Pose misses the box: carry the segment rigidly (k = 1) this frame.
     // See docs/architecture/transform-and-line-rebuild.md#missed-box-carry-rigidly.
@@ -122,7 +185,7 @@ export function bakeLineTransformAnimation(line, startOrigin, startDirection, pi
       // or stretched. See docs/architecture/transform-and-line-rebuild.md#marker-not-part-of-extent.
       markerPos
         .copy(op)
-        .addScaledVector(up, tValue * THREE.MathUtils.lerp(len1, len0, back))
+        .addScaledVector(up, tValue * length)
         .add(jitter)
       mMarker.compose(markerPos, identityQuat, marker.scale)
       mInverse.copy(line.matrix).invert()
@@ -131,4 +194,9 @@ export function bakeLineTransformAnimation(line, startOrigin, startDirection, pi
       marker.updateMatrixWorld(true)
     }
   }
+  // A base duration per step, like utils/pipelineStepAnimation.js.
+  Object.defineProperty(animate, 'durationScale', {
+    get: () => (playsStepwise() ? stepCount : 1),
+  })
+  line.userData.animate = animate
 }

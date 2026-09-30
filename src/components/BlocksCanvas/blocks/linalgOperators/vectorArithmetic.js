@@ -14,8 +14,8 @@ const esc = (s) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
   )
 
-// A named, bracketed 3x1 column vector.
-function columnVec(name, vec) {
+// A named, bracketed 3x1 column vector. Shared with vector_cross_product's drawer.
+export function columnVec(name, vec) {
   const rows = (vec ? [vec.x, vec.y, vec.z] : ['—', '—', '—'])
     .map((n) => `<span>${typeof n === 'number' ? fmt(n) : n}</span>`)
     .join('')

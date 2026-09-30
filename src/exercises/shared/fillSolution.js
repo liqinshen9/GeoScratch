@@ -14,8 +14,10 @@ import * as Blockly from 'blockly/core'
  * @param {object} workspace  Blockly workspace (must be rendered).
  * @param {string} xml        Blockly XML string for the solved workspace.
  * @param {Function} [seed]   The exercise's seedWorkspace, re-run after the
- *   clear: an exercise whose scene furniture is seeded rather than authored
- *   would otherwise lose it, since clearing takes every top block.
+ *   solution loads: an exercise whose scene furniture is seeded rather than
+ *   authored would otherwise lose it, since clearing takes every top block.
+ *   After, not before, so a solution can carry a given the student builds on
+ *   (by its fixed id) and seeding adds only what is still missing.
  * @returns {boolean}         Whether the fill succeeded.
  */
 export function fillSolution(workspace, xml, seed) {
@@ -30,8 +32,8 @@ export function fillSolution(workspace, xml, seed) {
         Blockly.Events.enable()
       }
     }
-    if (typeof seed === 'function') seed(workspace)
     Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), workspace)
+    if (typeof seed === 'function') seed(workspace)
     return true
   } catch (err) {
     console.error('[GeoScratch] Failed to fill the exercise solution:', err)

@@ -91,6 +91,34 @@ describe('applyTubeCollisions', () => {
     expect(zones[0].end).toBeCloseTo(-5 + 1 + TUBE_RADIUS, 2)
   })
 
+  describe('teapots', () => {
+    // A ring standing in for a teapot: its box is solid, but the hole is not.
+    const makeTeapot = () => {
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(2, 0.5, 16, 48))
+      mesh.userData = { geoType: 'geo_teapot' }
+      return mesh
+    }
+
+    it('collides with the surface, not the bounding box', () => {
+      // Along the torus's axis, through its hole: inside the box, outside the mesh.
+      const line = makeLine({ direction: new THREE.Vector3(0, 0, 1) })
+      applyTubeCollisions({ line, teapot: makeTeapot() })
+      expect(line.userData.setCollisionZones).toHaveBeenCalledWith([])
+    })
+
+    it('finds one zone per pass through the surface', () => {
+      // Across the ring's middle: through the tube, the hole, the tube again.
+      const line = makeLine()
+      applyTubeCollisions({ line, teapot: makeTeapot() })
+      const zones = line.userData.setCollisionZones.mock.calls[0][0]
+      expect(zones).toHaveLength(2)
+      expect(zones[0].start).toBeCloseTo(-2.5 - TUBE_RADIUS, 1)
+      expect(zones[0].end).toBeCloseTo(-1.5 + TUBE_RADIUS, 1)
+      expect(zones[1].start).toBeCloseTo(1.5 - TUBE_RADIUS, 1)
+      expect(zones[1].end).toBeCloseTo(2.5 + TUBE_RADIUS, 1)
+    })
+  })
+
   it('reports no zone when the line misses the solid entirely', () => {
     const line = makeLine()
     const sphere = makeSphere({ position: new THREE.Vector3(5, 5, 0), radius: 1 })

@@ -5,6 +5,13 @@ import { LABEL_DETAIL_LEVELS } from '@/store/namingConfig'
 // "Counterbalancing"). See docs/architecture/study-session.md#holistic-order.
 
 export const HOLISTIC_TASK_CAP_MS = 6 * 60 * 1000
+// Two parts, so more time. See docs/architecture/study-session.md#holistic-tasks.
+const HOLISTIC_TASK_CAPS_MS = { 'transform-object': 10 * 60 * 1000 }
+
+/** The time cap for one holistic task. */
+export function holisticTaskCapMs(exerciseId) {
+  return HOLISTIC_TASK_CAPS_MS[exerciseId] ?? HOLISTIC_TASK_CAP_MS
+}
 
 export const RENDER_MODES = Object.freeze({ STATIC: 'static', ANIMATED: 'animated' })
 export const CONFIGURATIONS = Object.freeze({ BASELINE: 'baseline', PERCEPTION: 'perception' })

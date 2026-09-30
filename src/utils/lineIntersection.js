@@ -23,8 +23,13 @@ export function closestApproach(p1, d1, p2, d2) {
 }
 
 // True only if the two lines meet at a real 3D point, not just cross in
-// screen projection while depth-separated (the normal haloed case).
+// screen projection while depth-separated (the normal haloed case). A parallel
+// pair touches only when it is one line twice, such as a vector drawn along a
+// line: each would otherwise cut the other with its halo along their whole
+// shared length. See docs/architecture/halos.md#coincident-lines.
 export function linesIntersect(p1, d1, p2, d2) {
   const result = closestApproach(p1, d1, p2, d2)
-  return !!result && result.distance < TOUCH_EPSILON
+  if (result) return result.distance < TOUCH_EPSILON
+  const unit = d1.clone().normalize()
+  return new THREE.Vector3().subVectors(p1, p2).cross(unit).length() < TOUCH_EPSILON
 }

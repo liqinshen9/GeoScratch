@@ -65,6 +65,11 @@ wrapper is identity), same assumption `rebuildTransformedLine` and the pose path
 make. Replaces the line's own t-sweep closure when both apply - the marker
 instead rides along at its fixed t.
 
+With `pipelineStepAnimation` on, the pose comes from the step in progress
+instead of the lerp: each step's matrix is decomposed and applied partially to
+the pose before it, so a rotation swings the line about the origin, as the
+pipeline does ([animation.md](animation.md#step-by-step-pipelines)).
+
 ## Gotchas a refactor would reintroduce
 
 ### missed-box-carry-rigidly

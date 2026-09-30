@@ -119,6 +119,25 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   const DASHED_SEGMENT_LENGTH = 0.14
   const DASHED_GAP_LENGTH = 0.09
   let currentZones = []
+  // Stretches the line leaves out, where a vector lies along it and is drawn
+  // instead. Set after the run by utils/vectorsAlongLines.js.
+  // See docs/architecture/vector-line-glyphs.md#vector-along-a-line.
+  let currentGaps = []
+  const withoutGaps = (pieces) => {
+    if (!currentGaps.length) return pieces
+    return pieces.flatMap((piece) =>
+      currentGaps.reduce(
+        (kept, gap) =>
+          kept.flatMap((part) => {
+            if (gap.end <= part.start || gap.start >= part.end) return [part]
+            const left = gap.start > part.start ? [{ ...part, end: gap.start }] : []
+            const right = gap.end < part.end ? [{ ...part, start: gap.end }] : []
+            return [...left, ...right]
+          }),
+        [piece],
+      ),
+    )
+  }
 
   // y-ranges to draw, each tagged isDash (bump) or not (solid stretch).
   // See docs/architecture/vector-line-glyphs.md#segment-and-dash-machinery.
@@ -458,7 +477,8 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     // See docs/architecture/vector-line-glyphs.md#accent-clearance.
     const radius = getAccentRadius(activeStyle) + 0.006
 
-    currentZones.forEach(({ start, end }) => {
+    const accentZones = withoutGaps(currentZones)
+    accentZones.forEach(({ start, end }) => {
       const height = end - start
       if (height <= 1e-6) return
       const tex = collisionRingTexture.clone()
@@ -481,7 +501,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
       collisionAccentRinged.add(segment)
     })
 
-    currentZones.forEach(({ start, end }) => {
+    accentZones.forEach(({ start, end }) => {
       addTubeSegment(collisionAccentDarkTexture, darkTextureMat, radius, start, end, false)
     })
   }
@@ -495,8 +515,16 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   let lastDashZoomScale = 1
   const thickDashLength = () => THICK_DASHED_SEGMENT_LENGTH * lastDashZoomScale
   const thickGapLength = () => THICK_DASHED_GAP_LENGTH * lastDashZoomScale
+  // The segmented tubes stand in for the continuous ones when the collision
+  // style is dashed, and whenever the line has a gap.
+  let builtDashed = null
   const rebuildThickDashedGlyphs = () => {
-    const pairs = computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
+    const dashed =
+      (useSettingsStore?.getState().settings?.lineCollisionStyle || 'dashed') === 'dashed'
+    builtDashed = dashed
+    const pairs = withoutGaps(
+      computeSegmentPairs(currentZones, dashed, thickDashLength(), thickGapLength()),
+    )
 
     clearGroupChildren(dashedTubeGroup, false) // shares dashedTubeMat
     pairs.forEach(({ start, end }) => {
@@ -510,6 +538,12 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     const dashScale = THREE.MathUtils.clamp(ratio, DASH_ZOOM_MIN_SCALE, DASH_ZOOM_MAX_SCALE)
     if (Math.abs(dashScale - lastDashZoomScale) < 0.08) return
     lastDashZoomScale = dashScale
+    rebuildThickDashedGlyphs()
+    group.userData.refreshGlyph?.()
+  }
+
+  group.userData.setGapZones = (gaps = []) => {
+    currentGaps = gaps || []
     rebuildThickDashedGlyphs()
     group.userData.refreshGlyph?.()
   }
@@ -534,12 +568,17 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     // gaps in its own geometry) is its only collision style.
     const linesNeedDashing = isDashed && activeStyle === 'plain_line'
     setThickLineSegmentPairs(
-      linesNeedDashing
-        ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
-        : computeSegmentPairs(currentZones, false),
+      withoutGaps(
+        linesNeedDashing
+          ? computeSegmentPairs(currentZones, true, thickDashLength(), thickGapLength())
+          : computeSegmentPairs(currentZones, false),
+      ),
     )
 
-    const useTubeDashedReplacement = isDashed && activeStyle === 'plain_tube'
+    const hasGaps = currentGaps.length > 0
+    // The segments follow the collision style, which may just have changed.
+    if (builtDashed !== (collisionStyle === 'dashed')) rebuildThickDashedGlyphs()
+    const useTubeDashedReplacement = (isDashed || hasGaps) && activeStyle === 'plain_tube'
 
     plainLineThickGroup.visible = activeStyle === 'plain_line'
 
@@ -548,7 +587,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     dashedTubeGroup.visible = useTubeDashedReplacement
     ringedTube.visible = activeStyle === 'ringed_tube'
 
-    const useRingedTubeDashedReplacement = isDashed && activeStyle === 'ringed_tube'
+    const useRingedTubeDashedReplacement = (isDashed || hasGaps) && activeStyle === 'ringed_tube'
     baseTube.visible = !useRingedTubeDashedReplacement
     ringedTubeDashedGroup.visible = useRingedTubeDashedReplacement
 

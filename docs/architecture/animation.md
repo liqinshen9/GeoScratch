@@ -56,6 +56,13 @@ origin. That is the point of it: translate to the origin, rotate, translate
 back reads as a turn about the object's own centre, while the pose lerp
 collapses it into one slide-and-turn and never visits the origin.
 
+A line pipeline plays step by step too. `bakeLineTransformAnimation` takes the
+step matrices and computes each frame's pose (origin and direction) from the
+step in progress, then maps the built line onto it as it does for the
+start-to-end lerp ([transform-and-line-rebuild.md](transform-and-line-rebuild.md#line-transform-animation)).
+Chained line pipelines keep the lerp, since the earlier pipeline's steps are not
+known where the later one bakes.
+
 `runConnectedTransformPipelines` bakes both closures. `anim.stepMatrices` and
 `anim.stepBlockIds` accumulate across chained pipelines like
 `pipelineBlockIds`. `animate` reads the setting on every call rather than when

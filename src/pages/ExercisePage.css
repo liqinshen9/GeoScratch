@@ -488,6 +488,11 @@
   color: var(--geo-text-muted-on-light);
 }
 
+/* An exercise in parts heads each part's list with its name. */
+.exercise-task-steps[data-part]::before {
+  content: attr(data-part);
+}
+
 .exercise-task-steps li {
   counter-increment: exercise-step;
   position: relative;

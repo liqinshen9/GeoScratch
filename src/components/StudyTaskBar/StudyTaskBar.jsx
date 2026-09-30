@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import useStudySession from '@/study/session/useStudySession'
-import { HOLISTIC_TASK_CAP_MS, RENDER_MODES } from '@/study/session/holistic'
+import { holisticTaskCapMs, RENDER_MODES } from '@/study/session/holistic'
 
 const formatClock = (ms) => {
   const total = Math.max(0, Math.ceil(ms / 1000))
@@ -41,7 +41,8 @@ export default function StudyTaskBar({ task, passed }) {
   }, [passed, startedAt])
 
   const elapsed = startedAt ? now - startedAt : 0
-  const timeUp = elapsed >= HOLISTIC_TASK_CAP_MS
+  const capMs = holisticTaskCapMs(task.exerciseId)
+  const timeUp = elapsed >= capMs
 
   const finish = () => {
     complete(stepIndex, {
@@ -69,7 +70,7 @@ export default function StudyTaskBar({ task, passed }) {
           ? 'Solved. Continue when you are ready.'
           : timeUp
             ? 'Time is up for this task.'
-            : `Time left: ${formatClock(HOLISTIC_TASK_CAP_MS - elapsed)}`}
+            : `Time left: ${formatClock(capMs - elapsed)}`}
       </p>
       <Button className="h-10 text-base" disabled={!hasPassed && !timeUp} onClick={finish}>
         Continue

@@ -122,6 +122,16 @@ edited away from its given gives the name back; a name typed by the student is
 left alone. Names stay unique, so a second match (a duplicated normal) keeps
 its number.
 
+## A computed vector with a name
+
+`vector_cross_product` and `vector_scale` are in the vector kind (V1, V2, ...)
+as well as `linalg_vec3`. Its result is a vector a student builds on (a line along it, in
+`transform-object`), and without a name nothing on screen said which vector
+that was. Its scene label reads `name = p x q` using the operand blocks' own
+names (baked in at code-gen time, like `vector_arithmetic`'s), its result
+carries the name downstream, and its "show" drawer (as `vector_arithmetic`
+has) gives the operands and result as column vectors.
+
 ## Variable references (variableReference.js)
 
 `geo_variable_ref` blocks store which wrapper they point at under their own

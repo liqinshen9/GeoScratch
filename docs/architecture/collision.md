@@ -16,6 +16,17 @@ Accent accuracy is measured against the plain tube's own radius:
 extra buffer) - the ring starts where the tube's _surface_ meets the solid's
 surface, not where its centerline does.
 
+## Teapot mesh
+
+A teapot collides as its own surface. Its axis-aligned box reached far past the
+spout, handle and lid, so a line passing beside the spout was dashed as though
+it went through it. `findMeshTubeCollisionZones` casts the line's centreline
+through the mesh, with both faces counted (a front-face-only cast finds the
+entry but not the exit), drops the duplicate hit a shared edge reports, and
+pairs the hits into entry/exit zones, each widened by the tube radius like the
+other colliders. A line can have several zones on one teapot, through the body
+and the spout. Cubes stay boxes, which is exact while they are axis-aligned.
+
 ## Annotated objects
 
 "Show point on object" (`objectComposition.js`) deletes its object from the store

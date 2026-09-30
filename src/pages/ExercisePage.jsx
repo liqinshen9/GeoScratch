@@ -137,6 +137,16 @@ export default function ExercisePage({
   }, [activeExercise, workspace])
 
   useEffect(() => {
+    if (!workspace?.rendered || !exercise.ensureWorkspace) return undefined
+    const ensure = (event) => {
+      if (event?.isUiEvent) return
+      exercise.ensureWorkspace(workspace)
+    }
+    workspace.addChangeListener(ensure)
+    return () => workspace.removeChangeListener(ensure)
+  }, [exercise, workspace])
+
+  useEffect(() => {
     if (!workspace || !exercise.givenNames) return undefined
     const apply = (event) => {
       if (event?.isUiEvent) return

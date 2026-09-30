@@ -78,6 +78,7 @@ function runConnectedTransformPipelines(workspace) {
       const combined = new THREE.Matrix4()
       let hasStep = false
       let skippedScale = false
+      const lineSteps = { matrices: [], blockIds: [] }
       for (const step of steps) {
         if (step.type === 'scale_matrix') {
           skippedScale = true
@@ -86,6 +87,8 @@ function runConnectedTransformPipelines(workspace) {
         const stepMatrix = matrix4FromTransformStepBlock(step)
         if (stepMatrix?.isMatrix4) {
           combined.premultiply(stepMatrix)
+          lineSteps.matrices.push(stepMatrix)
+          lineSteps.blockIds.push(step.id)
           hasStep = true
         }
       }
@@ -97,10 +100,15 @@ function runConnectedTransformPipelines(workspace) {
         const rebuilt = rebuildTransformedLine(object, combined)
         // Same object back == couldn't rebuild == nothing moved == nothing to animate.
         if (rebuilt !== object) {
-          bakeLineTransformAnimation(rebuilt, startOrigin, startDirection, [
-            ...(priorAnim?.pipelineBlockIds || []),
-            pipeline.id,
-          ])
+          // Step by step only for a single pipeline: a chained one's earlier
+          // steps are not known here.
+          bakeLineTransformAnimation(
+            rebuilt,
+            startOrigin,
+            startDirection,
+            [...(priorAnim?.pipelineBlockIds || []), pipeline.id],
+            priorAnim ? null : lineSteps,
+          )
         }
       }
       pipeline.setWarningText?.(

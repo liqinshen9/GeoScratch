@@ -1,6 +1,29 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
+import { getDisplayName } from '@/utils/namingRegistry'
+import { vector3FromBlock, vectorLabelFromBlock } from '@/utils/sceneHelpers'
+import { appendVectorPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPrimitives/matrixPreview'
+import { columnVec } from './vectorArithmetic'
+
+// The drawer behind the block's "show" button, as vector_arithmetic has: the
+// only place its result's value is shown.
+function renderCrossProductHtml(block) {
+  const p = vector3FromBlock(block.getInputTargetBlock('U'))
+  const q = vector3FromBlock(block.getInputTargetBlock('V'))
+  const n = p && q ? p.clone().cross(q) : null
+  const name = (input) => vectorLabelFromBlock(block.getInputTargetBlock(input)) || ''
+  return `
+    <div class="vec-drawer-expr">
+      ${columnVec(name('U'), p)}
+      <span class="vec-drawer-op">\u00d7</span>
+      ${columnVec(name('V'), q)}
+      <span class="vec-drawer-op">=</span>
+      ${columnVec(getDisplayName(block) || '', n)}
+    </div>
+  `
+}
 
 let REGISTERED = false
 
@@ -10,22 +33,29 @@ export function initCrossProductBlock() {
 
   Blockly.Blocks['vector_cross_product'] = {
     init() {
-      this.appendDummyInput().appendField('Cross Product')
-      this.appendValueInput('U').setCheck(['vector3', 'obj3D']).appendField('p:')
-      this.appendValueInput('V').setCheck(['vector3', 'obj3D']).appendField('x').appendField('q:')
+      this.appendDummyInput()
+        .appendField('Cross Product')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendValueInput('U').setCheck(['vector3', 'obj3D'])
+      this.appendValueInput('V').setCheck(['vector3', 'obj3D']).appendField('\u00d7')
       this.setInputsInline(true)
 
       this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Compute u × v and return a new geo_vector (registered to render).')
+      this.setTooltip('The cross product of two vectors: a vector perpendicular to both.')
       this.setDeletable(true)
       this.setMovable(true)
+      appendVectorPreviewUI(this, renderCrossProductHtml)
     },
   }
 
   javascriptGenerator.forBlock['vector_cross_product'] = function (block, g) {
     const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
+    // Operand names baked in at code-gen time, like vector_arithmetic: a nested
+    // vector does not carry its own name at runtime.
+    const uFallback = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('U')) || 'p')
+    const vFallback = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('V')) || 'q')
 
     const code = `(function(){
     const vectorInfoFromInput = (input, fallbackLabel) => {
@@ -52,8 +82,8 @@ export function initCrossProductBlock() {
       return null;
     };
 
-    const uInfo = vectorInfoFromInput(${u}, 'p');
-    const vInfo = vectorInfoFromInput(${v}, 'q');
+    const uInfo = vectorInfoFromInput(${u}, ${uFallback});
+    const vInfo = vectorInfoFromInput(${v}, ${vFallback});
     const uVal = uInfo?.vector;
     const vVal = vInfo?.vector;
 
@@ -63,11 +93,12 @@ export function initCrossProductBlock() {
     const lenU = uVal.length(), lenV = vVal.length(), lenC = cross.length();
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
-    const uLabel = uInfo?.label || vectorNotation.getLabel(uVal, 'p');
-    const vLabel = vInfo?.label || vectorNotation.getLabel(vVal, 'q');
+    const uLabel = uInfo?.label || vectorNotation.getLabel(uVal, ${uFallback});
+    const vLabel = vInfo?.label || vectorNotation.getLabel(vVal, ${vFallback});
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
-    const crossLabel = uLabel + ' x ' + vLabel;
-    const exerciseMode = String(window.__geoScratchRuntimeMode || '').startsWith('exercise');
+    const crossExpression = uLabel + ' \u00d7 ' + vLabel;
+    const crossName = window.geoNaming?.nameFor?.(${JSON.stringify(block.id)});
+    const crossLabel = crossName ? crossName + ' = ' + crossExpression : crossExpression;
     const baseId = ${JSON.stringify(block.id)};
 
     const operandAColor = window.GeoScratchColors.forRole('operandA');
@@ -97,18 +128,12 @@ export function initCrossProductBlock() {
     tag(arrowU); tag(arrowV); tag(crossObj);
 
     const group=new THREE.Group();
-    if (exerciseMode) {
-      group.add(crossObj);
-    } else {
-      group.add(arrowU,arrowV,crossObj);
-    }
+    group.add(arrowU,arrowV,crossObj);
     group.userData.geoType='geo_vector_group';
     group.userData.srcBlockId=${JSON.stringify(block.id)};
 
     // Labels at tips
-    group.userData.labelAnchors = exerciseMode ? {
-      cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
-    } : {
+    group.userData.labelAnchors = {
       uTip:{type:'world', position:[uVal.x,uVal.y,uVal.z]},
       vTip:{type:'world', position:[vVal.x,vVal.y,vVal.z]},
       cTip:{type:'world', position:[cross.x,cross.y,cross.z]},
@@ -116,14 +141,10 @@ export function initCrossProductBlock() {
     const crossLabelColor = lenC > 1e-8 ? crossVectorColor : warningColor;
     // A label waits for the arrow it names. See docs/architecture/animation.md#labels-wait-for-their-arrow.
     const shownWith = (obj) => () => !obj || obj.visible !== false;
-    group.userData.labels = exerciseMode
+    group.userData.labels = (showOperandLabels
       ? [
-      { anchor:'cTip', name: 'n = ' + crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor, revealed: shownWith(crossObj) },
-    ]
-      : (showOperandLabels
-      ? [
-      { anchor:'uTip', name: 'p', value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) },
-      { anchor:'vTip', name: 'q', value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV) },
+      { anchor:'uTip', name: uLabel, value: fmt(uVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandAColor, revealed: shownWith(arrowU) },
+      { anchor:'vTip', name: vLabel, value: fmt(vVal), distanceFactor:8, offset:[0.12,0.12,0], color: operandBColor, revealed: shownWith(arrowV) },
       { anchor:'cTip', name: crossLabel, value: fmt(cross), distanceFactor:8, offset:[0.12,0.12,0], color: crossLabelColor, revealed: shownWith(crossObj) },
     ]
       : [
@@ -132,15 +153,11 @@ export function initCrossProductBlock() {
 
     // Staged reveal for the play/scrub transport (AnimationDriver): grow p, then
     // q, then the cross result -- each from the origin, eased over its own third.
-    group.userData.animate = window.makeStagedVectorReveal(
-      exerciseMode
-        ? [{ obj: crossObj, full: safeLen(lenC) }]
-        : [
-          { obj: arrowU, full: safeLen(lenU) },
-          { obj: arrowV, full: safeLen(lenV) },
-          { obj: crossObj, full: lenC > 1e-8 ? safeLen(lenC) : 0 },
-        ]
-    );
+    group.userData.animate = window.makeStagedVectorReveal([
+      { obj: arrowU, full: safeLen(lenU) },
+      { obj: arrowV, full: safeLen(lenV) },
+      { obj: crossObj, full: lenC > 1e-8 ? safeLen(lenC) : 0 },
+    ]);
 
     const crossVisualKey = [
       uLabel,
@@ -153,17 +170,15 @@ export function initCrossProductBlock() {
     if (!crossVisualKeys.has(crossVisualKey) && typeof threeObjStore==='object' && threeObjStore){
       crossVisualKeys.add(crossVisualKey);
       const base=${JSON.stringify(block.id)};
-      if (!exerciseMode) {
-        threeObjStore[base+'_u']=arrowU;
-        threeObjStore[base+'_v']=arrowV;
-        threeObjStore[base+'_c']=crossObj;
-      }
+      threeObjStore[base+'_u']=arrowU;
+      threeObjStore[base+'_v']=arrowV;
+      threeObjStore[base+'_c']=crossObj;
       threeObjStore[base]=group;
     }
     const resultVector = cross.clone();
     vectorNotation.setVectorMetadata(resultVector, {
       geoType: 'named_vector_expression',
-      label: crossLabel,
+      label: crossName || crossExpression,
     });
     return resultVector;
   })()`

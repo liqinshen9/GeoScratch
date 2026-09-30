@@ -1,6 +1,10 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { FieldObjectName } from '@/components/BlocksCanvas/blocks/naming/FieldObjectName'
+import { vector3FromBlock, vectorLabelFromBlock } from '@/utils/sceneHelpers'
+import { appendVectorPreviewUI } from '@/components/BlocksCanvas/blocks/linalgPrimitives/matrixPreview'
+import { columnVec } from './vectorArithmetic'
 
 let REGISTERED = false
 
@@ -23,21 +27,42 @@ function operandName(block, inputName, fallback) {
   return JSON.stringify(typeof raw === 'string' && raw.trim() ? raw.trim() : fallback)
 }
 
+// The drawer behind the block's "show" button, as vector_arithmetic has.
+function renderScaleVectorHtml(block) {
+  const kBlock = block.getInputTargetBlock('K')
+  const k = kBlock?.type === 'scalar' ? Number(kBlock.getFieldValue('scalar')) : null
+  const v = vector3FromBlock(block.getInputTargetBlock('V'))
+  const kv = Number.isFinite(k) && v ? v.clone().multiplyScalar(k) : null
+  const name = vectorLabelFromBlock(block.getInputTargetBlock('V')) || ''
+  return `
+    <div class="vec-drawer-expr">
+      <span class="vec-drawer-op">${Number.isFinite(k) ? Math.round(k * 100) / 100 : '\u2014'}</span>
+      <span class="vec-drawer-op">\u00d7</span>
+      ${columnVec(name, v)}
+      <span class="vec-drawer-op">=</span>
+      ${columnVec('', kv)}
+    </div>
+  `
+}
+
 export function initVectorScaleBlock() {
   if (REGISTERED) return
   REGISTERED = true
 
   Blockly.Blocks.vector_scale = {
     init() {
-      this.appendDummyInput().appendField('Scale Vector')
-      this.appendValueInput('K').setCheck('scalar').appendField('k:')
-      this.appendValueInput('V').setCheck('vector3').appendField('v:')
+      this.appendDummyInput()
+        .appendField('Scale Vector')
+        .appendField(new FieldObjectName(), 'GEOSCRATCH_NAME')
+      this.appendValueInput('K').setCheck('scalar')
+      this.appendValueInput('V').setCheck('vector3').appendField('\u00d7')
       this.setInputsInline(true)
       this.setOutput(true, 'vector3')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
-      this.setTooltip('Multiply a vector by a scalar. Draws v and k*v, returns k*v.')
+      this.setTooltip('Multiply a vector by a scalar. Draws the vector and the scaled vector.')
       this.setDeletable(true)
       this.setMovable(true)
+      appendVectorPreviewUI(this, renderScaleVectorHtml)
     },
   }
 
@@ -57,7 +82,11 @@ export function initVectorScaleBlock() {
     const fmt = vectorNotation.formatVector;
     const baseId = ${JSON.stringify(block.id)};
     const vLabel = vectorNotation.getLabel(vVal, ${vNameExpr});
-    const scaledLabel = kVal + '\\u00b7' + vLabel;
+    const scaledExpression = kVal + '\\u00b7' + vLabel;
+    // Named like vector_cross_product: "name = expression", and the name
+    // carries downstream. See docs/architecture/naming-registry.md#a-computed-vector-with-a-name.
+    const scaledName = window.geoNaming?.nameFor?.(${JSON.stringify(block.id)});
+    const scaledLabel = scaledName ? scaledName + ' = ' + scaledExpression : scaledExpression;
 
     const anchor = (vVal.userData?.anchor && vVal.userData.anchor.isVector3)
       ? vVal.userData.anchor.clone()
@@ -170,7 +199,7 @@ export function initVectorScaleBlock() {
     // "5\u00b7V2" instead of falling back to a generic operand letter.
     vectorNotation.setVectorMetadata(scaled, {
       geoType: 'named_vector_expression',
-      label: scaledLabel,
+      label: scaledName || scaledExpression,
       // Provenance: this exact arrow is already on screen, from this tail, so
       // an operator downstream draws no coincident copy of it.
       // See vectorArithmetic.js's ownerGlyphs.

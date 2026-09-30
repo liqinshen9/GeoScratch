@@ -63,14 +63,18 @@ function geoTeapotDefinition(centreInput, sizeInput, segmentsInput, blockId) {
   mesh.userData.centre = centre.clone()
   mesh.userData.size = size
   mesh.userData.srcBlockId = blockId
+  // On the object itself, so a pipeline that moves it carries the label too,
+  // and the value reads where it is now rather than where its block put it.
   mesh.userData.labelAnchors = {
-    centre: { type: 'world', position: [centre.x, centre.y, centre.z] },
+    centre: { type: 'local', position: [0, 0, 0] },
   }
   mesh.userData.labels = [
     {
       anchor: 'centre',
       name: window.geoNaming?.nameFor?.(blockId) || 'Teapot',
-      value: window.vectorNotation.formatVector(centre),
+      get value() {
+        return window.vectorNotation.formatVector(mesh.getWorldPosition(new THREE.Vector3()))
+      },
       distanceFactor: 7,
       offset: [0.12, 0.12, 0],
       color: window.GeoScratchColors.forInstance('teapot', blockId),

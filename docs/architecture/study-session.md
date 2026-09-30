@@ -136,7 +136,8 @@ The workspace now sets `modalInputs: false` (`core/Workspace.jsx`).
   says to press Play, Play pulses until it is first pressed, and every play is
   logged (`animation_play`). With nothing selected, Play falls back to the
   task's main object ([animation.md](animation.md#fallback-target)).
-- **Cap**: six minutes from the step's first start. That time is wall-clock
+- **Cap**: six minutes from the step's first start, ten for `transform-object`,
+  which has two parts (`holisticTaskCapMs`). That time is wall-clock
   and kept in the cursor, so a reload does not reset it. Continue unlocks when
   the checker first passes or the cap runs out.
 
@@ -158,6 +159,18 @@ together. Over 20 slots each task meets each combination five times;
 
 Tasks: `transform-object` and `cube-point-pivot-rotation` (transform
 problems), `point-plane-distance` and `sphere-distance` (derivation problems).
+
+`transform-object` is the high-clutter task, where the cues the other tasks
+rarely trigger have to work. Its lines pass through solids (collision accents)
+and cross in front of one another (halos), among decorative objects. Part A
+moves line L1 with a pipeline, translate then rotate, so it threads a sphere, a
+cube and the teapot. Part B takes n = VA × VB with the Cross Product block,
+draws line N along it through the teapot, and translates the teapot 2n along N,
+so its spout tip touches line L2. The givens the student plugs into pipelines
+(L1, the teapot) are seeded only when missing, and `ensureWorkspace` puts them
+back after Clear; the rest are reset on every entry. It starts from azimuth 30,
+since at the default 45 L1 reads as horizontal and every line across it as
+vertical, on top of the Y axis.
 
 `cube-point-pivot-rotation` has its own `settingsOverrides`. The condition's
 settings are layered over them, so its shadows-off and label detail give way

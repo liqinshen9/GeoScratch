@@ -1,4 +1,10 @@
-export function buildDotProductVisualExpression(blockId, uExpression, vExpression) {
+export function buildDotProductVisualExpression(
+  blockId,
+  uExpression,
+  vExpression,
+  uName = 'p',
+  vName = 'q',
+) {
   const id = JSON.stringify(blockId)
   return `(function(){
     const uVal = ${uExpression};
@@ -9,8 +15,8 @@ export function buildDotProductVisualExpression(blockId, uExpression, vExpressio
     const dot = uVal.dot(vVal);
     const lenP = uVal.length();
     const lenQ = vVal.length();
-    const uLabel = vectorNotation.getLabel(uVal, 'p');
-    const vLabel = vectorNotation.getLabel(vVal, 'q');
+    const uLabel = vectorNotation.getLabel(uVal, ${JSON.stringify(uName)});
+    const vLabel = vectorNotation.getLabel(vVal, ${JSON.stringify(vName)});
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(uVal, vVal);
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const headLenRatio = 0.25, headWidthRatio = 0.10;

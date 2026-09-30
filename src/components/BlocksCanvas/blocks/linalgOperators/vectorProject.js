@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { vectorLabelFromBlock } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 
@@ -11,8 +12,8 @@ export function initVectorProjectBlock() {
   Blockly.Blocks['vector_project'] = {
     init() {
       this.appendDummyInput().appendField('Vector Project')
-      this.appendValueInput('U').setCheck('vector3').appendField('u:')
-      this.appendValueInput('V').setCheck('vector3').appendField('onto ').appendField('v:')
+      this.appendValueInput('U').setCheck('vector3')
+      this.appendValueInput('V').setCheck('vector3').appendField('onto')
       // Two operand inputs, either of which can hold a whole nested chain.
       // Inline puts them side by side, so a point-plane distance ran off the
       // right of the workspace. External stacks them instead.
@@ -30,6 +31,9 @@ export function initVectorProjectBlock() {
   javascriptGenerator.forBlock['vector_project'] = function (block, g) {
     const u = g.valueToCode(block, 'U', Order.FUNCTION_CALL) || 'null'
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
+    // Operand block names, baked in: a nested vector carries none.
+    const uName = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('U')) || 'u')
+    const vName = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('V')) || 'v')
 
     const code = `(function(){
     const uVal = ${u};
@@ -38,8 +42,8 @@ export function initVectorProjectBlock() {
 
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const fmt = vectorNotation.formatVector;
-    const uLabel = vectorNotation.getLabel(uVal, 'u');
-    const vLabel = vectorNotation.getLabel(vVal, 'v');
+    const uLabel = vectorNotation.getLabel(uVal, ${uName});
+    const vLabel = vectorNotation.getLabel(vVal, ${vName});
     // The normal is just the vector you projected onto, so it is named and
     // coloured as that vector rather than relabelled "n" in a colour of its
     // own. vector3/vectorScale tag their result with the block that drew it,
@@ -90,7 +94,7 @@ export function initVectorProjectBlock() {
     // Projection u onto v
     let projObj, projVec=new THREE.Vector3(), projLen=0, projOrigin=new THREE.Vector3(0,0,0);
     const isPointPlaneDistanceProjection = uVal.userData?.geoType === 'point_difference_vector';
-    const inputLabel = vectorNotation.getLabel(uVal, 'u');
+    const inputLabel = vectorNotation.getLabel(uVal, ${uName});
     const pointEnd = isPointPlaneDistanceProjection && uVal.userData.end?.isVector3
       ? uVal.userData.end.clone()
       : null;

@@ -36,7 +36,7 @@ export const EXERCISES = Object.freeze([
   },
   {
     id: 'transform-object',
-    title: 'Transform this object',
+    title: 'Thread lines through objects',
     difficulty: DIFFICULTIES.MEDIUM,
   },
   {

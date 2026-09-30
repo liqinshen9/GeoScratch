@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { vectorLabelFromBlock } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 
@@ -11,7 +12,7 @@ export function initNormInplaceBlock() {
   Blockly.Blocks['vector_normalise'] = {
     init() {
       this.appendDummyInput().appendField('Normalize')
-      this.appendValueInput('V').setCheck('vector3').appendField('w:')
+      this.appendValueInput('V').setCheck('vector3')
       this.setInputsInline(true)
       this.setOutput(true, 'obj3D')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
@@ -23,6 +24,8 @@ export function initNormInplaceBlock() {
 
   javascriptGenerator.forBlock['vector_normalise'] = function (block, g) {
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
+    // The operand block's own name, baked in: a nested vector carries none.
+    const vName = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('V')) || 'w')
 
     const code = `(function(){
     const vVal = ${v};
@@ -31,7 +34,7 @@ export function initNormInplaceBlock() {
     const safeLen = (x) => (isFinite(x) && x > 0 ? x : 1);
     const lenV = vVal.length();
     const fmt = vectorNotation.formatVector;
-    const valueLabel = vectorNotation.getLabel(vVal, 'w');
+    const valueLabel = vectorNotation.getLabel(vVal, ${vName});
     const showOperandLabels = vectorNotation.shouldShowOperandLabels(vVal, null);
     const normLabel = 'normalize ' + valueLabel;
     const baseId = ${JSON.stringify(block.id)};

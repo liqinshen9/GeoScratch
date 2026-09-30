@@ -36,11 +36,15 @@ import exercise10 from './exercise10-cubePointPivot'
  *                                     of a study build rather than merely
  *                                     hidden from participants. Omitted by the
  *                                     perceptual exercises, which have nothing
- *                                     to build. The four transform exercises
- *                                     share one shape via
+ *                                     to build. The single-step transform
+ *                                     exercises share one shape via
  *                                     shared/fillSolution.js's
  *                                     teapotPipelineSolution().
  *   seedWorkspace(workspace)          Drops starter/decorative blocks in on entry.
+ *   ensureWorkspace(workspace)        Run on every workspace edit: puts back any
+ *                                     given block that has gone missing (Clear,
+ *                                     a restore of an older save) without
+ *                                     moving the ones still there.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.
  *   cameraView                        { distance?, azimuthDeg?, elevationDeg? }

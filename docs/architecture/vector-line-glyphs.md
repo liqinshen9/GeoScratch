@@ -78,6 +78,29 @@ middle group, so the halo stretches with the bar. Halo registration uses the
 resting span in world coordinates, which is correct at rest; while an animation
 stretches the bar, the ringed texture stretches with it.
 
+## Vector along a line
+
+A vector drawn exactly along a line, such as a cross product's result along the
+line built from it or p along L1 in `transform-object`, occupies the line's
+space in every style. The tube radii are close (0.045 against 0.051), the
+ringed radii are equal (0.085), and plain lines are both screen-space strokes.
+The two fought per pixel and the vector broke into fragments.
+
+The vector matters more, so the line leaves that stretch out.
+`utils/vectorsAlongLines.js` runs after each build, after `applyTubeCollisions`.
+For each line it collects the stretch every collinear vector covers (origin on
+the line and direction parallel, within 0.01 so each glyph's own jitter still
+counts), measured from the line's segment midpoint like collision zones. It
+merges them and passes them to the line's `setGapZones`. The line removes those
+stretches from every piece it draws: the plain-line strokes, the segmented tube
+and ringed tube (which then stand in for the continuous ones), and the
+collision accents. So the vector is drawn whole with nothing behind it.
+Coincident lines are also mutually halo-immune
+([halos.md](halos.md#coincident-lines)).
+
+The gap is the vector's resting length. While a reveal grows the vector, the
+unfilled part of the gap shows empty.
+
 ## Halo companions
 
 Per-style inflated companion meshes for the halo depth-trick (full mechanism in

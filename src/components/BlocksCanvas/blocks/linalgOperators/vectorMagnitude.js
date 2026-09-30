@@ -1,6 +1,7 @@
 import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
+import { vectorLabelFromBlock } from '@/utils/sceneHelpers'
 
 let REGISTERED = false
 
@@ -16,7 +17,7 @@ export function initVectorMagnitude() {
       // inside this block's outline rather than hanging it off the right edge.
       // See docs/architecture/blockly-integration.md#operator-input-layout.
       this.appendEndRowInput('MAGNITUDE_TITLE').appendField('Vector Magnitude')
-      this.appendValueInput('V').setCheck('vector3').appendField('j:')
+      this.appendValueInput('V').setCheck('vector3')
       this.appendEndRowInput('MAGNITUDE_VALUE_ROW_END')
       this.setInputsInline(true)
       this.setOutput(true, 'obj3D')
@@ -29,6 +30,8 @@ export function initVectorMagnitude() {
 
   javascriptGenerator.forBlock['vector_magnitude'] = function (block, g) {
     const v = g.valueToCode(block, 'V', Order.FUNCTION_CALL) || 'null'
+    // The operand block's own name, baked in: a nested vector carries none.
+    const vName = JSON.stringify(vectorLabelFromBlock(block.getInputTargetBlock('V')) || 'j')
 
     const code = `(function () {
     const vVal = ${v};
@@ -37,7 +40,7 @@ export function initVectorMagnitude() {
     const len = vVal.length();
     const isPointPlaneProjection = vVal.userData?.geoType === 'point_plane_distance_projection_vector';
     const isPointDifference = vVal.userData?.geoType === 'point_difference_vector';
-    const valueLabel = vectorNotation.getLabel(vVal, 'j');
+    const valueLabel = vectorNotation.getLabel(vVal, ${vName});
     const safeLen = (x) => (Number.isFinite(x) && x > 0 ? x : 1);
     const baseId = ${JSON.stringify(block.id)};
     const usesPlacedVector = (isPointPlaneProjection || isPointDifference) && vVal.userData.start?.isVector3;
