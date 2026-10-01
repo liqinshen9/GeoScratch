@@ -389,18 +389,18 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
 
   const baseTube = new THREE.Mesh(
     new THREE.CylinderGeometry(
-      0.085,
-      0.085,
+      0.051,
+      0.051,
       distance,
       RINGED_TUBE_RADIAL_SEGMENTS,
       RINGED_TUBE_HEIGHT_SEGMENTS(distance),
     ),
     ringedTubeMat,
   )
-  baseTube.userData.zoomInvariantRadius = 0.085
+  baseTube.userData.zoomInvariantRadius = 0.051
   ringedTube.add(baseTube)
 
-  const haloCompanionRingedTube = haloAvailable ? buildHaloCompanion(0.085) : null
+  const haloCompanionRingedTube = haloAvailable ? buildHaloCompanion(0.051) : null
   if (haloAvailable) window.applyHaloDiscardMaterial(ringedTubeMat, haloId, haloImmuneIds)
 
   // "dashed" style REPLACES the base tube, like plain_tube's dashedTubeGroup;
@@ -427,15 +427,15 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     if (haloAvailable) window.applyHaloDiscardMaterial(mat, haloId, haloImmuneIds)
     const segment = new THREE.Mesh(
       new THREE.CylinderGeometry(
-        0.085,
-        0.085,
+        0.051,
+        0.051,
         height,
         RINGED_TUBE_RADIAL_SEGMENTS,
         RINGED_TUBE_HEIGHT_SEGMENTS(height),
       ),
       mat,
     )
-    segment.userData.zoomInvariantRadius = 0.085
+    segment.userData.zoomInvariantRadius = 0.051
     segment.position.set(0, (start + end) / 2, 0)
     ringedTubeDashedGroup.add(segment)
   }
@@ -473,7 +473,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   // Sized to the visible glyph's radius (plus a clearance hair), picked per
   // refresh. See docs/architecture/vector-line-glyphs.md#collision-accents.
   const getAccentRadius = (activeStyle) => {
-    if (activeStyle === 'ringed_tube') return 0.085 // == baseTube's own radius
+    if (activeStyle === 'ringed_tube') return 0.051 // == baseTube's own radius
     if (activeStyle === 'plain_tube') return 0.051 // == cylinder's own radius
     return 0.035 // no true radius (fat-line) -- a thin nominal size
   }

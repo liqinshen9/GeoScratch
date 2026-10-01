@@ -18,9 +18,9 @@ const TUBE_HEAD_RADIUS = 0.2
 const TUBE_HEAD_LENGTH = 0.35
 
 // Ringed Tube: a solid cylinder with a ring texture
-const RINGED_SHAFT_RADIUS = 0.085
-const RINGED_HEAD_RADIUS = 0.22
-const RINGED_HEAD_LENGTH = 0.28
+const RINGED_SHAFT_RADIUS = TUBE_SHAFT_RADIUS
+const RINGED_HEAD_RADIUS = TUBE_HEAD_RADIUS
+const RINGED_HEAD_LENGTH = TUBE_HEAD_LENGTH
 // One light + dark pair per grid unit, from the tail (the cylinder's texture
 // starts at its bottom end), so counting rings reads the length.
 const RINGED_RING_PERIOD = 1

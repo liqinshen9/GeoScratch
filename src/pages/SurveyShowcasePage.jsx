@@ -43,7 +43,8 @@ const SHOWCASE = {
 }
 
 // Each close-up is drawn at the size the intro page shows it, with the trial's
-// own settings (grid, axes, labels), so a cue looks as it will in a trial.
+// own settings, so a cue looks as it will in a trial. No grid: this close, the
+// floor grid and the y = 0 grid cross at clashing scales and read as a glitch.
 const CUE_CANVAS = { width: 512, height: 300 }
 const CUE_CAMERA_DISTANCE = 16
 
@@ -111,7 +112,7 @@ function resolveView(t, c, cue) {
     return {
       id: `cue-${cue}`,
       label: cueView.label,
-      settings: { ...getTechnique(cueView.technique).settings, showAxes: false },
+      settings: { ...getTechnique(cueView.technique).settings, showAxes: false, showGrid: false },
       scene: cueView.scene,
       canvas: CUE_CANVAS,
       crop: { top: 0, height: CUE_CANVAS.height },

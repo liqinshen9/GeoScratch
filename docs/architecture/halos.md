@@ -49,7 +49,7 @@ needed this):
   `buildHaloCompanion(baseRadius)` helper (`geoVectorLine.js`) -- 0.035
   (nominal, `plain_line` has no true 3D radius, matching the existing
   collision-accent ring's own fallback for this style), 0.051 (`plain_tube`,
-  unchanged), 0.085 (`ringed_tube`, matching `baseTube`'s own radius). Only
+  unchanged), 0.051 (`ringed_tube`, matching `baseTube`'s own radius). Only
   the currently-active style's companion is ever `.visible = true` at once
   (toggled alongside the real glyphs in `applyGlyphVisibility`) -- three
   differently-sized footprints for the same line on `HALO_LAYER`

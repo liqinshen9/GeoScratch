@@ -82,8 +82,8 @@ stretches the bar, the ringed texture stretches with it.
 
 A vector drawn exactly along a line, such as a cross product's result along the
 line built from it or p along L1 in `transform-object`, occupies the line's
-space in every style. The tube radii are close (0.045 against 0.051), the
-ringed radii are equal (0.085), and plain lines are both screen-space strokes.
+space in every style. The tube radii are close (0.045 against 0.051, the same for ringed tubes),
+and plain lines are both screen-space strokes.
 The two fought per pixel and the vector broke into fragments.
 
 The vector matters more, so the line leaves that stretch out.
@@ -137,7 +137,8 @@ the dashed collision style - real gaps, not an overlay.
 
 ### ringed_tube
 
-`CylinderGeometry(0.085, ...)` textured with a repeating 2-band `CanvasTexture`
+`CylinderGeometry(0.051, ...)` (plain_tube's radius, as a ringed vector
+shares the plain vector's shaft and head sizes) textured with a repeating 2-band `CanvasTexture`
 (`makeRingTexture`). Band frequency is fixed at build time
 (`RINGED_TUBE_RING_PERIOD`), deliberately not zoom-responsive, so there's no
 per-frame texture rebuild racing the cross-section's zoom-invariant scaling.
@@ -166,7 +167,7 @@ glyph is visible, so it's handled per-glyph (`dashedTubeGroup` /
 `ringedTubeDashedGroup` / `setThickLineSegmentPairs`).
 
 `getAccentRadius(style)` sizes the overlay to the visible glyph's own radius
-(0.085 / 0.051 / 0.035-nominal for fat-line) plus a clearance "hair".
+(0.051 for both tubes / 0.035-nominal for fat-line) plus a clearance "hair".
 
 `none` is the fourth value and draws no accent: it matches none of the three
 visibility branches in `applyGlyphVisibility`, so the continuous glyph stays
@@ -214,7 +215,7 @@ per segment.
 ### needle-triangle
 
 `CylinderGeometry` has only one height segment unless told otherwise - its side
-is two triangles spanning the tube's entire length (~40 units) against a 0.085
+is two triangles spanning the tube's entire length (~40 units) against a 0.051
 radius, an aspect ratio over 1000:1. Perspective-correct texture-coordinate
 interpolation across a triangle that extreme loses precision on some GPU/driver
 combinations, worse from an oblique angle - which is exactly what breaks the
