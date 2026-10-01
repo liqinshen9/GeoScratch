@@ -315,26 +315,6 @@ export default function ExercisePage({
                     />
                     <span>Browse</span>
                   </button>
-                  <button
-                    type="button"
-                    className="exercise-nav-button"
-                    onClick={() => previousExercise && handleSelectExercise(previousExercise.id)}
-                    disabled={!previousExercise}
-                    title="Previous exercise"
-                    aria-label="Previous exercise"
-                  >
-                    <ArrowLeft theme="outline" size="13" fill="currentColor" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="exercise-nav-button"
-                    onClick={() => nextExercise && handleSelectExercise(nextExercise.id)}
-                    disabled={!nextExercise}
-                    title="Next exercise"
-                    aria-label="Next exercise"
-                  >
-                    <ArrowRight theme="outline" size="13" fill="currentColor" aria-hidden="true" />
-                  </button>
                 </div>
               )}
             </div>
@@ -382,25 +362,58 @@ export default function ExercisePage({
             {!isPerceptual && !exercise.hideAnswerCard && (
               <AnswerCard result={result} className={answerCardClass} />
             )}
-            {passed && (
-              <div className="exercise-pass-banner" role="status">
-                <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
-                <span>Passed</span>
-              </div>
-            )}
-            {/* Dev only: import.meta.env.DEV is false in the study build, so
-                  the control is compiled out rather than merely hidden. */}
-            {import.meta.env?.DEV && exercise.solutionXml && (
-              <button
-                type="button"
-                className="exercise-debug-fill"
-                onClick={() =>
-                  fillSolution(workspace, exercise.solutionXml, exercise.seedWorkspace)
-                }
-              >
-                Fill solution (dev)
-              </button>
-            )}
+            <div className="exercise-task-panel__foot">
+              {passed && (
+                <div className="exercise-pass-banner" role="status">
+                  <CheckOne theme="filled" size="18" fill="currentColor" aria-hidden="true" />
+                  <span>Passed</span>
+                </div>
+              )}
+              {/* Dev only: import.meta.env.DEV is false in the study build, so
+                    the control is compiled out rather than merely hidden. */}
+              {import.meta.env?.DEV && exercise.solutionXml && (
+                <button
+                  type="button"
+                  className="exercise-debug-fill"
+                  onClick={() =>
+                    fillSolution(workspace, exercise.solutionXml, exercise.seedWorkspace)
+                  }
+                >
+                  Fill solution (dev)
+                </button>
+              )}
+              {!studyTask && !standalone && (previousExercise || nextExercise) && (
+                <nav className="exercise-step-nav" aria-label="Exercise navigation">
+                  {previousExercise && (
+                    <button
+                      type="button"
+                      className="exercise-nav-button exercise-nav-button--wide"
+                      onClick={() => handleSelectExercise(previousExercise.id)}
+                      title={previousExercise.title}
+                    >
+                      <ArrowLeft theme="outline" size="13" fill="currentColor" aria-hidden="true" />
+                      <span>Previous</span>
+                    </button>
+                  )}
+                  {nextExercise && (
+                    <button
+                      type="button"
+                      className="exercise-nav-button exercise-nav-button--wide"
+                      onClick={() => handleSelectExercise(nextExercise.id)}
+                      title={nextExercise.title}
+                    >
+                      <span>Next</span>
+                      <ArrowRight
+                        theme="outline"
+                        size="13"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </nav>
+              )}
+            </div>
             {studyTask && <StudyTaskBar task={studyTask} passed={passed} />}
           </aside>
 
@@ -423,6 +436,7 @@ export default function ExercisePage({
             answer={showAnswerHighlight ? answerHighlight : undefined}
             cameraPosition={cameraPosition}
             animationFallback
+            animationSequence={exercise.animationSequence}
             toggleLabelsOnLeftClick={toggleLabelsOnLeftClick}
           />
         </div>

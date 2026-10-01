@@ -25,13 +25,14 @@ Both read as a container around the thing they act on, which is what they are --
 one measures its operand, the other puts a point on it.
 
 `scalar_arithmetic` stacks the same way, a row each: title, `A`, the operator,
-`B`. Its rows are centred. Geras honours `setAlign()` only on dummy inputs, so
-the block opts in with `alignRowsByInput` (`renderers/geoScratchRenderer.js`),
-which copies a value or end-row input's alignment onto its row. It is opt-in
-because some blocks already set alignments that were silently ignored, and
-Vector Arithmetic's "show" jumped to the right when every block got it. A sphere-distance answer holds the
-whole `|VB - VA|` chain on its left, so the radius sum beside it sat far off to
-the right.
+`B`. A sphere-distance answer holds the whole `|VB - VA|` chain on its left, so
+the radius sum beside it sat far off to the right.
+
+Its rows are left-aligned. They were centred for a while, which made dropping
+into them flicker: while an operand is dragged near a socket, Blockly previews
+it connected, the wider row re-centres, the socket slides out from under the
+cursor, the preview drops, the row shrinks, and it slides back, every frame. A
+left-aligned socket stays put whatever its row holds.
 
 Measured on the solved point-plane chain, the widest block went from 1022px
 (everything inline) to 693px. Stacking all six two-operand operators instead

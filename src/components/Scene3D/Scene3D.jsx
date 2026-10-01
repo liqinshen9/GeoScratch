@@ -64,6 +64,7 @@ function Scene({
   theme,
   answer,
   animationFallback,
+  animationSequence,
 }) {
   const { settings } = useSettingsStore()
   const isDark = theme === 'dark'
@@ -114,7 +115,11 @@ function Scene({
       <DashZoomSync objects={objects} zoomEnabled={settings.zoomInvariantSizing} />
       <SelectionHighlight objects={objects} />
       <AnswerTint objects={objects} state={answer?.state} />
-      <AnimationDriver objects={objects} fallback={animationFallback} />
+      <AnimationDriver
+        objects={objects}
+        fallback={animationFallback}
+        sequence={animationSequence}
+      />
       <LabelDeclutter />
       <ambientLight intensity={isDark ? 0.6 : 0.4} />
 
@@ -181,8 +186,8 @@ function Scene({
 const SCENE_BACKGROUND_COLOR = { light: '#ffffff', dark: '#0b111b' }
 
 /**
- * `interactive={false}`, `onPresented`, `hiddenLabelKeys` and `onObjectClick`
- * exist for the study trial runner: they change input, label visibility and the
+ * `interactive={false}`, `showOrientationGizmo`, `onPresented`,
+ * `hiddenLabelKeys` and `onObjectClick` exist for the study trial runner: they change input, label visibility and the
  * camera-only overlays (gizmo, view buttons), never how the scene itself is
  * drawn. See docs/architecture/study-phase1.md#same-3d-view.
  */
@@ -190,12 +195,15 @@ export default function Scene3D({
   objects = [],
   answer,
   interactive = true,
+  showOrientationGizmo = false,
   onPresented,
   hiddenLabelKeys: extraHiddenLabelKeys,
   onObjectClick,
   toggleLabelsOnLeftClick = false,
   // Play an exercise's main object when nothing animatable is selected.
   animationFallback = false,
+  // (objects, workspace) => the objects the fallback plays in turn.
+  animationSequence,
   // Where the camera starts. Only a non-interactive view has any business
   // changing it: with no orbiting, the fixed distance is the whole framing.
   cameraPosition = DEFAULT_CAMERA_POSITION,
@@ -386,6 +394,7 @@ export default function Scene3D({
             theme={resolvedTheme}
             answer={answer}
             animationFallback={animationFallback}
+            animationSequence={animationSequence}
           />
           <HaloDepthPrepass onTargetReady={setHaloRawTarget} />
           <HaloDilatePass rawTarget={haloRawTarget} onTargetReady={setHaloDilatedTarget} />
@@ -394,9 +403,10 @@ export default function Scene3D({
           {/* Screen-space orientation gizmo -- an alternative to the in-scene
               axes that doesn't take up world space; the in-scene axes can be
               hidden via the toggle below and this still shows X/Y/Z. */}
-          {interactive && settings.showAxisGizmo && (
+          {(interactive || showOrientationGizmo) && settings.showAxisGizmo && (
             <GizmoHelper alignment="top-right" margin={[40, 40]}>
               <GizmoViewport
+                disabled={!interactive}
                 axisColors={[gizmoAxisColors.x, gizmoAxisColors.y, gizmoAxisColors.z]}
                 /* The axis-head discs are always a light colour, so the label
                    text stays dark in both themes. */

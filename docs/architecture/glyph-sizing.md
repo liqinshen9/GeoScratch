@@ -12,6 +12,31 @@ A mesh tagged `userData.zoomInvariantRadius` renders at its authored radius at
 linearly with camera distance from there, clamped to
 `ZOOM_INVARIANT_MIN_SCALE` (0.3) .. `ZOOM_INVARIANT_MAX_SCALE` (5).
 
+### view-height
+
+Distance alone keeps a glyph the same size relative to the **view**, so its
+pixel width tracked the canvas height: a plain tube was about 1.8px in an
+820px-tall editor view and 1.4px in the study's fixed 640px stage, and thinner
+still next to a tall editor on a big monitor. `ZoomInvariantScaler` and
+`DashZoomSync` now also multiply by `viewHeightFactor(size.height)`
+(`VIEW_HEIGHT_REFERENCE / height`, in `utils/zoomInvariantScale.js`), so glyphs
+are a fixed number of CSS pixels, calibrated to how they looked at 820px.
+Points and arrowheads therefore look as they did in the editor, and grow in a
+shorter canvas.
+
+On top of that, shafts (tagged, non-uniform, not an arrowhead) take a
+cross-section factor from `tubeWidthScale`, which draws a line tube and a
+vector shaft `TUBE_WIDTH_PX` (2.6) wide: the same as the plain-line stroke. So
+the line style changes the shading and not the width. Without it the study's
+T1 (tubes) and T2 (plain lines) differed in thickness as well as shading, by
+3 against 5 device pixels, which confounded exactly the comparison T2 exists
+for. `LINE_TUBE_RADIUS` / `VECTOR_TUBE_RADIUS` in `sceneConstants.js` mirror
+the builders' radii, which cannot import them; change them together.
+
+Only the pixel width changed, not placement, so the Phase 1 stimulus seed did
+not need a bump. Images rendered from the scene (survey cue images, pivot
+diagrams) show the old widths until they are re-rendered.
+
 `ZOOM_INVARIANT_REFERENCE_DISTANCE` lives in its own module because the halo
 discard shader also needs it: a tube's real world-space radius grows at this
 same rate when zoomed out, so a fixed world-unit "same touching point"
@@ -97,8 +122,13 @@ compute its own correction from its own world position made segments at
 different camera distances end up visibly different sizes - a bulging/tapering
 artifact on any line long enough (or viewed end-on enough) that its pieces sit
 at meaningfully different distances. Lines expose `userData.segmentMid` (their
-local-space centre) as the single reference point; everything else uses its own
-world position.
+local-space centre) as the single reference point, and vectors
+`userData.sizingAnchor` (their shaft's midpoint), read from the top-level
+object or, for a vector wrapped with its tail marker, its direct child. A
+vector's group sits at the world origin with its geometry in world space, so
+before `sizingAnchor` (2026-10-01) every vector was sized for the origin's
+distance rather than its own: off by up to about 30% for a vector near the edge
+of the room. Everything else uses its own world position.
 
 ### dash-sync-priority
 

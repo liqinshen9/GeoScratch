@@ -3,7 +3,7 @@
 // Generated-code coverage for the staged reveal: these blocks' builders are
 // spliced into a string and run through `new Function`, so nothing else in the
 // suite ever executes them. See docs/architecture/generated-code-runtime.md.
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeAll, beforeEach, vi } from 'vitest'
 
 // The real colorSystem pulls in @material/material-color-utilities, whose ESM
 // subpath doesn't resolve under vitest. Builders read window.GeoScratchColors.
@@ -18,6 +18,7 @@ import * as Blockly from 'blockly/core'
 import { javascriptGenerator } from 'blockly/javascript'
 import defineBlocks from '@/components/BlocksCanvas/blocks'
 import { installSceneRuntime, RUNTIME_PARAM_NAMES } from '@/utils/sceneRuntime'
+import useSettingsStore from '@/store/useSettingsStore'
 
 beforeAll(() => {
   window.GeoScratchColors = {
@@ -413,6 +414,31 @@ describe('vector_arithmetic point difference', () => {
     expect(() => group.userData.animate(3.5 / 4)).not.toThrow()
     expect(() => group.userData.animate(1)).not.toThrow()
     expect(length(result)).toBeCloseTo(DIFFERENCE, 9)
+  })
+})
+
+describe('vector_arithmetic with vectorDifferenceAsPositions', () => {
+  afterEach(() => useSettingsStore.getState().clearExerciseOverrides())
+
+  function vectorDifference() {
+    const minus = workspace.newBlock('vector_arithmetic')
+    minus.setFieldValue('subtract', 'OP')
+    plug(minus, 'U', vec3(-9, 8, 7))
+    plug(minus, 'V', vec3(3, -2, 5))
+    const store = run()
+    return { group: store[minus.id], result: store[minus.id + '_r'] }
+  }
+
+  it("draws two vectors' difference from the origin by default", () => {
+    const { result } = vectorDifference()
+    expect(result.userData.vectorOrigin.toArray()).toEqual([0, 0, 0])
+  })
+
+  it('draws it from Q to P, like two Points, when the setting is on', () => {
+    useSettingsStore.getState().setExerciseOverrides({ vectorDifferenceAsPositions: true })
+    const { group, result } = vectorDifference()
+    expect(result.userData.vectorOrigin.toArray()).toEqual([3, -2, 5])
+    expect(group.userData.end.toArray()).toEqual([-9, 8, 7])
   })
 })
 

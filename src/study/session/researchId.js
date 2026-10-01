@@ -18,6 +18,26 @@ export function generateResearchId(randomValues = defaultRandomValues) {
   return id
 }
 
+// Reserved for trying the study out (TEST1, TEST2, ...). The S keeps them out of
+// the generated alphabet, so a test session can never share a real ID.
+const TEST_RESEARCH_ID = /^TEST\d{1,3}$/
+
+export const isTestResearchId = (id) => TEST_RESEARCH_ID.test(String(id ?? ''))
+
+/**
+ * A research ID from a study link (see scripts/studyLinks.mjs), or a test ID.
+ *
+ * @returns {string|null} the ID, or null if `raw` could not have been generated
+ */
+export function parseResearchId(raw) {
+  const text = String(raw ?? '')
+    .trim()
+    .toUpperCase()
+  if (isTestResearchId(text)) return text
+  if (text.length !== RESEARCH_ID_LENGTH) return null
+  return [...text].every((ch) => RESEARCH_ID_ALPHABET.includes(ch)) ? text : null
+}
+
 function defaultRandomValues(n) {
   return crypto.getRandomValues(new Uint32Array(n))
 }

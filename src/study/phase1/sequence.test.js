@@ -13,13 +13,13 @@ describe('resolveSequence', () => {
   it('orders techniques by the participant row of the Williams square', () => {
     const sequence = resolveSequence('P03', stimulusSet)
     expect(sequence.squareRow).toBe(2)
-    expect(sequence.techniqueOrder).toEqual(williamsSquare(10)[2].map((i) => TECHNIQUE_IDS[i]))
-    expect(new Set(sequence.techniqueOrder).size).toBe(10)
+    expect(sequence.techniqueOrder).toEqual(williamsSquare(9)[2].map((i) => TECHNIQUE_IDS[i]))
+    expect(new Set(sequence.techniqueOrder).size).toBe(9)
   })
 
   it('runs every practice stimulus first, then every measured stimulus once, in each block', () => {
     const sequence = resolveSequence('P01', stimulusSet)
-    expect(sequence.blocks).toHaveLength(10)
+    expect(sequence.blocks).toHaveLength(9)
     for (const block of sequence.blocks) {
       expect(block.trials).toHaveLength(20)
       expect(block.trials.slice(0, 4).every((t) => t.practice)).toBe(true)
@@ -39,9 +39,9 @@ describe('resolveSequence', () => {
 
 describe('resolveSequence with a slot', () => {
   it('takes the Williams row from the slot, not the code', () => {
-    const sequence = resolveSequence('K7QX3M', stimulusSet, 13)
+    const sequence = resolveSequence('K7QX3M', stimulusSet, 21)
     expect(sequence.squareRow).toBe(2)
-    expect(sequence.slot).toBe(13)
-    expect(sequence.techniqueOrder).toEqual(williamsSquare(10)[2].map((i) => TECHNIQUE_IDS[i]))
+    expect(sequence.slot).toBe(21)
+    expect(sequence.techniqueOrder).toEqual(williamsSquare(9)[2].map((i) => TECHNIQUE_IDS[i]))
   })
 })

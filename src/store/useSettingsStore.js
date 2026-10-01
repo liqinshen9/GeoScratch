@@ -68,6 +68,11 @@ export const DEFAULT_SETTINGS = {
   // Off: a transform pipeline animates start pose to end pose in one motion.
   // On: one step at a time. See docs/architecture/animation.md#step-by-step-pipelines.
   pipelineStepAnimation: false,
+  // Not on the Settings page; an exercise turns it on. Subtracting two vectors
+  // drawn from the origin then reads as the difference of two positions, drawn
+  // from one tip to the other like P - Q of two Points.
+  // See docs/architecture/animation.md#a-measured-vector-difference.
+  vectorDifferenceAsPositions: false,
   namingStyle: NAMING_STYLES.SHORT,
   labelDetail: LABEL_DETAIL_LEVELS.NAME_ONLY,
 }

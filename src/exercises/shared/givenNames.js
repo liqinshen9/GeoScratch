@@ -2,7 +2,7 @@ import {
   clearCustomName,
   getDisplayName,
   isCustomNamed,
-  isNameTaken,
+  ownsDisplayName,
   setCustomName,
 } from '@/utils/namingRegistry'
 
@@ -25,10 +25,17 @@ export function applyGivenNames(workspace, givenNames) {
     if (given && !given.matches(block)) clearCustomName(block)
   }
 
-  // Names are unique, so a second match (a duplicated n) keeps its number.
+  // Every match takes the name, so a duplicated n is n too: the task tells the
+  // student to duplicate it. Only a block that is not this given (a name the
+  // student typed) keeps the name to itself.
+  // See docs/architecture/naming-registry.md#exercise-given-names.
   for (const { name, matches } of givenNames) {
-    if (isNameTaken(workspace, name)) continue
-    const block = blocks.find((candidate) => !isCustomNamed(candidate) && matches(candidate))
-    if (block) setCustomName(block, name)
+    const heldElsewhere = blocks.some(
+      (block) => ownsDisplayName(block) && getDisplayName(block) === name && !matches(block),
+    )
+    if (heldElsewhere) continue
+    for (const block of blocks) {
+      if (!isCustomNamed(block) && matches(block)) setCustomName(block, name)
+    }
   }
 }

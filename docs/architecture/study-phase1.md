@@ -2,9 +2,23 @@
 
 Phase 1 of the user study is a two-alternative forced choice depth-ordering
 task: a static scene with two targets labelled **A** and **B**, and the
-participant clicks which one wins a depth comparison. Ten rendering techniques
-(T1-T10) x two clutter levels, within subjects. The protocol itself is specified
-in the dissertation Method; this doc covers how the code realises it.
+participant clicks which one wins a depth comparison. Nine rendering
+techniques (T1-T8 and T10) x two clutter levels, within subjects. The
+protocol itself is specified in the dissertation Method; this doc covers how
+the code realises it.
+
+T9 (high-contrast palette) was dropped on 2026-09-30: it keeps each type's
+lightness equal and changes only hue and chroma, so it carries no depth. T8
+(monochrome) was dropped with it and restored on 2026-10-01, on a different
+hypothesis: not that a palette carries depth, but that without hue it is harder
+to tell which objects overlap, since hue is what separates one object from the
+next where they cross. Lines are grey under every palette, so T8 differs from
+T1 only where a vector, point or solid is involved. The IDs are not renumbered,
+so T10 still names the combination in logs, survey images and the Method.
+
+Nine is odd, so the Williams design is the square plus its rows reversed: 18
+orders (`williams.js`), each condition twice in each position and each ordered
+pair of neighbours twice. Slots repeat every 18.
 
 Route: `/study/phase1` (participants), `/study/phase1/preview` (dev only).
 Code: `src/study/phase1/`, `src/pages/StudyPhase1Page.jsx`.
@@ -12,18 +26,22 @@ Code: `src/study/phase1/`, `src/pages/StudyPhase1Page.jsx`.
 ## Questions
 
 An infinite line has no single depth, so every trial has to name _where_ it is
-asking about. Two question types do that, balanced within each clutter level
-(`questionCopy.js` holds the participant-facing wording):
+asking about. Three question types do that, each crossed with difficulty within
+each clutter level (`questionCopy.js` holds the participant-facing wording):
 
-- **occlusion** -- the targets cross on screen. "Where A and B cross, which one
-  passes in front of the other?" The judged point is the crossing.
+- **occlusion** -- the targets cross on screen. "Line A and Vector B do not
+  touch. Where they overlap on screen, which one is in front?" Saying they do
+  not touch heads off reading the overlap as a collision. The judged point is the crossing.
 - **proximity** -- the targets are apart on screen, and a shaded vertical band
   (left, middle or right third) marks a column of it. "Inside the shaded band,
   which one is closer to you?" The judged point is that column.
+- **distance** -- a labelled point C on a line, and "Point C sits on a line.
+  Which of these two is closer to Point C?" / "Any point on Line A or the tip
+  of Vector B?" See [Distance questions](#distance-questions).
 
 The band is a DOM overlay on the stage, not scene geometry, and is drawn
 identically under every technique. The prompt and the button labels follow the
-question type, and both appear during the fixation cross, so the reaction time
+question type and name each target with its kind ("Line A", "Sphere B"), and both appear during the fixation cross, so the reaction time
 measures the judgement rather than the reading.
 
 A trial's question type and band are logged (`question_type`, `probe_band`,
@@ -73,6 +91,9 @@ itself:
   the camera and would look clickable. This is done in `Scene3D`, not by turning
   off `showAxisGizmo`: that setting also switches the in-scene axis end labels
   on, which would change the scene.
+- `showOrientationGizmo`: the trial page shows the orientation gizmo anyway,
+  for orientation only. With `interactive={false}` it is drawn `disabled`, so
+  it has no hover and a click cannot turn the camera.
 - `cameraPosition`: the trial camera (`CAMERA.position` in `stimulusConfig.js`)
   is derived from the editor's `DEFAULT_CAMERA_VIEW`, with the same azimuth,
   elevation and `CAMERA_FOV` ([camera-view.md](camera-view.md)), at the study's
@@ -117,10 +138,16 @@ geometry is re-rendered under every technique.
   affine along the line), and a sphere with its **near surface**, the surface
   being judged.
 - **Target kinds** are lines (box-clipped, not segments), vectors (a drawn
-  arrow, tail to tip), points and spheres, paired by `PAIR_TYPES`. A sphere is a
+  arrow, tail to tip) and spheres, paired by `PAIR_TYPES`. A sphere is a
   transparent solid, so "which one occludes the other" is not well posed for it:
   `OCCLUSION_PAIR_TYPES` leaves sphere pairs out and they are asked as proximity
   questions only.
+- **No bare points as targets** in any question (since 2026-10-01). A point
+  marker is drawn the same size at any depth, so where a point sits in depth
+  cannot be told and a trial that hinges on one is a guess. A point is also an
+  opaque ball wider than a line, so a line-point overlap question drew its own
+  answer. Points still appear as distractors, and as C in distance questions,
+  where C sits on a line.
 - **A proximity trial has to stay answerable right across the band.** The same
   target must be nearer, and the two must stay visibly apart, at both band edges
   as well as at its centre (`bandIsUnambiguous`). Targets are placed near
@@ -144,8 +171,12 @@ geometry is re-rendered under every technique.
   trial T2, T3 and T5 act on one target at most. Pair type is balanced within
   each question type and logged; analyse it as a factor.
 - **Difficulty** is the depth gap, `DEPTH_SEPARATIONS`. Those numbers are
-  placeholders until the pilot. 24 measured stimuli split as 12 per clutter
-  level, 4 per difficulty (`MEASURED_DIFFICULTY_COUNTS`).
+  placeholders until the pilot. 18 measured stimuli split as 9 per clutter
+  level, 3 per difficulty (`MEASURED_DIFFICULTY_COUNTS`), one of each question
+  type in every clutter x difficulty cell. That gives each type 6 trials, with
+  the nearer target, the band and the pair type dealt evenly within the type.
+  The count dropped from 24 on 2026-10-01 when the third type was added: 24
+  cannot be split evenly across three types and their pairings.
 - **Distractors** are placed within `distractorRadiusNdc` of the probe, and kept
   off it and off both targets' judged points (points and lines by screen
   distance, solids by projected radius), so clutter adds crossing and occlusion
@@ -178,6 +209,49 @@ geometry is re-rendered under every technique.
   Which letter gets which kind, the angles, the vector lengths and the colour
   salt are drawn per stimulus.
 
+### Distance questions
+
+Occlusion questions sat near ceiling once the glyphs were the right size, so a
+third type asks about distances between objects rather than depth from the
+viewer, which is closer to what the authoring tasks need (point-to-plane,
+sphere-to-sphere). The prompt is two lines with a blank one between: "Point C sits
+on a line. Which of these two is closer to Point C?" / "Line A or the tip of Vector B?"; the
+buttons name the two options.
+
+- **C sits on a line.** C is a labelled point (`role: 'reference'`), and an
+  unlabelled line runs through it (`role: 'context'`, key `Cline`). A point
+  marker is drawn the same size at any depth, so a lone point carries no depth
+  of its own; the line gives C a place in depth for the cues to act on. The
+  line runs clear of A and B on screen and never touches them in 3D, and it can
+  carry the solid that T4 needs.
+- **What A and B can be.** A vector (judged by its tip), a line (its nearest
+  point to C) or a sphere (its surface): "closer" is always the shortest
+  distance. Six pairings, one of each per block (`DISTANCE_PAIR_TYPES`). Never a
+  bare point: a point marker has no size cue, so a trial that hinges on one
+  came out close to a guess (three points were tried first, then points
+  against vectors, and both were dropped). Cubes are left out because the
+  distance to a cube depends on its orientation, so the ratio could not be
+  exact. A line target is built through its nearest point, perpendicular to the
+  direction to C; a sphere's centre goes its radius further out.
+- **The screen never gives it away.** `placeDistanceTargets` puts the target
+  that is farther from C in 3D `targetScreenPx` from C on screen, and the
+  nearer one `screenRatio` (0.95-1.3) times that, so on screen the nearer one
+  is about as far away or farther. The check is repeated on what is actually
+  drawn (`imagePixelDistance`: to a tip, to a line's image, to a sphere's
+  outline), since a line can pass nearer C on screen than the point it was
+  built through. The nearer target's 3D distance is
+  `depthStretch` times the shortest distance its view ray allows, which forces
+  it off C's depth, and the farther one is `DISTANCE_RATIOS[difficulty]` times
+  further. Each target sits where its view ray meets that distance, in front of
+  or behind, chosen at random. Difficulty is that ratio, a placeholder until
+  the pilot.
+- **Vectors aim at C**, so a shaft trails away from C and never runs over C or
+  the other target on screen. Its tip is where its label hangs.
+
+Stimuli carry `distances` and `distanceRatio` as well as the judged points'
+`depths`; rows log `question_type = 'distance'`, and the geometry joins through
+`stimulus_id`.
+
 ## Scene build
 
 `stimulusToXml.js` writes the stimulus as ordinary blocks; `buildStimulusScene`
@@ -201,10 +275,20 @@ generator, runtime, builders and tube collisions are the editor's own.
 ## Session flow
 
 `phase1Flow.js` is a pure reducer: intro, then per block a block intro, 4
-practice trials with Correct/Incorrect feedback, 24 measured trials in shuffled
+practice trials with Correct/Incorrect feedback, 18 measured trials in shuffled
 order without feedback, and a block-end screen (placeholder for the per-block
 Qualtrics questionnaire). Each trial starts with a 500 ms fixation cross; the
 scene is built during it, so build cost never falls inside a reaction time.
+
+The intro is five pages inside the one `intro` state (local page state in
+`StudyPhase1Page`): the task, then one page each for halos, collision accents
+and ringed lines (one dark + one grey ring is one unit), then the answering
+instructions and Start. Every participant sees the
+cue explanations before block 1, whatever their order, so when a participant
+learns what a cue means never varies with the Williams row. The pictures are
+`public/study/cue-*.png`, rendered from `/study/showcase?cue=halo|accent|rings`
+under T5 / T4 / T3 (the rings view from closer, so each ring is countable) with the trial's own settings (`scripts/surveyScreenshots.mjs`), and
+shown at their rendered 512 px so the marking is the size it is in a trial.
 
 A cursor (`geoscratch:phase1-progress:<code>`) is saved after every step. A
 reload resumes at the start screen of the block it was in, continuing from the
@@ -241,6 +325,38 @@ pixel ratio, and `build_commit` (from
 `vite.config.js`'s `define`, `VERCEL_GIT_COMMIT_SHA` or `git rev-parse`).
 Practice trials are logged with `is_practice = true`. `label_toggles` counts
 clicks that hid or showed A's or B's label before the answer.
+
+### Height in the visual field
+
+`nearer_higher` (migration `0006_phase1_nearer_higher.sql`) records whether the
+nearer target's judged point sits higher on screen than the other's. On a
+ground plane, higher in the image means farther, and people apply that without
+thinking; but the study camera sits above the scene looking down, so raising an
+object moves it up on screen and toward the camera at once. Where the nearer
+target is the higher one, the heuristic pulls towards the wrong answer.
+
+The generator balances it: within proximity and distance questions the nearer
+target is the higher one in exactly half the trials (`highersForTypes`; a
+proximity question places the targets to match, a distance question retries
+until it does). For a distance question "higher" compares the points nearest
+C: a vector's tip, a line's foot, a sphere's closest surface point
+(`nearerIsHigher`). Null for occlusion, where both targets meet at the
+crossing. Techniques that convey depth should shrink the effect, so it is worth
+analysing as a factor, not only controlling.
+
+### Shadow visibility
+
+`shadow_visible_a` / `shadow_visible_b` (migration
+`0005_phase1_shadow_visibility.sql`) say how much of each target's overhead
+shadow a participant could see: 0..1, where a point or sphere is 0 or 1 and a
+line or vector is the share of its drawn length. Only the room receives
+shadows, and its floor is at y = -20, so a target's shadow often lands low or
+off screen, or on a near wall the camera culls (`shadowVisibility.js` follows
+the light's ray through the target to the room and applies the same face
+culling as `BoundingBoxRoom`). It is geometry, not pixels: it ignores objects
+standing in front of the shadow, and a thin tube's shadow can be in view yet
+faint. It is logged for every trial and only means something under T6, T7 and
+T10, e.g. `where technique in ('T6','T7','T10') and shadow_visible_a = 0`.
 
 Export:
 

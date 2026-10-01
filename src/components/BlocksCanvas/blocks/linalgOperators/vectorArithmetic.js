@@ -200,8 +200,11 @@ export function initVectorArithmeticBlock() {
       value?.userData?.geoType === 'linalg_point_vector'
     );
     // Two position vectors measured as a distance are drawn like two points: the
-    // difference rests between their tips.
-    const measuredVectorDifference = ${measured} &&
+    // difference rests between their tips. An exercise can ask for every such
+    // difference to be read this way, measured or not.
+    const vectorsAsPositions = ${op === 'subtract' ? 'true' : 'false'} &&
+      window.useSettingsStore?.getState().settings.vectorDifferenceAsPositions === true;
+    const measuredVectorDifference = (${measured} || vectorsAsPositions) &&
       uAnchor.lengthSq() < 1e-12 && vAnchor.lengthSq() < 1e-12;
     const isPointDifference = ${op === 'subtract' ? 'true' : 'false'} && (
       vVal.userData?.geoType === 'point_on_object_vector' ||
@@ -497,10 +500,6 @@ export function initVectorArithmeticBlock() {
     if (isPointDifference) {
       resultVector.userData = {
         geoType: 'point_difference_vector',
-        // Which block drew the point this difference starts from, so a
-        // downstream sweep can move that marker. This userData is assigned
-        // wholesale, so it has to be carried explicitly or it is lost here.
-        startBlockId: vVal.userData?.srcBlockId ?? null,
         start: resultOrigin.clone(),
         end: resultTip.clone(),
         label: pointDifferenceLabel,

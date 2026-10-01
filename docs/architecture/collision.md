@@ -111,6 +111,23 @@ after creation and solids may live under different transforms.
   `parametricPlane.js` uses (default +Z -> normal), so the collision square
   lines up with the rendered square's edges.
 
+## During an animation
+
+A transform pipeline plays by moving a line or a solid frame by frame, and zones
+computed for the resting scene then ring the wrong stretch: a dashed stretch
+floats where a teapot used to be, and a line passing through a sphere mid-way
+shows no accent. `AnimationDriver` therefore re-runs `applyTubeCollisions` after
+every frame it applies, scrubbing included, and at progress 1 that lands back on
+the resting zones. Setting zones rebuilds a line's accent geometry, so
+`applyTubeCollisions` skips a line whose zones match the ones it last set
+(`userData.collisionZones`).
+
+A playing line transform also stretches the line along its own direction, so it
+keeps reaching the walls (`lineTransformAnimation.js`). `worldSegment` measures
+that stretch and finds the zones in world units, and they are divided by it
+before the line rings them, since the line's dashes are laid out in its own
+unstretched units. At rest the stretch is 1.
+
 ## Gotcha a refactor would reintroduce
 
 ### sphere-double-translate

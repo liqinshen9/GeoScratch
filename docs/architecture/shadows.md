@@ -79,3 +79,28 @@ range after the object that zeroed it finishes drawing.
 Perceptual study conditions T6 and T7 are built on these settings: T6 is the
 overhead light alone, T7 adds the headlight. Because primitives never cast from
 the headlight, T7 differs from T6 only for solid bodies.
+
+`objectsReceiveShadows` is off in the app's defaults and in every study
+condition (since 2026-10-01): shadows land on the room, never on other objects.
+`study/phase1/shadowVisibility.js` relies on that when it logs whether a
+target's shadow could be seen.
+
+## Room fill shading
+
+The overhead light and the headlight can light two faces of the room almost
+identically: from the default view the floor and the -z wall came out the same
+tone, so their seam (running from the view's centre to its lower right,
+parallel to the grid) vanished. The room's edge lines cannot carry a seam,
+since they lie exactly on the walls and lose the depth test.
+
+`BoundingBoxRoom` therefore shades each face as if lit by one more directional
+light, `ROOM_FILL_DIRECTION`, baked into that face's colour (Lambert:
+`1 - strength * (1 - n . L) / 2` for the face's inward normal `n`). It is not a
+real light, so scene objects are lit exactly as before, which keeps the study
+conditions unchanged. Matte faces shade the same from any viewpoint, so the
+seams hold as the camera orbits. The direction's three components have clearly
+different magnitudes, because the step between two neighbouring faces is
+proportional to the difference of the two components they depend on: with two
+near-equal components a pair of neighbouring walls would come out alike.
+`ROOM_FILL_STRENGTH` is modest (0.15); tone mapping compresses these near-white
+tones, so a stronger fill buys little.

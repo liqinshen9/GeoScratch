@@ -44,8 +44,20 @@ function worldSegment(group) {
   group.updateMatrixWorld(true)
   const worldOrigin = segmentMid.clone().applyMatrix4(group.matrixWorld)
   const worldDirection = unitDirection.clone().transformDirection(group.matrixWorld).normalize()
+  // A playing line transform stretches the line along itself, so a local unit
+  // along it is `stretch` world units. See docs/architecture/collision.md#during-an-animation.
+  const stretch =
+    unitDirection
+      .clone()
+      .applyMatrix3(new THREE.Matrix3().setFromMatrix4(group.matrixWorld))
+      .length() || 1
 
-  return { origin: worldOrigin, direction: worldDirection, halfExtent: segmentHalfLength ?? 20 }
+  return {
+    origin: worldOrigin,
+    direction: worldDirection,
+    halfExtent: (segmentHalfLength ?? 20) * stretch,
+    stretch,
+  }
 }
 
 // worldSegment's counterpart for a point_normal_plane_group. basisU/basisV
@@ -279,8 +291,8 @@ function mergeZones(zones) {
 /**
  * Finds where each geo_vector_line's visible tube passes into a solid
  * object's bounds, and tells each line the exact local zone(s) to ring, via
- * its userData.setCollisionZones(zones) hook. Call once after (re)generating
- * the scene into threeObjStore.
+ * its userData.setCollisionZones(zones) hook. Call after (re)generating the
+ * scene into threeObjStore, and after each animation frame moves things.
  */
 export function applyTubeCollisions(threeObjStore) {
   const allObjects = Object.values(threeObjStore || {}).map(unwrapAnnotated)
@@ -378,8 +390,29 @@ export function applyTubeCollisions(threeObjStore) {
     }
   }
 
+  const stretchByLine = new Map(lineEntries.map(({ group, segment }) => [group, segment.stretch]))
   lines.forEach((group) => {
-    const zones = mergeZones(zonesByLine.get(group) || [])
+    // Zones are found in world units; the line rings them in its own.
+    const stretch = stretchByLine.get(group) ?? 1
+    const zones = mergeZones(zonesByLine.get(group) || []).map((zone) => ({
+      start: zone.start / stretch,
+      end: zone.end / stretch,
+    }))
+    // Runs every frame while an animation plays, and setting zones rebuilds
+    // the line's accent geometry, so a line whose zones held still is left be.
+    if (sameZones(group.userData.collisionZones, zones)) return
+    group.userData.collisionZones = zones
     group.userData.setCollisionZones?.(zones)
   })
+}
+
+const ZONE_EPSILON = 1e-4
+
+function sameZones(a, b) {
+  if (!Array.isArray(a) || a.length !== b.length) return false
+  return a.every(
+    (zone, i) =>
+      Math.abs(zone.start - b[i].start) < ZONE_EPSILON &&
+      Math.abs(zone.end - b[i].end) < ZONE_EPSILON,
+  )
 }

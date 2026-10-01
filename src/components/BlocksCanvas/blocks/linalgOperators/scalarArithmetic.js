@@ -2,7 +2,6 @@ import * as Blockly from 'blockly/core'
 import { BLOCK_STYLES } from '../blockColours'
 import { javascriptGenerator, Order } from 'blockly/javascript'
 import { isEffectivelyStandalone } from '@/utils/sceneHelpers'
-import { alignRowsByInput } from '@/components/BlocksCanvas/renderers/geoScratchRenderer'
 
 const OPERATORS = Object.freeze({
   add: {
@@ -39,22 +38,19 @@ export function initScalarArithmeticBlock() {
       // |VB - VA|) does not push the right one off to the side. Same end-row layout as Vector
       // Magnitude; see docs/architecture/blockly-integration.md#operator-input-layout.
       this.appendEndRowInput('ARITHMETIC_TITLE').appendField('Scalar Arithmetic')
-      const centre = Blockly.inputs.Align.CENTRE
-      this.appendValueInput('A').setCheck(['scalar', 'obj3D']).setAlign(centre)
-      this.appendEndRowInput('ARITHMETIC_A_ROW_END').setAlign(centre)
-      this.appendEndRowInput('ARITHMETIC_OP_ROW')
-        .setAlign(centre)
-        .appendField(
-          new Blockly.FieldDropdown(
-            Object.entries(OPERATORS).map(([value, { label }]) => [label, value]),
-          ),
-          'OP',
-        )
-      this.appendValueInput('B').setCheck(['scalar', 'obj3D']).setAlign(centre)
-      this.appendEndRowInput('ARITHMETIC_B_ROW_END').setAlign(centre)
+      this.appendValueInput('A').setCheck(['scalar', 'obj3D'])
+      this.appendEndRowInput('ARITHMETIC_A_ROW_END')
+      this.appendEndRowInput('ARITHMETIC_OP_ROW').appendField(
+        new Blockly.FieldDropdown(
+          Object.entries(OPERATORS).map(([value, { label }]) => [label, value]),
+        ),
+        'OP',
+      )
+      this.appendValueInput('B').setCheck(['scalar', 'obj3D'])
+      this.appendEndRowInput('ARITHMETIC_B_ROW_END')
       this.setInputsInline(true)
-      // Centred under the title, so the rows read as one expression.
-      alignRowsByInput(this)
+      // Left-aligned, not centred. See
+      // docs/architecture/blockly-integration.md#operator-input-layout.
       this.setOutput(true, 'scalar')
       this.setStyle(BLOCK_STYLES.COMPUTE_VECTOR_OPERATIONS)
       this.setTooltip(

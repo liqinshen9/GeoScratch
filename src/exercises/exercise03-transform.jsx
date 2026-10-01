@@ -50,9 +50,9 @@ const IDS = {
   sphere: 'ex-S',
   cube: 'ex-K',
 }
-const DECOR_IDS = ['ex-bg-sphere-1', 'ex-bg-line-2']
+const DECOR_IDS = ['ex-bg-sphere-1']
 // Decoration that has since been cut, removed from workspaces saved with it.
-const RETIRED_IDS = ['ex-bg-sphere-2', 'ex-bg-cube-1', 'ex-bg-line-1']
+const RETIRED_IDS = ['ex-bg-sphere-2', 'ex-bg-cube-1', 'ex-bg-line-1', 'ex-bg-line-2']
 
 const fields = ({ x, y, z }) =>
   `<field name="X">${x}</field><field name="Y">${y}</field><field name="Z">${z}</field>`
@@ -83,8 +83,6 @@ const cubeXml = (id, centre, side, x, y) => `
     <value name="CENTRE">${point(`${id}-centre`, centre)}</value>
   </block>`
 
-const v = (x, y, z) => new THREE.Vector3(x, y, z)
-
 // Blocks the student plugs into their own pipelines: added only when missing,
 // never reset, or a reload would pull them back out of the student's work.
 const WORKING_GIVENS = {
@@ -93,14 +91,12 @@ const WORKING_GIVENS = {
 }
 // Given and decorative blocks the student only looks at: reset on every entry,
 // so a layout change here reaches saved workspaces.
-// Kept to the decoration the cues need: a sphere on N (a collision accent) and
-// a line passing in front of N and L2 (halos).
+// Kept to the decoration the cues need: a sphere on N (a collision accent).
 const FIXED_BLOCKS = xml(`
   ${lineXml(IDS.l2, L2_POINT, L2_DIRECTION, -760, 120)}
   ${sphereXml(IDS.sphere, SPHERE_S.centre, SPHERE_S.radius, -760, 300)}
   ${cubeXml(IDS.cube, CUBE_K.centre, CUBE_K.side, -760, 450)}
   ${sphereXml('ex-bg-sphere-1', N_DIRECTION.clone().multiplyScalar(-3), 0.6, -1100, -300)}
-  ${lineXml('ex-bg-line-2', v(-2, -1, 5), v(1, 0.3, 0), -1100, 0)}
 `)
 const FIXED_IDS = [IDS.l2, IDS.sphere, IDS.cube, ...DECOR_IDS]
 
@@ -127,7 +123,9 @@ function seedWorkspace(workspace) {
 function ensureWorkspace(workspace) {
   addMissingWorkingGivens(workspace)
   const missingFixed = FIXED_IDS.some((id) => !workspace.getBlockById(id))
-  if (missingFixed) seedBackgroundBlocks(workspace, [...FIXED_IDS, ...RETIRED_IDS], FIXED_BLOCKS)
+  const retiredPresent = RETIRED_IDS.some((id) => workspace.getBlockById(id))
+  if (missingFixed || retiredPresent)
+    seedBackgroundBlocks(workspace, [...FIXED_IDS, ...RETIRED_IDS], FIXED_BLOCKS)
 }
 
 // The worked solution, loaded by the dev-only "Fill solution" control. It
@@ -224,15 +222,18 @@ const isLineN = (data) =>
   lineThrough(data, new THREE.Vector3()) &&
   vectorsAreParallel(data.direction, N_DIRECTION)
 
-// Scale Vector with 2 and n, either as a Vector block holding n's value or the
-// Cross Product itself.
+// A Vector block holding n's value, read off the Cross Product's show button.
+const isVectorVN = (block) =>
+  block?.type === 'linalg_vec3' && vec3FromBlock(block)?.distanceTo(N_DIRECTION) < 1e-6
+
+// Scale Vector with 2 and n, either as VN or the Cross Product itself.
 function isDoubledN(block) {
   const k = getInputBlock(block, 'K')
   const v = getInputBlock(block, 'V')
   return (
     k?.type === 'scalar' &&
     closeNumber(k.getFieldValue('scalar'), 2) &&
-    (isNormalCrossProduct(v) || vec3FromBlock(v)?.distanceTo(N_DIRECTION) < 1e-6)
+    (isNormalCrossProduct(v) || isVectorVN(v))
   )
 }
 
@@ -247,6 +248,24 @@ function givenTeapot(objects) {
   )
 }
 
+// Part B is about moving the teapot with a pipeline. Editing its centre to 2n
+// puts it in the same place, but skips the transform (and leaves an animated
+// participant nothing to play), so that is flagged rather than passed.
+function teapotMoveHint(workspace, placed) {
+  const teapotBlock = workspace?.getBlockById(IDS.teapot)
+  const centre = vec3FromBlock(getInputBlock(teapotBlock, 'CENTRE'))
+  if (centre && centre.lengthSq() > 1e-12) {
+    return `Leave T's centre at ${tuple(new THREE.Vector3())} and move the teapot with a Transform Pipeline instead.`
+  }
+  const inPipeline = (workspace?.getBlocksByType('transform_pipeline', false) ?? []).some(
+    (pipeline) => getInputBlock(pipeline, 'INPUT')?.id === IDS.teapot,
+  )
+  if (placed && !inPipeline) {
+    return 'The teapot is in the right place, but move it with a Transform Pipeline, as this step asks.'
+  }
+  return null
+}
+
 function evaluate({ objects, workspace }) {
   const pipeline = l1Pipeline(workspace)
   const l1 = lineObject(objects, (data) => data.srcBlockId === IDS.l1)?.userData
@@ -257,21 +276,27 @@ function evaluate({ objects, workspace }) {
   // The geometry is built at its size, so the tip sits at SPOUT_TIP x size locally.
   const tip = teapot?.localToWorld(SPOUT_TIP.clone().multiplyScalar(TEAPOT_SIZE))
   const lineN = { origin: new THREE.Vector3(), direction: N_DIRECTION }
+  const teapotPlaced =
+    Boolean(centre && tip && l2) &&
+    lineThrough(lineN, centre) &&
+    distanceToLine(tip, l2.origin, l2.direction) <= TOUCHING
+  const teapotHint = teapotMoveHint(workspace, teapotPlaced)
 
   const steps = {
     pipelineL1: Boolean(pipeline),
     throughOrigin: Boolean(pipeline) && firstStepThroughOrigin(pipeline),
     throughTargets:
       Boolean(pipeline) && lineThrough(l1, SPHERE_S.centre, CUBE_K.centre, new THREE.Vector3()),
+    vectors: [isVectorVA, isVectorVB].every((matches) =>
+      (workspace?.getAllBlocks(false) ?? []).some(matches),
+    ),
     crossProduct: (workspace?.getBlocksByType('vector_cross_product', false) ?? []).some(
       isNormalCrossProduct,
     ),
+    vectorN: (workspace?.getAllBlocks(false) ?? []).some(isVectorVN),
     lineN: Boolean(lineObject(objects, isLineN)),
     doubled: (workspace?.getBlocksByType('vector_scale', false) ?? []).some(isDoubledN),
-    teapot:
-      Boolean(centre && tip && l2) &&
-      lineThrough(lineN, centre) &&
-      distanceToLine(tip, l2.origin, l2.direction) <= TOUCHING,
+    teapot: teapotPlaced && !teapotHint,
   }
   const passed = Object.values(steps).every(Boolean)
   return {
@@ -281,7 +306,52 @@ function evaluate({ objects, workspace }) {
     target: teapot,
     answer: { type: 'placement' },
     steps,
+    partialSteps: { teapot: Boolean(teapotHint) },
+    partialMessages: { teapot: teapotHint },
   }
+}
+
+// Named as soon as it exists, before it is plugged into the Cross Product, but
+// never a line's own direction: L2's is parallel to VB.
+const isLooseOrCrossed = (block) => {
+  const parentType = block.getParent?.()?.type
+  return !parentType || parentType === 'vector_cross_product'
+}
+const isGivenVector = (direction) => (block) =>
+  POINT_VECTOR_BLOCK_TYPES.includes(block?.type) &&
+  isLooseOrCrossed(block) &&
+  vectorsAreParallel(vec3FromBlock(block), direction)
+const isVectorVA = isGivenVector(L1_TARGET_DIRECTION)
+const isVectorVB = isGivenVector(L2_DIRECTION)
+
+function hasAncestorOfType(block, type) {
+  for (let parent = block?.getParent?.(); parent; parent = parent.getParent()) {
+    if (parent.type === type) return true
+  }
+  return false
+}
+
+// Where an animatable object falls in the task: Part A's pipeline, then n and
+// 2n, then the teapot's pipeline. Null for anything the task does not ask for.
+function taskStage(object, workspace) {
+  const { srcBlockId } = object.userData
+  if (srcBlockId === IDS.l1) return 0
+  if (srcBlockId === IDS.teapot) return 3
+  const block = workspace?.getBlockById(String(srcBlockId))
+  // A Cross Product plugged straight into Scale Vector plays inside 2n's reveal.
+  if (isNormalCrossProduct(block) && !hasAncestorOfType(block, 'vector_scale')) return 1
+  if (block?.type === 'vector_scale' && isDoubledN(block)) return 2
+  return null
+}
+
+// Play with nothing selected runs the whole task in order, not one block of it.
+function animationSequence(objects, workspace) {
+  return objects
+    .filter((object) => typeof object?.userData?.animate === 'function')
+    .map((object) => ({ object, stage: taskStage(object, workspace) }))
+    .filter(({ stage }) => stage != null)
+    .sort((a, b) => a.stage - b.stage)
+    .map(({ object }) => object)
 }
 
 const tuple = ({ x, y, z }) => `(${[x, y, z].map((n) => Number(n.toFixed(2))).join(', ')})`
@@ -309,9 +379,20 @@ function Givens() {
   )
 }
 
-const StepItem = ({ done, children }) => <li className={done ? 'is-complete' : ''}>{children}</li>
+const StepItem = ({ done, hint, children }) => (
+  <li className={done ? 'is-complete' : hint ? 'is-partial' : ''}>
+    {children}
+    {!done && hint && (
+      <div className="exercise-step-actions">
+        <span className="exercise-step-feedback" role="status">
+          {hint}
+        </span>
+      </div>
+    )}
+  </li>
+)
 
-function Steps({ steps, passed }) {
+function Steps({ steps, partialMessages, passed }) {
   const passedClass = passed ? ' is-passed' : ''
   return (
     <>
@@ -328,29 +409,35 @@ function Steps({ steps, passed }) {
         </StepItem>
       </ol>
       <ol className={`exercise-task-steps${passedClass}`} data-part="Part B: move the teapot">
+        <StepItem done={steps.vectors}>
+          Create: two Vector blocks, VA = {tuple(L1_TARGET_DIRECTION)}, L1&apos;s new direction, and
+          VB = {tuple(L2_DIRECTION)}, L2&apos;s direction.
+        </StepItem>
         <StepItem done={steps.crossProduct}>
-          Compute: n = VA &times; VB with the Cross Product block, where VA and VB are Vector
-          blocks: VA = {tuple(L1_TARGET_DIRECTION)}, L1&apos;s new direction, and VB ={' '}
-          {tuple(L2_DIRECTION)}, L2&apos;s direction. Press its show button to see n.
+          Compute: n = VA &times; VB with the Cross Product block.
+        </StepItem>
+        <StepItem done={steps.vectorN}>
+          Create: a Vector block VN using the values of n. Press show on the Cross Product to see
+          them.
         </StepItem>
         <StepItem done={steps.lineN}>
-          Create: line N through the teapot&apos;s centre {tuple(new THREE.Vector3())}, with n as
-          its direction.
+          Create: line N through the teapot&apos;s centre {tuple(new THREE.Vector3())}, with the
+          Cross Product n as its direction. You can plug the Cross Product straight into the
+          line&apos;s Direction slot.
         </StepItem>
         <StepItem done={steps.doubled}>
-          Compute: 2n with the Scale Vector block, a Scalar 2 and a Vector block holding n. Press
-          show on the Cross Product to work out what n should be, and on Scale Vector to see 2n.
+          Compute: 2n with the Scale Vector block, a Scalar 2 and VN. Press show on Scale Vector to
+          see 2n.
         </StepItem>
-        <StepItem done={steps.teapot}>
+        <StepItem done={steps.teapot} hint={partialMessages?.teapot}>
           Transform: put the teapot in a Transform Pipeline and translate it by 2n, so its centre
-          stays on N and its spout tip touches L2.
+          stays on N and its spout tip touches L2. You will have to type 2n&apos;s values into the
+          Translate block by hand. Press show on Scale Vector to see them.
         </StepItem>
       </ol>
     </>
   )
 }
-
-const inCrossProduct = (block) => block.getParent?.()?.type === 'vector_cross_product'
 
 export default {
   id: 'transform-object',
@@ -368,6 +455,7 @@ export default {
     { name: 'L1', matches: (block) => block.id === IDS.l1 },
     { name: 'L2', matches: (block) => block.id === IDS.l2 },
     { name: 'n', matches: isNormalCrossProduct },
+    { name: 'VN', matches: isVectorVN },
     { name: '2n', matches: isDoubledN },
     {
       name: 'N',
@@ -377,25 +465,14 @@ export default {
         (getInputBlock(block, 'DIR')?.type === 'vector_cross_product' ||
           vectorsAreParallel(vec3FromBlock(getInputBlock(block, 'DIR')), N_DIRECTION)),
     },
-    {
-      name: 'VA',
-      matches: (block) =>
-        POINT_VECTOR_BLOCK_TYPES.includes(block.type) &&
-        inCrossProduct(block) &&
-        vectorsAreParallel(vec3FromBlock(block), L1_TARGET_DIRECTION),
-    },
-    {
-      name: 'VB',
-      matches: (block) =>
-        POINT_VECTOR_BLOCK_TYPES.includes(block.type) &&
-        inCrossProduct(block) &&
-        vectorsAreParallel(vec3FromBlock(block), L2_DIRECTION),
-    },
+    { name: 'VA', matches: isVectorVA },
+    { name: 'VB', matches: isVectorVB },
   ],
   Givens,
   Steps,
   evaluate,
   solutionXml: SOLUTION_XML,
+  animationSequence,
   seedWorkspace,
   ensureWorkspace,
 }

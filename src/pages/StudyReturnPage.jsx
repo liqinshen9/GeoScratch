@@ -32,7 +32,7 @@ export default function StudyReturnPage() {
       <FullScreen>
         <p className="max-w-md text-center text-base">
           This questionnaire was for research ID <strong>{returnedId}</strong>, but this browser is
-          running <strong>{study.researchId}</strong>. Please tell the researcher.
+          running <strong>{study.researchId}</strong>. Please contact the researcher.
         </p>
       </FullScreen>
     )

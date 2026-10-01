@@ -50,9 +50,9 @@ const T1 = {
 
 const ACCENTS = { lineCollisionStyle: LINE_COLLISION_STYLES.DASHED }
 const HALOS = { haloEnabled: true, haloLineVectorEnabled: true }
+// Shadows land on the room only, never on other objects, in every condition.
 const OVERHEAD_SHADOW = {
   pointShadowsEnabled: true,
-  objectsReceiveShadows: true,
   primitivesCastShadows: true,
 }
 const CAMERA_SHADOW = { cameraShadowsEnabled: true }
@@ -88,12 +88,8 @@ export const TECHNIQUES = Object.freeze([
     base: 'T1',
     settings: { ...T1, colorPreset: 'monochrome' },
   },
-  {
-    id: 'T9',
-    label: 'High-contrast palette',
-    base: 'T1',
-    settings: { ...T1, colorPreset: 'highContrast' },
-  },
+  // T9 (high-contrast palette) was dropped; IDs kept so T10 still means the
+  // combination. See docs/architecture/study-phase1.md.
   {
     id: 'T10',
     label: 'Combined',

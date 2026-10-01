@@ -67,9 +67,11 @@ function stepLabelSim(entries, delta) {
 
   for (let step = 0; step < substeps; step++) {
     for (const e of entries) {
-      // Spring-to-home (home = BASE_OFFSET_*, a fixed screen-space nudge)
-      e.fx = -SPRING_K * (e.offsetX - BASE_OFFSET_X)
-      e.fy = -SPRING_K * (e.offsetY - BASE_OFFSET_Y)
+      // Spring-to-home (home = BASE_OFFSET_*, a screen-space nudge shrunk by
+      // `reach` when zoomed out). See docs/architecture/label-declutter.md#reach.
+      const reach = e.reach ?? 1
+      e.fx = -SPRING_K * (e.offsetX - BASE_OFFSET_X * reach)
+      e.fy = -SPRING_K * (e.offsetY - BASE_OFFSET_Y * reach)
       e.contact = 0
     }
 
@@ -150,16 +152,17 @@ function stepLabelSim(entries, delta) {
       e.offsetX += e.velX * subDt
       e.offsetY += e.velY * subDt
 
+      const maxOffset = MAX_OFFSET * (e.reach ?? 1)
       const mag = Math.hypot(e.offsetX, e.offsetY)
-      if (mag > MAX_OFFSET) {
-        const s = MAX_OFFSET / mag
+      if (mag > maxOffset) {
+        const s = maxOffset / mag
         e.offsetX *= s
         e.offsetY *= s
         // Drop only the velocity pushing further out; a label pinned at the cap
         // still slides along it. Scaling both components instead makes the cap
         // bounce labels back inward, which buzzes.
-        const ux = e.offsetX / MAX_OFFSET
-        const uy = e.offsetY / MAX_OFFSET
+        const ux = e.offsetX / maxOffset
+        const uy = e.offsetY / maxOffset
         const outward = e.velX * ux + e.velY * uy
         if (outward > 0) {
           e.velX -= outward * ux

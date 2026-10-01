@@ -6,6 +6,7 @@ import {
   VIEWPORT,
   STUDY_STIMULUS_SEED,
   DEPTH_SEPARATIONS,
+  DISTANCE_RATIOS,
   DIFFICULTY_LEVELS,
   CLUTTER_DISTRACTORS,
   CLUTTER_LEVELS,
@@ -14,7 +15,9 @@ import {
   PAIR_KINDS,
   PAIR_TYPES,
   OCCLUSION_PAIR_TYPES,
+  DISTANCE_PAIR_TYPES,
   PROBE_BANDS,
+  QUESTION_TYPES,
   PLACEMENT,
 } from './stimulusConfig'
 
@@ -222,12 +225,14 @@ function ndcDistanceToObject(camera, ndc, object) {
   return ndcDistanceToLine(camera, ndc, toVec(object.origin), toVec(object.direction))
 }
 
-/** The judged point of a trial: a crossing, or a screen column for a band. */
+/**
+ * The judged point of a trial: a crossing, a screen column for a band, or the
+ * reference point C for a distance question.
+ */
 export function probeOf(stimulus) {
   const ndc = { x: stimulus.probeNdc[0], y: stimulus.probeNdc[1] }
-  return stimulus.question.type === 'occlusion'
-    ? { type: 'occlusion', ndc }
-    : { type: 'proximity', ndc, x: ndc.x }
+  if (stimulus.question.type === 'occlusion') return { type: 'occlusion', ndc }
+  return { type: stimulus.question.type, ndc, x: ndc.x }
 }
 
 const bandX = (id) => PROBE_BANDS.find((band) => band.id === id)?.x ?? 0
@@ -241,6 +246,10 @@ export function pointOfTargetAt(camera, object, probe) {
   if (object.kind === 'point') return toVec(object.position)
   if (isSolid(object)) return toVec(object.centre)
   const { origin, direction, length } = rayOf(object)
+  // A distance question judges a vector by its tip.
+  if (probe.type === 'distance' && object.kind === 'vector') {
+    return origin.clone().addScaledVector(direction, length)
+  }
   if (probe.type === 'occlusion') return lineAtNdc(camera, probe.ndc, origin, direction)
   const t = lineParamAtNdcX(camera, probe.x, origin, direction)
   // A line runs both ways from its origin; a vector stops at its tip.
@@ -417,7 +426,9 @@ function probeAnchors(params, rng) {
   const limit = PLACEMENT.proximityYLimitNdc
   const gap = rng.range(PLACEMENT.proximityGapNdc.min, PLACEMENT.proximityGapNdc.max)
   const lower = rng.range(-limit, limit - gap)
-  const [yA, yB] = rng.next() < 0.5 ? [lower, lower + gap] : [lower + gap, lower]
+  // The nearer target sits higher on screen exactly when the plan says so.
+  const upper = params.nearerHigher === (params.nearer === 'A') ? 'A' : 'B'
+  const [yA, yB] = upper === 'A' ? [lower + gap, lower] : [lower, lower + gap]
   return { probe: { x, y: (yA + yB) / 2 }, A: { x, y: yA }, B: { x, y: yB } }
 }
 
@@ -438,8 +449,7 @@ function targetAngles(params, rng) {
 
 function makeTarget(key, kind, anchorNdc, depth, angle, rng, camera) {
   if (kind === 'sphere') {
-    const { min, max } = PLACEMENT.targetSphereRadius
-    const radius = round(rng.range(min, max))
+    const radius = PLACEMENT.targetSphereRadius
     // The judgement is about the surface you can see, so that is what sits at
     // `depth`; the centre goes one radius further back.
     const centre = worldAtNdc(camera, anchorNdc, depth + radius)
@@ -472,7 +482,304 @@ function makeTarget(key, kind, anchorNdc, depth, angle, rng, camera) {
   }
 }
 
+/** Where a distance target's label hangs, and the point a vector is judged by. */
+function judgedPoint(object) {
+  if (object.kind === 'vector') return toVec(object.origin).add(toVec(object.vector))
+  if (object.kind === 'line') return lineLabelAnchor(toVec(object.origin), toVec(object.direction))
+  return toVec(object.position ?? object.centre)
+}
+
+/**
+ * Shortest 3D distance from `c` to what a distance question judges: a point, a
+ * vector's tip, a line's nearest point, or a sphere's surface.
+ */
+export function distanceToTarget(c, object) {
+  if (object.kind === 'line') {
+    const { origin, direction } = rayOf(object)
+    const offset = c.clone().sub(origin)
+    return offset.addScaledVector(direction, -offset.dot(direction)).length()
+  }
+  if (object.kind === 'sphere') return toVec(object.centre).distanceTo(c) - object.radius
+  return judgedPoint(object).distanceTo(c)
+}
+
+/** Each target's 3D distance to the reference point C, from the rounded geometry. */
+export function targetDistances(stimulus) {
+  const reference = stimulus.objects.find((o) => o.role === 'reference')
+  if (!reference) return null
+  const c = toVec(reference.position)
+  const distances = {}
+  for (const object of stimulus.objects) {
+    if (object.role === 'target') distances[object.key] = distanceToTarget(c, object)
+  }
+  return distances
+}
+
+/** The point of a distance target nearest C: its tip, its foot on C, or its surface. */
+function closestPointTo(c, object) {
+  if (object.kind === 'line') {
+    const { origin, direction } = rayOf(object)
+    return origin.clone().addScaledVector(direction, c.clone().sub(origin).dot(direction))
+  }
+  if (object.kind === 'sphere') {
+    const centre = toVec(object.centre)
+    return centre.clone().addScaledVector(c.clone().sub(centre).normalize(), object.radius)
+  }
+  return judgedPoint(object)
+}
+
+/**
+ * Whether the nearer target's judged point sits higher on screen than the
+ * other's. Height in the visual field reads as distance (higher looks
+ * farther), while from this raised camera higher objects are often nearer, so
+ * this is balanced and logged. Null for occlusion: both meet at the crossing.
+ */
+export function nearerIsHigher(camera, stimulus) {
+  const other = stimulus.nearer === 'A' ? 'B' : 'A'
+  if (stimulus.question.type === 'occlusion') return null
+  if (stimulus.question.type === 'proximity') {
+    return stimulus.anchorsNdc[stimulus.nearer][1] > stimulus.anchorsNdc[other][1]
+  }
+  const reference = stimulus.objects.find((o) => o.role === 'reference')
+  const c = toVec(reference.position)
+  const y = (key) =>
+    toNdc(
+      camera,
+      closestPointTo(
+        c,
+        stimulus.objects.find((o) => o.key === key),
+      ),
+    ).y
+  return y(stimulus.nearer) > y(other)
+}
+
+const toPixels = (ndc) => ({ x: (ndc.x * VIEWPORT.width) / 2, y: (ndc.y * VIEWPORT.height) / 2 })
+
+/**
+ * On-screen distance in CSS pixels from `ndc` to what a distance target draws
+ * there: its point or tip, its line, or its sphere's outline.
+ */
+export function imagePixelDistance(camera, ndc, object) {
+  const p = toPixels(ndc)
+  if (object.kind === 'line') {
+    const { origin, direction } = rayOf(object)
+    const a = toPixels(toNdc(camera, origin))
+    const b = toPixels(toNdc(camera, origin.clone().addScaledVector(direction, 2)))
+    const length = Math.hypot(b.x - a.x, b.y - a.y)
+    return Math.abs((b.x - a.x) * (a.y - p.y) - (b.y - a.y) * (a.x - p.x)) / length
+  }
+  const centre = toPixels(toNdc(camera, judgedPoint(object)))
+  const gap = Math.hypot(centre.x - p.x, centre.y - p.y)
+  if (object.kind !== 'sphere') return gap
+  const radiusPx =
+    (projectedRadius(camera, toVec(object.centre), object.radius) * VIEWPORT.height) / 2
+  return gap - radiusPx
+}
+
+/** Where on the view ray through `ndc` a point sits `distance` from `centre`, or null. */
+function pointOnRayAtDistance(camera, ndc, centre, distance, side) {
+  const u = new Vector3(ndc.x, ndc.y, 0.5).unproject(camera).sub(camera.position).normalize()
+  const w = centre.clone().sub(camera.position)
+  const along = w.dot(u)
+  const across = w.clone().addScaledVector(u, -along).length()
+  if (distance < across) return null
+  const s = along + side * Math.sqrt(distance * distance - across * across)
+  return s > 1 ? camera.position.clone().addScaledVector(u, s) : null
+}
+
+const withinScreen = (ndc, bounds) => Math.abs(ndc.x) <= bounds.x && Math.abs(ndc.y) <= bounds.y
+const roundedVec = (v) => toVec(roundVec(v))
+
+/**
+ * A vector whose tip sits at `tip`, with its arrow aimed roughly at `towardNdc`
+ * so the shaft trails away from it. Null if the tail leaves the scene box.
+ */
+function vectorWithTip(key, tip, towardNdc, rng, camera) {
+  const cfg = PLACEMENT.distance
+  const tipNdc = toNdc(camera, tip)
+  const aim = Math.atan2(
+    ((towardNdc.y - tipNdc.y) * VIEWPORT.height) / 2,
+    ((towardNdc.x - tipNdc.x) * VIEWPORT.width) / 2,
+  )
+  const jitter = THREE.MathUtils.degToRad(cfg.vectorAimJitterDeg)
+  const direction = lineDirection(camera, rng, aim + rng.range(-jitter, jitter))
+  const length = rng.range(PLACEMENT.vectorLength.min, PLACEMENT.vectorLength.max)
+  const tail = tip.clone().addScaledVector(direction, -length)
+  if (!withinBounds(tail)) return null
+  return {
+    key,
+    role: 'target',
+    kind: 'vector',
+    origin: roundVec(tail),
+    vector: roundVec(tip.clone().sub(roundedVec(tail))),
+  }
+}
+
+/**
+ * A line whose nearest point to `c` is `nearest`: it runs perpendicular to
+ * `nearest - c`, and not so end-on to the camera that it reads as a dot.
+ */
+function lineWithNearestPoint(key, nearest, c, rng, camera) {
+  const normal = nearest.clone().sub(c).normalize()
+  const { forward } = cameraBasis(camera)
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const direction = new Vector3(rng.range(-1, 1), rng.range(-1, 1), rng.range(-1, 1))
+    direction.addScaledVector(normal, -direction.dot(normal))
+    if (direction.length() < 0.2) continue
+    direction.normalize()
+    if (Math.abs(direction.dot(forward)) > PLACEMENT.distance.maxLineViewAlignment) continue
+    return {
+      key,
+      role: 'target',
+      kind: 'line',
+      origin: roundVec(nearest),
+      direction: roundVec(direction),
+    }
+  }
+  return null
+}
+
+/**
+ * Distance question: C near the middle on an unlabelled line, A and B around it
+ * on screen so the one nearer C in 3D is never clearly nearer on screen, their
+ * 3D distances to C in the difficulty's ratio. A line is judged by its nearest
+ * point and a sphere by its surface, so both are built from the distance they
+ * must have. See docs/architecture/study-phase1.md#distance-questions.
+ */
+function placeDistanceTargets(params, rng, camera) {
+  const cfg = PLACEMENT.distance
+  const cameraDistance = camera.position.distanceTo(toVec(CAMERA.target))
+  const base = cameraDistance + rng.range(-PLACEMENT.depthJitter, PLACEMENT.depthJitter)
+  const cNdc = {
+    x: rng.range(-cfg.referenceNdc.x, cfg.referenceNdc.x),
+    y: rng.range(-cfg.referenceNdc.y, cfg.referenceNdc.y),
+  }
+  const cPoint = roundedVec(worldAtNdc(camera, cNdc, base))
+  if (!withinBounds(cPoint)) return null
+
+  const near = params.nearer
+  const far = near === 'A' ? 'B' : 'A'
+  const farPx = rng.range(cfg.targetScreenPx.min, cfg.targetScreenPx.max)
+  const px = { [far]: farPx, [near]: farPx * rng.range(cfg.screenRatio.min, cfg.screenRatio.max) }
+  const firstAngle = rng.range(0, Math.PI * 2)
+  const minAngle = THREE.MathUtils.degToRad(cfg.minScreenAngleDeg)
+  const angle = { A: firstAngle, B: firstAngle + rng.sign() * rng.range(minAngle, Math.PI) }
+  const ndc = {}
+  for (const key of ['A', 'B']) {
+    ndc[key] = {
+      x: cNdc.x + (Math.cos(angle[key]) * px[key]) / (VIEWPORT.width / 2),
+      y: cNdc.y + (Math.sin(angle[key]) * px[key]) / (VIEWPORT.height / 2),
+    }
+    if (!withinScreen(ndc[key], cfg.onScreenNdc)) return null
+  }
+
+  const [firstKind, secondKind] = PAIR_KINDS[params.pairType]
+  const kinds =
+    firstKind === secondKind || rng.next() < 0.5
+      ? { A: firstKind, B: secondKind }
+      : { A: secondKind, B: firstKind }
+  const radius = {}
+  for (const key of ['A', 'B']) {
+    if (kinds[key] === 'sphere') {
+      radius[key] = PLACEMENT.targetSphereRadius
+    }
+  }
+
+  // The shortest distance each target could have along its ray; the nearer one
+  // is stretched past it so it has to leave C's depth, and the farther one is
+  // then the ratio further.
+  const shortest = (key) =>
+    worldAtNdc(camera, ndc[key], base).distanceTo(cPoint) - (radius[key] ?? 0)
+  const nearDistance = shortest(near) * rng.range(cfg.depthStretch.min, cfg.depthStretch.max)
+  const distance = {
+    [near]: nearDistance,
+    [far]: nearDistance * DISTANCE_RATIOS[params.difficulty],
+  }
+
+  const targets = []
+  for (const key of ['A', 'B']) {
+    const alongRay = distance[key] + (radius[key] ?? 0)
+    const point = pointOnRayAtDistance(camera, ndc[key], cPoint, alongRay, rng.sign())
+    if (!point || !withinBounds(point)) return null
+    let target
+    if (kinds[key] === 'point') {
+      target = { key, role: 'target', kind: 'point', position: roundVec(point) }
+    } else if (kinds[key] === 'sphere') {
+      target = { key, role: 'target', kind: 'sphere', centre: roundVec(point), radius: radius[key] }
+    } else if (kinds[key] === 'line') {
+      target = lineWithNearestPoint(key, point, cPoint, rng, camera)
+    } else {
+      target = vectorWithTip(key, point, cNdc, rng, camera)
+    }
+    if (!target) return null
+    targets.push(target)
+  }
+  const reference = { key: 'C', role: 'reference', kind: 'point', position: roundVec(cPoint) }
+
+  for (const [a, b] of [
+    [targets[0], targets[1]],
+    [targets[0], reference],
+    [targets[1], reference],
+  ]) {
+    if (separation3d(a, b) < PLACEMENT.minSeparation3d) return null
+  }
+
+  // The screen must not give it away, measured to what each target draws.
+  const referenceNdc = toNdc(camera, cPoint)
+  const imagePx = Object.fromEntries(
+    targets.map((t) => [t.key, imagePixelDistance(camera, referenceNdc, t)]),
+  )
+  if (Math.min(imagePx.A, imagePx.B) < cfg.minImagePx) return null
+  if (imagePx[near] < imagePx[far] * cfg.screenRatio.min) return null
+
+  // Labels on screen and apart from each other.
+  const labelNdc = Object.fromEntries(targets.map((t) => [t.key, toNdc(camera, judgedPoint(t))]))
+  const labels = [labelNdc.A, labelNdc.B, referenceNdc]
+  if (labels.some((l) => !withinScreen(l, PLACEMENT.labelOnScreenNdc))) return null
+  for (let i = 0; i < labels.length; i++) {
+    for (let k = i + 1; k < labels.length; k++) {
+      if (ndcDistance(labels[i], labels[k]) < PLACEMENT.labelClearOfOtherTargetNdc) return null
+    }
+  }
+  // A drawn target must not run over another label.
+  for (const target of targets) {
+    const others = [referenceNdc, labelNdc[target.key === 'A' ? 'B' : 'A']]
+    for (const other of others) {
+      if (ndcDistanceToObject(camera, other, target) < cfg.shaftClearNdc) return null
+    }
+  }
+
+  // C sits on an unlabelled line, which gives it a place in depth for the cues
+  // to act on: a lone point marker is drawn the same size at any depth. The
+  // line runs clear of the other labels on screen and never touches a target.
+  const referenceLine = {
+    key: 'Cline',
+    role: 'context',
+    kind: 'line',
+    origin: roundVec(cPoint),
+    direction: roundVec(lineDirection(camera, rng, rng.range(0, Math.PI))),
+  }
+  for (const target of targets) {
+    if (ndcDistanceToObject(camera, labelNdc[target.key], referenceLine) < cfg.shaftClearNdc) {
+      return null
+    }
+    if (separation3d(referenceLine, target) < PLACEMENT.minSeparation3d) return null
+  }
+
+  return {
+    anchors: { probe: referenceNdc, A: labelNdc.A, B: labelNdc.B },
+    probe: { type: 'distance', ndc: referenceNdc, x: referenceNdc.x },
+    base,
+    targets,
+    reference,
+    referenceLine,
+    labelAnchors: labels,
+    keepClearOf: labels,
+  }
+}
+
 function placeTargets(params, rng, camera) {
+  if (params.question.type === 'distance') return placeDistanceTargets(params, rng, camera)
   const anchors = probeAnchors(params, rng)
   if (!anchors) return null
 
@@ -552,7 +859,7 @@ function placeSolidOnTarget(rng, camera, placed, carriers, key, solids) {
     : null
 }
 
-function placeDistractor(rng, camera, placed, key, solids, forcedKind = null) {
+function placeDistractor(rng, camera, placed, key, solids, forcedKind = null, points = []) {
   const { probe, base, targets, labelAnchors, keepClearOf } = placed
   const kind = forcedKind ?? rng.pick(DISTRACTOR_KINDS)
   const angle = rng.range(0, Math.PI * 2)
@@ -568,6 +875,13 @@ function placeDistractor(rng, camera, placed, key, solids, forcedKind = null) {
   let object
   if (kind === 'point') {
     if (keepClearOf.some((p) => ndcDistance(ndc, p) < PLACEMENT.clearOfCrossingNdc)) return null
+    // Seen through a see-through solid, a point reads as a mark on its surface.
+    const insideSolid = solids.some((solid) => {
+      const centre = toVec(solid.centre)
+      const reach = projectedRadius(camera, centre, solidBoundingRadius(solid))
+      return ndcDistance(ndc, toNdc(camera, centre)) < reach + PLACEMENT.clearOfCrossingNdc
+    })
+    if (insideSolid) return null
     object = { key, role: 'distractor', kind, position: roundVec(anchor) }
   } else if (kind === 'line') {
     const direction = lineDirection(camera, rng, rng.range(0, Math.PI))
@@ -590,6 +904,12 @@ function placeDistractor(rng, camera, placed, key, solids, forcedKind = null) {
     object = { key, role: 'distractor', ...makeSolid(rng, kind, anchor) }
     if (!solidClearOfProbe(camera, object, keepClearOf)) return null
     if (!solidClearOfSolids(camera, object, solids)) return null
+    const reach = projectedRadius(camera, anchor, solidBoundingRadius(object))
+    const coversPoint = points.some(
+      (p) =>
+        ndcDistance(toNdc(camera, toVec(p.position)), ndc) < reach + PLACEMENT.clearOfCrossingNdc,
+    )
+    if (coversPoint) return null
   }
   return clearOfTargetLabels(camera, object, labelAnchors) ? object : null
 }
@@ -597,7 +917,7 @@ function placeDistractor(rng, camera, placed, key, solids, forcedKind = null) {
 function tryGenerate(params, rng, camera) {
   const placed = placeTargets(params, rng, camera)
   if (!placed) return null
-  const { anchors, probe, targets } = placed
+  const { anchors, probe, targets, reference, referenceLine } = placed
 
   const count = CLUTTER_DISTRACTORS[params.clutter]
   const distractors = []
@@ -616,7 +936,10 @@ function tryGenerate(params, rng, camera) {
   // geo_vector_line), so a pair with no line target needs a distractor line to
   // carry the solid, or T4 would render exactly like T1.
   // See docs/architecture/study-phase1.md#stimuli.
-  let carriers = targets.filter((t) => t.kind === 'line')
+  // C's line can carry the solid too.
+  let carriers = [...targets, ...(referenceLine ? [referenceLine] : [])].filter(
+    (t) => t.kind === 'line',
+  )
   if (!carriers.length) {
     const carrierLine = retry(() => placeDistractor(rng, camera, placed, nextKey(), solids, 'line'))
     if (!carrierLine) return null
@@ -631,7 +954,8 @@ function tryGenerate(params, rng, camera) {
 
   while (distractors.length < count) {
     const key = nextKey()
-    const distractor = retry(() => placeDistractor(rng, camera, placed, key, solids))
+    const points = distractors.filter((d) => d.kind === 'point')
+    const distractor = retry(() => placeDistractor(rng, camera, placed, key, solids, null, points))
     if (!distractor) return null
     distractors.push(distractor)
     if (isSolid(distractor)) solids.push(distractor)
@@ -651,16 +975,36 @@ function tryGenerate(params, rng, camera) {
       B: [round(anchors.B.x), round(anchors.B.y)],
     },
     colourSalt: rng.token(6),
-    objects: [...targets, ...distractors],
+    objects: [...targets, ...(reference ? [reference, referenceLine] : []), ...distractors],
+  }
+
+  if (params.question.type === 'distance') {
+    const distances = targetDistances(stimulus)
+    const nearer = distances.A < distances.B ? 'A' : 'B'
+    if (nearer !== params.nearer) return null
+    const judged = targetDepths(camera, stimulus)
+    const nearerHigher = nearerIsHigher(camera, { ...stimulus, nearer })
+    if (params.nearerHigher != null && nearerHigher !== params.nearerHigher) return null
+    return {
+      ...stimulus,
+      nearer,
+      nearerHigher,
+      depths: { A: round(judged.A), B: round(judged.B) },
+      distances: { A: round(distances.A), B: round(distances.B) },
+      distanceRatio: round(Math.max(distances.A, distances.B) / Math.min(distances.A, distances.B)),
+    }
   }
 
   const depths = targetDepths(camera, stimulus)
   if (depths.A == null || depths.B == null) return null
   const nearer = depths.A < depths.B ? 'A' : 'B'
   if (nearer !== params.nearer) return null
+  const nearerHigher = nearerIsHigher(camera, { ...stimulus, nearer })
+  if (params.nearerHigher != null && nearerHigher !== params.nearerHigher) return null
   return {
     ...stimulus,
     nearer,
+    nearerHigher,
     depths: { A: round(depths.A), B: round(depths.B) },
     depthGap: round(Math.abs(depths.A - depths.B)),
   }
@@ -670,7 +1014,8 @@ function tryGenerate(params, rng, camera) {
  * One stimulus from explicit parameters. Deterministic in `params.seed`.
  *
  * @param {{ id: string, seed: string, clutter: 'low'|'high', difficulty: 'easy'|'medium'|'hard',
- *           pairType: string, nearer: 'A'|'B', question: object, practice?: boolean }} params
+ *           pairType: string, nearer: 'A'|'B', nearerHigher?: boolean|null, question: object,
+ *           practice?: boolean }} params
  */
 export function generateStimulus(params, camera = makeStudyCamera()) {
   const rng = createRng(params.seed)
@@ -692,15 +1037,45 @@ function dealt(rng, values, n) {
   return rng.shuffle(pool.slice(0, n))
 }
 
-/** An occlusion question, or a proximity question in one of the three bands. */
-function questionsFor(rng, count) {
-  const types = dealt(rng, ['occlusion', 'proximity'], count)
+/** Questions for a list of types, with bands dealt evenly over the proximity ones. */
+function questionsForTypes(rng, types) {
   const bands = dealt(
     rng,
     PROBE_BANDS.map((band) => band.id),
     types.filter((type) => type === 'proximity').length,
   )
-  return types.map((type) => (type === 'occlusion' ? { type } : { type, band: bands.pop() }))
+  return types.map((type) => (type === 'proximity' ? { type, band: bands.pop() } : { type }))
+}
+
+/** Which target is nearer, dealt evenly within each question type. */
+function nearersForTypes(rng, types) {
+  const pools = Object.fromEntries(
+    QUESTION_TYPES.map((type) => [
+      type,
+      dealt(rng, ['A', 'B'], types.filter((t) => t === type).length),
+    ]),
+  )
+  return types.map((type) => pools[type].pop())
+}
+
+/**
+ * Whether the nearer target is the higher one on screen, dealt evenly within
+ * each question type that has a height difference (not occlusion).
+ */
+function highersForTypes(rng, types) {
+  const pools = Object.fromEntries(
+    QUESTION_TYPES.map((type) => [
+      type,
+      dealt(rng, [true, false], types.filter((t) => t === type).length),
+    ]),
+  )
+  return types.map((type) => (type === 'occlusion' ? null : pools[type].pop()))
+}
+
+const PAIR_TYPES_BY_QUESTION = {
+  occlusion: OCCLUSION_PAIR_TYPES,
+  proximity: PAIR_TYPES,
+  distance: DISTANCE_PAIR_TYPES,
 }
 
 /**
@@ -709,63 +1084,63 @@ function questionsFor(rng, count) {
  * only ever appear in proximity questions.
  */
 function pairTypePools(rng, questions) {
-  const count = (type) => questions.filter((q) => q.type === type).length
-  const occlusion = dealt(rng, OCCLUSION_PAIR_TYPES, count('occlusion'))
-  const proximity = dealt(rng, PAIR_TYPES, count('proximity'))
-  return (question) => (question.type === 'occlusion' ? occlusion.pop() : proximity.pop())
+  const pools = Object.fromEntries(
+    Object.entries(PAIR_TYPES_BY_QUESTION).map(([type, pairTypes]) => [
+      type,
+      dealt(rng, pairTypes, questions.filter((q) => q.type === type).length),
+    ]),
+  )
+  return (question) => pools[question.type].pop()
 }
 
 /**
  * The fixed stimulus set every participant sees: measured stimuli (per clutter
  * level, by MEASURED_DIFFICULTY_COUNTS) and a separate practice set. Question
- * type, which target is nearer and the pair type are balanced within each
- * clutter level.
+ * type is crossed with difficulty within each clutter level; which target is
+ * nearer, the band and the pair type are dealt evenly within each question type.
  */
 export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
   const camera = makeStudyCamera()
   const rng = createRng(`${setSeed}:layout`)
 
-  // Difficulty, question type and which target is nearer are balanced within
-  // each clutter level; pair type is dealt from one pool across both.
-  const plan = CLUTTER_LEVELS.map((clutter) => {
-    const difficulties = DIFFICULTY_LEVELS.flatMap((level) =>
-      Array(MEASURED_DIFFICULTY_COUNTS[clutter][level]).fill(level),
-    )
-    return {
-      clutter,
-      difficulties,
-      nearers: dealt(rng, ['A', 'B'], difficulties.length),
-      questions: questionsFor(rng, difficulties.length),
-    }
-  })
-  const nextPairType = pairTypePools(
-    rng,
-    plan.flatMap((entry) => entry.questions),
+  const plan = CLUTTER_LEVELS.flatMap((clutter) =>
+    DIFFICULTY_LEVELS.flatMap((difficulty) =>
+      dealt(rng, QUESTION_TYPES, MEASURED_DIFFICULTY_COUNTS[clutter][difficulty]).map((type) => ({
+        clutter,
+        difficulty,
+        type,
+      })),
+    ),
   )
+  const types = plan.map((entry) => entry.type)
+  const questions = questionsForTypes(rng, types)
+  const nearers = nearersForTypes(rng, types)
+  const highers = highersForTypes(rng, types)
+  const nextPairType = pairTypePools(rng, questions)
+  const indexInClutter = {}
 
-  const measured = []
-  for (const { clutter, difficulties, nearers, questions } of plan) {
-    difficulties.forEach((difficulty, i) => {
-      const id = `m-${clutter}-${String(i + 1).padStart(2, '0')}`
-      measured.push(
-        generateStimulus(
-          {
-            id,
-            seed: `${setSeed}:${id}`,
-            clutter,
-            difficulty,
-            pairType: nextPairType(questions[i]),
-            question: questions[i],
-            nearer: nearers[i],
-          },
-          camera,
-        ),
-      )
-    })
-  }
+  const measured = plan.map(({ clutter, difficulty }, i) => {
+    indexInClutter[clutter] = (indexInClutter[clutter] ?? 0) + 1
+    const id = `m-${clutter}-${String(indexInClutter[clutter]).padStart(2, '0')}`
+    return generateStimulus(
+      {
+        id,
+        seed: `${setSeed}:${id}`,
+        clutter,
+        difficulty,
+        pairType: nextPairType(questions[i]),
+        question: questions[i],
+        nearer: nearers[i],
+        nearerHigher: highers[i],
+      },
+      camera,
+    )
+  })
 
-  const practiceNearers = dealt(rng, ['A', 'B'], PRACTICE_TRIALS_PER_BLOCK)
-  const practiceQuestions = questionsFor(rng, PRACTICE_TRIALS_PER_BLOCK)
+  const practiceTypes = dealt(rng, QUESTION_TYPES, PRACTICE_TRIALS_PER_BLOCK)
+  const practiceQuestions = questionsForTypes(rng, practiceTypes)
+  const practiceNearers = nearersForTypes(rng, practiceTypes)
+  const practiceHighers = highersForTypes(rng, practiceTypes)
   const nextPracticePairType = pairTypePools(rng, practiceQuestions)
   const practice = Array.from({ length: PRACTICE_TRIALS_PER_BLOCK }, (_, i) => {
     const id = `p-${String(i + 1).padStart(2, '0')}`
@@ -778,6 +1153,7 @@ export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
         pairType: nextPracticePairType(practiceQuestions[i]),
         question: practiceQuestions[i],
         nearer: practiceNearers[i],
+        nearerHigher: practiceHighers[i],
         practice: true,
       },
       camera,

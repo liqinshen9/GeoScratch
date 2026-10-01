@@ -23,18 +23,18 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   if (!THREE) return null
 
   // This instance's colors from the shared framework (colorSystem.js): the
-  // "Line" family + light/dark variants for the ringed texture, "Point" for
-  // the t-marker.
+  // "Line" family + grey/near-black variants for the ringed texture (a light
+  // band read as beige against the room), "Point" for the t-marker.
   const colorInt = (hex) => parseInt(hex.slice(1), 16)
   const shadeOf = (hex, lightness) =>
     '#' + new THREE.Color(hex).offsetHSL(0, 0, lightness).getHexString()
   const lineColor = options.color || window.GeoScratchColors.forInstance('line', blockId)
   const lineColorLight = options.color
     ? shadeOf(options.color, 0.14)
-    : window.GeoScratchColors.forInstanceVariant('line', blockId, 28)
+    : window.GeoScratchColors.forInstanceVariant('line', blockId, -26)
   const lineColorDark = options.color
     ? shadeOf(options.color, -0.08)
-    : window.GeoScratchColors.forInstanceVariant('line', blockId, -14)
+    : window.GeoScratchColors.forInstanceVariant('line', blockId, -44)
   const pointColor = window.GeoScratchColors.forInstanceVariant('point', blockId, 24)
   let tSphereRef = null
 
@@ -230,7 +230,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   // stroked), not a cylinder; one LineSegments2 per pair (multi-instance
   // geometry silently drops instances).
   // See docs/architecture/vector-line-glyphs.md#plain_line.
-  const PLAIN_LINE_THICK_BASE_PX = 2.2
+  const PLAIN_LINE_THICK_BASE_PX = 2.6
   const plainLineThickMat = new THREE.LineMaterial({
     color: lineColor,
     linewidth: PLAIN_LINE_THICK_BASE_PX,
@@ -347,13 +347,20 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   const setRingTextureRepeat = (texture, length, period, scale) => {
     texture.repeat.set(1, length / (period * scale))
   }
+  // A cylinder's texture starts at its bottom end. `along` is how far that end
+  // sits from the line's point along its direction; shifting by it puts a dark
+  // band's start at the point and every whole unit from it, so rings count units.
+  const setRingTexturePhase = (texture, along, period) => {
+    texture.offset.y = (((along / period) % 1) + 1) % 1
+  }
 
   // 3. TECHNIQUE STYLE: Ringed Tube
   const ringedTube = new THREE.Group()
 
   // Fixed at build time -- ring band frequency is NOT zoom-responsive, so no
-  // texture rebuild races the cross-section's zoom-invariant scaling.
-  const RINGED_TUBE_RING_PERIOD = 0.8
+  // texture rebuild races the cross-section's zoom-invariant scaling. One
+  // light + dark pair per grid unit.
+  const RINGED_TUBE_RING_PERIOD = 1
 
   // Real height segments (~one per ring) keep every triangle short. This is
   // the fix for the torn ring texture, NOT the ring size/count.
@@ -367,10 +374,11 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
   // Deliberately NOT transparent -- transparent:true breaks depth-tested
   // occlusion. See docs/architecture/vector-line-glyphs.md#ringed-tube-opaque.
   const RINGED_TUBE_EMISSIVE_COLOR = 0x71717a
-  const RINGED_TUBE_EMISSIVE_INTENSITY = 0.2
+  const RINGED_TUBE_EMISSIVE_INTENSITY = 0.05
   const RINGED_TUBE_METALNESS = 0.15
   const ringedTubeTexture = makeRingTexture(colorInt(lineColorLight), colorInt(lineColorDark))
   setRingTextureRepeat(ringedTubeTexture, distance, RINGED_TUBE_RING_PERIOD, 1)
+  setRingTexturePhase(ringedTubeTexture, tEnter, RINGED_TUBE_RING_PERIOD)
   const ringedTubeMat = new THREE.MeshStandardMaterial({
     map: ringedTubeTexture,
     emissive: RINGED_TUBE_EMISSIVE_COLOR,
@@ -406,6 +414,7 @@ export function geoVectorLineDefinition(posInput, dirInput, tRaw, blockId, optio
     const tex = ringedTubeTexture.clone()
     tex.needsUpdate = true
     setRingTextureRepeat(tex, height, RINGED_TUBE_RING_PERIOD, 1)
+    setRingTexturePhase(tex, (tEnter + tExit) / 2 + start, RINGED_TUBE_RING_PERIOD)
     const mat = new THREE.MeshStandardMaterial({
       map: tex,
       emissive: RINGED_TUBE_EMISSIVE_COLOR,

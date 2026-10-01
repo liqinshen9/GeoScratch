@@ -36,7 +36,8 @@ beforeAll(() => {
 })
 
 const set = generateStimulusSet('scene-seed')
-const stimulus = set.measured.find((s) => s.pairType === 'line-line' && s.clutter === 'high')
+const stimulus = set.measured.find((s) => s.objects.filter((o) => o.kind === 'line').length >= 2)
+const distanceStimulus = set.measured.find((s) => s.question.type === 'distance')
 const withVector = set.measured.find((s) =>
   s.objects.some((o) => o.role === 'target' && o.kind === 'vector'),
 )
@@ -68,14 +69,17 @@ describe('buildStimulusScene', () => {
     }
   })
 
-  it('hides every label except the A and B targets', () => {
-    const { objects, hiddenLabelKeys } = buildStimulusScene(stimulus)
-    for (const object of stimulus.objects) {
-      const built = builtFor(objects, stimulus, object.key)
-      if (!built) continue
-      const keys = getLabelVisibilityKeysForObject(built)
-      const hidden = keys.every((key) => hiddenLabelKeys.has(key))
-      expect(hidden, object.key).toBe(object.role !== 'target')
+  it('hides every label except the A and B targets, and a distance question keeps C', () => {
+    for (const s of [stimulus, distanceStimulus]) {
+      const { objects, hiddenLabelKeys } = buildStimulusScene(s)
+      for (const object of s.objects) {
+        const built = builtFor(objects, s, object.key)
+        if (!built) continue
+        const keys = getLabelVisibilityKeysForObject(built)
+        const hidden = keys.every((key) => hiddenLabelKeys.has(key))
+        const unlabelled = object.role === 'distractor' || object.role === 'context'
+        expect(hidden, `${s.id}/${object.key}`).toBe(unlabelled)
+      }
     }
   })
 })

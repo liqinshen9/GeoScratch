@@ -6,6 +6,7 @@ import { fmtVec, resolveAnchor } from './labelAnchors'
 import { LabelAnchor, LabelGroup } from './LabelDeclutter'
 import { getLabelVisibilityKey, getLabelsForObject, formatLabelText } from './labelData'
 import { ANSWER_HIGHLIGHT_COLORS } from '@/store/highlightStyles'
+import { forRole } from '@/store/colorSystem'
 
 // Html's wrapper div sits on the anchor, which for a point is the marker itself,
 // and would swallow clicks meant for it; the pill re-enables its own. drei's
@@ -19,6 +20,10 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
   //srcBlockId stays stable across scene regenerations (uuid doesn't), so
   //labels keep their identity and settled position across edits.
   const labelIdBase = ud.srcBlockId ?? object3D.uuid
+  // A distance readout is the answer, so it takes the correctness colour when
+  // an exercise has one. The bar it annotates is recoloured to match by AnswerTint.
+  const roleColor = (role, color) =>
+    answerState && role === 'distance' ? ANSWER_HIGHLIGHT_COLORS[answerState] : color
 
   return (
     <>
@@ -61,14 +66,7 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                 id={`${labelIdBase}-${i}`}
                 visibilityKey={visibilityKey}
                 className={`label${lbl.emphasis ? ' label--emphasis' : ''}${lbl.className ? ` ${lbl.className}` : ''}`}
-                // A distance readout is the answer, so it takes the
-                // correctness colour when an exercise has one. The bar it
-                // annotates is recoloured to match by AnswerTint.
-                color={
-                  answerState && lbl.role === 'distance'
-                    ? ANSWER_HIGHLIGHT_COLORS[answerState]
-                    : lbl.color
-                }
+                color={roleColor(lbl.role, lbl.color)}
                 worldPos={worldPos}
                 // An animated object moves every frame while labelAnchors are
                 // only read on render, so the declutter pass re-resolves from
@@ -81,6 +79,16 @@ function LabelLayer({ object3D, hiddenLabelKeys, onHideLabel, labelDetail, answe
                 // the moving object (e.g. a point's coordinates) stays current.
                 liveText={
                   formatLabelText(lbl, labelDetail) ? () => formatLabelText(lbl, labelDetail) : null
+                }
+                // A label that takes on a role while it plays (the Q sweep's
+                // |P - Q| reaching d) is coloured as that role's label is.
+                liveColor={
+                  typeof lbl.liveRole === 'function'
+                    ? () => {
+                        const role = lbl.liveRole()
+                        return role ? roleColor(role, forRole(role)) : null
+                      }
+                    : null
                 }
                 emphasis={!!lbl.emphasis}
                 onHide={onHideLabel}

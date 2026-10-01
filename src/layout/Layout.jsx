@@ -4,16 +4,22 @@ import Header from '@/components/Header/Header'
 import ParticipantGate from '@/components/ParticipantGate/ParticipantGate'
 import useThemeSync from '@/hooks/useThemeSync'
 import useAuthStore from '@/store/useAuthStore'
-import { useCurrentStudyTask } from '@/study/session/useStudySession'
+import useStudySession, { useCurrentStudyTask } from '@/study/session/useStudySession'
 
 export default function Layout() {
   useThemeSync()
   const { pathname } = useLocation()
 
   // During a study session's holistic task, the task's exercise is the only
-  // page: anything else (a typed URL, the back button) returns to it.
+  // page: anything else (a typed URL, the back button) returns to it. Until
+  // the task is started, its briefing on /study comes first.
+  const { cursor } = useStudySession()
   const studyTask = useCurrentStudyTask()
-  const studyTaskPath = studyTask ? `/exercise/${studyTask.exerciseId}` : null
+  const studyTaskPath = !studyTask
+    ? null
+    : cursor.startedAt?.[studyTask.stepIndex] != null
+      ? `/exercise/${studyTask.exerciseId}`
+      : '/study'
 
   useEffect(() => {
     useAuthStore.getState().bootstrap()

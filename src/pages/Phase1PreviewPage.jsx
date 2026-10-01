@@ -188,7 +188,7 @@ export default function Phase1PreviewPage() {
 
         <div className="phase1-preview__info">
           {stimulus
-            ? `question: ${stimulus.question.type}${stimulus.question.band ? ` (${stimulus.question.band} band)` : ''}\n${questionPrompt(stimulus.question)}\nnearer: ${stimulus.nearer}\ndepths: A ${stimulus.depths.A}, B ${stimulus.depths.B}\ngap: ${stimulus.depthGap}\nprobe (NDC): ${stimulus.probeNdc.join(', ')}\nobjects: ${stimulus.objects.map((o) => `${o.key}:${o.kind}`).join(' ')}`
+            ? `question: ${stimulus.question.type}${stimulus.question.band ? ` (${stimulus.question.band} band)` : ''}\n${questionPrompt(stimulus)}\nnearer: ${stimulus.nearer}\ndepths: A ${stimulus.depths.A}, B ${stimulus.depths.B}${stimulus.distances ? `\ndistance to C: A ${stimulus.distances.A}, B ${stimulus.distances.B} (ratio ${stimulus.distanceRatio})` : `\ngap: ${stimulus.depthGap}`}\nprobe (NDC): ${stimulus.probeNdc.join(', ')}\nobjects: ${stimulus.objects.map((o) => `${o.key}:${o.kind}`).join(' ')}`
             : 'Could not place this stimulus; try another seed.'}
         </div>
 
@@ -211,6 +211,7 @@ export default function Phase1PreviewPage() {
           interactive={orbit}
           cameraPosition={CAMERA.position}
           hiddenLabelKeys={hiddenLabelKeys}
+          showOrientationGizmo
           onObjectClick={handleObjectClick}
         />
         {bandStyle && <div className="study-phase1__band" style={bandStyle} aria-hidden="true" />}

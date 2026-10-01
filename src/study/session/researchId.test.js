@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   generateResearchId,
+  parseResearchId,
   parseStudySlot,
   RESEARCH_ID_ALPHABET,
   RESEARCH_ID_LENGTH,
@@ -36,5 +37,25 @@ describe('parseStudySlot', () => {
     for (const raw of ['', '0', '-1', '1.5', 'P01', null, undefined, '12345']) {
       expect(parseStudySlot(raw)).toBeNull()
     }
+  })
+})
+
+describe('parseResearchId', () => {
+  it('accepts a generated ID, in either case', () => {
+    const id = generateResearchId()
+    expect(parseResearchId(id)).toBe(id)
+    expect(parseResearchId(` ${id.toLowerCase()} `)).toBe(id)
+  })
+
+  it('rejects anything that could not have been generated', () => {
+    for (const raw of ['', 'K7QX3', 'K7QX3MM', 'K7QX0M', 'K7-X3M', 'TESTGA', null, undefined]) {
+      expect(parseResearchId(raw)).toBeNull()
+    }
+  })
+
+  it('accepts the reserved test IDs', () => {
+    expect(parseResearchId('test1')).toBe('TEST1')
+    expect(parseResearchId('TEST42')).toBe('TEST42')
+    expect(parseResearchId('TEST')).toBeNull()
   })
 })

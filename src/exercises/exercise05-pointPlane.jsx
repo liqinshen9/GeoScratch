@@ -8,7 +8,9 @@ import {
   getInputBlock,
   objectOrChildMatches,
   planeNormalFromBlock,
+  vec3FromBlock,
   vectorMatches,
+  vectorsAreParallel,
   POINT_VECTOR_BLOCK_TYPES,
 } from './shared/blockQueries'
 
@@ -39,6 +41,8 @@ const xyzFields = (v) =>
   `<field name="X">${v.x}</field><field name="Y">${v.y}</field><field name="Z">${v.z}</field>`
 
 const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="linalg_point" x="420" y="60">${xyzFields(POINT_P)}</block>
+  <block type="linalg_point" x="420" y="120">${xyzFields(POINT_Q)}</block>
   <block type="parametric_plane" x="60" y="60">
     <value name="point">
       <block type="linalg_point">${xyzFields(PLANE_POINT_A)}</block>
@@ -54,10 +58,10 @@ const SOLUTION_XML = `<xml xmlns="https://developers.google.com/blockly/xml">
           <block type="vector_arithmetic">
             <field name="OP">subtract</field>
             <value name="U">
-              <block type="linalg_point">${xyzFields(POINT_P)}</block>
+              <block type="linalg_vec3">${xyzFields(POINT_P)}</block>
             </value>
             <value name="V">
-              <block type="linalg_point">${xyzFields(POINT_Q)}</block>
+              <block type="linalg_vec3">${xyzFields(POINT_Q)}</block>
             </value>
           </block>
         </value>
@@ -87,9 +91,9 @@ function isExercisePlaneObject(object) {
   )
 }
 
-function findPointBlock(workspace, point) {
+function findPointBlock(workspace, point, types = POINT_VECTOR_BLOCK_TYPES) {
   if (!workspace) return null
-  for (const type of POINT_VECTOR_BLOCK_TYPES) {
+  for (const type of types) {
     const match = workspace
       .getBlocksByType(type, false)
       .find((block) => blockMatchesVec3(block, point))
@@ -102,9 +106,12 @@ function isPointBlockAt(block, point) {
   return POINT_VECTOR_BLOCK_TYPES.includes(block?.type) && blockMatchesVec3(block, point)
 }
 
-function workspaceHasPointPVector(workspace) {
-  return Boolean(findPointBlock(workspace, POINT_P))
-}
+const isPointOnlyAt = (point) => (block) =>
+  block?.type === 'linalg_point' && blockMatchesVec3(block, point)
+const isVectorOnlyAt = (point) => (block) =>
+  block?.type === 'linalg_vec3' && blockMatchesVec3(block, point)
+
+const hasBlock = (workspace, matches) => (workspace?.getAllBlocks(false) ?? []).some(matches)
 
 function isExercisePlaneBlock(block) {
   return (
@@ -130,12 +137,28 @@ function isNormalVectorBlock(block) {
   return blockMatchesVec3(block, PLANE_NORMAL)
 }
 
+// Projecting onto any multiple of n gives the same projection.
+function isNormalDirectionBlock(block) {
+  return vectorsAreParallel(vec3FromBlock(block), PLANE_NORMAL)
+}
+
 function isPointDifferenceBlock(block) {
   return (
     block?.type === 'vector_arithmetic' &&
     block.getFieldValue('OP') === 'subtract' &&
     isPointPBlock(getInputBlock(block, 'U')) &&
     isExercisePointQBlock(getInputBlock(block, 'V'))
+  )
+}
+
+// Q - P has the right length, but not accepted: the projection draws its
+// perpendicular from the arrow's head, which would then be Q, on the plane.
+function isReversedDifferenceBlock(block) {
+  return (
+    block?.type === 'vector_arithmetic' &&
+    block.getFieldValue('OP') === 'subtract' &&
+    isExercisePointQBlock(getInputBlock(block, 'U')) &&
+    isPointPBlock(getInputBlock(block, 'V'))
   )
 }
 
@@ -176,7 +199,7 @@ function createExercisePointMarker(point, name, geoType) {
   return marker
 }
 
-// A point block plugged into a socket draws no glyph of its own, so the
+// A Point block plugged into a socket draws no glyph of its own, so the
 // exercise supplies the markers for P and Q. Each is labelled with its block's
 // own name rather than a hardcoded letter, so the scene and the workspace agree.
 function addExercisePointMarkers(objects, workspace) {
@@ -184,11 +207,14 @@ function addExercisePointMarkers(objects, workspace) {
     [POINT_P, 'P', 'exercise_point_p'],
     [POINT_Q, 'Q', 'exercise_point_q'],
   ].flatMap(([point, fallback, geoType]) => {
-    const block = findPointBlock(workspace, point)
+    const block = findPointBlock(workspace, point, ['linalg_point'])
     if (!block || objects.some((object) => objectIsAt(object, point))) return []
-    return [
-      createExercisePointMarker(point, window.geoNaming?.nameFor(block.id) || fallback, geoType),
-    ]
+    const marker = createExercisePointMarker(
+      point,
+      window.geoNaming?.nameFor(block.id) || fallback,
+      geoType,
+    )
+    return [marker]
   })
   return markers.length ? [...objects, ...markers] : objects
 }
@@ -218,7 +244,7 @@ function hasProjectionOntoNormalBlock(workspace) {
     .some(
       (block) =>
         isPointDifferenceBlock(getInputBlock(block, 'U')) &&
-        isNormalVectorBlock(getInputBlock(block, 'V')),
+        isNormalDirectionBlock(getInputBlock(block, 'V')),
     )
 }
 
@@ -229,7 +255,7 @@ function hasProjectionDistanceBlock(workspace) {
     return (
       projectBlock?.type === 'vector_project' &&
       isPointDifferenceBlock(getInputBlock(projectBlock, 'U')) &&
-      isNormalVectorBlock(getInputBlock(projectBlock, 'V'))
+      isNormalDirectionBlock(getInputBlock(projectBlock, 'V'))
     )
   })
 }
@@ -257,23 +283,45 @@ function Givens() {
         <p>P = {givenVector(POINT_P)}</p>
         <p>Q = {givenVector(POINT_Q)}, a point on the plane</p>
       </section>
+      <section>
+        <h3>Vectors</h3>
+        <p>VP = {givenVector(POINT_P)}</p>
+        <p>VQ = {givenVector(POINT_Q)}</p>
+      </section>
     </div>
   )
 }
 
-function Steps({ steps, passed }) {
+function Steps({ steps, partialSteps, partialMessages, passed }) {
+  const differenceClass = steps.difference
+    ? 'is-complete'
+    : partialSteps?.difference
+      ? 'is-partial'
+      : ''
   return (
     <ol className={`exercise-task-steps${passed ? ' is-passed' : ''}`}>
       <li className={steps.plane ? 'is-complete' : ''}>
         Create: plane S through A with normal vector n
       </li>
       <li className={steps.pointP ? 'is-complete' : ''}>Create: Point P</li>
-      <li className={steps.pointQ ? 'is-complete' : ''}>Create: Point Q on the plane</li>
-      <li className={steps.difference ? 'is-complete' : ''}>
-        Compute: P - Q with the Vector Arithmetic block.
+      <li className={steps.pointQ ? 'is-complete' : ''}>
+        Create: Point Q, this will be on the plane.
+      </li>
+      <li className={steps.vectors ? 'is-complete' : ''}>
+        Create: Vector VP and Vector VQ, ending at P and Q.
+      </li>
+      <li className={differenceClass}>
+        Compute: VP - VQ with the Vector Arithmetic block.
+        {partialSteps?.difference && (
+          <div className="exercise-step-actions">
+            <span className="exercise-step-feedback" role="status">
+              {partialMessages.difference}
+            </span>
+          </div>
+        )}
       </li>
       <li className={steps.projection ? 'is-complete' : ''}>
-        Project: P - Q onto n with the Vector Project block. Hint: right-click n and Duplicate it.
+        Project: VP - VQ onto n with the Vector Project block. Hint: right-click n and Duplicate it.
       </li>
       <li className={steps.distance ? 'is-complete' : ''}>
         Compute: the Vector Magnitude of that projection. This is the distance from P to the plane.
@@ -307,8 +355,14 @@ function evaluate({ objects, workspace }) {
   const distanceIsCorrect = distance !== null && closeNumber(distance, CORRECT_DISTANCE, 0.01)
   const passed = distanceIsCorrect && hasValidDistanceComputation(workspace)
 
-  const hasPointP = workspaceHasPointPVector(workspace)
-  const hasPointQ = Boolean(findPointBlock(workspace, POINT_Q)) || hasPointQOnExercisePlane(objects)
+  const hasPointP = hasBlock(workspace, isPointOnlyAt(POINT_P))
+  const hasPointQ = hasBlock(workspace, isPointOnlyAt(POINT_Q)) || hasPointQOnExercisePlane(objects)
+  const vectors =
+    hasBlock(workspace, isVectorOnlyAt(POINT_P)) && hasBlock(workspace, isVectorOnlyAt(POINT_Q))
+  const difference = hasPointDifferenceBlock(workspace)
+  const reversedDifference =
+    !difference &&
+    (workspace?.getBlocksByType('vector_arithmetic', false) ?? []).some(isReversedDifferenceBlock)
 
   return {
     passed,
@@ -323,10 +377,17 @@ function evaluate({ objects, workspace }) {
       plane: hasExercisePlane(objects),
       pointP: hasPointP,
       pointQ: hasPointQ,
-      difference: hasPointP && hasPointQ && hasPointDifferenceBlock(workspace),
+      vectors,
+      difference,
       // The projection ticks on its own, before the magnitude finishes the job.
       projection: hasProjectionOntoNormalBlock(workspace),
       distance: passed,
+    },
+    partialSteps: { difference: reversedDifference },
+    partialMessages: {
+      difference: reversedDifference
+        ? 'This is VQ - VP. Swap the two vectors so it is VP - VQ, from Q on the plane to P.'
+        : null,
     },
   }
 }
@@ -338,13 +399,16 @@ export default {
   // it has no edge of its own.
   cameraView: { distance: 48 },
   // From this far out the room's front edges cross the scene.
-  settingsOverrides: { showBoxFrontWireframe: false },
+  // VP - VQ rests from Q to P, where the projection needs it, as with two Points.
+  settingsOverrides: { showBoxFrontWireframe: false, vectorDifferenceAsPositions: true },
   givenNames: [
     { name: 'S', matches: isExercisePlaneBlock },
     { name: 'A', matches: (block) => isPointBlockAt(block, PLANE_POINT_A) },
     { name: 'n', matches: (block) => block.type === 'linalg_vec3' && isNormalVectorBlock(block) },
-    { name: 'P', matches: (block) => isPointBlockAt(block, POINT_P) },
-    { name: 'Q', matches: (block) => isPointBlockAt(block, POINT_Q) },
+    { name: 'P', matches: isPointOnlyAt(POINT_P) },
+    { name: 'Q', matches: isPointOnlyAt(POINT_Q) },
+    { name: 'VP', matches: isVectorOnlyAt(POINT_P) },
+    { name: 'VQ', matches: isVectorOnlyAt(POINT_Q) },
   ],
   Givens,
   Steps,

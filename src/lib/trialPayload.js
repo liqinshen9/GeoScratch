@@ -31,6 +31,7 @@ export function buildTrialRow({
   viewport,
   devicePixelRatio,
   labelToggles,
+  shadowVisibility,
 }) {
   return {
     profile_id: profileId,
@@ -49,6 +50,7 @@ export function buildTrialRow({
     stimulus_id: stimulus.id,
     stimulus_seed: stimulus.seed,
     correct_target: stimulus.nearer,
+    nearer_higher: stimulus.nearerHigher ?? null,
     response,
     correct: gradeResponse(response, stimulus.nearer),
     rt_ms: reactionTimeMs(presentedPerf, answeredPerf),
@@ -58,5 +60,7 @@ export function buildTrialRow({
     viewport_h: viewport?.height ?? null,
     device_pixel_ratio: devicePixelRatio ?? null,
     label_toggles: labelToggles ?? 0,
+    shadow_visible_a: shadowVisibility?.A ?? null,
+    shadow_visible_b: shadowVisibility?.B ?? null,
   }
 }

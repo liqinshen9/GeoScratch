@@ -91,6 +91,31 @@ describe('applyTubeCollisions', () => {
     expect(zones[0].end).toBeCloseTo(-5 + 1 + TUBE_RADIUS, 2)
   })
 
+  it('follows a line moved and stretched by a playing transform, in its own units', () => {
+    const line = makeLine()
+    // Shifted 1 along x and stretched 2x along it, as lineTransformAnimation does.
+    line.matrixAutoUpdate = false
+    line.matrix.makeScale(2, 1, 1).premultiply(new THREE.Matrix4().makeTranslation(1, 0, 0))
+    const sphere = makeSphere({ position: new THREE.Vector3(5, 0, 0), radius: 1 })
+    applyTubeCollisions({ line, sphere })
+
+    // World 5 is local (5 - 1) / 2 = 2.
+    const [zone] = line.userData.setCollisionZones.mock.calls[0][0]
+    expect(zone.start).toBeCloseTo((4 - 1 - TUBE_RADIUS) / 2, 2)
+    expect(zone.end).toBeCloseTo((4 + 1 + TUBE_RADIUS) / 2, 2)
+  })
+
+  it('leaves a line alone when its zones have not changed', () => {
+    const line = makeLine()
+    const sphere = makeSphere({ position: new THREE.Vector3(5, 0, 0), radius: 1 })
+    applyTubeCollisions({ line, sphere })
+    applyTubeCollisions({ line, sphere })
+    expect(line.userData.setCollisionZones).toHaveBeenCalledTimes(1)
+    sphere.position.x = 6
+    applyTubeCollisions({ line, sphere })
+    expect(line.userData.setCollisionZones).toHaveBeenCalledTimes(2)
+  })
+
   describe('teapots', () => {
     // A ring standing in for a teapot: its box is solid, but the hole is not.
     const makeTeapot = () => {

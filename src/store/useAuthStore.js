@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { supabase, isSupabaseConfigured } from '@/lib/supabaseClient'
 import { normalizeParticipantCode, normalizeCohort } from '@/lib/participantCode'
-import { generateResearchId } from '@/study/session/researchId'
 import { HOLISTIC_TASKS } from '@/study/session/holistic'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 
@@ -77,7 +76,7 @@ const useAuthStore = create((set, get) => ({
   profile: null,
   participantCode: loadStoredCode(),
   cohort: loadStoredCohort(),
-  // { slot, setting, researchId } of the /study session on this device. Local
+  // { slot, researchId } of the /study session on this device. Local
   // only: a session resumes on the device it started on, never by lookup.
   study: loadStoredStudy(),
 
@@ -175,11 +174,11 @@ const useAuthStore = create((set, get) => ({
   },
 
   /**
-   * Start a study session: generate a research ID and attach it, with the
-   * researcher's counterbalancing slot and the study setting, to the profile.
-   * The ID becomes the participant code, so every existing row joins on it.
+   * Start a study session: attach the research ID and counterbalancing slot
+   * from the study link to the profile. The ID becomes the participant code,
+   * so every existing row joins on it.
    */
-  startStudySession: async ({ slot, setting }) => {
+  startStudySession: async ({ slot, researchId }) => {
     // Every session is a fresh anonymous user with no saved work on the task
     // exercises. Otherwise a previous participant on a lab machine (or a dev
     // who opened those exercises) leaks a profile, cloud snapshots or local
@@ -187,11 +186,10 @@ const useAuthStore = create((set, get) => ({
     await get().resetIdentity()
     useWorkspaceStore.getState().clearSavedWorkspaces(HOLISTIC_TASKS.map((id) => `exercise-${id}`))
 
-    const researchId = generateResearchId()
     const res = await get().setParticipantCode(researchId)
     if (!res.ok) return res
 
-    const study = { slot, setting, researchId }
+    const study = { slot, researchId }
     storeStudy(study)
     set({ study })
 
@@ -199,7 +197,7 @@ const useAuthStore = create((set, get) => ({
     if (isSupabaseConfigured && userId) {
       supabase
         .from('profiles')
-        .update({ study_slot: slot, study_setting: setting })
+        .update({ study_slot: slot })
         .eq('id', userId)
         .then(({ error }) => {
           if (error) console.error('[GeoScratch] Failed to record study slot:', error)

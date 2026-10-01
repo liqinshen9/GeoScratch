@@ -131,8 +131,6 @@ export function buildDistanceIllustration(
 
   group.userData.geoType = 'distance_projection_illustration'
   group.userData.srcBlockId = blockId
-  // The Q sweep redraws this each frame as Q moves.
-  group.userData.guideLine = guideLine
   group.userData.tangent = tangent
 
   return { group, guideLine, normalGlyph, normalTip }

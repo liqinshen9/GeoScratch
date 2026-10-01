@@ -4,8 +4,7 @@ import Scene3D from '@/components/Scene3D/Scene3D'
 import useSettingsStore, { DEFAULT_SETTINGS } from '@/store/useSettingsStore'
 import { getTechnique } from '@/study/phase1/conditions'
 import { CONFIGURATIONS, configurationSettings } from '@/study/session/holistic'
-import { buildSceneFromXml } from '@/study/phase1/buildStimulusScene'
-import { stimulusToXml } from '@/study/phase1/stimulusToXml'
+import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { positionFromOrbit, DEFAULT_CAMERA_VIEW } from '@/components/Scene3D/sceneConstants'
 import './StudyPhase1Page.css'
 
@@ -13,6 +12,8 @@ import './StudyPhase1Page.css'
 // every Phase 1 cue shows at once, for the questionnaire screenshots
 // (scripts/surveyScreenshots.mjs). ?t=T1..T10 picks a Phase 1 technique;
 // ?c=C1 / C2 a holistic configuration (baseline / perception-driven).
+// ?cue=halo / accent is a close-up of one cue, for the Phase 1 intro pages
+// (public/study/cue-*.png).
 
 // The camera looks at the room's centre, but the near floor corner projects
 // lower than the back corner, so the room sits low in the frame. Render on a
@@ -41,6 +42,53 @@ const SHOWCASE = {
   ],
 }
 
+// Each close-up is drawn at the size the intro page shows it, with the trial's
+// own settings (grid, axes, labels), so a cue looks as it will in a trial.
+const CUE_CANVAS = { width: 512, height: 300 }
+const CUE_CAMERA_DISTANCE = 16
+
+const CUE_VIEWS = {
+  halo: {
+    technique: 'T5',
+    label: 'Halo',
+    scene: {
+      id: 'survey-cue-halo',
+      colourSalt: 0,
+      objects: [
+        // Off the view's centre, where the labels settle, so they stay clear of the crossing.
+        { key: 'B', role: 'target', kind: 'line', origin: [-2, 0, 0.5], direction: [1, 0.15, -1] },
+        { key: 'A', role: 'target', kind: 'line', origin: [-2, 0, 3.5], direction: [-1, 1.4, -1] },
+      ],
+    },
+  },
+  accent: {
+    technique: 'T4',
+    label: 'Collision accent',
+    scene: {
+      id: 'survey-cue-accent',
+      colourSalt: 0,
+      objects: [
+        { key: 'cube', kind: 'cube', centre: [-2, 0, 2], size: 4 },
+        // Across the view, so the part inside the cube is long on screen.
+        { key: 'A', role: 'target', kind: 'line', origin: [-2, 0, 2], direction: [1, 0.3, -1] },
+      ],
+    },
+  },
+  rings: {
+    technique: 'T3',
+    label: 'Ringed lines',
+    // Closer, so each ring is large enough to count.
+    distance: 9,
+    scene: {
+      id: 'survey-cue-rings',
+      colourSalt: 0,
+      objects: [
+        { key: 'A', role: 'target', kind: 'line', origin: [-1, 0.5, 1], direction: [1, 0.9, -1] },
+      ],
+    },
+  },
+}
+
 const SCENE_SETTINGS = {
   showGrid: false,
   showAxes: false,
@@ -57,10 +105,27 @@ const CONFIGURATION_VIEWS = [
   { id: 'C2', label: 'Perception-driven configuration', configuration: CONFIGURATIONS.PERCEPTION },
 ]
 
-function resolveView(t, c) {
+function resolveView(t, c, cue) {
+  const cueView = CUE_VIEWS[cue]
+  if (cueView) {
+    return {
+      id: `cue-${cue}`,
+      label: cueView.label,
+      settings: { ...getTechnique(cueView.technique).settings, showAxes: false },
+      scene: cueView.scene,
+      canvas: CUE_CANVAS,
+      crop: { top: 0, height: CUE_CANVAS.height },
+      cameraPosition: positionFromOrbit({
+        ...DEFAULT_CAMERA_VIEW,
+        distance: cueView.distance ?? CUE_CAMERA_DISTANCE,
+      }),
+    }
+  }
+  const room = { scene: SHOWCASE, canvas: CANVAS, crop: CROP, cameraPosition: CAMERA_POSITION }
   const config = CONFIGURATION_VIEWS.find((view) => view.id === c)
   if (config) {
     return {
+      ...room,
       id: config.id,
       label: config.label,
       settings: {
@@ -73,6 +138,7 @@ function resolveView(t, c) {
   }
   const technique = getTechnique(t ?? 'T1') ?? getTechnique('T1')
   return {
+    ...room,
     id: technique.id,
     label: technique.label,
     settings: { ...technique.settings, ...SCENE_SETTINGS },
@@ -83,13 +149,14 @@ export default function SurveyShowcasePage() {
   const [params] = useSearchParams()
   const t = params.get('t')
   const c = params.get('c')
-  const view = useMemo(() => resolveView(t, c), [t, c])
+  const cue = params.get('cue')
+  const view = useMemo(() => resolveView(t, c, cue), [t, c, cue])
 
   // Builders read the active settings as they run, so apply them first.
-  const [objects, setObjects] = useState([])
+  const [scene, setScene] = useState({ objects: [], hiddenLabelKeys: new Set() })
   useEffect(() => {
     useSettingsStore.getState().setExerciseOverrides(view.settings)
-    setObjects(buildSceneFromXml(stimulusToXml(SHOWCASE)))
+    setScene(buildStimulusScene(view.scene))
   }, [view])
   useEffect(() => () => useSettingsStore.getState().clearExerciseOverrides(), [])
 
@@ -99,22 +166,23 @@ export default function SurveyShowcasePage() {
         className="study-phase1__stage"
         data-view={view.id}
         data-label={view.label}
-        style={{ width: CANVAS.width, height: CROP.height }}
+        style={{ width: view.canvas.width, height: view.crop.height }}
       >
         <div
           className="study-phase1__stage"
           style={{
             position: 'absolute',
-            top: -CROP.top,
-            width: CANVAS.width,
-            height: CANVAS.height,
+            top: -view.crop.top,
+            width: view.canvas.width,
+            height: view.canvas.height,
           }}
         >
           <Scene3D
             key={view.id}
-            objects={objects}
+            objects={scene.objects}
+            hiddenLabelKeys={scene.hiddenLabelKeys}
             interactive={false}
-            cameraPosition={CAMERA_POSITION}
+            cameraPosition={view.cameraPosition}
           />
         </div>
       </div>

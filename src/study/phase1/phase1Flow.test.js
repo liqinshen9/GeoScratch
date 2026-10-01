@@ -113,4 +113,46 @@ describe('dev controls', () => {
     )
     expect(reduce(mid, { type: FLOW_ACTIONS.RESTART })).toEqual(initialFlowState(sequence, null))
   })
+
+  it('gives measured trials feedback too when feedbackAlways is on', () => {
+    const devReduce = createFlowReducer(sequence, { feedbackAlways: true })
+    const atMeasured = { status: FLOW.TRIAL, blockIndex: 0, trialIndex: 1, lastResponse: null }
+    expect(devReduce(atMeasured, { type: FLOW_ACTIONS.ANSWER, response: 'A' })).toMatchObject({
+      status: FLOW.FEEDBACK,
+      lastResponse: 'A',
+    })
+    expect(reduce(atMeasured, { type: FLOW_ACTIONS.ANSWER, response: 'A' }).status).toBe(
+      FLOW.BLOCK_END,
+    )
+  })
+
+  it('steps back one trial within the block, including from its end screen', () => {
+    const atSecond = { status: FLOW.TRIAL, blockIndex: 0, trialIndex: 1, lastResponse: null }
+    expect(reduce(atSecond, { type: FLOW_ACTIONS.PREVIOUS_TRIAL })).toMatchObject({
+      status: FLOW.FIXATION,
+      blockIndex: 0,
+      trialIndex: 0,
+    })
+    const atEnd = { status: FLOW.BLOCK_END, blockIndex: 0, trialIndex: 2, lastResponse: null }
+    expect(reduce(atEnd, { type: FLOW_ACTIONS.PREVIOUS_TRIAL })).toMatchObject({
+      status: FLOW.FIXATION,
+      trialIndex: 1,
+    })
+    const atFirst = { status: FLOW.TRIAL, blockIndex: 1, trialIndex: 0, lastResponse: null }
+    expect(reduce(atFirst, { type: FLOW_ACTIONS.PREVIOUS_TRIAL })).toBe(atFirst)
+  })
+
+  it('skips to the next trial without answering, and to the block end after the last', () => {
+    const atFirst = { status: FLOW.TRIAL, blockIndex: 0, trialIndex: 0, lastResponse: null }
+    expect(reduce(atFirst, { type: FLOW_ACTIONS.NEXT_TRIAL })).toMatchObject({
+      status: FLOW.FIXATION,
+      trialIndex: 1,
+    })
+    const atLast = { status: FLOW.FEEDBACK, blockIndex: 0, trialIndex: 1, lastResponse: 'A' }
+    expect(reduce(atLast, { type: FLOW_ACTIONS.NEXT_TRIAL })).toMatchObject({
+      status: FLOW.BLOCK_END,
+    })
+    const intro = { status: FLOW.BLOCK_INTRO, blockIndex: 0, trialIndex: 0, lastResponse: null }
+    expect(reduce(intro, { type: FLOW_ACTIONS.NEXT_TRIAL })).toBe(intro)
+  })
 })

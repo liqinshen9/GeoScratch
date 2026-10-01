@@ -4,6 +4,8 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 import useAnimationStore from '@/store/useAnimationStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import { getEasingFn } from '@/store/animationConfig'
+import { makeAnimationSequence } from '@/utils/animationSequence'
+import { applyTubeCollisions } from '@/utils/tubeCollision'
 
 // Headless, mounted under <Scene>. Resolves the selected block's 3D object
 // (by stable srcBlockId / animAliasBlockIds), calls its userData.animate(p,
@@ -38,7 +40,15 @@ function fallbackTarget(objects, workspace) {
   return best
 }
 
-export default function AnimationDriver({ objects = [], fallback = false }) {
+// An exercise's own playing order for the fallback, when it names more than one
+// object. See docs/architecture/animation.md#a-whole-task-in-sequence.
+function sequenceTarget(sequence, objects, workspace) {
+  const parts = (sequence?.(objects, workspace) ?? []).filter(isAnimatable)
+  if (parts.length > 1) return makeAnimationSequence(parts)
+  return parts[0] ?? null
+}
+
+export default function AnimationDriver({ objects = [], fallback = false, sequence }) {
   const { invalidate } = useThree()
   const selectedBlockId = useWorkspaceStore((s) => s.selectedBlockId)
   const workspace = useWorkspaceStore((s) => s.workspace)
@@ -64,8 +74,9 @@ export default function AnimationDriver({ objects = [], fallback = false }) {
           )
         })
       : null
-    return selected || (fallback ? fallbackTarget(objects, workspace) : null)
-  }, [objects, selectedBlockId, fallback, workspace])
+    if (selected || !fallback) return selected ?? null
+    return sequenceTarget(sequence, objects, workspace) ?? fallbackTarget(objects, workspace)
+  }, [objects, selectedBlockId, fallback, sequence, workspace])
 
   // The block of the step playing, highlighted in the workspace
   // (userData.animActiveBlockId, set by a step-by-step pipeline).
@@ -85,6 +96,9 @@ export default function AnimationDriver({ objects = [], fallback = false }) {
       const fn = obj?.userData?.animate
       if (typeof fn !== 'function') return
       fn(Math.max(0, Math.min(1, p)), getEasingFn(easing))
+      // Accents are computed at build time, for the resting scene; a moving line
+      // or solid needs them recomputed. See docs/architecture/collision.md#during-an-animation.
+      applyTubeCollisions(window.threeObjStore)
       highlightActiveBlock(obj)
     },
     [easing, highlightActiveBlock],

@@ -4,7 +4,7 @@ import { resolveHolisticOrder } from './holistic'
 // The whole study session as a flat list of steps, and the cursor that walks
 // it. See docs/architecture/study-session.md.
 
-export const SESSION_PLAN_VERSION = 3
+export const SESSION_PLAN_VERSION = 6
 
 export const STEP_KINDS = Object.freeze({
   PHASE1_BLOCK: 'phase1Block',
@@ -16,6 +16,7 @@ export const STEP_KINDS = Object.freeze({
 // The embedded-data names each survey reads must match its Qualtrics survey
 // flow exactly, or the value arrives blank.
 export const SURVEYS = Object.freeze({
+  demographic: 'https://auckland.au1.qualtrics.com/jfe/form/SV_9uhAiSCmJdY5ULI',
   perBlock: 'https://auckland.au1.qualtrics.com/jfe/form/SV_b41w0nx2tzLHiZw',
   holistic: 'https://auckland.au1.qualtrics.com/jfe/form/SV_eY9wZ7aNQQh8Kto',
   post: 'https://auckland.au1.qualtrics.com/jfe/form/SV_0SuRuKxECznsNG6',
@@ -27,7 +28,9 @@ export const SURVEYS = Object.freeze({
 export function buildSessionPlan({ researchId, slot }) {
   const { squareRow, techniqueOrder } = resolveTechniqueOrder(researchId, slot)
   const holistic = resolveHolisticOrder(slot)
-  const steps = []
+  const steps = [
+    { kind: STEP_KINDS.SURVEY, survey: 'demographic', params: { participantID: researchId } },
+  ]
 
   techniqueOrder.forEach((technique, blockIndex) => {
     steps.push({ kind: STEP_KINDS.PHASE1_BLOCK, blockIndex, technique })
@@ -75,7 +78,9 @@ export function buildSessionPlan({ researchId, slot }) {
   }
 }
 
+/** @returns {string|null} null while that survey's link is not set */
 export function surveyUrl(step) {
+  if (!SURVEYS[step.survey]) return null
   const url = new URL(SURVEYS[step.survey])
   for (const [key, value] of Object.entries(step.params)) url.searchParams.set(key, String(value))
   return url.toString()

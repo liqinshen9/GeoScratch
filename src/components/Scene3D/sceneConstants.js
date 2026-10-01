@@ -33,6 +33,13 @@ export const AXIS_COLORS = AXIS_COLORS_BY_THEME.light
 // clamp. See docs/architecture/glyph-sizing.md#axis-vs-line-radius.
 export const AXIS_SHAFT_RADIUS = 0.022
 export const MIN_LINE_WORLD_RADIUS = AXIS_SHAFT_RADIUS * 1.25
+// Tubes are drawn as wide as the plain-line stroke (2.6px, geoVectorLine.js and
+// vectorShaftGlyph.js), so switching line style changes the shading, not the
+// width. The radii mirror the builders', which cannot import them.
+// See docs/architecture/glyph-sizing.md#view-height.
+export const TUBE_WIDTH_PX = 2.6
+export const LINE_TUBE_RADIUS = 0.051
+export const VECTOR_TUBE_RADIUS = 0.045
 // Per-glyph-kind zoom/thickness caps. See docs/architecture/glyph-sizing.md.
 export const EXTRA_THICK_LINE_MULTIPLIER = 2.7
 export const EXTRA_LARGE_POINT_MULTIPLIER = 1.6

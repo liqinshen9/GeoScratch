@@ -80,7 +80,9 @@ describe('proximity questions', () => {
 
 describe('target labels', () => {
   it('anchors each line and vector label on screen, clear of the probe and the other target', () => {
-    for (const s of all) {
+    // Distance questions judge the labelled points themselves; stimuli.test.js
+    // checks their labels and shafts.
+    for (const s of all.filter((s) => s.question.type !== 'distance')) {
       const targets = targetsOf(s)
       const probe = { x: s.probeNdc[0], y: s.probeNdc[1] }
       for (const target of targets.filter(isLinear)) {

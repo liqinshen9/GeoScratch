@@ -93,6 +93,36 @@ stage beneath it. Play therefore always does something once there is something
 to play, so a study participant can be told "press Play" without first being
 taught selection. The sandbox keeps selection-only.
 
+### a-whole-task-in-sequence
+
+The fallback picks one object, and in a task with several separate stacks every
+top-level block ties, so the last one wins. On transform-object that was the
+Scale Vector reveal: Play grew `2n` and never moved L1 or the teapot.
+
+An exercise can export `animationSequence(objects, workspace)`, returning the
+animatable objects in task order. With two or more, the driver wraps them in
+`makeAnimationSequence` (`utils/animationSequence.js`), a stand-in target shaped
+like an object, and plays them one after another. With one it plays that
+object; with none, the usual fallback. Selecting a block still plays just that
+block.
+
+- Each part gets a slot sized by its own `durationScale`, so a two-step pipeline
+  gets two base durations and a three-arrow reveal three. The sequence's
+  `durationScale` is the sum, read as a getter for the same reason as the
+  pipeline's.
+- Every part is called every frame with its own local progress, so at 0 the
+  whole scene is at its start (L1 unmoved, `n` and `2n` hidden, the teapot at
+  the origin) and at 1 it is the static scene.
+- The part in progress is called last. Two parts can drive one glyph (a
+  delegated reveal), and the playing one must have the final say.
+- `animActiveBlockId` is the playing part's own (a pipeline step), or else that
+  part's block, so the workspace highlight walks the task too.
+
+transform-object orders L1's pipeline, the Cross Product `n`, Scale Vector `2n`,
+then the teapot's pipeline, and drops anything the task does not ask for. A
+Cross Product plugged straight into Scale Vector is dropped too: `2n`'s reveal
+already plays it as its first stage.
+
 ## Staged vector reveal
 
 `utils/stagedVectorReveal.js`. `makeStagedVectorReveal(parts)` builds an
@@ -106,38 +136,6 @@ across the whole sequence. Used by `vector_arithmetic` and
 re-anchoring); a degenerate result (a plain sphere, `full` 0) has no
 `setVectorLength` and is just left visible.
 
-### Sweeping a point instead of revealing
-
-A point-plane distance does not use a staged reveal. Growing the pieces in
-sequence shows how the picture was _constructed_; it does not show why the
-projection is the _answer_. So `vector_project` swaps the reveal for a sweep
-when its input is a point difference: Q slides across the plane, `P - Q` swings
-and stretches with it, and the perpendicular stays put at length d.
-
-Two things make it work, and both were wrong in the first attempt.
-
-**The perpendicular has to be anchored at P's own foot.** It used to start at Q
-and rise to height d, so it travelled with Q and nothing stayed fixed to compare
-against.
-
-**Q has to sweep THROUGH the foot, not around it.** A circle about the foot
-keeps Q at a constant distance from it, so `|P - Q|` stays at
-`sqrt(d^2 + r^2)` for the whole animation and the sweep demonstrates nothing.
-Q instead orbits a circle whose diameter runs from its own resting place to the
-foot, so the path passes through both: Q at progress 0 and 1, the foot at 0.5,
-where `|P - Q|` is exactly d. In between it varies smoothly, which is the whole
-demonstration -- the projection is visibly the shortest of them.
-
-The orbit's radius breathes slightly so it does not look mechanical, and the
-frequencies for that are not free. Only even multiples of the base frequency are
-used, because those are the terms that vanish at progress 0, 0.5 and 1. The
-variation therefore never disturbs either fixed point. Choosing frequencies
-freely loses the resting position, the foot, or both.
-
-The closure sets `durationScale = 4`: a path has to be followed rather than
-watched go past. `AnimationDriver` divides its per-frame step by that scale, so
-the speed control still applies on top.
-
 ### pace
 
 Every staged reveal takes a base duration per stage (`durationScale = stages`),
@@ -147,24 +145,10 @@ grew to five or more stages.
 
 `makeStagedVectorReveal` also keeps a delegated closure's own pace inside the
 slots it claims: its scale is `max(total, own * total / claimed)` over the
-delegates. So a slower closure like the sweep stretches the whole run. Without
-that the scale never reaches the driver: it reads the value off the
-**selected** object, and the block a student selects is the outermost one,
-which delegates to the sweep rather than being it. The sweep ran at 1x until
-that was fixed.
-
-The sweep reaches across blocks, which a reveal never has to: the marker belongs
-to `geo_show_point_on_object`, the arrow to `vector_arithmetic`, the guide line
-to the illustration. `geo_show_point_on_object` therefore tags its returned point
-with its own `srcBlockId`, and `vector_arithmetic` carries that onto the point
-difference as `startBlockId` -- it assigns `userData` wholesale, so anything not
-copied explicitly is lost there. Re-aiming the arrow needs
-`setVectorSegment`, since a swinging vector changes origin and direction as well
-as length.
-
-Labels do not follow the sweep. `labelAnchors` are read on React render, not per
-frame, so a moving object's label stays where it started until the next scene
-rebuild.
+delegates. So a slower closure stretches the whole run. Without that the
+scale never reaches the driver: it reads the value off the **selected** object,
+and the block a student selects is the outermost one, which delegates to the
+slow closure rather than being it.
 
 ### Derivations, not just transformations
 
@@ -334,6 +318,12 @@ magnitude's centre-distance bar, the answer bar, hiding the working) behaves as
 it does for two Points. The label uses the operands' names, because plain
 vectors carry none of their own and the point path's P and Q fallbacks would be
 wrong.
+
+The `vectorDifferenceAsPositions` setting, which is not on the Settings page and is
+forced on by the point-to-plane exercise, treats every subtraction of two vectors
+drawn from the origin as measured, whatever it is plugged into. There the
+student's VP - VQ feeds Vector Project, not Vector Magnitude, and it has to rest
+from Q to P for the projection to draw its perpendicular from P.
 
 The signal is "measured", not "these tips are sphere centres". Matching sphere
 centres would depend on whether the spheres' blocks ran first, which depends on

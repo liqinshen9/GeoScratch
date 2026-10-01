@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, Billboard } from '@react-three/drei'
 import THREE from '@/utils/three'
@@ -14,6 +14,25 @@ const ROOM_COLORS = {
   light: { wall: '#ffffff', edge: '#a3a3a3' },
   dark: { wall: '#1c2834', edge: '#405267' },
 }
+
+// Room-only fill shading, so every seam of the room stays visible from any
+// angle. See docs/architecture/shadows.md#room-fill-shading.
+const ROOM_FILL_DIRECTION = new THREE.Vector3(0.15, 0.82, -0.55).normalize()
+const ROOM_FILL_STRENGTH = 0.15
+
+// BoxGeometry's material slots (+x, -x, +y, -y, +z, -z), by inward normal.
+const ROOM_FACE_INWARD_NORMALS = [
+  [-1, 0, 0],
+  [1, 0, 0],
+  [0, -1, 0],
+  [0, 1, 0],
+  [0, 0, -1],
+  [0, 0, 1],
+].map(([x, y, z]) => new THREE.Vector3(x, y, z))
+
+const ROOM_FACE_SHADES = ROOM_FACE_INWARD_NORMALS.map(
+  (normal) => 1 - (ROOM_FILL_STRENGTH * (1 - normal.dot(ROOM_FILL_DIRECTION))) / 2,
+)
 
 const GRID_COLORS = {
   light: { center: 0xb0b0b0, line: 0xd2d2d2 },
@@ -60,6 +79,19 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true, theme = 'light'
   const edges = useMemo(() => cubeEdges(half), [half])
   const edgeRefs = useRef([])
   const room = ROOM_COLORS[theme] || ROOM_COLORS.light
+  const wallMaterials = useMemo(
+    () =>
+      ROOM_FACE_SHADES.map(
+        (shade) =>
+          new THREE.MeshStandardMaterial({
+            color: new THREE.Color(room.wall).multiplyScalar(shade),
+            side: THREE.BackSide,
+            roughness: 1,
+          }),
+      ),
+    [room.wall],
+  )
+  useEffect(() => () => wallMaterials.forEach((m) => m.dispose()), [wallMaterials])
 
   useFrame(({ camera }) => {
     const open = showFrontWireframe ? null : openFaces(camera.position, half)
@@ -73,9 +105,8 @@ function BoundingBoxRoom({ size = 40, showFrontWireframe = true, theme = 'light'
 
   return (
     <group>
-      <mesh position={[0, 0, 0]} receiveShadow>
+      <mesh position={[0, 0, 0]} receiveShadow material={wallMaterials}>
         <boxGeometry args={[size, size, size]} />
-        <meshStandardMaterial color={room.wall} side={THREE.BackSide} roughness={1} />
       </mesh>
       {edges.map((edge, i) => (
         <line

@@ -117,7 +117,7 @@ function Steps({ steps, partialSteps, partialMessages, feedbackRevision, passed 
 
   const tasks = [
     ['cube', `Create: a Cube C with side length Scalar 2 and centre Point ${tuple(1, 1, 1)}.`],
-    ['point', `Create: a Point P = ${tuple(0, 2, 2)}, the corner of the cube.`],
+    ['point', `Create: a Point P = ${tuple(0, 2, 2)}, this will be the corner of the cube.`],
     [
       'pair',
       'My Blocks: save the cube and P together as one block, with any name you like. Then drag your new block out of My Blocks into the workspace.',

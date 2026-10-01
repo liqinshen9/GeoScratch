@@ -69,7 +69,7 @@ export default function StudyTaskBar({ task, passed }) {
         {hasPassed
           ? 'Solved. Continue when you are ready.'
           : timeUp
-            ? 'Time is up for this task.'
+            ? 'Time is up for this task. Feel free to skip it with Continue if you are stuck.'
             : `Time left: ${formatClock(capMs - elapsed)}`}
       </p>
       <Button className="h-10 text-base" disabled={!hasPassed && !timeUp} onClick={finish}>

@@ -1,6 +1,7 @@
 // Screenshots of the Phase 1 techniques for the Qualtrics questionnaires: the
 // dev-only /study/showcase scene under every technique, then under the two
-// holistic configurations (C1 baseline, C2 perception-driven).
+// holistic configurations (C1 baseline, C2 perception-driven). Also the two
+// cue close-ups the Phase 1 intro shows; copy those into public/study/.
 //
 //   pnpm dev --port 5199
 //   node scripts/surveyScreenshots.mjs http://localhost:5199 <out-dir>
@@ -15,11 +16,12 @@ import { join } from 'node:path'
 const [baseUrl = 'http://localhost:5173', outDir = 'survey-images'] = process.argv.slice(2)
 
 const VIEWS = [
-  ...['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'].map((id) => ({
+  ...['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T10'].map((id) => ({
     id,
     query: `t=${id}`,
   })),
   ...['C1', 'C2'].map((id) => ({ id, query: `c=${id}` })),
+  ...['halo', 'accent', 'rings'].map((cue) => ({ id: `cue-${cue}`, query: `cue=${cue}` })),
 ]
 const SETTLE_MS = 1500
 
@@ -59,7 +61,8 @@ for (const { id, query } of VIEWS) {
   }
 
   const label = await stage.getAttribute('data-label')
-  const file = join(outDir, `${id.replace(/^T(\d)$/, 'T0$1')}-${slug(label)}.png`)
+  const name = id.startsWith('cue-') ? id : `${id.replace(/^T(\d)$/, 'T0$1')}-${slug(label)}`
+  const file = join(outDir, `${name}.png`)
   await stage.screenshot({ path: file })
   console.log(file)
 }

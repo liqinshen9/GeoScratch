@@ -139,10 +139,16 @@
   box-shadow: inset 4px 0 0 #22c55e;
 }
 
-/* Full-width success strip pinned to the foot of the panel once the checker
-   passes, so it never shifts the task content when it appears. */
-.exercise-pass-banner {
+/* Pinned to the panel's foot so the pass banner appearing never shifts the
+   task content above it. */
+.exercise-task-panel__foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exercise-pass-banner {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -221,6 +227,13 @@
 .exercise-nav-button:disabled {
   opacity: 0.38;
   cursor: not-allowed;
+}
+
+.exercise-step-nav {
+  /* flex-end for the same reason as .exercise-debug-fill: the "tracking off" badge. */
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .exercise-nav-button--wide {
@@ -696,12 +709,8 @@
 /* Dev-only affordance; compiled out of the study build. Deliberately plain and
    a little ugly so it is never mistaken for part of the exercise UI. */
 .exercise-debug-fill {
-  /* Pinned to the foot and right-aligned. margin-top:auto keeps it in the same
-     place whether or not the pass banner is showing -- the banner claims the
-     free space first, and this then sits directly under it -- and flex-end
-     keeps it clear of the fixed "tracking off" badge in the bottom-left. */
+  /* flex-end keeps it clear of the fixed "tracking off" badge in the bottom-left. */
   align-self: flex-end;
-  margin-top: auto;
   padding: 3px 8px;
   border: 1px dashed var(--geo-text-muted-on-light);
   border-radius: 4px;

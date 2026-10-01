@@ -40,9 +40,8 @@ export function recordSessionPlan(plan) {
 }
 
 /** Session-level context the Method asks for, logged once when a session starts. */
-export function sessionContext(setting) {
+export function sessionContext() {
   return {
-    setting,
     viewport_w: window.innerWidth,
     viewport_h: window.innerHeight,
     device_pixel_ratio: window.devicePixelRatio,

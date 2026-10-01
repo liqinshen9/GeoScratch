@@ -43,7 +43,7 @@ export function makeStagedVectorReveal(parts) {
   reveal.stages = total
   // A base duration per stage, like one step-by-step pipeline step. A
   // delegated reveal keeps its own pace inside the slots it claims, so a slower
-  // one (the point-plane sweep) stretches the whole run. AnimationDriver reads
+  // one stretches the whole run. AnimationDriver reads
   // this off the SELECTED object's closure, and the block a student selects is
   // usually the outermost one, which delegates.
   // See docs/architecture/animation.md#pace.

@@ -16,7 +16,9 @@ export default function initObjectCompositionBlocks() {
       this.appendDummyInput().appendField('special block')
       this.setOutput(true, 'obj3D')
       this.setStyle(BLOCK_STYLES.CREATE_CUBE)
-      this.setTooltip('Cube of side length 2, centred at (1, 1, 1), with corner point P at (0, 2, 2).')
+      this.setTooltip(
+        'Cube of side length 2, centred at (1, 1, 1), with corner point P at (0, 2, 2).',
+      )
     },
   }
   javascriptGenerator.forBlock.geo_special_cube = function (block) {
@@ -24,7 +26,10 @@ export default function initObjectCompositionBlocks() {
     const cubeCode = `(${geoCubeDefinition.toString()})(new window.THREE.Vector3(1,1,1), 2, ${JSON.stringify(cubeId)})`
     return javascriptGenerator.forBlock.geo_object_with_point(
       { id: block.id, type: 'geo_special_cube', getInputTargetBlock: () => ({ id: cubeId }) },
-      { valueToCode: (_block, input) => input === 'OBJECT' ? cubeCode : 'new window.THREE.Vector3(0,2,2)' },
+      {
+        valueToCode: (_block, input) =>
+          input === 'OBJECT' ? cubeCode : 'new window.THREE.Vector3(0,2,2)',
+      },
     )
   }
 
@@ -44,7 +49,8 @@ export default function initObjectCompositionBlocks() {
     const point = generator.valueToCode(block, 'POINT', Order.NONE) || 'null'
     const id = JSON.stringify(block.id)
     const childId = JSON.stringify(block.getInputTargetBlock('OBJECT')?.id)
-    return [`(function(){
+    return [
+      `(function(){
       const object = (${object});
       const point = (${point});
       if (!object?.isObject3D || !point?.isVector3) return null;
@@ -72,7 +78,9 @@ export default function initObjectCompositionBlocks() {
       delete window.threeObjStore[${childId}];
       window.threeObjStore[${id}] = group;
       return group;
-    })()`, Order.FUNCTION_CALL]
+    })()`,
+      Order.FUNCTION_CALL,
+    ]
   }
 
   Blockly.Blocks.geo_show_point_on_object = {
@@ -390,8 +398,8 @@ export default function initObjectCompositionBlocks() {
       const pointVector = markerPoint.clone();
       pointVector.userData = {
         geoType: 'point_on_object_vector',
-        // Lets a consumer reach this point's marker -- the Q sweep has to move
-        // it, and only this block knows which object in the store is ours.
+        // Lets a consumer reach this point's marker: only this block knows
+        // which object in the store is ours.
         srcBlockId: ${JSON.stringify(block.id)},
         label: pointLabel,
         labelVisible: true,

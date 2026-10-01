@@ -24,8 +24,27 @@ describe('williamsSquare', () => {
     expect([...pairs.values()].every((count) => count === 1)).toBe(true)
   })
 
-  it('rejects an odd size', () => {
-    expect(() => williamsSquare(9)).toThrow()
+  it('balances an odd size over twice as many rows', () => {
+    const rows = williamsSquare(9)
+    expect(rows).toHaveLength(18)
+    for (let col = 0; col < 9; col++) {
+      const counts = Array(9).fill(0)
+      for (const row of rows) counts[row[col]]++
+      expect(counts.every((count) => count === 2)).toBe(true)
+    }
+    const pairs = new Map()
+    for (const row of rows) {
+      for (let i = 0; i < row.length - 1; i++) {
+        const key = `${row[i]}>${row[i + 1]}`
+        pairs.set(key, (pairs.get(key) ?? 0) + 1)
+      }
+    }
+    expect(pairs.size).toBe(9 * 8)
+    expect([...pairs.values()].every((count) => count === 2)).toBe(true)
+  })
+
+  it('rejects a size below 2', () => {
+    expect(() => williamsSquare(1)).toThrow()
   })
 })
 

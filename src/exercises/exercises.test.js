@@ -286,14 +286,21 @@ describe('exercise 3 (thread lines through objects)', () => {
     return teapot
   }
 
+  const givenTeapot = (x, y, z) => ({
+    ...fakeBlock('geo_teapot', {}, { SIZE_INPUT: scalar(1), CENTRE: point(x, y, z) }),
+    id: 'ex-teapot',
+  })
+  const moveTeapot = fakeBlock('trans_matrix', { TX: 2, TY: -2, TZ: 2 })
+
   function solved({
     steps = [shift, turn],
     l1 = lineObject('ex-L1', v(0, 0, 0), v(1, 0, -1)),
     teapot = teapotAt(v(2, -2, 2)),
+    teapotBlocks = [pipelineTo(givenTeapot(0, 0, 0), [moveTeapot])],
     cross = crossProduct(vec3(1, 0, -1), vec3(0, 1, 1)),
     doubled = fakeBlock('vector_scale', {}, { K: scalar(2), V: vec3(1, -1, 1) }),
   } = {}) {
-    const workspace = fakeWorkspace([pipelineTo(l1Block(), steps), cross, doubled])
+    const workspace = fakeWorkspace([pipelineTo(l1Block(), steps), cross, doubled, ...teapotBlocks])
     const objects = [l1, l2, lineObject('block-n', v(0, 0, 0), v(1, -1, 1)), teapot]
     return mod.evaluate({ objects, workspace })
   }
@@ -304,7 +311,9 @@ describe('exercise 3 (thread lines through objects)', () => {
       pipelineL1: true,
       throughOrigin: true,
       throughTargets: true,
+      vectors: true,
       crossProduct: true,
+      vectorN: true,
       lineN: true,
       doubled: true,
       teapot: true,
@@ -335,6 +344,19 @@ describe('exercise 3 (thread lines through objects)', () => {
     expect(result.passed).toBe(false)
   })
 
+  it('flags a teapot moved by editing its centre instead of passing it', () => {
+    const result = solved({ teapotBlocks: [givenTeapot(2, -2, 2)] })
+    expect(result.steps.teapot).toBe(false)
+    expect(result.passed).toBe(false)
+    expect(result.partialMessages.teapot).toMatch(/centre/)
+  })
+
+  it('flags a teapot placed without a pipeline', () => {
+    const result = solved({ teapotBlocks: [givenTeapot(0, 0, 0)] })
+    expect(result.steps.teapot).toBe(false)
+    expect(result.partialMessages.teapot).toMatch(/Transform Pipeline/)
+  })
+
   it('counts 2n from a Vector block or from the Cross Product itself', () => {
     const fromCross = fakeBlock(
       'vector_scale',
@@ -347,6 +369,19 @@ describe('exercise 3 (thread lines through objects)', () => {
     expect(solved({ doubled: fromCross }).steps.doubled).toBe(true)
     const wrong = fakeBlock('vector_scale', {}, { K: scalar(3), V: vec3(1, -1, 1) })
     expect(solved({ doubled: wrong }).steps.doubled).toBe(false)
+  })
+
+  it('counts VA and VB before they are plugged into the Cross Product', () => {
+    const workspace = fakeWorkspace([vec3(2, 0, -2), vec3(0, 1, 1)])
+    expect(mod.evaluate({ objects: [], workspace }).steps.vectors).toBe(true)
+    const onlyVA = fakeWorkspace([vec3(1, 0, -1)])
+    expect(mod.evaluate({ objects: [], workspace: onlyVA }).steps.vectors).toBe(false)
+  })
+
+  it('counts VN only when it holds n exactly', () => {
+    const vn = (x, y, z) => fakeWorkspace([vec3(x, y, z)])
+    expect(mod.evaluate({ objects: [], workspace: vn(1, -1, 1) }).steps.vectorN).toBe(true)
+    expect(mod.evaluate({ objects: [], workspace: vn(2, -2, 2) }).steps.vectorN).toBe(false)
   })
 
   it('does not count a cross product of the wrong directions', () => {
@@ -508,18 +543,55 @@ describe('exercise 7 (distance between spheres)', () => {
 describe('exercise 5 (point to plane)', () => {
   const mod = EXERCISE_MODULES['point-plane-distance']
 
-  it('recognises the point P vector in the workspace', () => {
-    const workspace = fakeWorkspace([vec3(4, 5, -3)])
-    expect(mod.evaluate({ objects: [], workspace }).steps.pointP).toBe(true)
+  it('recognises Point P, and VP as a separate Vector block', () => {
+    const steps = (blocks) => mod.evaluate({ objects: [], workspace: fakeWorkspace(blocks) }).steps
+    expect(steps([point(4, 5, -3)]).pointP).toBe(true)
+    expect(steps([vec3(4, 5, -3)]).pointP).toBe(false)
+    expect(steps([vec3(4, 5, -3), vec3(-7, -2, 2)]).vectors).toBe(true)
+    expect(steps([point(4, 5, -3), point(-7, -2, 2)]).vectors).toBe(false)
   })
 
   it('does not recognise a different point as P', () => {
-    const workspace = fakeWorkspace([vec3(1, 1, 1)])
+    const workspace = fakeWorkspace([point(1, 1, 1)])
     expect(mod.evaluate({ objects: [], workspace }).steps.pointP).toBe(false)
   })
 
   it('offers a reusable block template', () => {
     expect(mod.reusableBlockTemplate.xmlText).toContain('point_plane_distance')
+  })
+
+  const difference = (u, v) => fakeBlock('vector_arithmetic', { OP: 'subtract' }, { U: u, V: v })
+  const magnitudeOfProjection = (diff, normal) =>
+    fakeBlock(
+      'vector_magnitude',
+      {},
+      { V: fakeBlock('vector_project', {}, { U: diff, V: normal }) },
+    )
+  const distanceObject = {
+    userData: {
+      geoType: 'point_plane_distance_projection_magnitude',
+      distance: 17 / Math.sqrt(4.5),
+    },
+  }
+
+  it('passes when P - Q is projected onto a multiple of n', () => {
+    const workspace = fakeWorkspace([
+      magnitudeOfProjection(difference(vec3(4, 5, -3), vec3(-7, -2, 2)), vec3(1, 4, 1)),
+    ])
+    const result = mod.evaluate({ objects: [distanceObject], workspace })
+    expect(result.steps.projection).toBe(true)
+    expect(result.passed).toBe(true)
+  })
+
+  it('flags Q - P on its step instead of passing it', () => {
+    const workspace = fakeWorkspace([
+      magnitudeOfProjection(difference(vec3(-7, -2, 2), vec3(4, 5, -3)), vec3(0.5, 2, 0.5)),
+    ])
+    const result = mod.evaluate({ objects: [distanceObject], workspace })
+    expect(result.passed).toBe(false)
+    expect(result.steps.difference).toBe(false)
+    expect(result.partialSteps.difference).toBe(true)
+    expect(result.partialMessages.difference).toMatch(/VP - VQ/)
   })
 })
 

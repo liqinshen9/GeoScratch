@@ -47,6 +47,10 @@ import exercise10 from './exercise10-cubePointPivot'
  *                                     moving the ones still there.
  *   decorateObjects(objects, ws)      Adds exercise-only scene objects before render.
  *   reusableBlockTemplate             Offered as a saveable "My Block" once passed.
+ *   animationSequence(objects, ws)    The animatable objects Play runs one after
+ *                                     another when nothing is selected, in task
+ *                                     order; otherwise it plays the one nearest
+ *                                     the top of its stack.
  *   cameraView                        { distance?, azimuthDeg?, elevationDeg? }
  *                                     overriding DEFAULT_CAMERA_VIEW for where
  *                                     the camera starts and "Reset view" returns.

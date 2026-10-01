@@ -27,6 +27,8 @@ export const FLOW_ACTIONS = Object.freeze({
   // Dev only, from the buttons the trial page renders under import.meta.env.DEV.
   SKIP_BLOCK: 'skipBlock',
   SKIP_TO_LAST_BLOCK: 'skipToLastBlock',
+  PREVIOUS_TRIAL: 'previousTrial',
+  NEXT_TRIAL: 'nextTrial',
   RESTART: 'restart',
 })
 
@@ -60,7 +62,11 @@ function advanceTrial(sequence, state) {
   return { ...state, status: FLOW.FIXATION, trialIndex, lastResponse: null }
 }
 
-export function createFlowReducer(sequence) {
+/**
+ * @param {{ feedbackAlways?: boolean }} [options]  `feedbackAlways` gives every
+ *   trial practice-style feedback; the page turns it on in dev builds only.
+ */
+export function createFlowReducer(sequence, { feedbackAlways = false } = {}) {
   return function flowReducer(state, action) {
     switch (action.type) {
       case FLOW_ACTIONS.START:
@@ -78,7 +84,7 @@ export function createFlowReducer(sequence) {
       case FLOW_ACTIONS.ANSWER: {
         if (state.status !== FLOW.TRIAL) return state
         const trial = currentTrial(sequence, state)
-        if (trial?.practice) {
+        if (trial?.practice || feedbackAlways) {
           return { ...state, status: FLOW.FEEDBACK, lastResponse: action.response ?? null }
         }
         return advanceTrial(sequence, state)
@@ -101,6 +107,25 @@ export function createFlowReducer(sequence) {
           trialIndex: 0,
           lastResponse: null,
         }
+
+      // Back one trial within the block, to look at it again. Not across blocks:
+      // under /study a block is a session step, and the session has moved on.
+      case FLOW_ACTIONS.PREVIOUS_TRIAL: {
+        const replayable = [FLOW.FIXATION, FLOW.TRIAL, FLOW.FEEDBACK, FLOW.BLOCK_END]
+        if (!replayable.includes(state.status) || state.trialIndex < 1) return state
+        return {
+          ...state,
+          status: FLOW.FIXATION,
+          trialIndex: state.trialIndex - 1,
+          lastResponse: null,
+        }
+      }
+
+      // On to the next trial without answering this one; nothing is logged.
+      case FLOW_ACTIONS.NEXT_TRIAL: {
+        const skippable = [FLOW.FIXATION, FLOW.TRIAL, FLOW.FEEDBACK]
+        return skippable.includes(state.status) ? advanceTrial(sequence, state) : state
+      }
 
       case FLOW_ACTIONS.RESTART:
         return { status: FLOW.INTRO, blockIndex: 0, trialIndex: 0, lastResponse: null }

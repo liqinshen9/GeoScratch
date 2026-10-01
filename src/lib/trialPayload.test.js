@@ -38,6 +38,7 @@ describe('buildTrialRow', () => {
         pairType: 'line-point',
         question: { type: 'proximity', band: 'left' },
         nearer: 'B',
+        nearerHigher: true,
       },
       response: 'B',
       presentedPerf: 100,
@@ -47,6 +48,7 @@ describe('buildTrialRow', () => {
       viewport: { width: 960, height: 640 },
       devicePixelRatio: 2,
       labelToggles: 3,
+      shadowVisibility: { A: 0, B: 0.625 },
     })
     expect(row).toEqual({
       profile_id: 'u1',
@@ -65,6 +67,7 @@ describe('buildTrialRow', () => {
       stimulus_id: 'm-low-01',
       stimulus_seed: 'seed:m-low-01',
       correct_target: 'B',
+      nearer_higher: true,
       response: 'B',
       correct: true,
       rt_ms: 800.5,
@@ -74,6 +77,8 @@ describe('buildTrialRow', () => {
       viewport_h: 640,
       device_pixel_ratio: 2,
       label_toggles: 3,
+      shadow_visible_a: 0,
+      shadow_visible_b: 0.625,
     })
   })
 })

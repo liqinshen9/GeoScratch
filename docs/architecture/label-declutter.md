@@ -43,7 +43,7 @@ camera distance (tightly clamped 0.6..1.0). The mass-spring constants:
 | `CONTACT_RAMP`            | 2 px    | penetration over which that damping fades in             |
 | `AXIS_BLEND`              | 0.5     | how far the push favors the cheap axis over the diagonal |
 | `FORCE_DEADZONE`          | 2 px    | outward shift of the zero-force point                    |
-| `MAX_OFFSET`              | 55 px   | hard cap on drift from anchor                            |
+| `MAX_OFFSET`              | 55 px   | hard cap on drift from anchor, times `reach`             |
 | `EMPHASIS_MASS`           | 2.5     | emphasis labels resist being pushed                      |
 | `MAX_DT`                  | 0.05 s  | single-frame step cap                                    |
 | `TARGET_SUBSTEP_DT`       | 0.006 s | each sub-step aims for ~this duration                    |
@@ -160,6 +160,24 @@ project to ~zero screen displacement from some camera angles (offset vector
 pointing along the view direction), letting the label render on top of the
 object it labels. A fixed screen-space offset is applied after projection, so
 it's the same nudge regardless of camera angle.
+
+### reach
+
+The label's size follows camera distance but is clamped (`LABEL_SCALE_MIN`), so
+from about a third of the way out it stops shrinking while the scene carries on.
+The base offset and `MAX_OFFSET` used to be fixed pixels, so fully zoomed out a
+sphere a few pixels across had its label a sphere-width or more away, and a
+pushed label up to 55px off.
+
+Each entry now carries `reach = min(1, LABEL_SCALE_REF_DISTANCE / distance)`,
+the label scale without the lower clamp. The spring's home (`BASE_OFFSET_*`)
+and the drift cap (`MAX_OFFSET`) are multiplied by it. Up to the reference
+distance nothing changes. Past it, the offsets shrink with the scene, first in
+step with the text and then on their own after the text stops. `GAP`, the
+repulsion and the dead zone stay in pixels, since they describe the pills'
+own spacing and the pills are clamped. A crowded label at the smaller cap
+therefore overlaps its neighbours sooner, which at that zoom is the better
+failure than floating away from what it names.
 
 ### silhouette-clearance
 

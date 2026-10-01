@@ -18,8 +18,11 @@ export function blockIdFor(stimulus, key) {
   return `p1-${stimulus.id}-${stimulus.colourSalt}-${key}`
 }
 
+/** The labelled objects: targets A and B, and a distance question's reference C. */
 export function targetBlockIds(stimulus) {
-  return { A: blockIdFor(stimulus, 'A'), B: blockIdFor(stimulus, 'B') }
+  const ids = { A: blockIdFor(stimulus, 'A'), B: blockIdFor(stimulus, 'B') }
+  if (stimulus.objects?.some((o) => o.role === 'reference')) ids.C = blockIdFor(stimulus, 'C')
+  return ids
 }
 
 const escapeXml = (text) =>
@@ -36,7 +39,7 @@ const scalarBlock = (id, value) =>
 // A target's letter rides in the naming registry's own block.data record, so
 // the label layer shows "A"/"B" exactly as it would show a user-chosen name.
 function namingData(object, id) {
-  if (object.role !== 'target') return ''
+  if (object.role !== 'target' && object.role !== 'reference') return ''
   const record = {
     geoScratchNaming: { kind: object.kind, number: null, custom: object.key, refId: `ref-${id}` },
   }

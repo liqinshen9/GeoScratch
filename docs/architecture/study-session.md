@@ -1,9 +1,9 @@
 # Study session: the full participant flow
 
-The dissertation Method runs one session per participant: ten Phase 1 blocks,
-each followed by a questionnaire, then four holistic authoring conditions, each
-followed by a questionnaire, then a post-study questionnaire. The demographic
-questionnaire is run separately, outside GeoScratch. This doc covers how
+The dissertation Method runs one session per participant: a demographic
+questionnaire, nine Phase 1 blocks, each followed by a questionnaire, then four
+holistic authoring conditions, each followed by a questionnaire, then a
+post-study questionnaire. This doc covers how
 `/study` strings those together. Phase 1 trials themselves are in
 [study-phase1.md](study-phase1.md).
 
@@ -12,20 +12,43 @@ Code: `src/study/session/`, `src/pages/Study{Session,Task,Return}Page.jsx`,
 
 ## Starting a session
 
-The researcher opens `/study` (with `?c=<cohort>` for real data). `StudyGate`
-asks for:
+Every session starts from a participant's own link, made ahead of time. There
+is no in-app form: `/study` without link parameters only asks for the link
+from the invitation email. A lab session is the researcher opening that
+participant's link on the lab machine; for dev, generate a link against
+`http://localhost:5173`.
 
-- the **slot**, 1, 2, 3, ... in order. It picks the Phase 1 Williams row
-  (`(slot - 1) % 10`) and the holistic order, so handing out slots in sequence
-  fills both squares evenly.
-- the **setting**, lab or remote, a covariate in the Method.
+```
+node scripts/studyLinks.mjs --base https://<deployment> --cohort cohort1 --from 1 --count 30 > links.csv
+```
 
-GeoScratch then generates the **research ID** (`researchId.js`): six characters
-from an alphabet with no look-alikes (no 0/O, 1/I/L, 2/Z, 5/S, 8/B), because
-it is copied by hand into the demographic survey. It becomes the profile's
-`participant_code`, so every existing table (`phase1_trials`,
-`exercise_attempts`) joins on it unchanged. The welcome screen shows the ID in
-large type, and it stays in the corner of every screen between tasks.
+Each row is a slot, a research ID and `/study?c=<cohort>&slot=<n>&id=<ID>`.
+Keep the sheet: it is the only record of which ID went to which person (needed
+for a withdrawal request). `--from` starts a later batch after the last slot
+handed out.
+
+- The **slot** picks the Phase 1 Williams row (`(slot - 1) % 18`, since nine conditions need 18 orders) and the
+  holistic order, so handing out slots in sequence fills both squares evenly.
+- The **research ID** (`generateResearchId` in `researchId.js`) is six
+  characters from an alphabet with no look-alikes (no 0/O, 1/I/L, 2/Z, 5/S,
+  8/B), in case it is read off the screen and copied by hand. It becomes the
+  profile's `participant_code`, so every existing table (`phase1_trials`,
+  `exercise_attempts`) joins on it unchanged. The welcome screen shows it in
+  large type, and it stays in the corner of every screen between tasks.
+
+`StudyGate` starts the session from those parameters by itself. Opening the
+link again on the same device resumes that session, because the ID matches the
+stored one. Any other session on the device is replaced. Opening it on a second
+device starts that ID over from the first step: progress lives only on the
+device, and both attempts land in the data under the same ID.
+
+A participant could edit `slot=` in the URL. That is accepted as unlikely.
+
+**Trying it out.** `TEST1`, `TEST2`, ... are reserved research IDs: the S keeps
+them out of the generated alphabet. `/study?slot=1&id=TEST1` runs a session
+without a cohort, so exports that filter on `cohort` leave it out. Reopening the
+same link resumes it; use the next number to start fresh. A link whose `id` is
+neither shows "This study link is not valid" rather than the invitation screen.
 
 The Phase 1 shuffles are still seeded by the ID; only the row choice moves to
 the slot (`participantRow(code, rows, slot)`).
@@ -33,15 +56,17 @@ the slot (`participantRow(code, rows, slot)`).
 **One device, several participants.** If the browser already carries a code,
 starting a session first signs out and signs in a fresh anonymous user
 (`resetIdentity`). Otherwise the new participant's slot and plan would overwrite
-the last participant's profile row. The "All done" screen has a researcher
-button that does the same.
+the last participant's profile row. Participants take part on their own
+computers, so the "All done" screen just thanks them; opening a new link is
+what starts a new session.
 
 ## The plan and the cursor
 
 `buildSessionPlan({ researchId, slot })` expands to a flat list of steps:
 
 ```
-phase1Block, survey(perBlock)   x10
+survey(demographic)
+phase1Block, survey(perBlock)   x9
 holistic,    survey(holistic)   x4
 survey(post)
 done
@@ -70,11 +95,12 @@ Each questionnaire opens in a **new tab** with its embedded data as query
 parameters (`surveyUrl`). The GeoScratch tab stays put and shows a waiting
 screen, so a participant always has a way back even if a redirect is missing:
 
-| Survey   | Fields                                                                    |
-| -------- | ------------------------------------------------------------------------- |
-| perBlock | `participantID`, `blockOrder` (1-10), `technique` (T1-T10)                |
-| holistic | `participantID`, `conditionOrder` (1-4), `combinationNum`, `renderMode`   |
-| post     | `participantID`, `phase1Order` (`T3-T4-...`), `holisticOrder` (`3-4-1-2`) |
+| Survey      | Fields                                                                    |
+| ----------- | ------------------------------------------------------------------------- |
+| demographic | `participantID`                                                           |
+| perBlock    | `participantID`, `blockOrder` (1-9), `technique` (T1-T8, T10)             |
+| holistic    | `participantID`, `conditionOrder` (1-4), `combinationNum`, `renderMode`   |
+| post        | `participantID`, `phase1Order` (`T3-T4-...`), `holisticOrder` (`3-4-1-2`) |
 
 Each survey's end-of-survey redirect must point at
 
@@ -87,6 +113,11 @@ localStorage there and tries `window.close()`, which works for a tab the
 browser opened from the link. If the tab stays open, it asks the participant to
 close it. The waiting tab picks up the change through the `storage` event, and
 by re-reading on `focus` as a backstop, and moves on by itself.
+
+Because the first step is a questionnaire, the welcome screen holds off
+starting it until Begin is pressed. A survey whose URL in `SURVEYS` is still
+`null` shows only the researcher's continue button, logged with
+`link_unset: true`.
 
 The waiting screen also has "Open it again" for a closed survey tab, and a
 confirm-guarded researcher button that continues without the redirect. That
@@ -103,7 +134,19 @@ it would skip is the post-study questionnaire. A return carrying a different
 
 A holistic task is the ordinary exercise at `/exercise/<id>`, in the normal
 app layout, with **study mode** on while it is the session's current step
-(`useCurrentStudyTask`):
+(`useCurrentStudyTask`).
+
+Before each task, `/study` shows a briefing (`HolisticBriefing` in
+`StudySessionPage`): task N of 4, its title and time limit, and the Play hint in
+an animated condition. Before the first task it opens with four intro pages,
+since participants have had no hands-on introduction to the editor: the phase,
+the editor's four panels (over `public/study/editor.png`, made by
+`scripts/studyEditorScreenshot.mjs`), working with blocks, and the 3D view and
+time limit. The task starts (`startedAt`, `step_start`, the clock) on Start,
+not when the exercise opens, so reading the briefing never eats into the cap.
+Until then `Layout` sends the exercise route back to `/study`.
+
+Once started:
 
 - `Layout` sends every other route back to the task's exercise, and the header
   drops its links (Exercises, Sandbox, Settings, theme) and its logo link.
@@ -184,8 +227,8 @@ edges and the centre), and `pipelineStepAnimation`, which it shares with
 
 `study_events`, one row per event, fire-and-forget:
 
-- `session_start`: slot, setting, viewport, device pixel ratio, user agent
-- `step_start`: a block begun, a task opened, a questionnaire screen shown
+- `session_start`: slot, viewport, device pixel ratio, user agent
+- `step_start`: a block begun, a task's Start pressed, a questionnaire screen shown
 - `step_complete`: a block or task finished. A task's detail has `passed`,
   `time_to_pass_ms`, `elapsed_ms`, `timed_out`
 - `survey_return`: with `handed_off_at`, the time of the handoff click

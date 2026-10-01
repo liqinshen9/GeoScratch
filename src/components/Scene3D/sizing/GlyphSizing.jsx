@@ -5,8 +5,14 @@ import {
   ZOOM_INVARIANT_REFERENCE_DISTANCE,
   ZOOM_INVARIANT_MIN_SCALE,
   ZOOM_INVARIANT_MAX_SCALE,
+  tubeWidthScale,
+  viewHeightFactor,
 } from '@/utils/zoomInvariantScale'
 import {
+  CAMERA_FOV,
+  LINE_TUBE_RADIUS,
+  TUBE_WIDTH_PX,
+  VECTOR_TUBE_RADIUS,
   EXTRA_LARGE_POINT_MAX_SCALE,
   EXTRA_LARGE_POINT_MULTIPLIER,
   EXTRA_THICK_LINE_MULTIPLIER,
@@ -23,6 +29,18 @@ function traverseVisible(object3D, callback) {
   object3D.children.forEach((child) => traverseVisible(child, callback))
 }
 
+// The object whose own reference point sizes this top-level object: a line's
+// segmentMid, or a vector's sizingAnchor, which may sit one level down when the
+// vector is wrapped with its tail marker.
+function sizingAnchorOwner(o) {
+  const has = (x) => x?.userData?.sizingAnchor || x?.userData?.segmentMid
+  if (has(o)) return o
+  return o.children?.find(has) ?? null
+}
+
+const LINE_SHAFT_SCALE = tubeWidthScale(LINE_TUBE_RADIUS, CAMERA_FOV, TUBE_WIDTH_PX)
+const VECTOR_SHAFT_SCALE = tubeWidthScale(VECTOR_TUBE_RADIUS, CAMERA_FOV, TUBE_WIDTH_PX)
+
 // Zoom-invariant scaling + a per-glyph-kind size multiplier for meshes tagged
 // userData.zoomInvariantRadius. See docs/architecture/glyph-sizing.md#zoominvariantscaler.
 function ZoomInvariantScaler({
@@ -34,7 +52,8 @@ function ZoomInvariantScaler({
 }) {
   const worldPos = useMemo(() => new THREE.Vector3(), [])
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera, size }) => {
+    const heightFactor = zoomEnabled ? viewHeightFactor(size.height) : 1
     objects.forEach((o) => {
       if (!o) return
 
@@ -42,18 +61,21 @@ function ZoomInvariantScaler({
       // not per child. See docs/architecture/glyph-sizing.md#one-distance-per-object.
       let zoomScale = 1
       if (zoomEnabled) {
-        if (o.userData?.segmentMid) {
-          o.updateMatrixWorld()
-          worldPos.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld)
+        const anchorOwner = sizingAnchorOwner(o)
+        if (anchorOwner) {
+          anchorOwner.updateMatrixWorld()
+          const anchor = anchorOwner.userData.sizingAnchor ?? anchorOwner.userData.segmentMid
+          worldPos.copy(anchor).applyMatrix4(anchorOwner.matrixWorld)
         } else {
           o.getWorldPosition(worldPos)
         }
         const distance = camera.position.distanceTo(worldPos)
-        zoomScale = THREE.MathUtils.clamp(
-          distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
-          ZOOM_INVARIANT_MIN_SCALE,
-          ZOOM_INVARIANT_MAX_SCALE,
-        )
+        zoomScale =
+          THREE.MathUtils.clamp(
+            distance / ZOOM_INVARIANT_REFERENCE_DISTANCE,
+            ZOOM_INVARIANT_MIN_SCALE,
+            ZOOM_INVARIANT_MAX_SCALE,
+          ) * heightFactor
       }
 
       traverseVisible(o, (child) => {
@@ -69,6 +91,10 @@ function ZoomInvariantScaler({
           thickMultiplier = extraLargePoints ? EXTRA_LARGE_POINT_MULTIPLIER : 1
         } else {
           thickMultiplier = extraThick ? EXTRA_THICK_LINE_MULTIPLIER : 1
+        }
+        // Shafts only: points and arrowheads keep their size.
+        if (!isUniform && !child.userData.zoomInvariantMaxAspectScale) {
+          thickMultiplier *= isVector ? VECTOR_SHAFT_SCALE : LINE_SHAFT_SCALE
         }
         let finalScale = zoomScale * thickMultiplier
         if (isVector) {
@@ -120,14 +146,15 @@ function DashZoomSync({ objects, zoomEnabled }) {
   // Priority -1 so this runs BEFORE ZoomInvariantScaler, else new dash
   // segments flicker at raw radius.
   // See docs/architecture/glyph-sizing.md#dash-sync-priority.
-  useFrame(({ camera }) => {
+  useFrame(({ camera, size }) => {
     if (!zoomEnabled) return
+    const heightFactor = viewHeightFactor(size.height)
     objects.forEach((o) => {
       if (!o?.userData?.updateZoomRatio || !o.userData.segmentMid) return
       o.updateMatrixWorld()
       worldMid.copy(o.userData.segmentMid).applyMatrix4(o.matrixWorld)
       const distance = camera.position.distanceTo(worldMid)
-      o.userData.updateZoomRatio(distance / ZOOM_INVARIANT_REFERENCE_DISTANCE)
+      o.userData.updateZoomRatio((distance / ZOOM_INVARIANT_REFERENCE_DISTANCE) * heightFactor)
     })
   }, -1)
 

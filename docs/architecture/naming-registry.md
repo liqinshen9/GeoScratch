@@ -119,8 +119,16 @@ built in another order or remade a block. Instead an exercise module can export
 `exercises/shared/givenNames.js` on every workspace change: a block matching a
 given, and not already custom-named, is `setCustomName`d after it. A block
 edited away from its given gives the name back; a name typed by the student is
-left alone. Names stay unique, so a second match (a duplicated normal) keeps
-its number.
+left alone.
+
+Every matching block takes the name, not just the first. point-plane-distance
+tells the student to duplicate n for the projection, and a copy that kept its
+number showed as "V2" in the scene while the task said n. The matchers compare
+values, so every block sharing a given name holds that given's value, and
+nothing looks a block up by display name (references pair by `refId`), so a
+shared name is safe. The one exception is a block that holds the name without
+matching the given, such as a name the student typed on something else. It
+keeps the name to itself, and no match takes it.
 
 ## A computed vector with a name
 

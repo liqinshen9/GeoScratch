@@ -109,9 +109,11 @@ fails if the lists drift apart or an exercise is not placed in exactly one unit
 section. The `id` appears only in the URL (`/exercise/<id>`), never in the UI.
 
 Each `UNITS` entry carries a paragraph-length `description`, shown in the unit
-page's "About this unit" card. The in-exercise prev/next arrows walk only the
-exercises inside the current unit (`getAdjacentExercises`); a unit is a
-self-contained track and the browser is the way to cross between units.
+page's "About this unit" card. The Previous/Next buttons at the foot of the
+task panel walk only the exercises inside the current unit
+(`getAdjacentExercises`); a unit is a self-contained track and the browser is
+the way to cross between units. They live at the foot, not in the header,
+because the header grew too tall on narrow laptops.
 
 Solved exercises are remembered per-device in `localStorage`
 (`utils/exerciseProgress.js`): `ExercisePage` calls `markExerciseSolved` when

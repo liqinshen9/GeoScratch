@@ -2,7 +2,7 @@ import { createRng } from './prng'
 import { williamsSquare, participantRow } from './williams'
 import { TECHNIQUE_IDS } from './conditions'
 
-export const SEQUENCE_VERSION = 1
+export const SEQUENCE_VERSION = 3
 
 /** The Williams row and the technique order it gives, without building trials. */
 export function resolveTechniqueOrder(participantCode, slot = null) {

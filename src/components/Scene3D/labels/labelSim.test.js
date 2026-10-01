@@ -132,6 +132,25 @@ describe('stepLabelSim', () => {
     }
   })
 
+  it('shrinks the home offset and the cap with reach when zoomed out', () => {
+    const [near] = [label(400, 300)]
+    const [far] = [{ ...label(400, 300), reach: 0.4 }]
+    run([near], 120)
+    run([far], 120)
+    // Sleep snaps velocity to 0 a little short of home, so not an exact 0.4.
+    expect(Math.hypot(far.offsetX, far.offsetY)).toBeLessThan(
+      0.5 * Math.hypot(near.offsetX, near.offsetY),
+    )
+
+    const crowded = denseCluster(12).map((e) => ({ ...e, reach: 0.4 }))
+    run(crowded, 600)
+    for (const e of crowded) {
+      expect(Math.hypot(e.offsetX, e.offsetY)).toBeLessThanOrEqual(0.4 * MAX_OFFSET + 1e-6)
+    }
+    const trail = run(crowded, 300)
+    expect(peakFrameMotion(trail, 100)).toBeLessThan(0.1)
+  })
+
   it('reports motion while settling and quiet once settled', () => {
     const entries = [label(400, 300), label(430, 300)]
     expect(stepLabelSim(entries, DT)).toBe(true)

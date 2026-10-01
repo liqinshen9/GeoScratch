@@ -1,8 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
-import { generateStimulusSet, makeStudyCamera, targetDepths, toNdc, anchorPoint } from './stimuli'
+import {
+  generateStimulusSet,
+  makeStudyCamera,
+  targetDepths,
+  targetDistances,
+  imagePixelDistance,
+  nearerIsHigher,
+  toNdc,
+  anchorPoint,
+} from './stimuli'
 import {
   DEPTH_SEPARATIONS,
+  DISTANCE_RATIOS,
+  DISTANCE_PAIR_TYPES,
+  DIFFICULTY_LEVELS,
+  VIEWPORT,
   CLUTTER_DISTRACTORS,
   CLUTTER_LEVELS,
   MEASURED_DIFFICULTY_COUNTS,
@@ -36,6 +49,11 @@ const screenGapBetween = (a, b) => {
   return Math.hypot(pa.x - pb.x, pa.y - pb.y) - projectedRadius(a) - projectedRadius(b)
 }
 
+const toNdcArray = (p) => {
+  const n = toNdc(camera, p)
+  return [n.x, n.y]
+}
+
 const countBy = (stimuli, key) =>
   stimuli.reduce((counts, s) => ({ ...counts, [key(s)]: (counts[key(s)] || 0) + 1 }), {})
 
@@ -49,38 +67,52 @@ describe('generateStimulusSet', () => {
     expect(() => generateStimulusSet(STUDY_STIMULUS_SEED)).not.toThrow()
   })
 
-  it('has 12 measured stimuli per clutter level with the configured difficulty split', () => {
-    expect(set.measured).toHaveLength(24)
+  it('has 9 measured stimuli per clutter level with the configured difficulty split', () => {
+    expect(set.measured).toHaveLength(18)
     expect(set.practice).toHaveLength(4)
     for (const clutter of CLUTTER_LEVELS) {
       const group = set.measured.filter((s) => s.clutter === clutter)
-      expect(group).toHaveLength(12)
+      expect(group).toHaveLength(9)
       for (const [level, count] of Object.entries(MEASURED_DIFFICULTY_COUNTS[clutter])) {
         expect(group.filter((s) => s.difficulty === level)).toHaveLength(count)
       }
     }
   })
 
-  it('balances nearer target and question type within each clutter level', () => {
+  it('crosses question type with difficulty within each clutter level', () => {
     for (const clutter of CLUTTER_LEVELS) {
-      const group = set.measured.filter((s) => s.clutter === clutter)
-      expect(group.filter((s) => s.nearer === 'A')).toHaveLength(6)
-      for (const type of QUESTION_TYPES) {
-        expect(
-          group.filter((s) => s.question.type === type),
-          type,
-        ).toHaveLength(6)
+      for (const difficulty of DIFFICULTY_LEVELS) {
+        const cell = set.measured.filter(
+          (s) => s.clutter === clutter && s.difficulty === difficulty,
+        )
+        expect(cell.map((s) => s.question.type).sort(), `${clutter}/${difficulty}`).toEqual(
+          [...QUESTION_TYPES].sort(),
+        )
       }
+    }
+  })
+
+  it('balances the nearer target within each question type', () => {
+    for (const type of QUESTION_TYPES) {
+      const group = set.measured.filter((s) => s.question.type === type)
+      expect(group, type).toHaveLength(6)
+      expect(
+        group.filter((s) => s.nearer === 'A'),
+        type,
+      ).toHaveLength(3)
     }
   })
 
   it('deals every pair type equally often within its question type', () => {
     const byType = (type) => set.measured.filter((s) => s.question.type === type)
     expect(countBy(byType('occlusion'), (s) => s.pairType)).toEqual(
-      Object.fromEntries(OCCLUSION_PAIR_TYPES.map((p) => [p, 3])),
+      Object.fromEntries(OCCLUSION_PAIR_TYPES.map((p) => [p, 2])),
     )
     expect(countBy(byType('proximity'), (s) => s.pairType)).toEqual(
-      Object.fromEntries(PAIR_TYPES.map((p) => [p, 2])),
+      Object.fromEntries(PAIR_TYPES.map((p) => [p, 1])),
+    )
+    expect(countBy(byType('distance'), (s) => s.pairType)).toEqual(
+      Object.fromEntries(DISTANCE_PAIR_TYPES.map((p) => [p, 6 / DISTANCE_PAIR_TYPES.length])),
     )
   })
 
@@ -89,7 +121,25 @@ describe('generateStimulusSet', () => {
       set.measured.filter((s) => s.question.type === 'proximity'),
       (s) => s.question.band,
     )
-    expect(bands).toEqual(Object.fromEntries(PROBE_BANDS.map((b) => [b.id, 4])))
+    expect(bands).toEqual(Object.fromEntries(PROBE_BANDS.map((b) => [b.id, 2])))
+  })
+
+  it('balances whether the nearer target is the higher one on screen, and records it', () => {
+    for (const type of QUESTION_TYPES) {
+      const group = set.measured.filter((s) => s.question.type === type)
+      if (type === 'occlusion') {
+        expect(
+          group.every((s) => s.nearerHigher === null),
+          type,
+        ).toBe(true)
+        continue
+      }
+      expect(
+        group.filter((s) => s.nearerHigher === true),
+        type,
+      ).toHaveLength(3)
+      for (const s of group) expect(nearerIsHigher(camera, s), s.id).toBe(s.nearerHigher)
+    }
   })
 
   it('has unique ids and seeds', () => {
@@ -100,7 +150,7 @@ describe('generateStimulusSet', () => {
 
 describe('each stimulus', () => {
   it('separates the targets by its difficulty level, with ground truth matching the geometry', () => {
-    for (const s of all) {
+    for (const s of all.filter((s) => s.question.type !== 'distance')) {
       const depths = targetDepths(camera, s)
       expect(Math.abs(depths.A - depths.B), s.id).toBeCloseTo(DEPTH_SEPARATIONS[s.difficulty], 1)
       expect(depths.A < depths.B ? 'A' : 'B', s.id).toBe(s.nearer)
@@ -112,6 +162,50 @@ describe('each stimulus', () => {
       const targets = s.objects.filter((o) => o.role === 'target')
       expect(targets.map((t) => t.key).sort()).toEqual(['A', 'B'])
       expect(targets.map((t) => t.kind).sort(), s.id).toEqual([...PAIR_KINDS[s.pairType]].sort())
+    }
+  })
+
+  it('puts a distance question in its ratio, with ground truth matching the geometry', () => {
+    for (const s of all.filter((s) => s.question.type === 'distance')) {
+      const d = targetDistances(s)
+      const ratio = Math.max(d.A, d.B) / Math.min(d.A, d.B)
+      expect(ratio, s.id).toBeCloseTo(DISTANCE_RATIOS[s.difficulty], 1)
+      expect(d.A < d.B ? 'A' : 'B', s.id).toBe(s.nearer)
+      const reference = s.objects.filter((o) => o.role === 'reference')
+      expect(
+        reference.map((o) => [o.key, o.kind]),
+        s.id,
+      ).toEqual([['C', 'point']])
+      // C sits on its own unlabelled line.
+      const line = s.objects.find((o) => o.role === 'context')
+      expect(line?.kind, s.id).toBe('line')
+      expect(line.origin, s.id).toEqual(reference[0].position)
+    }
+  })
+
+  it('keeps the three labelled points of a distance question apart on screen', () => {
+    for (const s of all.filter((s) => s.question.type === 'distance')) {
+      const [a, b, c] = [s.anchorsNdc.A, s.anchorsNdc.B, s.probeNdc]
+      for (const [p, q] of [
+        [a, b],
+        [a, c],
+        [b, c],
+      ]) {
+        expect(Math.hypot(p[0] - q[0], p[1] - q[1]), s.id).toBeGreaterThanOrEqual(
+          PLACEMENT.labelClearOfOtherTargetNdc,
+        )
+      }
+    }
+  })
+
+  it('never lets the screen give a distance question away', () => {
+    for (const s of all.filter((s) => s.question.type === 'distance')) {
+      const c = { x: s.probeNdc[0], y: s.probeNdc[1] }
+      const target = (key) => s.objects.find((o) => o.key === key)
+      const far = s.nearer === 'A' ? 'B' : 'A'
+      const nearPx = imagePixelDistance(camera, c, target(s.nearer))
+      const farPx = imagePixelDistance(camera, c, target(far))
+      expect(nearPx, s.id).toBeGreaterThanOrEqual(farPx * PLACEMENT.distance.screenRatio.min - 1)
     }
   })
 
@@ -162,6 +256,27 @@ describe('each stimulus', () => {
           expect(Math.min(...distances), `${s.id}/${d.key}`).toBeGreaterThanOrEqual(
             PLACEMENT.clearOfCrossingNdc - 0.01,
           )
+        }
+      }
+    }
+  })
+
+  it('gives every target sphere the same radius', () => {
+    for (const s of all) {
+      for (const o of s.objects.filter((o) => o.role === 'target' && o.kind === 'sphere')) {
+        expect(o.radius, `${s.id}/${o.key}`).toBe(PLACEMENT.targetSphereRadius)
+      }
+    }
+  })
+
+  it('never puts a distractor point over a solid on screen', () => {
+    for (const s of all) {
+      const solids = s.objects.filter((o) => o.kind === 'cube' || o.kind === 'sphere')
+      for (const d of s.objects.filter((o) => o.role === 'distractor' && o.kind === 'point')) {
+        for (const solid of solids) {
+          const gap =
+            ndcDist(anchorPoint(d), toNdcArray(anchorPoint(solid))) - projectedRadius(solid)
+          expect(gap, `${s.id}/${d.key}-${solid.key}`).toBeGreaterThanOrEqual(0)
         }
       }
     }

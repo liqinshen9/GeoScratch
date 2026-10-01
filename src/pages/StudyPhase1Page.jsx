@@ -13,6 +13,7 @@ import { STEP_KINDS } from '@/study/session/sessionPlan'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
 import { questionPrompt, choiceLabel, probeBandStyle } from '@/study/phase1/questionCopy'
+import { targetShadowVisibility } from '@/study/phase1/shadowVisibility'
 import {
   FLOW,
   FLOW_ACTIONS,
@@ -111,7 +112,10 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
   const authStatus = useAuthStore((s) => s.status)
   const recordTrial = usePhase1TrackingStore((s) => s.recordTrial)
   const recordSequence = usePhase1TrackingStore((s) => s.recordSequence)
-  const reducer = useMemo(() => createFlowReducer(sequence), [sequence])
+  const reducer = useMemo(
+    () => createFlowReducer(sequence, { feedbackAlways: import.meta.env.DEV }),
+    [sequence],
+  )
   const [state, dispatch] = useReducer(reducer, null, () =>
     initialFlowState(sequence, resumeCursor(participantCode, sessionBlockIndex ?? 0)),
   )
@@ -177,6 +181,21 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
     navigate('/study')
   }
 
+  // Dev only: past this block's questionnaire straight to the next block. In a
+  // session the cursor jumps over the survey step; after the last block that
+  // lands on the first holistic task, which /study routes to.
+  const skipQuestionnaire = () => {
+    if (!session) {
+      dispatch({ type: FLOW_ACTIONS.CONTINUE })
+      return
+    }
+    const next = session.plan.steps[sessionStep.stepIndex + 2]
+    saveProgress(participantCode, { blockIndex: state.blockIndex + 1, trialIndex: 0 })
+    session.jumpTo(next.stepIndex)
+    if (next.kind === STEP_KINDS.PHASE1_BLOCK) dispatch({ type: FLOW_ACTIONS.CONTINUE })
+    else navigate('/study')
+  }
+
   // Dev only. In a session the session moves too, skipping the blocks and
   // questionnaires in between; resumeCursor would pull the page back otherwise.
   const skipToLastBlock = () => {
@@ -234,6 +253,7 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
       viewport: VIEWPORT,
       devicePixelRatio: window.devicePixelRatio,
       labelToggles: labelTogglesRef.current,
+      shadowVisibility: targetShadowVisibility(trialScene.stimulus),
     })
     presentedRef.current = null
     dispatch({ type: FLOW_ACTIONS.ANSWER, response })
@@ -267,6 +287,7 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
           cameraPosition={CAMERA.position}
           onPresented={handlePresented}
           hiddenLabelKeys={hiddenLabelKeys}
+          showOrientationGizmo
           onObjectClick={handleObjectClick}
         />
 
@@ -281,38 +302,11 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
         )}
 
         {state.status === FLOW.INTRO && (
-          <Overlay>
-            <h1 className="text-2xl font-semibold tracking-tight">Which one is closer to you?</h1>
-            <p>
-              Each scene shows several objects. Two of them are labelled <strong>A</strong> and{' '}
-              <strong>B</strong>: lines, arrows, points or spheres. <strong>A</strong> and{' '}
-              <strong>B</strong> never touch each other, though either of them may pass through the
-              other objects around them. Each trial asks one of two questions, and the question is
-              written above the buttons before the scene appears.
-            </p>
-            <p>
-              When <strong>A</strong> and <strong>B</strong> cross on the screen, you are asked
-              which one <strong>passes in front of</strong> the other where they cross. When they do
-              not cross, a shaded vertical band marks part of the screen, and you are asked which
-              one is <strong>closer to you</strong> inside that band. A line runs on for ever, so it
-              is only ever the named place that the question is about.
-            </p>
-            <p>
-              Answer with the buttons on the right, as quickly and as accurately as you can. Not
-              sure which label is which? Click a labelled object to hide or show its label.
-            </p>
-            <p>
-              There are {blockCount} blocks. The way the scene is drawn changes between blocks. The
-              first few trials of each block are practice and tell you whether you were right.
-            </p>
-            <Button
-              className="h-11 text-base"
-              disabled={!windowFits}
-              onClick={() => dispatch({ type: FLOW_ACTIONS.START })}
-            >
-              Start
-            </Button>
-          </Overlay>
+          <Intro
+            blockCount={blockCount}
+            canStart={windowFits}
+            onStart={() => dispatch({ type: FLOW_ACTIONS.START })}
+          />
         )}
 
         {state.status === FLOW.BLOCK_INTRO && (
@@ -352,19 +346,24 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
             >
               Continue
             </Button>
+            {import.meta.env.DEV && (
+              <Button variant="outline" className="h-11 text-base" onClick={skipQuestionnaire}>
+                Skip questionnaire (dev)
+              </Button>
+            )}
           </Overlay>
         )}
 
         {state.status === FLOW.DONE && (
           <Overlay>
             <h2 className="text-xl font-semibold">This part is complete</h2>
-            <p>Thank you. Let the researcher know you have finished.</p>
+            <p>Thank you. Feel free to close this tab.</p>
           </Overlay>
         )}
 
         {trialScene?.error && stimulusVisible && (
           <Overlay>
-            <p>Something went wrong drawing this scene. Please tell the researcher.</p>
+            <p>Something went wrong drawing this scene. Please contact the researcher.</p>
           </Overlay>
         )}
 
@@ -379,19 +378,22 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
       </div>
 
       <aside className="study-phase1__panel" style={{ width: PANEL_WIDTH }}>
-        <p className="text-base font-medium">
-          {question ? questionPrompt(question) : 'The question appears here each trial.'}
+        {/* Six lines reserved, the longest prompt's height at 16px (a
+            sphere-sphere distance question), so the buttons below never move
+            when the question changes length. */}
+        <p className="min-h-[9em] text-base leading-normal font-medium whitespace-pre-line">
+          {question ? questionPrompt(trialScene.stimulus) : 'The question appears here each trial.'}
         </p>
         <div className="flex flex-col gap-3">
           {['A', 'B'].map((choice) => (
             <Button
               key={choice}
               variant="outline"
-              className="h-12 text-base"
+              className="h-auto min-h-[4.25em] py-2 text-base leading-normal whitespace-normal hover:bg-primary/10 hover:text-foreground"
               disabled={!canAnswer}
               onClick={() => answer(choice)}
             >
-              {question ? choiceLabel(question, choice) : choice}
+              {question ? choiceLabel(trialScene.stimulus, choice) : choice}
             </Button>
           ))}
         </div>
@@ -436,6 +438,20 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
             </button>
             <button
               type="button"
+              disabled={state.trialIndex < 1}
+              onClick={() => dispatch({ type: FLOW_ACTIONS.PREVIOUS_TRIAL })}
+            >
+              Previous trial
+            </button>
+            <button
+              type="button"
+              disabled={![FLOW.FIXATION, FLOW.TRIAL, FLOW.FEEDBACK].includes(state.status)}
+              onClick={() => dispatch({ type: FLOW_ACTIONS.NEXT_TRIAL })}
+            >
+              Next trial
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 clearProgress(participantCode)
                 dispatch({ type: FLOW_ACTIONS.RESTART })
@@ -450,12 +466,137 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
   )
 }
 
-function Overlay({ children }) {
+function Overlay({ children, width = 'max-w-lg' }) {
   return (
     <div className="study-phase1__overlay">
-      <div className="flex max-w-lg flex-col items-start gap-4 text-base leading-relaxed">
+      <div className={`flex w-full ${width} flex-col items-start gap-4 text-base leading-relaxed`}>
         {children}
       </div>
     </div>
+  )
+}
+
+// The cue pictures come from /study/showcase?cue=... (scripts/surveyScreenshots.mjs).
+const CUE_FIGURES = [
+  {
+    src: '/study/cue-halo.png',
+    alt: 'Line B has a small gap on either side of line A where A passes in front of it.',
+    title: 'Halo',
+    text: 'Where one line passes in front of another, the line behind is cut away on either side of it. Here B is broken where A crosses it, so A is in front.',
+  },
+  {
+    src: '/study/cue-accent.png',
+    alt: 'Line A is drawn dashed where it runs through a cube.',
+    title: 'Collision accent',
+    text: 'Where a line passes through a solid object, the part inside the object is drawn dashed. Here line A runs through the cube.',
+  },
+  {
+    src: '/study/cue-rings.png',
+    alt: 'Line A drawn with alternating dark and grey rings.',
+    title: 'Ringed lines',
+    text: 'Some blocks draw lines with rings. One dark ring and one grey ring together are one unit long, so you can count them to measure along a line, and they look shorter the farther away that part of the line is. Vectors are ringed the same way, in their own colour, starting from the tail.',
+  },
+]
+
+function Intro({ blockCount, canStart, onStart }) {
+  const [page, setPage] = useState(0)
+  const back = (
+    <Button variant="outline" className="h-11 text-base" onClick={() => setPage(page - 1)}>
+      Back
+    </Button>
+  )
+  const next = (
+    <Button className="h-11 text-base" onClick={() => setPage(page + 1)}>
+      Next
+    </Button>
+  )
+
+  if (page === 0) {
+    return (
+      <Overlay>
+        <h1 className="text-2xl font-semibold tracking-tight">Which one is closer to you?</h1>
+        <p>
+          Each scene shows several objects. Two of them are labelled <strong>A</strong> and{' '}
+          <strong>B</strong>, and the question names them by kind, such as &ldquo;Line A&rdquo; or
+          &ldquo;Sphere B&rdquo;. <strong>A</strong> and <strong>B</strong> never touch each other,
+          though either of them may pass through the other objects around them.
+        </p>
+        <p>
+          When <strong>A</strong> and <strong>B</strong> overlap on the screen, you are asked which
+          one is <strong>in front</strong> where they overlap. When they do not overlap, a shaded
+          vertical band marks part of the screen, and you are asked which one is{' '}
+          <strong>closer to you</strong> inside that band. A line runs on for ever, so the question
+          is only ever about that one place.
+        </p>
+        <p>
+          Some trials add <strong>Point C</strong>, sitting on a line, and ask which of{' '}
+          <strong>A</strong> and <strong>B</strong> is <strong>closer to C</strong> in space, not on
+          the screen. For a line that means its nearest point, for a sphere its surface, and for a
+          vector its tip.
+        </p>
+        <div className="flex gap-3">{next}</div>
+      </Overlay>
+    )
+  }
+
+  const figure = CUE_FIGURES[page - 1]
+  if (figure) {
+    return (
+      <Overlay width="max-w-[512px]">
+        <h2 className="text-xl font-semibold">{figure.title}</h2>
+        <p>
+          The way the scene is drawn changes between blocks. Some blocks add one of these markings.
+        </p>
+        {/* At its rendered size (px, not rem), so the marking is as large as in a trial. */}
+        <img
+          src={figure.src}
+          alt={figure.alt}
+          width={512}
+          height={300}
+          className="rounded-lg border"
+        />
+        {/* Every caption shares one grid cell, so the box is as tall as the longest
+            and the image and buttons stay put from page to page. */}
+        <div className="grid">
+          {CUE_FIGURES.map((f) => (
+            <p
+              key={f.src}
+              aria-hidden={f !== figure}
+              className={`col-start-1 row-start-1 ${f === figure ? '' : 'invisible'}`}
+            >
+              {f.text}
+            </p>
+          ))}
+        </div>
+        <div className="flex gap-3">
+          {back}
+          {next}
+        </div>
+      </Overlay>
+    )
+  }
+
+  return (
+    <Overlay>
+      <h2 className="text-xl font-semibold">Before you start</h2>
+      <p>
+        Answer with the buttons on the right, as quickly and as accurately as you can. Not sure
+        which label is which? Click a labelled object to hide or show its label.
+      </p>
+      <p>
+        In many trials the answer will not be obvious. That is expected: if you are not sure, go
+        with your best guess.
+      </p>
+      <p>
+        There are {blockCount} blocks. The first few trials of each block are practice and tell you
+        whether you were right.
+      </p>
+      <div className="flex gap-3">
+        {back}
+        <Button className="h-11 text-base" disabled={!canStart} onClick={onStart}>
+          Start
+        </Button>
+      </div>
+    </Overlay>
   )
 }

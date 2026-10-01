@@ -11,24 +11,22 @@ const EXPECTED_DIFFS = {
   T3: ['lineStyle', 'vectorStyle'],
   T4: ['lineCollisionStyle'],
   T5: ['haloEnabled', 'haloLineVectorEnabled'],
-  T6: ['objectsReceiveShadows', 'pointShadowsEnabled', 'primitivesCastShadows'],
+  T6: ['pointShadowsEnabled', 'primitivesCastShadows'],
   T7: ['cameraShadowsEnabled'],
   T8: ['colorPreset'],
-  T9: ['colorPreset'],
   T10: [
     'cameraShadowsEnabled',
     'haloEnabled',
     'haloLineVectorEnabled',
     'lineCollisionStyle',
-    'objectsReceiveShadows',
     'pointShadowsEnabled',
     'primitivesCastShadows',
   ],
 }
 
 describe('Phase 1 conditions', () => {
-  it('has T1..T10 in order', () => {
-    expect(TECHNIQUE_IDS).toEqual(['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10'])
+  it('has T1..T8 and T10 in order', () => {
+    expect(TECHNIQUE_IDS).toEqual(['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T10'])
   })
 
   it('pins every setting key in every condition', () => {

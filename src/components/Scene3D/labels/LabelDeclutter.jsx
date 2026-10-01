@@ -60,6 +60,7 @@ function LabelAnchor({
   clearObject,
   revealed,
   liveText,
+  liveColor,
   emphasis,
   onHide,
   children,
@@ -78,6 +79,8 @@ function LabelAnchor({
       clearObject,
       revealed,
       liveText,
+      liveColor,
+      baseColor: color,
       cx: 0,
       cy: 0,
       hw: 0,
@@ -127,6 +130,8 @@ function LabelAnchor({
     entry.clearObject = clearObject
     entry.revealed = revealed
     entry.liveText = liveText
+    entry.liveColor = liveColor
+    entry.baseColor = color
     entry.mass = mass
     if (!anchorMoved && !massChanged) return
     labelRegistryRevision += 1
@@ -135,7 +140,18 @@ function LabelAnchor({
       entry.velX = 0
       entry.velY = 0
     }
-  }, [id, worldPos, emphasis, anchorObject, anchorName, clearObject, revealed, liveText])
+  }, [
+    id,
+    worldPos,
+    emphasis,
+    anchorObject,
+    anchorName,
+    clearObject,
+    revealed,
+    liveText,
+    liveColor,
+    color,
+  ])
 
   const background = color ? hexToRgba(color, 0.55) : undefined
 
@@ -162,6 +178,14 @@ function refreshLabelText(entry) {
   if (node.nodeValue === text) return false
   node.nodeValue = text
   return true
+}
+
+// Recolours the label from `liveColor` (null means its own colour).
+function refreshLabelColor(entry) {
+  const body = entry.bodyRef.current
+  if (!entry.liveColor || !body) return
+  const color = entry.liveColor() ?? entry.baseColor
+  body.style.backgroundColor = color ? hexToRgba(color, 0.55) : ''
 }
 
 function applyLabelTransform(entry, x, y, scale) {
@@ -286,6 +310,7 @@ function LabelDeclutter() {
       })
       entries.forEach((entry) => {
         if (refreshLabelText(entry)) anyMoved = true
+        refreshLabelColor(entry)
       })
       if (anyMoved) settleFrameRef.current = 0
     }
@@ -324,6 +349,10 @@ function LabelDeclutter() {
         .distanceTo(camera.position)
       const rawScale = LABEL_SCALE_REF_DISTANCE / Math.max(dist, 1e-3)
       const targetScale = Math.max(LABEL_SCALE_MIN, Math.min(LABEL_SCALE_MAX, rawScale))
+      // Unclamped below: the scene keeps shrinking after the text stops, and
+      // the label's distance from its anchor has to follow the scene.
+      // See docs/architecture/label-declutter.md#reach.
+      e.reach = Math.min(1, rawScale)
       const scaleDelta = targetScale - e.appliedScale
       if (Math.abs(scaleDelta) < 0.001) {
         e.appliedScale = targetScale

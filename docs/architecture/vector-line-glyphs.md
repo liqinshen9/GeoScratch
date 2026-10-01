@@ -141,6 +141,16 @@ the dashed collision style - real gaps, not an overlay.
 (`makeRingTexture`). Band frequency is fixed at build time
 (`RINGED_TUBE_RING_PERIOD`), deliberately not zoom-responsive, so there's no
 per-frame texture rebuild racing the cross-section's zoom-invariant scaling.
+
+One dark + light pair is one world unit, and the pattern is phased so a dark
+band starts at the line's point and at every whole unit from it
+(`setRingTexturePhase`: a cylinder's texture starts at its bottom end, which
+sits `tEnter` from the point). A vector's ringed shaft (`vectorShaftGlyph.js`)
+starts at its tail with no offset. Counting rings therefore reads lengths in
+units; the arrowhead covers the last `RINGED_HEAD_LENGTH` of a vector. The line
+bands are charcoal and dark grey (tone deltas -44 / -26 on the neutral Line
+family) with a weak emissive (0.05): the old +28 / -14 bands and 0.2 emissive
+rendered as beige and light grey, too close to the room's walls.
 `ringedTubeDashedGroup` is the dashed-style replacement (per-segment cloned
 textures).
 

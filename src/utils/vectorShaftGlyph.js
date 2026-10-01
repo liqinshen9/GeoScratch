@@ -5,8 +5,10 @@ import { LINE_STYLES } from '@/store/lineStyles'
 // See docs/architecture/vector-line-glyphs.md#vector-shaft-glyph.
 
 // Plain Line: a flat GL line (constant pixel width) with a flat 2D arrowhead
-// (a single double-sided triangle) to match its unshaded look.
-const LINE_SHAFT_PX = 4.6
+// (a single double-sided triangle) to match its unshaded look. The shaft is the
+// same width as a Plain Line line (geoVectorLine.js), as the tube styles keep a
+// vector's shaft about as thick as a line; wider, it read as nearer in Phase 1.
+const LINE_SHAFT_PX = 2.6
 const LINE_HEAD_HALF_WIDTH = 0.2
 const LINE_HEAD_LENGTH = 0.35
 
@@ -19,7 +21,9 @@ const TUBE_HEAD_LENGTH = 0.35
 const RINGED_SHAFT_RADIUS = 0.085
 const RINGED_HEAD_RADIUS = 0.22
 const RINGED_HEAD_LENGTH = 0.28
-const RINGED_RING_PERIOD = 0.8
+// One light + dark pair per grid unit, from the tail (the cylinder's texture
+// starts at its bottom end), so counting rings reads the length.
+const RINGED_RING_PERIOD = 1
 const RINGED_RADIAL_SEGMENTS = 48
 const RINGED_HEIGHT_SEGMENTS = (length) => Math.max(1, Math.ceil(length / RINGED_RING_PERIOD) * 2)
 
@@ -156,6 +160,18 @@ export function buildVectorShaftGlyph(
   group.position
     .addScaledVector(jitterA, Math.cos(jitterAngle) * Z_FIGHT_JITTER)
     .addScaledVector(jitterB, Math.sin(jitterAngle) * Z_FIGHT_JITTER)
+
+  // The point GlyphSizing measures camera distance to. The group itself sits at
+  // the world origin (the geometry is built in world space), so without this a
+  // vector's width would be set for the origin's distance, not its own.
+  // See docs/architecture/glyph-sizing.md#one-distance-per-object.
+  const updateSizingAnchor = () => {
+    group.userData.sizingAnchor = origin
+      .clone()
+      .addScaledVector(direction, length / 2)
+      .sub(group.position)
+  }
+  updateSizingAnchor()
 
   let lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
   let tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
@@ -419,6 +435,7 @@ export function buildVectorShaftGlyph(
   // Everything below is derived from origin/direction/length, so re-aiming is
   // exactly the same work as rescaling. One rebuild, two setters.
   const rebuildGlyph = () => {
+    updateSizingAnchor()
     lineLayout = computeVectorShaftLayout(origin, direction, length, LINE_HEAD_LENGTH)
     tubeLayout = computeVectorShaftLayout(origin, direction, length, TUBE_HEAD_LENGTH)
     ringedLayout = computeVectorShaftLayout(origin, direction, length, RINGED_HEAD_LENGTH)
