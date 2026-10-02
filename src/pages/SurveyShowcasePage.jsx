@@ -77,7 +77,7 @@ const CUE_VIEWS = {
   },
   rings: {
     technique: 'T3',
-    label: 'Ringed lines',
+    label: 'Ringed tubes',
     // Closer, so each ring is large enough to count.
     distance: 9,
     scene: {

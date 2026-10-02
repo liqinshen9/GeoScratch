@@ -493,8 +493,8 @@ const CUE_FIGURES = [
   {
     src: '/study/cue-rings.png',
     alt: 'Line A drawn with alternating dark and grey rings.',
-    title: 'Ringed lines',
-    text: 'Some blocks draw lines with rings. One dark ring and one grey ring together are one unit long, so you can count them to measure along a line, and they look shorter the farther away that part of the line is. Vectors are ringed the same way, in their own colour, starting from the tail.',
+    title: 'Ringed tubes',
+    text: 'Some blocks draw lines as ringed tubes. One dark ring and one grey ring together are one unit long, so you can count them to measure along a line, and they look shorter the farther away that part of the line is. Vectors are ringed the same way, in their own colour, starting from the tail.',
   },
 ]
 

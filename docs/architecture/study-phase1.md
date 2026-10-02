@@ -282,7 +282,7 @@ scene is built during it, so build cost never falls inside a reaction time.
 
 The intro is five pages inside the one `intro` state (local page state in
 `StudyPhase1Page`): the task, then one page each for halos, collision accents
-and ringed lines (one dark + one grey ring is one unit), then the answering
+and ringed tubes (one dark + one grey ring is one unit), then the answering
 instructions and Start. Every participant sees the
 cue explanations before block 1, whatever their order, so when a participant
 learns what a cue means never varies with the Williams row. The pictures are
