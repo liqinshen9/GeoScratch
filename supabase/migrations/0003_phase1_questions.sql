@@ -6,7 +6,10 @@ alter table public.phase1_trials
   add column if not exists question_type text,  -- occlusion | proximity
   add column if not exists probe_band   text;   -- left | middle | right, proximity only
 
-create or replace view public.phase1_export with (security_invoker = on) as
+-- Dropped first: create or replace can only append view columns, and this
+-- list inserts new ones mid-way.
+drop view if exists public.phase1_export;
+create view public.phase1_export with (security_invoker = on) as
   select
     p.participant_code,
     p.cohort,

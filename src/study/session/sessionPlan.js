@@ -14,13 +14,26 @@ export const STEP_KINDS = Object.freeze({
 })
 
 // The embedded-data names each survey reads must match its Qualtrics survey
-// flow exactly, or the value arrives blank.
-export const SURVEYS = Object.freeze({
-  demographic: 'https://auckland.au1.qualtrics.com/jfe/form/SV_9uhAiSCmJdY5ULI',
-  perBlock: 'https://auckland.au1.qualtrics.com/jfe/form/SV_b41w0nx2tzLHiZw',
-  holistic: 'https://auckland.au1.qualtrics.com/jfe/form/SV_eY9wZ7aNQQh8Kto',
-  post: 'https://auckland.au1.qualtrics.com/jfe/form/SV_0SuRuKxECznsNG6',
+// flow exactly, or the value arrives blank. A dev build uses the test copies,
+// whose redirects go to localhost; the deployed build uses the live surveys,
+// which redirect to geoscratch.xyz. See docs/architecture/study-session.md.
+const QUALTRICS = 'https://auckland.au1.qualtrics.com/jfe/form/'
+
+export const TEST_SURVEYS = Object.freeze({
+  demographic: `${QUALTRICS}SV_9uhAiSCmJdY5ULI`,
+  perBlock: `${QUALTRICS}SV_b41w0nx2tzLHiZw`,
+  holistic: `${QUALTRICS}SV_eY9wZ7aNQQh8Kto`,
+  post: `${QUALTRICS}SV_0SuRuKxECznsNG6`,
 })
+
+export const LIVE_SURVEYS = Object.freeze({
+  demographic: `${QUALTRICS}SV_57vWxUbe7NdY6ZU`,
+  perBlock: `${QUALTRICS}SV_3BME83p2WJ4DeqW`,
+  holistic: `${QUALTRICS}SV_bHnb61GWy1NsRGm`,
+  post: `${QUALTRICS}SV_3duwiGRdcjSAj42`,
+})
+
+export const SURVEYS = import.meta.env.DEV ? TEST_SURVEYS : LIVE_SURVEYS
 
 /**
  * @param {{ researchId: string, slot: number }} identity
@@ -78,11 +91,17 @@ export function buildSessionPlan({ researchId, slot }) {
   }
 }
 
-/** @returns {string|null} null while that survey's link is not set */
-export function surveyUrl(step) {
+/**
+ * Every survey also gets the link's `cohort`, so test responses can be filtered
+ * out in Qualtrics; each survey flow declares it as embedded data.
+ *
+ * @returns {string|null} null while that survey's link is not set
+ */
+export function surveyUrl(step, { cohort } = {}) {
   if (!SURVEYS[step.survey]) return null
   const url = new URL(SURVEYS[step.survey])
   for (const [key, value] of Object.entries(step.params)) url.searchParams.set(key, String(value))
+  if (cohort) url.searchParams.set('cohort', cohort)
   return url.toString()
 }
 

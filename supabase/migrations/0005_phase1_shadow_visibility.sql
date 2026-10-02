@@ -9,7 +9,10 @@ alter table public.phase1_trials
   add column if not exists shadow_visible_a real,
   add column if not exists shadow_visible_b real;
 
-create or replace view public.phase1_export with (security_invoker = on) as
+-- Dropped first: create or replace can only append view columns, and this
+-- list inserts new ones mid-way.
+drop view if exists public.phase1_export;
+create view public.phase1_export with (security_invoker = on) as
   select
     p.participant_code,
     p.cohort,

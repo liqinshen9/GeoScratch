@@ -31,10 +31,10 @@ import exercise10 from './exercise10-cubePointPivot'
  *                                     and logs the pick to exercise_attempts.
  *   solutionXml                       Blockly XML for a worked solution, offered
  *                                     behind ExercisePage's dev-only "Fill
- *                                     solution" control. Gated on
- *                                     import.meta.env.DEV, so it is compiled out
- *                                     of a study build rather than merely
- *                                     hidden from participants. Omitted by the
+ *                                     solution" control, shown only in a dev
+ *                                     build or for the test cohort
+ *                                     (study/session/devTools.js), never to a
+ *                                     participant. Omitted by the
  *                                     perceptual exercises, which have nothing
  *                                     to build. The single-step transform
  *                                     exercises share one shape via

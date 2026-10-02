@@ -102,11 +102,22 @@ screen, so a participant always has a way back even if a redirect is missing:
 | holistic    | `participantID`, `conditionOrder` (1-4), `combinationNum`, `renderMode`   |
 | post        | `participantID`, `phase1Order` (`T3-T4-...`), `holisticOrder` (`3-4-1-2`) |
 
+Every survey also gets `cohort` (from the link's `?c=`), so `test` responses
+can be filtered out in Qualtrics. Like the fields above, it must be declared as
+embedded data in each survey's flow, or Qualtrics drops it.
+
 Each survey's end-of-survey redirect must point at
 
 ```
 https://<deployment>/study/return?participantID=${e://Field/participantID}
 ```
+
+There are two copies of every survey. `TEST_SURVEYS` (the originals) redirect to
+`http://localhost:5173` and are used by a dev build; `LIVE_SURVEYS` (imported
+from the `_v2` exports) redirect to `https://geoscratch.xyz` and are used by the
+deployed build, `test` cohort included. `SURVEYS` picks between them on
+`import.meta.env.DEV`. A survey edited in Qualtrics has to be edited in the copy
+that matters, and published.
 
 The redirect lands in the survey's tab. `/study/return` advances the cursor in
 localStorage there and tries `window.close()`, which works for a tab the
@@ -222,6 +233,24 @@ still apply: `cubeShowEdges` and `cubeShowCentre` (the rotation reads from the
 edges and the centre), and `pipelineStepAnimation`, which it shares with
 `transform-object` so both play their pipelines step by step
 ([animation.md](animation.md#step-by-step-pipelines)).
+
+## Dev tools
+
+The study's shortcuts show in a dev build (`pnpm dev`) and for the `test`
+cohort (`?c=test`), via `useStudyDevTools()` in `study/session/devTools.js`:
+
+- Phase 1: feedback on every trial, Previous / Next trial, Skip to next / final
+  block, and the block's technique in a panel under the answers.
+- Block-end and survey screens: Skip questionnaire.
+- Holistic tasks: Skip task, and Fill solution in the exercise panel.
+
+A test cohort link against the deployed site therefore walks the whole flow in
+a few minutes, while every other cohort gets the participant build. They are
+gated on the cohort rather than compiled out, so a participant who edits their
+link to `c=test` would see them; their data would then be filed under `test`
+and fall out of the `cohort1` export, which is the safe direction. Skipped
+steps log as usual (`dev_skip: true` on a skipped survey), and skipping a
+trial writes no trial row.
 
 ## Logging
 

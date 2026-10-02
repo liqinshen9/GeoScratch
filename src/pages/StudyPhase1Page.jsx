@@ -10,6 +10,7 @@ import { getStudyStimulusSet, findStimulus } from '@/study/phase1/stimuli'
 import { resolveSequence } from '@/study/phase1/sequence'
 import useStudySession from '@/study/session/useStudySession'
 import { STEP_KINDS } from '@/study/session/sessionPlan'
+import { useStudyDevTools } from '@/study/session/devTools'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
 import { questionPrompt, choiceLabel, probeBandStyle } from '@/study/phase1/questionCopy'
@@ -112,9 +113,10 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
   const authStatus = useAuthStore((s) => s.status)
   const recordTrial = usePhase1TrackingStore((s) => s.recordTrial)
   const recordSequence = usePhase1TrackingStore((s) => s.recordSequence)
+  const devTools = useStudyDevTools()
   const reducer = useMemo(
-    () => createFlowReducer(sequence, { feedbackAlways: import.meta.env.DEV }),
-    [sequence],
+    () => createFlowReducer(sequence, { feedbackAlways: devTools }),
+    [sequence, devTools],
   )
   const [state, dispatch] = useReducer(reducer, null, () =>
     initialFlowState(sequence, resumeCursor(participantCode, sessionBlockIndex ?? 0)),
@@ -346,7 +348,7 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
             >
               Continue
             </Button>
-            {import.meta.env.DEV && (
+            {devTools && (
               <Button variant="outline" className="h-11 text-base" onClick={skipQuestionnaire}>
                 Skip questionnaire (dev)
               </Button>
@@ -415,9 +417,9 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
           </p>
         )}
 
-        {/* Dev only: never built into what a participant runs. Skipping logs
-            nothing -- a row is only written when a trial is answered. */}
-        {import.meta.env.DEV && (
+        {/* Dev build or test cohort only. Skipping logs nothing -- a row is
+            only written when a trial is answered. */}
+        {devTools && (
           <div className="study-phase1__dev">
             <div className="study-phase1__dev-row">
               <span className="study-phase1__dev-label">dev</span>

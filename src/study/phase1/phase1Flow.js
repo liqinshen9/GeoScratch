@@ -24,7 +24,8 @@ export const FLOW_ACTIONS = Object.freeze({
   ANSWER: 'answer',
   FEEDBACK_DONE: 'feedbackDone',
   CONTINUE: 'continue',
-  // Dev only, from the buttons the trial page renders under import.meta.env.DEV.
+  // Dev tools only, from the buttons the trial page renders for a dev build or
+  // the test cohort (study/session/devTools.js).
   SKIP_BLOCK: 'skipBlock',
   SKIP_TO_LAST_BLOCK: 'skipToLastBlock',
   PREVIOUS_TRIAL: 'previousTrial',

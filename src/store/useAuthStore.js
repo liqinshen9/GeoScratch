@@ -59,6 +59,12 @@ function resolveCohort() {
   return fromUrl || normalizeCohort(loadStoredCohort() || '') || null
 }
 
+function initialCohort() {
+  const cohort = resolveCohort()
+  if (cohort) storeCohort(cohort)
+  return cohort
+}
+
 async function fetchProfile(userId) {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
   if (error) {
@@ -75,7 +81,9 @@ const useAuthStore = create((set, get) => ({
   userId: null,
   profile: null,
   participantCode: loadStoredCode(),
-  cohort: loadStoredCohort(),
+  // From the link straight away, not only after sign-in: the study's dev tools
+  // key off it (study/session/devTools.js).
+  cohort: initialCohort(),
   // { slot, researchId } of the /study session on this device. Local
   // only: a session resumes on the device it started on, never by lookup.
   study: loadStoredStudy(),

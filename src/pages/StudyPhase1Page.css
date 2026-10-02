@@ -92,7 +92,7 @@
   color: #b91c1c;
 }
 
-/* Dev-only controls, rendered under import.meta.env.DEV. Deliberately plain, so
+/* Dev-tool controls, rendered for a dev build or the test cohort. Deliberately plain, so
    there is no mistaking them for part of the task. */
 .study-phase1__dev {
   margin-top: auto;

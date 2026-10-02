@@ -1,9 +1,9 @@
 import * as Blockly from 'blockly/core'
 
 /**
- * Replaces the workspace contents with an exercise's worked solution. Dev only:
- * ExercisePage gates the control on `import.meta.env.DEV`, so this never reaches
- * a study build where a participant could reach for it.
+ * Replaces the workspace contents with an exercise's worked solution. Dev tools
+ * only: ExercisePage shows the control in a dev build or for the test cohort
+ * (study/session/devTools.js), never to a participant.
  *
  * Clearing runs with Blockly events disabled, the same reasoning as
  * seedBackgroundBlocks: throwing the student's blocks away is not a student

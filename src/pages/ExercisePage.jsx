@@ -26,6 +26,7 @@ import { markExerciseSolved, unmarkExerciseSolved } from '@/utils/exerciseProgre
 import { useCurrentStudyTask } from '@/study/session/useStudySession'
 import { configurationSettings, RENDER_MODES } from '@/study/session/holistic'
 import { logStudyEvent } from '@/study/session/studyEvents'
+import { useStudyDevTools } from '@/study/session/devTools'
 import StudyTaskBar from '@/components/StudyTaskBar/StudyTaskBar'
 
 import '@/components/EditorShell/editor-shell.css'
@@ -109,7 +110,8 @@ export default function ExercisePage({
 
   // The URL is the source of truth for which exercise is open;
   // /exercise with no param (or an unknown id) defaults to the first one.
-  const activeExerciseConfig = getExercise(fixedExerciseId ?? routeExerciseId) ?? orderedExercises()[0]
+  const activeExerciseConfig =
+    getExercise(fixedExerciseId ?? routeExerciseId) ?? orderedExercises()[0]
   const activeExercise = activeExerciseConfig.id
   const exercise = getExerciseModule(activeExercise)
   const cameraPosition = useMemo(
@@ -177,8 +179,8 @@ export default function ExercisePage({
   // and a static condition hides every animation control.
   // See docs/architecture/study-session.md#holistic-tasks.
   const currentTask = useCurrentStudyTask()
-  const studyTask =
-    !standalone && currentTask?.exerciseId === activeExercise ? currentTask : null
+  const devTools = useStudyDevTools()
+  const studyTask = !standalone && currentTask?.exerciseId === activeExercise ? currentTask : null
   const hideAnimation = Boolean(studyTask) && studyTask.mode !== RENDER_MODES.ANIMATED
   // An animated condition only means something if the participant plays it:
   // prompt for it, and log each play. See docs/architecture/study-session.md#holistic-tasks.
@@ -369,9 +371,8 @@ export default function ExercisePage({
                   <span>Passed</span>
                 </div>
               )}
-              {/* Dev only: import.meta.env.DEV is false in the study build, so
-                    the control is compiled out rather than merely hidden. */}
-              {import.meta.env?.DEV && exercise.solutionXml && (
+              {/* Dev build or test cohort only (study/session/devTools.js). */}
+              {devTools && exercise.solutionXml && (
                 <button
                   type="button"
                   className="exercise-debug-fill"

@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   buildSessionPlan,
   surveyUrl,
+  TEST_SURVEYS,
+  LIVE_SURVEYS,
   initialCursor,
   completeStep,
   handOff,
@@ -74,6 +76,23 @@ describe('surveyUrl', () => {
     expect(url.searchParams.get('participantID')).toBe('K7QX3M')
     expect(url.searchParams.get('blockOrder')).toBe('1')
     expect(url.searchParams.get('technique')).toBe(plan.techniqueOrder[0])
+    expect(url.searchParams.has('cohort')).toBe(false)
+  })
+
+  it('adds the cohort when there is one', () => {
+    const url = new URL(surveyUrl(plan.steps[0], { cohort: 'test' }))
+    expect(url.searchParams.get('cohort')).toBe('test')
+    expect(url.searchParams.get('participantID')).toBe('K7QX3M')
+  })
+})
+
+describe('survey sets', () => {
+  it('has a test and a live link for every survey, never the same one', () => {
+    expect(Object.keys(LIVE_SURVEYS)).toEqual(Object.keys(TEST_SURVEYS))
+    for (const key of Object.keys(LIVE_SURVEYS)) {
+      expect(LIVE_SURVEYS[key]).toMatch(/\/jfe\/form\/SV_\w+$/)
+      expect(LIVE_SURVEYS[key]).not.toBe(TEST_SURVEYS[key])
+    }
   })
 })
 

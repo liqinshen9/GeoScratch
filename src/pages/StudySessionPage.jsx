@@ -3,6 +3,8 @@ import { Navigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { FullScreen } from '@/components/StudyGate/StudyGate'
 import useStudySession from '@/study/session/useStudySession'
+import { useStudyDevTools } from '@/study/session/devTools'
+import useAuthStore from '@/store/useAuthStore'
 import { STEP_KINDS, surveyUrl } from '@/study/session/sessionPlan'
 import { holisticTaskCapMs, RENDER_MODES } from '@/study/session/holistic'
 import { getExercise } from '@/data/exercises'
@@ -20,6 +22,8 @@ const SURVEY_COPY = {
 
 export default function StudySessionPage() {
   const { study, plan, cursor, step, start, handOffToSurvey, receiveReturn } = useStudySession()
+  const devTools = useStudyDevTools()
+  const cohort = useAuthStore((s) => s.cohort)
 
   // The first step is itself a questionnaire, so the welcome screen must hold
   // off the effect below or it would start that step and skip the welcome.
@@ -66,7 +70,7 @@ export default function StudySessionPage() {
 
   if (step.kind === STEP_KINDS.SURVEY) {
     const waiting = cursor.awaiting?.stepIndex === step.stepIndex
-    const href = surveyUrl(step)
+    const href = surveyUrl(step, { cohort })
     if (!href) {
       return (
         <Screen researchId={study.researchId}>
@@ -106,7 +110,7 @@ export default function StudySessionPage() {
           </a>
         </Button>
         {waiting && <ManualContinue onConfirm={() => receiveReturn({ manual: true })} />}
-        {import.meta.env.DEV && (
+        {devTools && (
           <button
             type="button"
             className="text-left text-xs underline"

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import useStudySession from '@/study/session/useStudySession'
+import { useStudyDevTools } from '@/study/session/devTools'
 import { holisticTaskCapMs, RENDER_MODES } from '@/study/session/holistic'
 
 const formatClock = (ms) => {
@@ -16,6 +17,7 @@ const formatClock = (ms) => {
  * See docs/architecture/study-session.md#holistic-tasks.
  */
 export default function StudyTaskBar({ task, passed }) {
+  const devTools = useStudyDevTools()
   const { cursor, start, complete } = useStudySession()
   const navigate = useNavigate()
   const { stepIndex } = task
@@ -75,7 +77,7 @@ export default function StudyTaskBar({ task, passed }) {
       <Button className="h-10 text-base" disabled={!hasPassed && !timeUp} onClick={finish}>
         Continue
       </Button>
-      {import.meta.env.DEV && (
+      {devTools && (
         <button type="button" className="text-left text-xs underline" onClick={finish}>
           Skip task (dev)
         </button>
