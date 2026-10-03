@@ -530,6 +530,11 @@ function Intro({ blockCount, canStart, onStart }) {
           <strong>closer to you</strong> inside that band. A line runs on for ever, so the question
           is only ever about that one place.
         </p>
+        <p>
+          <strong>Closer to you</strong> means closer to the camera you are looking through. The
+          camera sits well above the grid, looking down at it, so height counts too: an object
+          higher up can be closer to you than one lower down that looks nearer the front.
+        </p>
         <div className="flex gap-3">{next}</div>
       </Overlay>
     )
