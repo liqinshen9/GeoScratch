@@ -53,9 +53,15 @@ Rules for anything that touches the backend:
 | Table                 | Row meaning                                                                      |
 | --------------------- | -------------------------------------------------------------------------------- |
 | `profiles`            | one per auth user; `participant_code`, `cohort`, `user_agent`, `phase1_sequence` |
-| `exercise_attempts`   | one per exercise open; timing, pass, counts, `mcq_answer`                        |
+| `exercise_attempts`   | one per exercise open, keyed by `exercise_id` (slug); timing, pass, counts       |
 | `workspace_snapshots` | latest Blockly XML per `(profile, workspace_id)` (Phase 2)                       |
 | `phase1_trials`       | one per study Phase 1 trial (`0002_phase1_trials.sql`, see `study-phase1.md`)    |
+
+`exercise_attempts.exercise_number` is from when exercises were numbered; once
+they became slugs every insert failed against the integer column, silently,
+until `0007_exercise_attempts_id.sql` added `exercise_id`. `workspace_snapshots`
+carries the slug in `workspace_id` (`exercise-<slug>`), so its
+`exercise_number` is null.
 
 `profiles` rows are created by the `on_auth_user_created` trigger. RLS restricts
 every table to `auth.uid() = profile_id`. No delete policies exist.

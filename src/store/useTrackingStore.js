@@ -30,7 +30,7 @@ export function canTrack() {
 const useTrackingStore = create((set, get) => ({
   clientSessionId: CLIENT_SESSION_ID,
   attemptId: null,
-  exerciseNumber: null,
+  exerciseId: null,
   startedPerf: null,
   completed: false,
   // The id of the current logical "exercise open". The hook generates one per
@@ -39,12 +39,12 @@ const useTrackingStore = create((set, get) => ({
   openId: null,
 
   /** Insert a fresh attempt row for a newly opened exercise. */
-  startAttempt: async ({ openId, exerciseNumber, exerciseKind }) => {
+  startAttempt: async ({ openId, exerciseId, exerciseKind }) => {
     if (get().openId === openId) return // already handled this open
     set({
       openId,
       attemptId: null,
-      exerciseNumber,
+      exerciseId,
       startedPerf: performance.now(),
       completed: false,
     })
@@ -58,11 +58,11 @@ const useTrackingStore = create((set, get) => ({
         .from('exercise_attempts')
         .select('id', { count: 'exact', head: true })
         .eq('profile_id', profileId)
-        .eq('exercise_number', exerciseNumber)
+        .eq('exercise_id', exerciseId)
 
       const row = buildAttemptInsert({
         profileId,
-        exerciseNumber,
+        exerciseId,
         exerciseKind,
         attemptNumber: nextAttemptNumber(count),
         clientSessionId: get().clientSessionId,

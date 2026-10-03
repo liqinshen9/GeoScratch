@@ -14,11 +14,11 @@ function newOpenId() {
  *
  * Everything degrades to a no-op when the backend is not configured.
  *
- * @param {number} exerciseNumber
+ * @param {string} exerciseId  the exercise's slug, e.g. 'sphere-distance'
  * @param {string} [exerciseKind]  the module's `kind`
  * @returns {{ reportResult: (result) => void, recordMcqAnswer: (answer, correctId) => void }}
  */
-export function useExerciseTracking(exerciseNumber, exerciseKind) {
+export function useExerciseTracking(exerciseId, exerciseKind) {
   const authStatus = useAuthStore((s) => s.status)
   const startAttempt = useTrackingStore((s) => s.startAttempt)
   const completeAttempt = useTrackingStore((s) => s.completeAttempt)
@@ -34,12 +34,12 @@ export function useExerciseTracking(exerciseNumber, exerciseKind) {
   // auth settles; stable across a StrictMode double-mount, so the store can
   // ignore the duplicate startAttempt call.
   const authSettled = isAuthSettled(authStatus)
-  const openId = useMemo(newOpenId, [exerciseNumber, exerciseKind, authSettled])
+  const openId = useMemo(newOpenId, [exerciseId, exerciseKind, authSettled])
 
   useEffect(() => {
     wasPassed.current = false
     if (!authSettled) return // wait for sign-in; a new openId fires this again
-    startAttempt({ openId, exerciseNumber, exerciseKind })
+    startAttempt({ openId, exerciseId, exerciseKind })
 
     const onHide = () => {
       if (document.visibilityState === 'hidden') saveProgress(resultRef.current)
@@ -52,7 +52,7 @@ export function useExerciseTracking(exerciseNumber, exerciseKind) {
       window.removeEventListener('pagehide', onHide)
       if (!wasPassed.current) saveProgress(resultRef.current)
     }
-  }, [openId, authSettled, exerciseNumber, exerciseKind, startAttempt, saveProgress])
+  }, [openId, authSettled, exerciseId, exerciseKind, startAttempt, saveProgress])
 
   const reportResult = useCallback(
     (result) => {

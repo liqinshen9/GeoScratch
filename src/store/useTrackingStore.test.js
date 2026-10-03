@@ -55,12 +55,12 @@ describe('useTrackingStore', () => {
     const store = await freshStore()
     await store
       .getState()
-      .startAttempt({ openId: 'o1', exerciseNumber: 3, exerciseKind: 'transform' })
+      .startAttempt({ openId: 'o1', exerciseId: 'ex-3', exerciseKind: 'transform' })
 
     expect(calls.inserts).toHaveLength(1)
     expect(calls.inserts[0].row).toMatchObject({
       profile_id: 'u1',
-      exercise_number: 3,
+      exercise_id: 'ex-3',
       attempt_number: 2, // existing count 1 + 1
       passed: false,
     })
@@ -69,14 +69,14 @@ describe('useTrackingStore', () => {
 
   it('ignores a repeat startAttempt with the same openId (StrictMode double-fire)', async () => {
     const store = await freshStore()
-    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
-    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseId: 'ex-1' })
+    await store.getState().startAttempt({ openId: 'o1', exerciseId: 'ex-1' })
     expect(calls.inserts).toHaveLength(1)
   })
 
   it('completes the attempt exactly once', async () => {
     const store = await freshStore()
-    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseId: 'ex-1' })
 
     const result = { passed: true, steps: { a: true, b: false } }
     store.getState().completeAttempt(result)
@@ -90,7 +90,7 @@ describe('useTrackingStore', () => {
   it('does nothing when auth is not ready', async () => {
     authState = { status: 'signing-in', userId: null }
     const store = await freshStore()
-    await store.getState().startAttempt({ openId: 'o1', exerciseNumber: 1 })
+    await store.getState().startAttempt({ openId: 'o1', exerciseId: 'ex-1' })
     expect(calls.inserts).toHaveLength(0)
   })
 
@@ -98,7 +98,7 @@ describe('useTrackingStore', () => {
     const store = await freshStore()
     await store
       .getState()
-      .startAttempt({ openId: 'o8', exerciseNumber: 8, exerciseKind: 'perceptual' })
+      .startAttempt({ openId: 'o8', exerciseId: 'ex-8', exerciseKind: 'perceptual' })
     store.getState().recordMcq({ answer: 'cube', correctId: 'cube' })
 
     const mcqWrite = calls.updates.find((u) => 'mcq_answer' in u.values)

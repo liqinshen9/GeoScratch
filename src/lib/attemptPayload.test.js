@@ -53,7 +53,7 @@ describe('buildAttemptInsert', () => {
   it('produces a not-yet-passed row keyed to the profile and exercise', () => {
     const row = buildAttemptInsert({
       profileId: 'u1',
-      exerciseNumber: 3,
+      exerciseId: 'ex-3',
       exerciseKind: 'transform',
       attemptNumber: 2,
       clientSessionId: 's1',
@@ -61,7 +61,7 @@ describe('buildAttemptInsert', () => {
     })
     expect(row).toEqual({
       profile_id: 'u1',
-      exercise_number: 3,
+      exercise_id: 'ex-3',
       exercise_kind: 'transform',
       attempt_number: 2,
       client_session_id: 's1',

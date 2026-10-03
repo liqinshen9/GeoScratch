@@ -37,7 +37,7 @@ export function gradeMcq(answer, correctId) {
  */
 export function buildAttemptInsert({
   profileId,
-  exerciseNumber,
+  exerciseId,
   exerciseKind,
   attemptNumber,
   clientSessionId,
@@ -45,7 +45,7 @@ export function buildAttemptInsert({
 }) {
   return {
     profile_id: profileId,
-    exercise_number: exerciseNumber,
+    exercise_id: exerciseId,
     exercise_kind: exerciseKind ?? null,
     attempt_number: attemptNumber,
     client_session_id: clientSessionId ?? null,
