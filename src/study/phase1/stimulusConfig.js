@@ -8,7 +8,7 @@ import {
 // See docs/architecture/study-phase1.md.
 
 /** Bump the suffix to generate a new fixed stimulus set; never reuse one mid-study. */
-export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v15'
+export const STUDY_STIMULUS_SEED = 'geoscratch-phase1-v16'
 
 /**
  * The scene viewport is this exact CSS size for every trial and participant.
@@ -34,18 +34,19 @@ export const CAMERA = Object.freeze({
 })
 
 /**
- * The three questions a trial can ask.
+ * The questions a trial asks.
  *
  * - `occlusion`: the targets cross on screen and one is drawn over the other.
  *   "Which is in front" is only well posed where they overlap, hence the wording.
  * - `proximity`: the targets are apart on screen and the question names a
  *   vertical band. An infinite line has no single depth, so a proximity
  *   question without a named region has no answer.
- * - `distance`: which of A and B (each a point or a vector's tip) is closer in
- *   3D to a reference point C. The screen distances never give it away, so it
- *   takes depth. See docs/architecture/study-phase1.md#distance-questions.
+ *
+ * The generator also supports `distance` questions (which of A and B is closer
+ * in 3D to a point C), dropped from the study after the pilot to shorten Phase 1.
+ * See docs/architecture/study-phase1.md#distance-questions.
  */
-export const QUESTION_TYPES = Object.freeze(['occlusion', 'proximity', 'distance'])
+export const QUESTION_TYPES = Object.freeze(['occlusion', 'proximity'])
 
 /** Where a proximity question's band sits, in NDC x. */
 export const PROBE_BANDS = Object.freeze([
@@ -68,7 +69,7 @@ export const DEPTH_SEPARATIONS = Object.freeze({ easy: 6, medium: 3, hard: 1.2 }
 export const DISTANCE_RATIOS = Object.freeze({ easy: 1.6, medium: 1.35, hard: 1.15 })
 export const DIFFICULTY_LEVELS = Object.freeze(['easy', 'medium', 'hard'])
 
-export const CLUTTER_DISTRACTORS = Object.freeze({ low: 2, high: 8 })
+export const CLUTTER_DISTRACTORS = Object.freeze({ low: 2, high: 5 })
 export const CLUTTER_LEVELS = Object.freeze(['low', 'high'])
 
 /**
@@ -117,16 +118,25 @@ export const PAIR_KINDS = Object.freeze({
 })
 
 /**
- * Measured stimuli per clutter level, by difficulty: 9 each, 18 in total. Each
+ * Measured stimuli per clutter level, by difficulty: 6 each, 12 in total. Each
  * difficulty level holds one of each question type per clutter level, so every
- * type gets 6 trials, 2 per difficulty.
+ * type gets 6 trials, 3 per clutter level.
  */
 export const MEASURED_DIFFICULTY_COUNTS = Object.freeze({
-  low: { easy: 3, medium: 3, hard: 3 },
-  high: { easy: 3, medium: 3, hard: 3 },
+  low: { easy: 2, medium: 2, hard: 2 },
+  high: { easy: 2, medium: 2, hard: 2 },
 })
 
-export const PRACTICE_TRIALS_PER_BLOCK = 4
+export const PRACTICE_TRIALS_PER_BLOCK = 2
+
+/**
+ * One stimulus set per block position, so no scene is seen twice. Block k
+ * always uses set k; the Williams order then pairs every set with every
+ * technique equally often across a full rotation of slots. Equal to the number
+ * of conditions (sequence.test.js checks).
+ * See docs/architecture/study-phase1.md#stimulus-sets.
+ */
+export const STIMULUS_SET_COUNT = 9
 
 export const FIXATION_MS = 500
 export const FEEDBACK_MS = 900

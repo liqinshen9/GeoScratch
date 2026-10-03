@@ -26,7 +26,7 @@ Code: `src/study/phase1/`, `src/pages/StudyPhase1Page.jsx`.
 ## Questions
 
 An infinite line has no single depth, so every trial has to name _where_ it is
-asking about. Three question types do that, each crossed with difficulty within
+asking about. Two question types do that, each crossed with difficulty within
 each clutter level (`questionCopy.js` holds the participant-facing wording):
 
 - **occlusion** -- the targets cross on screen. "Line A and Vector B do not
@@ -35,9 +35,10 @@ each clutter level (`questionCopy.js` holds the participant-facing wording):
 - **proximity** -- the targets are apart on screen, and a shaded vertical band
   (left, middle or right third) marks a column of it. "Inside the shaded band,
   which one is closer to you?" The judged point is that column.
-- **distance** -- a labelled point C on a line, and "Point C sits on a line.
-  Which of these two is closer to Point C?" / "Any point on Line A or the tip
-  of Vector B?" See [Distance questions](#distance-questions).
+
+A third type, **distance** ("which of these two is closer to Point C?"), is
+still supported by the generator but was dropped from the study after the
+pilot. See [Distance questions](#distance-questions).
 
 The band is a DOM overlay on the stage, not scene geometry, and is drawn
 identically under every technique. The prompt and the button labels follow the
@@ -124,9 +125,8 @@ the Method's "one renderer, one scene graph" claim stops being true.
 
 ## Stimuli
 
-`stimuli.js`, tuned in `stimulusConfig.js`. One fixed set for the whole study
-(`STUDY_STIMULUS_SEED`), so stimulus is a proper random effect and the same
-geometry is re-rendered under every technique.
+`stimuli.js`, tuned in `stimulusConfig.js`. Nine fixed sets for the whole
+study, one per block position (see [Stimulus sets](#stimulus-sets)).
 
 - **Ground truth** is camera-space depth at the judged point. Each target is
   placed on the view ray through its own screen anchor at depth `base +- gap / 2`
@@ -171,12 +171,14 @@ geometry is re-rendered under every technique.
   trial T2, T3 and T5 act on one target at most. Pair type is balanced within
   each question type and logged; analyse it as a factor.
 - **Difficulty** is the depth gap, `DEPTH_SEPARATIONS`. Those numbers are
-  placeholders until the pilot. 18 measured stimuli split as 9 per clutter
-  level, 3 per difficulty (`MEASURED_DIFFICULTY_COUNTS`), one of each question
+  placeholders until the pilot. 12 measured stimuli per set, 6 per clutter
+  level, 2 per difficulty (`MEASURED_DIFFICULTY_COUNTS`), one of each question
   type in every clutter x difficulty cell. That gives each type 6 trials, with
   the nearer target, the band and the pair type dealt evenly within the type.
-  The count dropped from 24 on 2026-10-01 when the third type was added: 24
-  cannot be split evenly across three types and their pairings.
+  Cut from 18 after the pilot (2026-10-03), with distance questions dropped and
+  practice halved, because Phase 1 was long and tiring.
+- **Clutter** is 2 distractors (low) or 5 (high), `CLUTTER_DISTRACTORS`. High
+  was 8 until the pilot, which found it too busy.
 - **Distractors** are placed within `distractorRadiusNdc` of the probe, and kept
   off it and off both targets' judged points (points and lines by screen
   distance, solids by projected radius), so clutter adds crossing and occlusion
@@ -209,9 +211,26 @@ geometry is re-rendered under every technique.
   Which letter gets which kind, the angles, the vector lengths and the colour
   salt are drawn per stimulus.
 
+### Stimulus sets
+
+Until the pilot every block re-rendered one set, so a participant saw the same
+22 scenes nine times. They stopped judging and answered from habit. Now
+`getStudyStimulusSets()` builds `STIMULUS_SET_COUNT` (9) sets, seeded
+`<STUDY_STIMULUS_SEED>:set<k>`, with ids prefixed `s<k>-` so an id is unique
+across them. `resolveSequence` gives block k set k: the set goes with the block
+_position_, never the technique. Since the Williams order varies by slot, a full
+rotation of 18 slots pairs every set with every technique exactly twice
+(`sequence.test.js`), so set is balanced against technique across the sample
+and stimulus is still a random effect, nested in set. All nine sets together
+take about 0.2 s to build at page load. Each block records its
+`stimulusSetSeed` in the stored sequence.
+
 ### Distance questions
 
-Occlusion questions sat near ceiling once the glyphs were the right size, so a
+Dropped from the study after the pilot (2026-10-03) to shorten Phase 1;
+`QUESTION_TYPES` no longer lists it, but the generator still builds them and
+`stimuli.test.js` tests them on purpose-built samples. Why they were added:
+occlusion questions sat near ceiling once the glyphs were the right size, so a
 third type asks about distances between objects rather than depth from the
 viewer, which is closer to what the authoring tasks need (point-to-plane,
 sphere-to-sphere). The prompt is two lines with a blank one between: "Point C sits
@@ -274,8 +293,8 @@ generator, runtime, builders and tube collisions are the editor's own.
 
 ## Session flow
 
-`phase1Flow.js` is a pure reducer: intro, then per block a block intro, 4
-practice trials with Correct/Incorrect feedback, 18 measured trials in shuffled
+`phase1Flow.js` is a pure reducer: intro, then per block a block intro, 2
+practice trials with Correct/Incorrect feedback, 12 measured trials in shuffled
 order without feedback, and a block-end screen (placeholder for the per-block
 Qualtrics questionnaire). Each trial starts with a 500 ms fixation cross; the
 scene is built during it, so build cost never falls inside a reaction time.

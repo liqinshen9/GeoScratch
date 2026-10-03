@@ -234,6 +234,28 @@ edges and the centre), and `pipelineStepAnimation`, which it shares with
 `transform-object` so both play their pipelines step by step
 ([animation.md](animation.md#step-by-step-pipelines)).
 
+## Finishing
+
+Reaching the last step ends the study on that browser. The end screen logs
+`session_complete`, waits `STUDY_FINISH_DELAY_MS` (3 s) so the final survey's
+return and that event have landed, then calls `useAuthStore.finishStudy()`:
+
+- the research ID goes on a completed list (`geoscratch:studyCompleted`), so
+  reopening the link shows "Already completed" instead of starting a second
+  session under the same ID;
+- the stored research ID, study identity and cohort are cleared and the
+  anonymous login is signed out, so using GeoScratch afterwards on that
+  browser is a new visitor, not more rows under the participant's ID.
+
+`/study/return` does the same after the last survey, in case the GeoScratch tab
+is already closed. Signing out cannot lose study data: every row is written as
+it happens, before this.
+
+A production build with no backend (`status === 'offline'`) refuses to run the
+study at all ("not available"). Without it a missing environment variable on
+the host silently records nothing, which is exactly what happened to the first
+pilot. A dev build still runs offline.
+
 ## Dev tools
 
 The study's shortcuts show in a dev build (`pnpm dev`) and for the `test`

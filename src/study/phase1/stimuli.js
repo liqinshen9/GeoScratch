@@ -12,6 +12,7 @@ import {
   CLUTTER_LEVELS,
   MEASURED_DIFFICULTY_COUNTS,
   PRACTICE_TRIALS_PER_BLOCK,
+  STIMULUS_SET_COUNT,
   PAIR_KINDS,
   PAIR_TYPES,
   OCCLUSION_PAIR_TYPES,
@@ -1099,7 +1100,7 @@ function pairTypePools(rng, questions) {
  * type is crossed with difficulty within each clutter level; which target is
  * nearer, the band and the pair type are dealt evenly within each question type.
  */
-export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
+export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED, { idPrefix = '' } = {}) {
   const camera = makeStudyCamera()
   const rng = createRng(`${setSeed}:layout`)
 
@@ -1121,7 +1122,7 @@ export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
 
   const measured = plan.map(({ clutter, difficulty }, i) => {
     indexInClutter[clutter] = (indexInClutter[clutter] ?? 0) + 1
-    const id = `m-${clutter}-${String(indexInClutter[clutter]).padStart(2, '0')}`
+    const id = `${idPrefix}m-${clutter}-${String(indexInClutter[clutter]).padStart(2, '0')}`
     return generateStimulus(
       {
         id,
@@ -1143,7 +1144,7 @@ export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
   const practiceHighers = highersForTypes(rng, practiceTypes)
   const nextPracticePairType = pairTypePools(rng, practiceQuestions)
   const practice = Array.from({ length: PRACTICE_TRIALS_PER_BLOCK }, (_, i) => {
-    const id = `p-${String(i + 1).padStart(2, '0')}`
+    const id = `${idPrefix}p-${String(i + 1).padStart(2, '0')}`
     return generateStimulus(
       {
         id,
@@ -1163,16 +1164,27 @@ export function generateStimulusSet(setSeed = STUDY_STIMULUS_SEED) {
   return { seed: setSeed, measured, practice }
 }
 
-let cachedStudySet = null
+let cachedStudySets = null
 
-/** The study's fixed set, generated once per page load. */
-export function getStudyStimulusSet() {
-  if (!cachedStudySet) cachedStudySet = generateStimulusSet(STUDY_STIMULUS_SEED)
-  return cachedStudySet
+/**
+ * The study's fixed sets, one per block position (set k for block k), generated
+ * once per page load. Ids carry the set number (`s3-m-low-01`), so an id is
+ * unique across all of them.
+ */
+export function getStudyStimulusSets() {
+  if (!cachedStudySets) {
+    cachedStudySets = Array.from({ length: STIMULUS_SET_COUNT }, (_, k) =>
+      generateStimulusSet(`${STUDY_STIMULUS_SEED}:set${k + 1}`, { idPrefix: `s${k + 1}-` }),
+    )
+  }
+  return cachedStudySets
 }
 
-export function findStimulus(stimulusSet, id) {
-  return (
-    stimulusSet.measured.find((s) => s.id === id) ?? stimulusSet.practice.find((s) => s.id === id)
-  )
+/** @param {object|object[]} sets  one stimulus set or several */
+export function findStimulus(sets, id) {
+  for (const set of [sets].flat()) {
+    const found = set.measured.find((s) => s.id === id) ?? set.practice.find((s) => s.id === id)
+    if (found) return found
+  }
+  return undefined
 }

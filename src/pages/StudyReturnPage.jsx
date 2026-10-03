@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { FullScreen } from '@/components/StudyGate/StudyGate'
 import useStudySession from '@/study/session/useStudySession'
+import useAuthStore from '@/store/useAuthStore'
+import { STEP_KINDS, STUDY_FINISH_DELAY_MS } from '@/study/session/sessionPlan'
 
 // /study/return: where every Qualtrics survey's end-of-survey redirect lands,
 // in the tab the questionnaire was opened in. Advancing the cursor here is
@@ -10,7 +12,7 @@ import useStudySession from '@/study/session/useStudySession'
 // reloading this URL cannot skip a step.
 
 export default function StudyReturnPage() {
-  const { study, receiveReturn } = useStudySession()
+  const { study, step, receiveReturn } = useStudySession()
   const [params] = useSearchParams()
   const returnedId = params.get('participantID')
   const mismatch = Boolean(returnedId && study && returnedId !== study.researchId)
@@ -26,6 +28,15 @@ export default function StudyReturnPage() {
     // below covers every other case.
     window.close()
   }, [mismatch, study, returnedId, receiveReturn])
+
+  // After the last survey, end the study here too, in case the participant has
+  // already closed the GeoScratch tab.
+  const finished = done && step?.kind === STEP_KINDS.DONE
+  useEffect(() => {
+    if (!finished) return undefined
+    const timer = setTimeout(() => useAuthStore.getState().finishStudy(), STUDY_FINISH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [finished])
 
   if (mismatch) {
     return (

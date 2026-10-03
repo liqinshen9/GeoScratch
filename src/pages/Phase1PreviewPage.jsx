@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Scene3D from '@/components/Scene3D/Scene3D'
 import useSettingsStore from '@/store/useSettingsStore'
 import { TECHNIQUES, getTechnique } from '@/study/phase1/conditions'
-import { getStudyStimulusSet, findStimulus, generateStimulus } from '@/study/phase1/stimuli'
+import { getStudyStimulusSets, findStimulus, generateStimulus } from '@/study/phase1/stimuli'
 import { resolveSequence } from '@/study/phase1/sequence'
 import { buildStimulusScene } from '@/study/phase1/buildStimulusScene'
 import { targetLabelKeys, toggleLabelKeys } from '@/study/phase1/labelToggle'
@@ -26,14 +26,14 @@ import './StudyPhase1Page.css'
 // calibration of DEPTH_SEPARATIONS. See docs/architecture/study-phase1.md.
 
 export default function Phase1PreviewPage() {
-  const stimulusSet = useMemo(() => getStudyStimulusSet(), [])
+  const stimulusSets = useMemo(() => getStudyStimulusSets(), [])
   const allStimuli = useMemo(
-    () => [...stimulusSet.practice, ...stimulusSet.measured],
-    [stimulusSet],
+    () => stimulusSets.flatMap((set) => [...set.practice, ...set.measured]),
+    [stimulusSets],
   )
   const [techniqueId, setTechniqueId] = useState('T1')
   const [source, setSource] = useState('set')
-  const [stimulusId, setStimulusId] = useState(stimulusSet.measured[0].id)
+  const [stimulusId, setStimulusId] = useState(stimulusSets[0].measured[0].id)
   const [custom, setCustom] = useState({
     seed: 'pilot-1',
     clutter: 'low',
@@ -47,7 +47,7 @@ export default function Phase1PreviewPage() {
   const [code, setCode] = useState('P01')
 
   const stimulus = useMemo(() => {
-    if (source === 'set') return findStimulus(stimulusSet, stimulusId)
+    if (source === 'set') return findStimulus(stimulusSets, stimulusId)
     try {
       const { questionType, band, ...rest } = custom
       const question =
@@ -57,7 +57,7 @@ export default function Phase1PreviewPage() {
       console.error('[GeoScratch] Preview stimulus failed:', err)
       return null
     }
-  }, [source, stimulusSet, stimulusId, custom])
+  }, [source, stimulusSets, stimulusId, custom])
 
   const [scene, setScene] = useState(null)
   const [labelsOff, setLabelsOff] = useState(() => new Set())
@@ -82,7 +82,7 @@ export default function Phase1PreviewPage() {
 
   useEffect(() => () => useSettingsStore.getState().clearExerciseOverrides(), [])
 
-  const sequence = useMemo(() => resolveSequence(code, stimulusSet), [code, stimulusSet])
+  const sequence = useMemo(() => resolveSequence(code, stimulusSets), [code, stimulusSets])
   const bandStyle = probeBandStyle(stimulus)
   const setCustomField = (key) => (e) => setCustom((prev) => ({ ...prev, [key]: e.target.value }))
 

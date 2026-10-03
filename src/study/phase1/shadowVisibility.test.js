@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
 import { OVERHEAD_LIGHT_POSITION } from '@/components/Scene3D/sceneConstants'
 import { shadowOnRoom, shadowVisibleShare, targetShadowVisibility } from './shadowVisibility'
-import { makeStudyCamera, getStudyStimulusSet } from './stimuli'
+import { makeStudyCamera, getStudyStimulusSets } from './stimuli'
 
 const light = new THREE.Vector3(...OVERHEAD_LIGHT_POSITION)
 const camera = makeStudyCamera()
@@ -40,8 +40,7 @@ describe('shadowVisibleShare', () => {
 })
 
 describe('targetShadowVisibility over the stimulus set', () => {
-  const set = getStudyStimulusSet()
-  const all = [...set.practice, ...set.measured]
+  const all = getStudyStimulusSets().flatMap((set) => [...set.practice, ...set.measured])
 
   it('returns a share for both targets of every stimulus', () => {
     for (const s of all) {

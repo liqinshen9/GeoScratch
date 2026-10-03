@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import useAuthStore from '@/store/useAuthStore'
+import useAuthStore, { hasCompletedStudy } from '@/store/useAuthStore'
 import { parseResearchId, parseStudySlot } from '@/study/session/researchId'
 import { buildSessionPlan } from '@/study/session/sessionPlan'
 import { logStudyEvent, recordSessionPlan, sessionContext } from '@/study/session/studyEvents'
@@ -31,6 +31,7 @@ export default function StudyGate({ children }) {
   const status = useAuthStore((s) => s.status)
   const study = useAuthStore((s) => s.study)
   const startStudySession = useAuthStore((s) => s.startStudySession)
+  const finishedResearchId = useAuthStore((s) => s.finishedResearchId)
 
   const [error, setError] = useState(null)
 
@@ -39,8 +40,10 @@ export default function StudyGate({ children }) {
   const linkStarted = useRef(null)
   const ready = status === 'ready' || status === 'offline'
   // Reopening the link resumes this device's session for that ID; any other
-  // session on the device is replaced.
-  const linkPending = link && study?.researchId !== link.researchId
+  // session on the device is replaced. A link this browser already finished
+  // never starts again.
+  const linkCompleted = Boolean(link) && hasCompletedStudy(link.researchId)
+  const linkPending = link && !linkCompleted && study?.researchId !== link.researchId
   useEffect(() => {
     if (!ready || !linkPending || linkStarted.current === link.researchId) return
     linkStarted.current = link.researchId
@@ -48,6 +51,34 @@ export default function StudyGate({ children }) {
       if (!res.ok) setError('Could not start the session. Check the connection and reload.')
     })
   }, [ready, linkPending, link, startStudySession])
+
+  // Before the status checks: finishing signs out, which leaves status idle.
+  if (finishedResearchId) {
+    return (
+      <EndScreen title="All done">
+        Thank you for taking part. Feel free to close this tab.
+      </EndScreen>
+    )
+  }
+  if (linkCompleted) {
+    return (
+      <EndScreen title="Already completed">
+        You have already completed this study on this browser. Thank you for taking part.
+      </EndScreen>
+    )
+  }
+
+  // A deployed study must never run untracked: without the backend nothing is
+  // recorded, and nothing on screen would say so.
+  if (status === 'offline' && !import.meta.env.DEV) {
+    return (
+      <FullScreen>
+        <p className="max-w-md text-center text-base text-muted-foreground">
+          The study is not available right now. Please contact the researcher.
+        </p>
+      </FullScreen>
+    )
+  }
 
   if (status === 'idle' || status === 'signing-in') {
     return (
@@ -94,6 +125,17 @@ export default function StudyGate({ children }) {
         <p className="text-muted-foreground">
           Please open the study link from your invitation email. It starts your session.
         </p>
+      </div>
+    </FullScreen>
+  )
+}
+
+function EndScreen({ title, children }) {
+  return (
+    <FullScreen>
+      <div className="flex max-w-md flex-col gap-3 text-base leading-relaxed">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <p>{children}</p>
       </div>
     </FullScreen>
   )

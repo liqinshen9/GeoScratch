@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import THREE from '@/utils/three'
 import {
   generateStimulusSet,
+  generateStimulus,
   makeStudyCamera,
   targetDepths,
   targetDistances,
@@ -13,6 +14,7 @@ import {
 import {
   DEPTH_SEPARATIONS,
   DISTANCE_RATIOS,
+  PRACTICE_TRIALS_PER_BLOCK,
   DISTANCE_PAIR_TYPES,
   DIFFICULTY_LEVELS,
   VIEWPORT,
@@ -31,6 +33,25 @@ import {
 const set = generateStimulusSet('test-seed')
 const camera = makeStudyCamera()
 const all = [...set.measured, ...set.practice]
+// Distance questions are not in the study set any more, but the generator still
+// supports them: test them on purpose-built stimuli.
+const distanceSamples = DISTANCE_PAIR_TYPES.flatMap((pairType, i) =>
+  DIFFICULTY_LEVELS.map((difficulty, j) =>
+    generateStimulus(
+      {
+        id: `d-${pairType}-${difficulty}`,
+        seed: `distance-sample:${pairType}:${difficulty}`,
+        clutter: CLUTTER_LEVELS[(i + j) % 2],
+        difficulty,
+        pairType,
+        question: { type: 'distance' },
+        nearer: (i + j) % 2 ? 'A' : 'B',
+        nearerHigher: i % 2 === 0,
+      },
+      camera,
+    ),
+  ),
+)
 const ndcDist = (p, [x, y]) => {
   const n = toNdc(camera, p)
   return Math.hypot(n.x - x, n.y - y)
@@ -67,12 +88,12 @@ describe('generateStimulusSet', () => {
     expect(() => generateStimulusSet(STUDY_STIMULUS_SEED)).not.toThrow()
   })
 
-  it('has 9 measured stimuli per clutter level with the configured difficulty split', () => {
-    expect(set.measured).toHaveLength(18)
-    expect(set.practice).toHaveLength(4)
+  it('has 6 measured stimuli per clutter level with the configured difficulty split', () => {
+    expect(set.measured).toHaveLength(12)
+    expect(set.practice).toHaveLength(PRACTICE_TRIALS_PER_BLOCK)
     for (const clutter of CLUTTER_LEVELS) {
       const group = set.measured.filter((s) => s.clutter === clutter)
-      expect(group).toHaveLength(9)
+      expect(group).toHaveLength(6)
       for (const [level, count] of Object.entries(MEASURED_DIFFICULTY_COUNTS[clutter])) {
         expect(group.filter((s) => s.difficulty === level)).toHaveLength(count)
       }
@@ -110,9 +131,6 @@ describe('generateStimulusSet', () => {
     )
     expect(countBy(byType('proximity'), (s) => s.pairType)).toEqual(
       Object.fromEntries(PAIR_TYPES.map((p) => [p, 1])),
-    )
-    expect(countBy(byType('distance'), (s) => s.pairType)).toEqual(
-      Object.fromEntries(DISTANCE_PAIR_TYPES.map((p) => [p, 6 / DISTANCE_PAIR_TYPES.length])),
     )
   })
 
@@ -166,7 +184,7 @@ describe('each stimulus', () => {
   })
 
   it('puts a distance question in its ratio, with ground truth matching the geometry', () => {
-    for (const s of all.filter((s) => s.question.type === 'distance')) {
+    for (const s of distanceSamples) {
       const d = targetDistances(s)
       const ratio = Math.max(d.A, d.B) / Math.min(d.A, d.B)
       expect(ratio, s.id).toBeCloseTo(DISTANCE_RATIOS[s.difficulty], 1)
@@ -184,7 +202,7 @@ describe('each stimulus', () => {
   })
 
   it('keeps the three labelled points of a distance question apart on screen', () => {
-    for (const s of all.filter((s) => s.question.type === 'distance')) {
+    for (const s of distanceSamples) {
       const [a, b, c] = [s.anchorsNdc.A, s.anchorsNdc.B, s.probeNdc]
       for (const [p, q] of [
         [a, b],
@@ -199,7 +217,7 @@ describe('each stimulus', () => {
   })
 
   it('never lets the screen give a distance question away', () => {
-    for (const s of all.filter((s) => s.question.type === 'distance')) {
+    for (const s of distanceSamples) {
       const c = { x: s.probeNdc[0], y: s.probeNdc[1] }
       const target = (key) => s.objects.find((o) => o.key === key)
       const far = s.nearer === 'A' ? 'B' : 'A'

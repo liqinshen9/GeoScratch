@@ -6,7 +6,7 @@ import useAuthStore from '@/store/useAuthStore'
 import useSettingsStore from '@/store/useSettingsStore'
 import usePhase1TrackingStore from '@/store/usePhase1TrackingStore'
 import { getTechnique } from '@/study/phase1/conditions'
-import { getStudyStimulusSet, findStimulus } from '@/study/phase1/stimuli'
+import { getStudyStimulusSets, findStimulus } from '@/study/phase1/stimuli'
 import { resolveSequence } from '@/study/phase1/sequence'
 import useStudySession from '@/study/session/useStudySession'
 import { STEP_KINDS } from '@/study/session/sessionPlan'
@@ -76,17 +76,17 @@ export default function StudyPhase1Page() {
   )
   const session = useStudySession()
   const slot = session.study?.slot ?? null
-  const stimulusSet = useMemo(() => getStudyStimulusSet(), [])
+  const stimulusSets = useMemo(() => getStudyStimulusSets(), [])
   const sequence = useMemo(
-    () => resolveSequence(participantCode, stimulusSet, slot),
-    [participantCode, stimulusSet, slot],
+    () => resolveSequence(participantCode, stimulusSets, slot),
+    [participantCode, stimulusSets, slot],
   )
   return (
     <Phase1Session
       key={participantCode}
       participantCode={participantCode}
       sequence={sequence}
-      stimulusSet={stimulusSet}
+      stimulusSets={stimulusSets}
       session={session.plan ? session : null}
     />
   )
@@ -105,7 +105,7 @@ function resumeCursor(participantCode, sessionBlockIndex) {
   return saved
 }
 
-function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
+function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
   const navigate = useNavigate()
   const sessionStep = session?.step
   const sessionBlockIndex =
@@ -156,7 +156,7 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
     labelTogglesRef.current = 0
     setLabelsOff(new Set())
     useSettingsStore.getState().setExerciseOverrides(technique.settings)
-    const stimulus = findStimulus(stimulusSet, trial.stimulusId)
+    const stimulus = findStimulus(stimulusSets, trial.stimulusId)
     try {
       setTrialScene({ ...buildStimulusScene(stimulus), stimulus, trial })
     } catch (err) {
@@ -166,7 +166,7 @@ function Phase1Session({ participantCode, sequence, stimulusSet, session }) {
     const wait = Math.max(0, FIXATION_MS - (performance.now() - startedAt))
     const timer = setTimeout(() => dispatch({ type: FLOW_ACTIONS.FIXATION_DONE }), wait)
     return () => clearTimeout(timer)
-  }, [state.status, trial, technique, stimulusSet])
+  }, [state.status, trial, technique, stimulusSets])
 
   useEffect(() => {
     if (state.status !== FLOW.FEEDBACK) return
@@ -530,12 +530,6 @@ function Intro({ blockCount, canStart, onStart }) {
           <strong>closer to you</strong> inside that band. A line runs on for ever, so the question
           is only ever about that one place.
         </p>
-        <p>
-          Some trials add <strong>Point C</strong>, sitting on a line, and ask which of{' '}
-          <strong>A</strong> and <strong>B</strong> is <strong>closer to C</strong> in space, not on
-          the screen. For a line that means its nearest point, for a sphere its surface, and for a
-          vector its tip.
-        </p>
         <div className="flex gap-3">{next}</div>
       </Overlay>
     )
@@ -590,7 +584,7 @@ function Intro({ blockCount, canStart, onStart }) {
         with your best guess.
       </p>
       <p>
-        There are {blockCount} blocks. The first few trials of each block are practice and tell you
+        There are {blockCount} blocks. The first two trials of each block are practice and tell you
         whether you were right.
       </p>
       <div className="flex gap-3">

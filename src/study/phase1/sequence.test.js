@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { resolveSequence } from './sequence'
 import { TECHNIQUE_IDS } from './conditions'
 import { williamsSquare } from './williams'
+import { STIMULUS_SET_COUNT } from './stimulusConfig'
 
 const stimulusSet = {
   seed: 'fake',
@@ -43,5 +44,42 @@ describe('resolveSequence with a slot', () => {
     expect(sequence.squareRow).toBe(2)
     expect(sequence.slot).toBe(21)
     expect(sequence.techniqueOrder).toEqual(williamsSquare(9)[2].map((i) => TECHNIQUE_IDS[i]))
+  })
+})
+
+describe('resolveSequence with one set per block position', () => {
+  const sets = Array.from({ length: STIMULUS_SET_COUNT }, (_, k) => ({
+    seed: `set${k + 1}`,
+    practice: [{ id: `s${k + 1}-p-01` }],
+    measured: [{ id: `s${k + 1}-m-01` }, { id: `s${k + 1}-m-02` }],
+  }))
+
+  it('has one set per condition', () => {
+    expect(STIMULUS_SET_COUNT).toBe(TECHNIQUE_IDS.length)
+  })
+
+  it('draws block k from set k, so no scene repeats', () => {
+    const sequence = resolveSequence('K7QX3M', sets, 4)
+    sequence.blocks.forEach((block, k) => {
+      expect(block.stimulusSetSeed).toBe(`set${k + 1}`)
+      expect(block.trials.every((t) => t.stimulusId.startsWith(`s${k + 1}-`))).toBe(true)
+    })
+    const ids = sequence.blocks.flatMap((b) => b.trials.map((t) => t.stimulusId))
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('pairs every set with every technique equally often over a full rotation', () => {
+    const rows = williamsSquare(TECHNIQUE_IDS.length).length
+    const pairs = {}
+    for (let slot = 1; slot <= rows; slot++) {
+      const sequence = resolveSequence(`P${slot}`, sets, slot)
+      for (const block of sequence.blocks) {
+        const key = `${block.stimulusSetSeed}/${block.technique}`
+        pairs[key] = (pairs[key] ?? 0) + 1
+      }
+    }
+    const counts = Object.values(pairs)
+    expect(counts).toHaveLength(STIMULUS_SET_COUNT * TECHNIQUE_IDS.length)
+    expect(new Set(counts)).toEqual(new Set([rows / TECHNIQUE_IDS.length]))
   })
 })

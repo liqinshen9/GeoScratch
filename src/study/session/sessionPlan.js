@@ -105,6 +105,12 @@ export function surveyUrl(step, { cohort } = {}) {
   return url.toString()
 }
 
+/**
+ * How long the end screen waits before finishStudy signs the browser out, so the
+ * last logged events (the final survey's return, session_complete) have landed.
+ */
+export const STUDY_FINISH_DELAY_MS = 3000
+
 export const initialCursor = () => ({ stepIndex: 0, awaiting: null, startedAt: {} })
 
 /** Leave `stepIndex`. A stale completion (the cursor has moved on) is ignored. */

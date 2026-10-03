@@ -17,7 +17,12 @@ import THREE from '@/utils/three'
 import '@/store/useSettingsStore'
 import { getLabelVisibilityKeysForObject } from '@/components/Scene3D/labels/labelData'
 import { buildStimulusScene } from './buildStimulusScene'
-import { generateStimulusSet, getStudyStimulusSet, targetLabelAnchor } from './stimuli'
+import {
+  generateStimulus,
+  generateStimulusSet,
+  getStudyStimulusSets,
+  targetLabelAnchor,
+} from './stimuli'
 import { blockIdFor } from './stimulusToXml'
 
 beforeAll(() => {
@@ -37,7 +42,17 @@ beforeAll(() => {
 
 const set = generateStimulusSet('scene-seed')
 const stimulus = set.measured.find((s) => s.objects.filter((o) => o.kind === 'line').length >= 2)
-const distanceStimulus = set.measured.find((s) => s.question.type === 'distance')
+// Not in the study set any more; generated on purpose to keep C's label covered.
+const distanceStimulus = generateStimulus({
+  id: 'd-scene',
+  seed: 'scene-seed:distance',
+  clutter: 'low',
+  difficulty: 'easy',
+  pairType: 'vector-line',
+  question: { type: 'distance' },
+  nearer: 'A',
+  nearerHigher: true,
+})
 const withVector = set.measured.find((s) =>
   s.objects.some((o) => o.role === 'target' && o.kind === 'vector'),
 )
@@ -89,11 +104,10 @@ describe('buildStimulusScene', () => {
 // those conditions exactly like T1.
 describe('collision accents', () => {
   it('gives every stimulus in the study set a line passing through a solid', () => {
-    const studySet = getStudyStimulusSet()
-    for (const s of [...studySet.measured, ...studySet.practice]) {
+    for (const s of getStudyStimulusSets().flatMap((set) => [...set.measured, ...set.practice])) {
       const { objects } = buildStimulusScene(s)
       const accented = objects.filter((o) => o.userData?.hasCollisionAccent)
       expect(accented.length, `${s.id} (${s.pairType})`).toBeGreaterThan(0)
     }
-  })
+  }, 60_000)
 })

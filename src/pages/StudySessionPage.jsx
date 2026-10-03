@@ -5,7 +5,8 @@ import { FullScreen } from '@/components/StudyGate/StudyGate'
 import useStudySession from '@/study/session/useStudySession'
 import { useStudyDevTools } from '@/study/session/devTools'
 import useAuthStore from '@/store/useAuthStore'
-import { STEP_KINDS, surveyUrl } from '@/study/session/sessionPlan'
+import { STEP_KINDS, STUDY_FINISH_DELAY_MS, surveyUrl } from '@/study/session/sessionPlan'
+import { logStudyEvent } from '@/study/session/studyEvents'
 import { holisticTaskCapMs, RENDER_MODES } from '@/study/session/holistic'
 import { getExercise } from '@/data/exercises'
 
@@ -32,6 +33,15 @@ export default function StudySessionPage() {
   useEffect(() => {
     if (surveyStepIndex != null) start(surveyStepIndex)
   }, [surveyStepIndex, start])
+
+  // The last step ends the study on this browser (useAuthStore.finishStudy).
+  const finished = step?.kind === STEP_KINDS.DONE
+  useEffect(() => {
+    if (!finished) return undefined
+    logStudyEvent('session_complete')
+    const timer = setTimeout(() => useAuthStore.getState().finishStudy(), STUDY_FINISH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [finished])
 
   if (!plan || !step) return null
 

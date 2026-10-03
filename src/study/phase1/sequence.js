@@ -2,7 +2,7 @@ import { createRng } from './prng'
 import { williamsSquare, participantRow } from './williams'
 import { TECHNIQUE_IDS } from './conditions'
 
-export const SEQUENCE_VERSION = 3
+export const SEQUENCE_VERSION = 4
 
 /** The Williams row and the technique order it gives, without building trials. */
 export function resolveTechniqueOrder(participantCode, slot = null) {
@@ -13,16 +13,21 @@ export function resolveTechniqueOrder(participantCode, slot = null) {
 
 /**
  * A participant's full Phase 1 sequence, derived only from their code, their
- * counterbalancing slot and the stimulus set: technique order from the
- * Williams square, then per block the
- * practice stimuli followed by the measured stimuli, each shuffled by a seed
- * that includes the block index. The resolved object is also stored on the
- * profile so analysis never depends on this function staying unchanged.
+ * counterbalancing slot and the stimulus sets: technique order from the
+ * Williams square, then per block the practice stimuli followed by the
+ * measured stimuli of that block position's set (block k uses set k), each
+ * shuffled by a seed that includes the block index. The resolved object is also
+ * stored on the profile so analysis never depends on this function staying
+ * unchanged. See docs/architecture/study-phase1.md#stimulus-sets.
+ *
+ * @param {object|object[]} stimulusSets  one set per block position, or one set for every block
  */
-export function resolveSequence(participantCode, stimulusSet, slot = null) {
+export function resolveSequence(participantCode, stimulusSets, slot = null) {
+  const sets = [stimulusSets].flat()
   const { squareRow, techniqueOrder } = resolveTechniqueOrder(participantCode, slot)
 
   const blocks = techniqueOrder.map((technique, blockIndex) => {
+    const stimulusSet = sets[blockIndex % sets.length]
     const rng = createRng(`${participantCode}:phase1:block${blockIndex}`)
     const practice = rng.shuffle(stimulusSet.practice.map((s) => s.id))
     const measured = rng.shuffle(stimulusSet.measured.map((s) => s.id))
@@ -30,7 +35,7 @@ export function resolveSequence(participantCode, stimulusSet, slot = null) {
       ...practice.map((stimulusId) => ({ stimulusId, practice: true })),
       ...measured.map((stimulusId) => ({ stimulusId, practice: false })),
     ].map((trial, trialIndex) => ({ ...trial, trialIndex }))
-    return { blockIndex, technique, trials }
+    return { blockIndex, technique, stimulusSetSeed: stimulusSet.seed, trials }
   })
 
   return {
@@ -38,7 +43,7 @@ export function resolveSequence(participantCode, stimulusSet, slot = null) {
     participantCode,
     slot,
     squareRow,
-    stimulusSetSeed: stimulusSet.seed,
+    stimulusSetSeeds: sets.map((set) => set.seed),
     techniqueOrder,
     blocks,
   }

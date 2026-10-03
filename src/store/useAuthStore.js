@@ -13,6 +13,7 @@ import useWorkspaceStore from '@/store/useWorkspaceStore'
 const CODE_STORAGE_KEY = 'geoscratch:participantCode'
 const COHORT_STORAGE_KEY = 'geoscratch:cohort'
 const STUDY_STORAGE_KEY = 'geoscratch:studyIdentity'
+const COMPLETED_STORAGE_KEY = 'geoscratch:studyCompleted'
 
 function loadStored(key, label) {
   if (typeof window === 'undefined') return null
@@ -59,6 +60,20 @@ function resolveCohort() {
   return fromUrl || normalizeCohort(loadStoredCohort() || '') || null
 }
 
+function loadCompleted() {
+  try {
+    const list = JSON.parse(loadStored(COMPLETED_STORAGE_KEY, 'completed studies') || '[]')
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
+
+/** Whether this browser has already finished the study under `researchId`. */
+export function hasCompletedStudy(researchId) {
+  return Boolean(researchId) && loadCompleted().includes(researchId)
+}
+
 function initialCohort() {
   const cohort = resolveCohort()
   if (cohort) storeCohort(cohort)
@@ -87,6 +102,8 @@ const useAuthStore = create((set, get) => ({
   // { slot, researchId } of the /study session on this device. Local
   // only: a session resumes on the device it started on, never by lookup.
   study: loadStoredStudy(),
+  /** Set by finishStudy for the rest of this page's life, so the end screen stays up. */
+  finishedResearchId: null,
 
   /** Idempotent. Safe to call from Layout's mount effect. */
   bootstrap: async () => {
@@ -212,6 +229,33 @@ const useAuthStore = create((set, get) => ({
         })
     }
     return { ok: true, researchId }
+  },
+
+  /**
+   * End the study on this browser at its last step: remember the research ID as
+   * completed, so reopening the link does not start a second session, then
+   * forget the ID, cohort and anonymous login, so using GeoScratch afterwards
+   * is not logged under that ID. See docs/architecture/study-session.md#finishing.
+   */
+  finishStudy: async () => {
+    const researchId = get().study?.researchId
+    if (!researchId) return
+    persistStored(
+      COMPLETED_STORAGE_KEY,
+      JSON.stringify([...new Set([...loadCompleted(), researchId])]),
+      'completed studies',
+    )
+    storeCode(null)
+    storeStudy(null)
+    storeCohort(null)
+    set({ participantCode: null, study: null, cohort: null, finishedResearchId: researchId })
+    if (!isSupabaseConfigured) return
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('[GeoScratch] Sign-out failed:', err)
+    }
+    set({ status: 'idle', session: null, userId: null, profile: null })
   },
 
   /** Forget this device's participant: a new anonymous user, no code, no study. */
