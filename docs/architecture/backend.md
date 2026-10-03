@@ -75,18 +75,31 @@ how dev data is excluded at export time.
 
 ## Client pieces
 
-| File                               | Role                                                               |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| `src/lib/supabaseClient.js`        | the client + `isSupabaseConfigured`                                |
-| `src/store/useAuthStore.js`        | `bootstrap()` (anon sign-in, `?c=` cohort), `setParticipantCode()` |
-| `src/components/ParticipantGate/`  | blocks all routes until a code is set; "tracking off" badge        |
-| `src/store/useTrackingStore.js`    | writes `exercise_attempts`                                         |
-| `src/hooks/useExerciseTracking.js` | drives the store from `ExercisePage`                               |
-| `src/lib/attemptPayload.js`        | pure row builders (unit-tested)                                    |
-| `src/lib/workspaceSync.js`         | Phase 2 snapshot pull/push                                         |
+| File                               | Role                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------- |
+| `src/lib/supabaseClient.js`        | the client + `isSupabaseConfigured`                                   |
+| `src/store/useAuthStore.js`        | `bootstrap()` (anon sign-in, `?c=` cohort), `setParticipantCode()`    |
+| `src/components/ParticipantGate/`  | during a study, holds routes until auth settles; "tracking off" badge |
+| `src/store/useTrackingStore.js`    | writes `exercise_attempts`                                            |
+| `src/hooks/useExerciseTracking.js` | drives the store from `ExercisePage`                                  |
+| `src/lib/attemptPayload.js`        | pure row builders (unit-tested)                                       |
+| `src/lib/workspaceSync.js`         | Phase 2 snapshot pull/push                                            |
 
-`Layout.jsx` calls `bootstrap()` once on mount and wraps `<Outlet />` in
+`Layout.jsx` calls `bootstrap({ studyOnly: true })` and wraps `<Outlet />` in
 `<ParticipantGate>`.
+
+### Who is tracked
+
+Only study participants. Outside a study session the normal app signs nobody
+in: `bootstrap({ studyOnly: true })` sees no stored study identity and sets
+status `untracked`, which every consumer treats as settled-but-not-syncing
+(`isAuthSettled`), so autosave restores locally and nothing is written.
+`/study` signs in only when the URL carries a study link (`?id=`) or a session
+is already running on the browser. Starting a session reuses that fresh
+anonymous login and only signs out first if the browser still carries an
+earlier participant, so each participant leaves one profile row. Before this,
+every visitor to the site (and every link start, twice) created an anonymous
+user and a profile.
 
 ### Attempt lifecycle
 

@@ -138,9 +138,10 @@ and per-attempt logging for user studies. It is **off unless
 them `isSupabaseConfigured` is false and the app behaves exactly as before, with
 a small "tracking off" badge.
 
-- Identity is anonymous sign-in + a participant code. `ParticipantGate` (in
-  `Layout`) blocks every route until a code is set. A new device is a new user;
-  the code is an analysis join key, not a login.
+- Identity is anonymous sign-in + a participant code, and only for study
+  participants: outside a study session the app signs nobody in and logs
+  nothing (status `untracked`). A new device is a new user; the code is an
+  analysis join key, not a login.
 - `useExerciseTracking` in `ExercisePage` writes `exercise_attempts` (row per
   exercise open, updated on pass / MCQ pick / unmount). Pure row builders are in
   `src/lib/attemptPayload.js`.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import useTrackingStore from '@/store/useTrackingStore'
-import useAuthStore from '@/store/useAuthStore'
+import useAuthStore, { isAuthSettled } from '@/store/useAuthStore'
 
 function newOpenId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
@@ -33,7 +33,7 @@ export function useExerciseTracking(exerciseNumber, exerciseKind) {
   // One id per logical "exercise open". Regenerated when the exercise changes or
   // auth settles; stable across a StrictMode double-mount, so the store can
   // ignore the duplicate startAttempt call.
-  const authSettled = authStatus === 'ready' || authStatus === 'offline' || authStatus === 'error'
+  const authSettled = isAuthSettled(authStatus)
   const openId = useMemo(newOpenId, [exerciseNumber, exerciseKind, authSettled])
 
   useEffect(() => {

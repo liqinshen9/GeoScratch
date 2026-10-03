@@ -21,9 +21,11 @@ export default function Layout() {
       ? `/exercise/${studyTask.exerciseId}`
       : '/study'
 
+  // Outside a study session the normal app signs nobody in and logs nothing.
+  const inStudy = useAuthStore((s) => Boolean(s.study))
   useEffect(() => {
-    useAuthStore.getState().bootstrap()
-  }, [])
+    useAuthStore.getState().bootstrap({ studyOnly: true })
+  }, [inStudy])
 
   return (
     <ParticipantGate>

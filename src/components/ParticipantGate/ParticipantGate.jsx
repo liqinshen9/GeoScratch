@@ -21,6 +21,8 @@ export default function ParticipantGate({ children }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
+  if (status === 'untracked') return children
+
   if (status === 'offline') {
     return (
       <>

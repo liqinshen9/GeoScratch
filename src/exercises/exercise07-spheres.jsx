@@ -120,6 +120,11 @@ function isSphereRadiusSumBlock(block) {
   )
 }
 
+function hasSphereRadiusSumBlock(workspace) {
+  if (!workspace) return false
+  return workspace.getBlocksByType('scalar_arithmetic', false).some(isSphereRadiusSumBlock)
+}
+
 function getCenterMinusOneRadius(block) {
   if (block?.type !== 'scalar_arithmetic' || block.getFieldValue('OP') !== 'subtract') return null
   if (!isSphereCenterMagnitudeBlock(getInputBlock(block, 'A'))) return null
@@ -205,8 +210,11 @@ function Steps({ steps, passed }) {
       <li className={steps.magnitude ? 'is-complete' : ''}>
         Compute: the Vector Magnitude of VB - VA. This is the distance between the centres.
       </li>
+      <li className={steps.radii ? 'is-complete' : ''}>
+        Compute: rA + rB with the Scalar Arithmetic block. This is the sum of the two radii.
+      </li>
       <li className={steps.distance ? 'is-complete' : ''}>
-        Compute: |VB - VA| - (rA + rB) with the Scalar Arithmetic block. This is the distance
+        Compute: |VB - VA| - (rA + rB) with another Scalar Arithmetic block. This is the distance
         between the spheres.
       </li>
     </ol>
@@ -266,6 +274,9 @@ function evaluate({ objects, workspace }) {
       spheres: hasSphereBlocks(workspace),
       difference: hasSphereCenterDifferenceBlock(workspace),
       magnitude: hasSphereCenterMagnitudeBlock(workspace),
+      // Subtracting each radius in turn is also accepted; it never builds rA + rB,
+      // so a passed solution counts this step done too.
+      radii: hasSphereRadiusSumBlock(workspace) || passed,
       distance: hasSphereScalarDistanceBlock(workspace) && passed,
     },
   }

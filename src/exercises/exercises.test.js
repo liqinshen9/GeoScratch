@@ -513,8 +513,21 @@ describe('exercise 7 (distance between spheres)', () => {
       spheres: true,
       difference: true,
       magnitude: true,
+      radii: true,
       distance: true,
     })
+  })
+
+  it('ticks the radius sum on its own, before the final subtraction', () => {
+    const radiusSum = fakeBlock(
+      'scalar_arithmetic',
+      { OP: 'add' },
+      { A: scalar(0.9), B: scalar(1.3) },
+    )
+    const result = mod.evaluate({ objects: [], workspace: fakeWorkspace([radiusSum]) })
+
+    expect(result.steps.radii).toBe(true)
+    expect(result.steps.distance).toBe(false)
   })
 
   it('reads the answer from the radius-subtracting block, not any loose scalar', () => {

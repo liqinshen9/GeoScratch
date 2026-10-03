@@ -16,6 +16,10 @@ function makeSupabase() {
         return { data: { session: state.session }, error: null }
       }),
       onAuthStateChange: vi.fn(),
+      signOut: vi.fn(async () => {
+        state.session = null
+        return { error: null }
+      }),
     },
     from(table) {
       return {
@@ -63,6 +67,54 @@ describe('useAuthStore', () => {
     state.profile = { id: 'anon-1', participant_code: null, user_agent: null, cohort: null }
     state.updateError = null
     state.supabase = makeSupabase()
+  })
+
+  it('leaves the normal app untracked outside a study session', async () => {
+    const store = await freshStore()
+    await store.getState().bootstrap({ studyOnly: true })
+
+    expect(state.supabase.auth.signInAnonymously).not.toHaveBeenCalled()
+    expect(store.getState().status).toBe('untracked')
+  })
+
+  it('signs the normal app in while a study session is active', async () => {
+    window.localStorage.setItem(
+      'geoscratch:studyIdentity',
+      JSON.stringify({ slot: 1, researchId: 'K7QX3M' }),
+    )
+    const store = await freshStore()
+    await store.getState().bootstrap({ studyOnly: true })
+
+    expect(state.supabase.auth.signInAnonymously).toHaveBeenCalledOnce()
+    expect(store.getState().status).toBe('ready')
+  })
+
+  it('still signs in for a study link after the normal app went untracked', async () => {
+    const store = await freshStore()
+    await store.getState().bootstrap({ studyOnly: true })
+    await store.getState().bootstrap()
+
+    expect(state.supabase.auth.signInAnonymously).toHaveBeenCalledOnce()
+    expect(store.getState().status).toBe('ready')
+  })
+
+  it('starts a study session on the fresh login, leaving no empty profile', async () => {
+    const store = await freshStore()
+    await store.getState().bootstrap()
+    await store.getState().startStudySession({ slot: 2, researchId: 'K7QX3M' })
+
+    expect(state.supabase.auth.signOut).not.toHaveBeenCalled()
+    expect(state.supabase.auth.signInAnonymously).toHaveBeenCalledOnce()
+    expect(store.getState().participantCode).toBe('K7QX3M')
+  })
+
+  it("replaces a previous participant's login before starting a session", async () => {
+    state.profile = { id: 'anon-1', participant_code: 'OLD123', user_agent: 'x', cohort: null }
+    const store = await freshStore()
+    await store.getState().bootstrap()
+    await store.getState().startStudySession({ slot: 2, researchId: 'K7QX3M' })
+
+    expect(state.supabase.auth.signOut).toHaveBeenCalledOnce()
   })
 
   it('signs in anonymously and becomes ready', async () => {

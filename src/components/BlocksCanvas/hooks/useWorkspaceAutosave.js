@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as Blockly from 'blockly/core'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
-import useAuthStore from '@/store/useAuthStore'
+import useAuthStore, { isAuthSettled } from '@/store/useAuthStore'
 import setupChangeListener from '@/utils/setupChangeListener'
 import { shouldSync, chooseSnapshot, fetchSnapshot, pushSnapshot } from '@/lib/workspaceSync'
 import { applyMyBlockColours } from '@/components/BlocksCanvas/blocks/myBlockAppearance'
@@ -38,8 +38,8 @@ export function useWorkspaceAutosave(workspace, id, syncScene) {
     if (!workspace || !workspace.rendered || !id) return
 
     // Hold the first-load restore until auth has settled, so a cloud snapshot
-    // (if any) can win. 'offline' / 'error' proceed with local only.
-    const authSettled = authStatus === 'ready' || authStatus === 'offline' || authStatus === 'error'
+    // (if any) can win. 'offline' / 'error' / 'untracked' proceed with local only.
+    const authSettled = isAuthSettled(authStatus)
 
     let cancelled = false
 

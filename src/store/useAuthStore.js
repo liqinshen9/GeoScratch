@@ -74,6 +74,11 @@ export function hasCompletedStudy(researchId) {
   return Boolean(researchId) && loadCompleted().includes(researchId)
 }
 
+/** Whether auth has finished deciding, so a restore or a tracked write can go ahead. */
+export function isAuthSettled(status) {
+  return ['ready', 'offline', 'error', 'untracked'].includes(status)
+}
+
 function initialCohort() {
   const cohort = resolveCohort()
   if (cohort) storeCohort(cohort)
@@ -90,7 +95,8 @@ async function fetchProfile(userId) {
 }
 
 const useAuthStore = create((set, get) => ({
-  // 'idle' -> 'signing-in' -> 'ready', or 'offline' when unconfigured, or 'error'
+  // 'idle' -> 'signing-in' -> 'ready', or 'offline' when unconfigured, or 'error',
+  // or 'untracked' for the normal app outside a study session
   status: isSupabaseConfigured ? 'idle' : 'offline',
   session: null,
   userId: null,
@@ -105,13 +111,21 @@ const useAuthStore = create((set, get) => ({
   /** Set by finishStudy for the rest of this page's life, so the end screen stays up. */
   finishedResearchId: null,
 
-  /** Idempotent. Safe to call from Layout's mount effect. */
-  bootstrap: async () => {
+  /**
+   * Idempotent. With `studyOnly` (the normal app shell), sign in only while a
+   * study session is active on this browser; otherwise the app runs untracked,
+   * as if there were no study. See docs/architecture/backend.md#who-is-tracked.
+   */
+  bootstrap: async ({ studyOnly = false } = {}) => {
     if (!isSupabaseConfigured) {
       set({ status: 'offline' })
       return
     }
-    if (get().status !== 'idle') return
+    if (studyOnly && !get().study) {
+      if (get().status === 'idle') set({ status: 'untracked' })
+      return
+    }
+    if (get().status !== 'idle' && get().status !== 'untracked') return
     set({ status: 'signing-in' })
 
     try {
@@ -208,7 +222,10 @@ const useAuthStore = create((set, get) => ({
     // exercises. Otherwise a previous participant on a lab machine (or a dev
     // who opened those exercises) leaks a profile, cloud snapshots or local
     // autosaves into this participant's holistic tasks.
-    await get().resetIdentity()
+    // Only a browser already carrying a participant needs a new login: a fresh
+    // anonymous user (the one signed in to open this link) is reused, so starting
+    // a session leaves no empty profile behind.
+    if (get().participantCode || get().profile?.participant_code) await get().resetIdentity()
     useWorkspaceStore.getState().clearSavedWorkspaces(HOLISTIC_TASKS.map((id) => `exercise-${id}`))
 
     const res = await get().setParticipantCode(researchId)

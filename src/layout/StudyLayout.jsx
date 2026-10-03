@@ -9,11 +9,14 @@ import useAuthStore from '@/store/useAuthStore'
 // showcase and pivot-diagrams pages skip the session gate.
 export default function StudyLayout() {
   useThemeSync()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
 
+  // Sign in only for a study link or a session already running here, so
+  // opening /study by itself creates no profile.
+  const hasLink = new URLSearchParams(search).has('id')
   useEffect(() => {
-    useAuthStore.getState().bootstrap()
-  }, [])
+    useAuthStore.getState().bootstrap({ studyOnly: !hasLink })
+  }, [hasLink])
 
   const content = (
     <main className="flex min-h-screen flex-col">
