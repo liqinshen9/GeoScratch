@@ -90,8 +90,7 @@ const WORKING_GIVENS = {
   [IDS.teapot]: teapotXml(-760, -300),
   [IDS.l1]: lineXml(IDS.l1, L1.point, L1.direction, -760, -60),
 }
-// Given and decorative blocks the student only looks at: reset on every entry,
-// so a layout change here reaches saved workspaces.
+// Reference blocks are regenerated on entry, retaining their saved positions.
 // Kept to the decoration the cues need: a sphere on N (a collision accent).
 const FIXED_BLOCKS = xml(`
   ${lineXml(IDS.l2, L2_POINT, L2_DIRECTION, -760, 120)}
@@ -115,13 +114,48 @@ function addMissingWorkingGivens(workspace) {
 }
 
 function seedWorkspace(workspace) {
+  const fresh = !workspace.getTopBlocks(false).length
+  const positions = new Map(
+    FIXED_IDS.map((id) => [id, workspace.getBlockById(id)?.getRelativeToSurfaceXY()]),
+  )
   seedBackgroundBlocks(workspace, [...FIXED_IDS, ...RETIRED_IDS], FIXED_BLOCKS)
+  positions.forEach((position, id) => {
+    const block = workspace.getBlockById(id)
+    if (!position || !block) return
+    const current = block.getRelativeToSurfaceXY()
+    block.moveBy(position.x - current.x, position.y - current.y)
+  })
   addMissingWorkingGivens(workspace)
+  if (fresh) {
+    Blockly.renderManagement.finishQueuedRenders().then(() => {
+      if (!workspace.rendered || !workspace.getParentSvg()?.isConnected) return
+      let x = 60
+      for (const ids of [Object.keys(WORKING_GIVENS), FIXED_IDS]) {
+        let y = 60
+        let width = 0
+        for (const id of ids) {
+          const block = workspace.getBlockById(id)
+          if (!block || block.getParent()) continue
+          const bounds = block.getBoundingRectangle()
+          block.moveBy(x - bounds.left, y - bounds.top)
+          y += bounds.getHeight() + 48
+          width = Math.max(width, bounds.getWidth())
+        }
+        x += width + 100
+      }
+      workspace.zoomToFit()
+      workspace.setScale(Math.min(workspace.scale, 0.72))
+      workspace.scrollCenter()
+    })
+  }
 }
 
-// Also after Clear, or a restore of a workspace saved before these givens
-// existed: every given comes back, and none is moved.
+// Restore missing givens without pulling existing blocks out of student pipelines.
 function ensureWorkspace(workspace) {
+  if (!workspace.getTopBlocks(false).length) {
+    seedWorkspace(workspace)
+    return
+  }
   addMissingWorkingGivens(workspace)
   const missingFixed = FIXED_IDS.some((id) => !workspace.getBlockById(id))
   const retiredPresent = RETIRED_IDS.some((id) => workspace.getBlockById(id))

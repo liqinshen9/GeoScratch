@@ -5,6 +5,7 @@ import useAuthStore, { isAuthSettled } from '@/store/useAuthStore'
 import setupChangeListener from '@/utils/setupChangeListener'
 import { shouldSync, chooseSnapshot, fetchSnapshot, pushSnapshot } from '@/lib/workspaceSync'
 import { applyMyBlockColours } from '@/components/BlocksCanvas/blocks/myBlockAppearance'
+import { DEFAULT_WORKSPACE_SCALE } from '@/components/BlocksCanvas/core/Workspace'
 
 const CLOUD_PUSH_DELAY_MS = 3000
 
@@ -51,6 +52,7 @@ export function useWorkspaceAutosave(workspace, id, syncScene) {
         if (cancelled) return
       }
       const xml = chooseSnapshot({ local: localXml, cloud })
+      let restored = false
       if (xml && workspace.rendered) {
         try {
           // Events off while loading, so restoring does not immediately trigger
@@ -60,11 +62,19 @@ export function useWorkspaceAutosave(workspace, id, syncScene) {
           Blockly.Xml.clearWorkspaceAndLoadFromXml(dom, workspace)
           applyMyBlockColours(workspace)
           syncScene(workspace)
+          restored = true
         } catch (err) {
           console.error('[GeoScratch] Failed to restore workspace state:', err)
         } finally {
           Blockly.Events.enable()
         }
+      }
+      if (restored) {
+        await Blockly.renderManagement.finishQueuedRenders()
+        if (cancelled || !workspace.getParentSvg()?.isConnected) return
+        workspace.zoomToFit()
+        workspace.setScale(Math.min(workspace.scale * 0.97, DEFAULT_WORKSPACE_SCALE))
+        workspace.scrollCenter()
       }
     }
 

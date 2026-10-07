@@ -92,6 +92,11 @@ not "duplicate".
   save listener and echo straight back to the store.
 - Restore reads through `getState()`, not a subscription, so the component
   doesn't re-render on every block move.
+- After a restore, wait for queued renders, then fit and centre the content,
+  capped at the default zoom, with a small margin for rendered SVG edges. The
+  mount-time centre ran before any blocks were
+  loaded, so returning through Browse otherwise kept the empty workspace's
+  scroll origin and shifted the restored blocks off to the side.
 - The `rendered` check is repeated inside the change-listener frame: the
   workspace can be disposed between an event firing and that frame running.
 
