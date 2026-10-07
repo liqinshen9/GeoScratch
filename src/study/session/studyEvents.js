@@ -19,7 +19,7 @@ export function logStudyEvent(event, step = null, detail = {}) {
       step_index: step?.stepIndex ?? null,
       step_kind: step?.kind ?? null,
       event,
-      detail,
+      detail: step?.highlightStyle ? { ...detail, highlight_style: step.highlightStyle } : detail,
     })
     .then(({ error }) => {
       if (error) console.error(`[GeoScratch] Failed to record study event ${event}:`, error)

@@ -11,6 +11,21 @@ import { getTechnique, CUE_SETTING_KEYS } from '@/study/phase1/conditions'
 const slots = (n) => Array.from({ length: n }, (_, i) => i + 1)
 
 describe('resolveHolisticOrder', () => {
+  it('balances blink and glow across modes and configurations over 16 slots', () => {
+    const counts = new Map()
+    for (const slot of slots(16)) {
+      const conditions = resolveHolisticOrder(slot).conditions
+      expect(conditions.filter((c) => c.highlightStyle === 'glow')).toHaveLength(2)
+      conditions.forEach((c) => {
+        const key = `${c.number}:${c.highlightStyle}`
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+      })
+      expect(conditions[0].highlightStyle).not.toBe(conditions[1].highlightStyle)
+      expect(conditions[2].highlightStyle).not.toBe(conditions[3].highlightStyle)
+    }
+    expect(counts.size).toBe(8)
+    for (const count of counts.values()) expect(count).toBe(8)
+  })
   it('gives every slot all four combinations, blocked on mode', () => {
     for (const slot of slots(20)) {
       const { conditions } = resolveHolisticOrder(slot)

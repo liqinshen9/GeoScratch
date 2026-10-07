@@ -176,9 +176,9 @@ function HolisticBriefing({ task, taskCount, researchId, onStart }) {
       <h2 className="text-xl font-semibold">{getExercise(task.exerciseId)?.title}</h2>
       <p>You have {minutes} minutes for this task.</p>
       {task.mode === RENDER_MODES.ANIMATED && (
-        <p>
-          In this task, &#9654;&#xFE0E; above the 3D view plays your blocks step by step. Try it as
-          you build.
+        <p className="rounded-lg border border-primary bg-primary/10 p-3">
+          <strong>Try the animation as you build.</strong> Press &#9654;&#xFE0E; Play above the 3D
+          view to watch your blocks run step by step. You can use it before you finish the task.
         </p>
       )}
       <p className="text-muted-foreground">The clock starts when you press Start.</p>
@@ -241,6 +241,10 @@ const HOLISTIC_INTRO = [
             <strong>Workspace</strong> is where you build.
           </li>
           <li>
+            Click a workspace block to find its object in the 3D view: the object will blink or
+            glow. This helps you see which object a block controls.
+          </li>
+          <li>
             <strong>3D View</strong> shows what your blocks make. It updates as soon as you change a
             block.
           </li>
@@ -269,6 +273,10 @@ const HOLISTIC_INTRO = [
           press Delete. Ctrl+Z undoes a change.
         </li>
         <li>Right-click a block for more options, such as Duplicate.</li>
+        <li>
+          In My Blocks, click the <strong>+ Make a Block</strong> button to save your work as a
+          reusable block, then drag the saved block into the workspace.
+        </li>
       </ul>
     ),
   },
@@ -278,10 +286,14 @@ const HOLISTIC_INTRO = [
       <>
         <ul className="flex list-disc flex-col gap-2 pl-5">
           <li>
-            Drag in the 3D view to turn it, right-drag to move it, and scroll to zoom. The Default
-            view button in its bottom-right corner puts it back.
+            Left-drag in the 3D view to turn it, and scroll to zoom. The Default view button in its
+            bottom-right corner puts it back.
           </li>
           <li>Click an object to highlight the block that made it.</li>
+          <li>
+            In animated tasks, press <strong>&#9654; Play above the 3D view</strong> as you build to
+            watch your blocks run step by step. Select a pipeline to animate it.
+          </li>
         </ul>
         <p>
           The time left is shown under the steps. Continue unlocks once your blocks solve the task,

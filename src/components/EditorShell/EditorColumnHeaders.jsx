@@ -10,6 +10,7 @@ export default function EditorColumnHeaders({
   preserveColumns = false,
   hideAnimationTransport = false,
   promptPlay = false,
+  animationPromptKey,
   onWorkspaceMaximizedChange,
   onClearWorkspace,
 }) {
@@ -69,7 +70,9 @@ export default function EditorColumnHeaders({
 
       <header className="panel-column-header editor-head editor-head--last">
         <h2>3D View</h2>
-        {!hideAnimationTransport && <AnimationTransport promptPlay={promptPlay} />}
+        {!hideAnimationTransport && (
+          <AnimationTransport key={animationPromptKey} promptPlay={promptPlay} />
+        )}
       </header>
     </div>
   )

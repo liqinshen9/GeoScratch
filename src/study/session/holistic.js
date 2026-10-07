@@ -1,5 +1,6 @@
 import { getTechnique, CUE_SETTING_KEYS, STUDY_PINNED_SETTINGS } from '@/study/phase1/conditions'
 import { LABEL_DETAIL_LEVELS } from '@/store/namingConfig'
+import { OBJECT_HIGHLIGHT_STYLES } from '@/store/highlightStyles'
 
 // Phases 2 and 3 (dissertation Method, "Holistic Authoring Tasks" and
 // "Counterbalancing"). See docs/architecture/study-session.md#holistic-order.
@@ -89,7 +90,12 @@ export function resolveHolisticOrder(slot) {
         (c) => c.mode === mode && c.configuration === configuration,
       )
       const exerciseId = HOLISTIC_TASKS[(combination.number - 1 + taskRow) % 4]
-      return { ...combination, exerciseId }
+      const conditionIndex = modes.indexOf(mode) * 2 + configurations.indexOf(configuration)
+      const highlightStyle =
+        (conditionIndex + Math.floor(s / 4)) % 2 === 0
+          ? OBJECT_HIGHLIGHT_STYLES.BLINK
+          : OBJECT_HIGHLIGHT_STYLES.GLOW
+      return { ...combination, exerciseId, highlightStyle }
     }),
   )
 

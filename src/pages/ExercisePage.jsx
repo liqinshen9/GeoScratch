@@ -254,9 +254,17 @@ export default function ExercisePage({
   // An exercise can force certain settings while it is open (its
   // settingsOverrides export); reverted when the student leaves or switches.
   const studyConfiguration = studyTask?.configuration
+  const studyHighlightStyle = studyTask?.highlightStyle
   const studySettings = useMemo(
-    () => (studyConfiguration ? configurationSettings(studyConfiguration) : null),
-    [studyConfiguration],
+    () =>
+      studyConfiguration
+        ? {
+            ...configurationSettings(studyConfiguration),
+            objectHighlightEnabled: true,
+            objectHighlightStyle: studyHighlightStyle,
+          }
+        : null,
+    [studyConfiguration, studyHighlightStyle],
   )
   useEffect(() => {
     setExerciseOverrides({ ...exercise.settingsOverrides, ...settingsOverrides, ...studySettings })
@@ -326,6 +334,7 @@ export default function ExercisePage({
           preserveColumns
           hideAnimationTransport={hideAnimationTransport || hideAnimation}
           promptPlay={promptPlay}
+          animationPromptKey={studyTask?.stepIndex ?? activeExercise}
           onWorkspaceMaximizedChange={handleWorkspaceMaximizedChange}
           onClearWorkspace={() => clearWorkspaceRef.current()}
         />

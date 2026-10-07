@@ -4,7 +4,7 @@ import { resolveHolisticOrder } from './holistic'
 // The whole study session as a flat list of steps, and the cursor that walks
 // it. See docs/architecture/study-session.md.
 
-export const SESSION_PLAN_VERSION = 6
+export const SESSION_PLAN_VERSION = 7
 
 export const STEP_KINDS = Object.freeze({
   PHASE1_BLOCK: 'phase1Block',

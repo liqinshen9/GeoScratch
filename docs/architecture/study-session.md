@@ -286,6 +286,16 @@ trial writes no trial row.
 - `animation_play`: Play pressed in an animated task, with `exercise_id` and
   `from_progress` (0 for a fresh play, less than 1 when resuming a pause)
 
+Holistic tasks assign two blink and two glow highlight styles per participant,
+alternating within each mode pair. The assignment flips with the four-slot
+batch, balancing styles across the four combinations over 16 slots. It is stored
+as `highlightStyle` in session plan version 7 and copied to each task event's
+`detail.highlight_style`. Highlighting is enabled in all authoring conditions.
+The existing editor tutorial explains selecting a block to find its object;
+animated-task briefings and that tutorial encourage animation during
+construction. Play keeps its existing pulse until first used, reset for each
+animated task. There is no floating reminder over the scene.
+
 The handoff click itself is logged only locally, and its time arrives with the
 return. A participant who drops out inside a questionnaire shows up as a
 `step_start` for that survey with no `survey_return`, which is enough to place
