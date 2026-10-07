@@ -1,5 +1,6 @@
 import * as Blockly from 'blockly/core'
 import { markMyBlockInstance } from '@/components/BlocksCanvas/blocks/myBlockAppearance'
+import { placeVisibleBlocks } from './placeVisibleBlocks'
 
 const FALLBACK_OFFSET = 28
 
@@ -39,7 +40,7 @@ function prepareCompositeDom(dom, workspace, options) {
   const minX = Math.min(...topBlocks.map((node) => getNumericAttribute(node, 'x')))
   const minY = Math.min(...topBlocks.map((node) => getNumericAttribute(node, 'y')))
   const existingCount = workspace.getTopBlocks(false).length
-  const offset = existingCount * FALLBACK_OFFSET
+  const offset = Number.isFinite(options.clientX) ? 0 : existingCount * FALLBACK_OFFSET
 
   topBlocks.forEach((node) => {
     const x = getNumericAttribute(node, 'x')
@@ -54,24 +55,31 @@ function prepareCompositeDom(dom, workspace, options) {
 export default function addCompositeBlockToWorkspace(workspace, xmlText, options = {}) {
   if (!workspace || workspace.isFlyout || !xmlText) return false
 
-  const group = Blockly.utils.idGenerator.genUid()
+  const previousGroup = Blockly.Events.getGroup()
+  const group = previousGroup || Blockly.utils.idGenerator.genUid()
   Blockly.Events.setGroup(group)
   try {
     const existingBlockIds = new Set(workspace.getAllBlocks(false).map((block) => block.id))
     const dom = Blockly.utils.xml.textToDom(xmlText)
     Blockly.Xml.domToWorkspace(prepareCompositeDom(dom, workspace, options), workspace)
+    const created = workspace.getAllBlocks(false).filter((block) => !existingBlockIds.has(block.id))
     if (options.myBlockId) {
       workspace
         .getAllBlocks(false)
         .filter((block) => !existingBlockIds.has(block.id))
         .forEach((block) => markMyBlockInstance(block, options.myBlockId))
     }
+    const roots = created.filter((block) => !block.getParent())
+    if (!Number.isFinite(options.clientX) && options.visibleRect) {
+      placeVisibleBlocks(workspace, roots, options.visibleRect)
+    }
+    options.onCreated?.(roots)
     Blockly.svgResize(workspace)
     return true
   } catch (err) {
     console.error('[GeoScratch] addCompositeBlockToWorkspace error:', err)
     return false
   } finally {
-    Blockly.Events.setGroup(false)
+    Blockly.Events.setGroup(previousGroup)
   }
 }

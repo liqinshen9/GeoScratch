@@ -100,3 +100,24 @@ not "duplicate".
 `blockMoveChangesGeneratedCode` distinguishes a re-parent (changes generated
 code, so re-run) from a drag-pixel `BLOCK_MOVE` (position only). Used by the
 naming registry and `shouldIgnoreWorkspaceChange`.
+
+## Palette transfers
+
+`usePaletteDrag` turns a palette press into a main-workspace Blockly gesture
+after the drag threshold. It registers the pointer with `Blockly.Touch` before
+starting the gesture: bypassing the normal SVG pointerdown binding otherwise
+leaves pointerup unrecognised and the workspace stuck dragging. Blockly handles
+connection previews and snapping before the first release. Creation and the
+drag share one event group, so Undo removes the whole addition.
+
+A pointer-transparent SVG preview follows the pointer when the dragged blocks
+would be clipped by the workspace; entering its unobscured area closes the
+palette. Cancellation moves the gesture away from sockets before ending and
+disposing the new blocks, avoiding
+an accidental connection during cleanup. The click following a cancelled drag
+is suppressed so it cannot add a second block. Saved-block trash is tested by
+bounds because Blockly's drag layer can cover its DOM hit target.
+
+Click-to-add closes the popup and uses `placeVisibleBlocks` to search within the
+visible workspace using rendered bounds. Crowded or oversized additions are
+framed without increasing the existing zoom.

@@ -227,15 +227,35 @@
   display: none !important;
 }
 
-/* Sits in front of the Blockly-injected SVG so the browser's native drag
-   gesture starts on this element instead -- Blockly's own gesture handling
-   on the injected SVG swallows mousedown before native dragstart can fire. */
+/* Routes palette presses into the main workspace's Blockly gesture. */
 .palette-block-preview__drag-surface {
   position: absolute;
   inset: 0;
   z-index: 2;
   cursor: grab;
   background: transparent;
+  touch-action: none;
+}
+
+.palette-drag-preview {
+  position: fixed;
+  z-index: 1000;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.palette-drag-preview * {
+  pointer-events: none !important;
+}
+
+body.palette-dragging,
+body.palette-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+.my-block-card__main {
+  touch-action: none;
 }
 
 .palette-block-preview__drag-surface:active {

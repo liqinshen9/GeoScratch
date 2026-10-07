@@ -2,6 +2,7 @@
 //place it near the center of the view, avoiding overlap with existing blocks.
 
 import * as Blockly from 'blockly/core'
+import { placeVisibleBlocks } from './placeVisibleBlocks'
 import {
   PIPELINE_DEMO_OBJECT_TYPES,
   TRANSFORM_STEP_BLOCK_TYPES,
@@ -152,7 +153,8 @@ function clientToWorkspaceXY(workspace, clientX, clientY, block) {
 export function addBlockToWorkspace(workspace, type, options = {}) {
   if (!workspace || workspace.isFlyout) return null
 
-  const group = Blockly.utils.idGenerator.genUid()
+  const previousGroup = Blockly.Events.getGroup()
+  const group = previousGroup || Blockly.utils.idGenerator.genUid()
   Blockly.Events.setGroup(group)
   try {
     const block = workspace.newBlock(type)
@@ -176,11 +178,13 @@ export function addBlockToWorkspace(workspace, type, options = {}) {
       (anchor ? findCascadedOpenSpot(workspace, block, anchor) : findOpenSpot(workspace, block))
     const xy = block.getRelativeToSurfaceXY()
     block.moveBy(x - xy.x, y - xy.y)
+    if (!hasDropPoint && options.visibleRect)
+      placeVisibleBlocks(workspace, [block], options.visibleRect)
 
     Blockly.svgResize(workspace)
     return block
   } finally {
-    Blockly.Events.setGroup(false)
+    Blockly.Events.setGroup(previousGroup)
   }
 }
 

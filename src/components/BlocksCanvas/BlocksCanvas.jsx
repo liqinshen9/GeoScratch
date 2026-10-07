@@ -18,6 +18,7 @@ import {
   TRASH_BLOCK_ID_TRANSFER_TYPE,
 } from '@/components/BlocksCanvas/hooks/useBlockTrash'
 import { useBlockSelectionSync } from '@/components/BlocksCanvas/hooks/useBlockSelectionSync'
+import { usePaletteDrag } from '@/components/BlocksCanvas/hooks/usePaletteDrag'
 import useWorkspaceStore from '@/store/useWorkspaceStore'
 import { canonicalizeWorkspaceXml } from '@/utils/blocklyXml'
 import './BlocksCanvas.css'
@@ -90,6 +91,7 @@ export default function BlocksCanvas({
   } = useBlockTrash(workspace, syncScene)
 
   const closePalette = useCallback(() => setPaletteOpen(false), [])
+  const startPaletteDrag = usePaletteDrag(workspace, workspaceHostRef, closePalette)
   useBlockSelectionSync(workspace, selectedBlockId, setSelectedBlockId, closePalette)
 
   const handleClearWorkspace = useCallback(() => {
@@ -106,9 +108,12 @@ export default function BlocksCanvas({
   const handleBlockSelect = useCallback(
     (type) => {
       if (!workspace) return
-      addBlockToWorkspace(workspace, type)
+      closePalette()
+      addBlockToWorkspace(workspace, type, {
+        visibleRect: workspaceHostRef.current?.getBoundingClientRect(),
+      })
     },
-    [workspace],
+    [workspace, closePalette],
   )
 
   const handleMakeBlock = useCallback(() => {
@@ -177,16 +182,18 @@ export default function BlocksCanvas({
         .getState()
         .userBlocks.find((block) => block.id === blockId)
       if (!userBlock) return
+      if (!Number.isFinite(options.clientX)) closePalette()
       if (
         addCompositeBlockToWorkspace(workspace, userBlock.xmlText, {
           ...options,
           myBlockId: blockId,
+          visibleRect: workspaceHostRef.current?.getBoundingClientRect(),
         })
       ) {
         syncScene(workspace)
       }
     },
-    [workspace, syncScene],
+    [workspace, syncScene, closePalette],
   )
 
   const handleWorkspaceDragOver = useCallback((event) => {
@@ -198,8 +205,6 @@ export default function BlocksCanvas({
     (event) => {
       event.preventDefault()
       if (!workspace) return
-      const type = event.dataTransfer?.getData('application/x-geoscratch-block-type')
-      const userBlockId = event.dataTransfer?.getData('application/x-geoscratch-my-block-id')
       const trashBlockXml = event.dataTransfer?.getData(TRASH_BLOCK_XML_TRANSFER_TYPE)
       const trashBlockId = event.dataTransfer?.getData(TRASH_BLOCK_ID_TRANSFER_TYPE)
 
@@ -210,23 +215,8 @@ export default function BlocksCanvas({
         })
         return
       }
-
-      if (type) {
-        addBlockToWorkspace(workspace, type, {
-          clientX: event.clientX,
-          clientY: event.clientY,
-        })
-        return
-      }
-
-      if (userBlockId) {
-        handleUserBlockSelect(userBlockId, {
-          clientX: event.clientX,
-          clientY: event.clientY,
-        })
-      }
     },
-    [restoreDroppedBlock, workspace, handleUserBlockSelect],
+    [restoreDroppedBlock, workspace],
   )
 
   const handleCategorySelect = (nextCategoryId) => {
@@ -292,11 +282,30 @@ export default function BlocksCanvas({
               <BlockPalette
                 categoryId={categoryId}
                 onBlockSelect={handleBlockSelect}
-                onBlockDragStart={() => setPaletteOpen(true)}
+                onBlockDragStart={(event, type) =>
+                  startPaletteDrag(event, (options) => {
+                    const block = addBlockToWorkspace(workspace, type, options)
+                    return block ? [block] : []
+                  })
+                }
                 onMakeBlock={handleMakeBlock}
                 onUserBlockSelect={handleUserBlockSelect}
-                onUserBlockDelete={deleteUserBlock}
-                onUserBlockDragStart={() => setPaletteOpen(true)}
+                onUserBlockDragStart={(event, blockId) =>
+                  startPaletteDrag(
+                    event,
+                    (options) => {
+                      let roots = []
+                      handleUserBlockSelect(blockId, {
+                        ...options,
+                        onCreated: (blocks) => {
+                          roots = blocks
+                        },
+                      })
+                      return roots
+                    },
+                    () => deleteUserBlock(blockId),
+                  )
+                }
               />
             </aside>
           )}

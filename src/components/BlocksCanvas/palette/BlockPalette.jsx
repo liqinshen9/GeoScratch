@@ -17,7 +17,6 @@ const PALETTE_WS_OPTIONS = {
 }
 
 const SELECTION_FEEDBACK_MS = 450
-const MY_BLOCK_TRANSFER_TYPE = 'application/x-geoscratch-my-block-id'
 
 function useSelectionFeedback() {
   const itemRef = useRef(null)
@@ -62,8 +61,7 @@ function useSelectionFeedback() {
 function BlockPreview({ type, onSelect, onDragStartBlock }) {
   const hostRef = useRef(null)
   const resolvedTheme = useSettingsStore((s) => s.resolvedTheme)
-  const { itemRef, flashSelection, handlePointerEnter, handlePointerLeave } =
-    useSelectionFeedback()
+  const { itemRef, flashSelection, handlePointerEnter, handlePointerLeave } = useSelectionFeedback()
 
   useLayoutEffect(() => {
     const host = hostRef.current
@@ -90,14 +88,6 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
     }
   }, [type, resolvedTheme])
 
-  const handleDragStart = (event) => {
-    if (!event.dataTransfer) return
-    flashSelection()
-    event.dataTransfer.effectAllowed = 'copy'
-    event.dataTransfer.setData('application/x-geoscratch-block-type', type)
-    onDragStartBlock?.(type)
-  }
-
   const handleSelect = () => {
     flashSelection()
     onSelect(type)
@@ -107,6 +97,7 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
     <div
       ref={itemRef}
       className="palette-block-preview"
+      data-block-type={type}
       title="Click to add or drag into workspace"
     >
       <div className="palette-block-preview__blockly-host" ref={hostRef} />
@@ -114,11 +105,16 @@ function BlockPreview({ type, onSelect, onDragStartBlock }) {
         className="palette-block-preview__drag-surface"
         role="button"
         tabIndex={0}
-        draggable
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
-        onDragStart={handleDragStart}
+        onPointerDown={(event) => onDragStartBlock?.(event, type)}
         onClick={handleSelect}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            handleSelect()
+          }
+        }}
       />
     </div>
   )
@@ -170,19 +166,8 @@ function MyBlockPreview({ xmlText }) {
   return <span className="my-block-card__preview" ref={hostRef} />
 }
 
-function MyBlockCard({ block, onSelect, onDragStartBlock, onDragEndBlock }) {
-  const { itemRef, flashSelection, handlePointerEnter, handlePointerLeave } =
-    useSelectionFeedback()
-
-  const handleDragStart = (event) => {
-    if (!event.dataTransfer) return
-    flashSelection()
-    event.dataTransfer.effectAllowed = 'copyMove'
-    event.dataTransfer.setData(MY_BLOCK_TRANSFER_TYPE, block.id)
-    const blockPreview = itemRef.current?.querySelector('.my-block-card__preview')
-    if (blockPreview) event.dataTransfer.setDragImage(blockPreview, 12, 12)
-    onDragStartBlock?.(block.id)
-  }
+function MyBlockCard({ block, onSelect, onDragStartBlock }) {
+  const { itemRef, flashSelection, handlePointerEnter, handlePointerLeave } = useSelectionFeedback()
 
   const handleSelect = () => {
     flashSelection()
@@ -190,17 +175,12 @@ function MyBlockCard({ block, onSelect, onDragStartBlock, onDragEndBlock }) {
   }
 
   return (
-    <div
-      ref={itemRef}
-      className="my-block-card"
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={onDragEndBlock}
-    >
+    <div ref={itemRef} className="my-block-card">
       <button
         type="button"
         className="my-block-card__main"
         onClick={handleSelect}
+        onPointerDown={(event) => onDragStartBlock?.(event, block.id)}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         title="Add this saved block to the workspace"
@@ -212,31 +192,11 @@ function MyBlockCard({ block, onSelect, onDragStartBlock, onDragEndBlock }) {
   )
 }
 
-function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDelete, onUserBlockDragStart }) {
+function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDragStart }) {
   const userBlocks = useWorkspaceStore((state) => state.userBlocks)
   const recentDeletedBlocks = useWorkspaceStore((state) => state.recentDeletedUserBlocks)
   const restoreUserBlock = useWorkspaceStore((state) => state.restoreUserBlock)
-  const [trashActive, setTrashActive] = useState(false)
   const [trashPanelOpen, setTrashPanelOpen] = useState(false)
-
-  const handleTrashDragOver = (event) => {
-    if (!event.dataTransfer.types.includes(MY_BLOCK_TRANSFER_TYPE)) return
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-    setTrashActive(true)
-    setTrashPanelOpen(false)
-  }
-
-  const handleTrashDragLeave = (event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setTrashActive(false)
-  }
-
-  const handleTrashDrop = (event) => {
-    event.preventDefault()
-    const blockId = event.dataTransfer.getData(MY_BLOCK_TRANSFER_TYPE)
-    setTrashActive(false)
-    if (userBlocks.some((block) => block.id === blockId)) onUserBlockDelete(blockId)
-  }
 
   const handleRestoreDeleted = (blockId) => {
     const deletedBlock = recentDeletedBlocks.find((block) => block.id === blockId)
@@ -265,7 +225,6 @@ function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDelete, onUse
                 block={block}
                 onSelect={onUserBlockSelect}
                 onDragStartBlock={onUserBlockDragStart}
-                onDragEndBlock={() => setTrashActive(false)}
               />
             ))
           ) : (
@@ -275,16 +234,12 @@ function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDelete, onUse
         <div className="my-block-trash-row">
           <button
             type="button"
-            className={`workspace-control-button my-block-trash${trashActive ? ' is-active' : ''}`}
+            className="workspace-control-button my-block-trash"
             aria-label="Saved blocks trash"
             title="Drag a saved block here to delete it; click to view deleted blocks"
             onClick={handleTrashClick}
-            onDragEnter={handleTrashDragOver}
-            onDragOver={handleTrashDragOver}
-            onDragLeave={handleTrashDragLeave}
-            onDrop={handleTrashDrop}
           >
-            <span className={`workspace-trash-icon${trashActive ? ' is-open' : ''}`}>
+            <span className="workspace-trash-icon">
               <Delete theme="outline" size="18" fill="currentColor" />
             </span>
           </button>
@@ -321,7 +276,6 @@ export default function BlockPalette({
   onBlockDragStart,
   onMakeBlock,
   onUserBlockSelect,
-  onUserBlockDelete,
   onUserBlockDragStart,
 }) {
   const category = getCategory(categoryId)
@@ -332,7 +286,6 @@ export default function BlockPalette({
       <MyBoxPalette
         onMakeBlock={onMakeBlock}
         onUserBlockSelect={onUserBlockSelect}
-        onUserBlockDelete={onUserBlockDelete}
         onUserBlockDragStart={onUserBlockDragStart}
       />
     )
