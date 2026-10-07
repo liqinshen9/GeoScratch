@@ -258,6 +258,12 @@ body.palette-dragging * {
   touch-action: none;
 }
 
+.make-block-hint {
+  margin: -6px 0 16px;
+  color: var(--geo-text-muted-on-light);
+  font-size: 12px;
+}
+
 .palette-block-preview__drag-surface:active {
   cursor: grabbing;
 }
@@ -290,8 +296,8 @@ body.palette-dragging * {
   margin: 0 0 14px;
   border: 1px solid var(--geo-border-light);
   border-radius: 6px;
-  background: var(--geo-surface);
-  color: var(--geo-text-on-light);
+  background: var(--geo-highlight);
+  color: white;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -299,7 +305,12 @@ body.palette-dragging * {
 
 .make-block-button:hover {
   border-color: var(--geo-highlight);
-  background: rgba(0, 46, 166, 0.08);
+  filter: brightness(1.12);
+}
+
+.make-block-button:focus-visible {
+  outline: 3px solid var(--geo-highlight);
+  outline-offset: 3px;
 }
 
 .my-block-card {

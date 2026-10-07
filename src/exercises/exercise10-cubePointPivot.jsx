@@ -117,14 +117,17 @@ function Steps({ steps, partialSteps, partialMessages, feedbackRevision, passed 
 
   const tasks = [
     ['cube', `Create: a Cube C with side length Scalar 2 and centre Point ${tuple(1, 1, 1)}.`],
-    ['point', `Create: a Point P = ${tuple(0, 2, 2)}, this will be the corner of the cube.`],
+    [
+      'point',
+      `Create: a separate Point P = ${tuple(0, 2, 2)} at a corner of the cube. This is not the centre Point C inside the Cube block.`,
+    ],
     [
       'pair',
-      'My Blocks: save the cube and P together as one block, with any name you like. Then drag your new block out of My Blocks into the workspace.',
+      'My Blocks: click the + Make a Block button to save Cube C and the separate Point P together, with any name you like. Then drag your saved block into the workspace.',
     ],
     [
       'cleanup',
-      'Clean up: drag the original Cube and Point blocks to the bin, so only your new block is left.',
+      'Clean up: delete the original Cube C block and the separate Point P block you created earlier. Deleting Cube C also removes its centre-point input. Keep your newly saved block.',
     ],
     ['pipeline', "Transform: connect your new block to a Transform Pipeline's input."],
     [

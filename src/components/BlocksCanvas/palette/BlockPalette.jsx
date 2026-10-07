@@ -213,8 +213,9 @@ function MyBoxPalette({ onMakeBlock, onUserBlockSelect, onUserBlockDragStart }) 
     <div className="block-palette my-box-palette">
       <div className="block-palette-scroll">
         <button type="button" className="make-block-button" onClick={onMakeBlock}>
-          Make a Block
+          <span aria-hidden="true">＋</span> Make a Block
         </button>
+        <p className="make-block-hint">Click this button to save your work as a reusable block.</p>
 
         <section className="palette-group">
           <h3 className="palette-group-label">Saved Blocks</h3>
