@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS = {
   objectsReceiveShadows: false,
   primitivesCastShadows: false,
   pointShadowsEnabled: true,
-  cameraShadowsEnabled: true,
+  cameraShadowsEnabled: false,
   autoFocusOnNewObject: false,
   // null = each solid keeps the opacity its builder was written with. A number
   // overrides all of them; Phase 1 pins it, because a see-through solid tints

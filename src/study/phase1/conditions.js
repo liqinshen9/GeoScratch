@@ -94,7 +94,7 @@ export const TECHNIQUES = Object.freeze([
     id: 'T10',
     label: 'Combined',
     base: 'T1',
-    settings: { ...T1, ...ACCENTS, ...HALOS, ...OVERHEAD_SHADOW, ...CAMERA_SHADOW },
+    settings: { ...T1, ...ACCENTS, ...HALOS, ...OVERHEAD_SHADOW },
   },
 ])
 

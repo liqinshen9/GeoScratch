@@ -15,7 +15,6 @@ const EXPECTED_DIFFS = {
   T7: ['cameraShadowsEnabled'],
   T8: ['colorPreset'],
   T10: [
-    'cameraShadowsEnabled',
     'haloEnabled',
     'haloLineVectorEnabled',
     'lineCollisionStyle',

@@ -58,6 +58,13 @@ describe('resolveHolisticOrder', () => {
 })
 
 describe('configurationSettings', () => {
+  it('uses overhead shadows without camera shadows in the perception-driven combination', () => {
+    const settings = configurationSettings(CONFIGURATIONS.PERCEPTION)
+    expect(settings.pointShadowsEnabled).toBe(true)
+    expect(settings.primitivesCastShadows).toBe(true)
+    expect(settings.cameraShadowsEnabled).toBe(false)
+  })
+
   it('matches T1 and T10 on every cue key', () => {
     const baseline = configurationSettings(CONFIGURATIONS.BASELINE)
     const perception = configurationSettings(CONFIGURATIONS.PERCEPTION)

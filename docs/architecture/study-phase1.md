@@ -16,6 +16,11 @@ next where they cross. Lines are grey under every palette, so T8 differs from
 T1 only where a vector, point or solid is involved. The IDs are not renumbered,
 so T10 still names the combination in logs, survey images and the Method.
 
+After the October pilot, T10's combined condition uses overhead shadows only.
+Camera shadows remain in the separate experimental T7 condition: the pilot
+participant found them confusing in the combination. Perception-driven holistic
+tasks inherit the same overhead-only shadow settings from T10.
+
 Nine is odd, so the Williams design is the square plus its rows reversed: 18
 orders (`williams.js`), each condition twice in each position and each ordered
 pair of neighbours twice. Slots repeat every 18.
