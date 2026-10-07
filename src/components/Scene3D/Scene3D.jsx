@@ -25,7 +25,6 @@ import ScenePicker from './ScenePicker'
 import PresentationProbe from './PresentationProbe'
 import LabelDeclutter from './labels/LabelDeclutter'
 import LabelLayer from './labels/LabelLayer'
-import { getLabelVisibilityKeysForObject } from './labels/labelData'
 import { ZoomInvariantScaler, DashZoomSync, FatLineSync } from './sizing/GlyphSizing'
 import { computeNestingRenderOrders } from '@/utils/nestingRenderOrder'
 import { getObjectFocus } from '@/utils/sceneFocus'
@@ -343,16 +342,6 @@ export default function Scene3D({
   )
   const ignoreLabelToggle = useCallback(() => {}, [])
 
-  // Non-interactive: a click on a label pill counts as a click on its object,
-  // so the editor's persistent click-to-hide never fires.
-  const handleLabelClickFrom3D = useCallback(
-    (labelKey) => {
-      const object = objects.find((o) => o && getLabelVisibilityKeysForObject(o).includes(labelKey))
-      if (object) onObjectClick?.(object)
-    },
-    [objects, onObjectClick],
-  )
-
   return (
     <div className="editor-body-3d">
       <div className="relative flex-1 min-h-0">
@@ -366,6 +355,7 @@ export default function Scene3D({
           <OrbitControls
             makeDefault
             enabled={interactive}
+            enablePan={false}
             minDistance={MIN_CAMERA_DISTANCE}
             maxDistance={MAX_CAMERA_DISTANCE}
             ref={handleControlsReady}
@@ -382,6 +372,7 @@ export default function Scene3D({
               <ScenePicker
                 onSelectBlock={handleObjectClickFrom3D}
                 onToggleLabels={ignoreLabelToggle}
+                pickRadius={8}
               />
             )
           )}
@@ -390,7 +381,7 @@ export default function Scene3D({
             objects={objects}
             hiddenLabelKeys={visibleHiddenLabelKeys}
             controlsRef={controlsRef}
-            onHideLabel={interactive ? handleHideLabel : handleLabelClickFrom3D}
+            onHideLabel={interactive ? handleHideLabel : undefined}
             theme={resolvedTheme}
             answer={answer}
             animationFallback={animationFallback}

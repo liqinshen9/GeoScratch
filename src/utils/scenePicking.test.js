@@ -7,9 +7,39 @@ import {
   resolveSrcBlockId,
   CLICK_MAX_DIST,
   CLICK_MAX_MS,
+  pickWithTolerance,
 } from './scenePicking'
 
 const down = (over = {}) => ({ clientX: 100, clientY: 100, time: 0, pointerId: 1, ...over })
+
+describe('pickWithTolerance', () => {
+  const hit = (id, distance = 1) => ({ object: { userData: { srcBlockId: id } }, distance })
+
+  it('prefers a direct object hit over a nearby object', () => {
+    expect(
+      pickWithTolerance((x, y) => [hit(x === 0 && y === 0 ? 'direct' : 'nearby')], 8)[0].object
+        .userData.srcBlockId,
+    ).toBe('direct')
+  })
+
+  it('finds thin objects within the pixel margin but leaves distant clicks empty', () => {
+    const raycast = (x, y) => (Math.abs(x - 4) < 0.1 && Math.abs(y) < 0.1 ? [hit('thin')] : [])
+    expect(pickWithTolerance(raycast, 8)[0].object.userData.srcBlockId).toBe('thin')
+    expect(pickWithTolerance(raycast, 2)).toEqual([])
+  })
+
+  it('ignores furniture and resolves equal-offset candidates by depth', () => {
+    const furniture = { object: { userData: {} }, distance: 0 }
+    const result = pickWithTolerance(
+      (x, y) =>
+        x === 0 && y === 0
+          ? [furniture]
+          : [furniture, hit(x > 0 ? 'front' : 'back', x > 0 ? 1 : 3)],
+      8,
+    )
+    expect(result[0].object.userData.srcBlockId).toBe('front')
+  })
+})
 
 describe('classifyGesture', () => {
   it('treats a small, quick press-release as a click', () => {

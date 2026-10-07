@@ -61,6 +61,23 @@ export function resolveSelectedBlockId(hits) {
   return null
 }
 
+export function pickWithTolerance(raycast, radius = 0) {
+  const direct = raycast(0, 0)
+  if (!radius || resolveSelectedBlockId(direct) != null) return direct
+
+  for (const distance of [radius / 2, radius]) {
+    const candidates = []
+    for (let i = 0; i < 16; i += 1) {
+      const angle = (i * Math.PI * 2) / 16
+      const hits = raycast(Math.cos(angle) * distance, Math.sin(angle) * distance)
+      const hit = hits.find((candidate) => resolveSrcBlockId(candidate.object) != null)
+      if (hit) candidates.push(hit)
+    }
+    if (candidates.length) return candidates.sort((a, b) => a.distance - b.distance)
+  }
+  return direct
+}
+
 // Every object a selected block owns in the scene: the outermost node of each
 // subtree whose srcBlockId matches, searching nested children rather than only
 // the top-level list. A block whose object is consumed by another block keeps

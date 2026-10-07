@@ -8,6 +8,7 @@ import {
   findSelectablePointMarker,
   resolveSelectedBlockId,
   CLICK_MAX_DIST,
+  pickWithTolerance,
 } from '@/utils/scenePicking'
 import { getLabelsForObject, getLabelVisibilityKeysForObject } from './labels/labelData'
 
@@ -24,7 +25,12 @@ function findClickLabelMarker(object) {
 // on pointerdown (OrbitControls shares the element). Click vs drag is decided
 // on pointerup (#92). Left click selects; right click toggles labels (#75).
 // See docs/architecture/selection-and-picking.md#scenepicker.
-function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = false }) {
+function ScenePicker({
+  onSelectBlock,
+  onToggleLabels,
+  toggleLabelsOnLeftClick = false,
+  pickRadius = 0,
+}) {
   const { camera, gl, scene } = useThree()
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const pointer = useMemo(() => new THREE.Vector2(), [])
@@ -33,13 +39,18 @@ function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = 
   useEffect(() => {
     const canvas = gl.domElement
 
-    const raycastAt = (event) => {
+    const raycastAt = (event, dx = 0, dy = 0) => {
       const rect = canvas.getBoundingClientRect()
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1
+      pointer.x = ((event.clientX + dx - rect.left) / rect.width) * 2 - 1
+      pointer.y = -((event.clientY + dy - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(pointer, camera)
-      raycaster.params.Line.threshold = 0.18
-      return raycaster.intersectObjects(scene.children, true).filter((hit) => hit.object.visible)
+      raycaster.params.Line.threshold = pickRadius ? 0.001 : 0.18
+      return raycaster.intersectObjects(scene.children, true).filter((hit) => {
+        for (let object = hit.object; object; object = object.parent) {
+          if (!object.visible) return false
+        }
+        return true
+      })
     }
 
     const toggleClickedMarkerLabel = (hits) => {
@@ -77,6 +88,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = 
 
     // On window, not the canvas -- OrbitControls captures the pointer mid-drag.
     const handlePointerUp = (event) => {
+      if (event.target.closest?.('.label')) return
       const down = downRef.current
       if (!down || down.button !== 0 || event.pointerId !== down.pointerId) return
       const up = {
@@ -86,7 +98,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = 
         pointerId: event.pointerId,
       }
       if (down.moved || classifyGesture(down, up) !== 'click') return
-      const hits = raycastAt(event)
+      const hits = pickWithTolerance((dx, dy) => raycastAt(event, dx, dy), pickRadius)
       onSelectBlock(resolveSelectedBlockId(hits))
       if (toggleLabelsOnLeftClick) toggleClickedMarkerLabel(hits)
     }
@@ -136,6 +148,7 @@ function ScenePicker({ onSelectBlock, onToggleLabels, toggleLabelsOnLeftClick = 
     onSelectBlock,
     onToggleLabels,
     toggleLabelsOnLeftClick,
+    pickRadius,
   ])
 
   return null

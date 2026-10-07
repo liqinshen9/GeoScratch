@@ -400,7 +400,8 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
           ))}
         </div>
         <p className="text-sm text-muted-foreground">
-          Unsure which label is which? Click a labelled object to hide or show its label.
+          Unsure which label is which? Click the object to hide or show its label. Clicking the
+          label itself does nothing.
         </p>
         <p
           className={`study-phase1__feedback ${feedbackCorrect ? 'is-correct' : 'is-incorrect'}`}
@@ -582,7 +583,8 @@ function Intro({ blockCount, canStart, onStart }) {
       <h2 className="text-xl font-semibold">Before you start</h2>
       <p>
         Answer with the buttons on the right, as quickly and as accurately as you can. Not sure
-        which label is which? Click a labelled object to hide or show its label.
+        which label is which? Click the object to hide or show its label. Clicking the label itself
+        does nothing.
       </p>
       <p>
         In many trials the answer will not be obvious. That is expected: if you are not sure, go

@@ -30,6 +30,13 @@ begins over a large plane still orbits instead of being swallowed (#92).
 - left click -> select the hit object's block (empty space clears)
 - right click -> toggle that object's scene labels (#75)
 
+Panning is disabled; left-drag still orbits and wheel zoom still works. Phase 1
+passes an 8px picking radius: exact object hits win, then nearby rays are tested
+in screen-space rings, with nearer rings preferred and depth breaking ties.
+Invisible ancestor chains are excluded. Phase 1 label pills have no action and
+pointerup on a pill is ignored, so labels cannot toggle themselves or an object
+underneath them.
+
 `scenePicking.js` is framework-free and unit-tested without a WebGL context.
 `down.moved` is set during the drag, so a wander-and-return still counts as a
 drag. `contextmenu` consults the kept `downRef` because its ordering relative to

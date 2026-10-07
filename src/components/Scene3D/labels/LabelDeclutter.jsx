@@ -160,7 +160,7 @@ function LabelAnchor({
       <div
         ref={bodyRef}
         className={className}
-        style={background ? { backgroundColor: background } : undefined}
+        style={{ backgroundColor: background, cursor: onHide ? 'pointer' : 'default' }}
         onClick={() => onHide?.(visibilityKey)}
       >
         {children}
