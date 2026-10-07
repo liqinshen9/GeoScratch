@@ -87,7 +87,8 @@ and plain lines are both screen-space strokes.
 The two fought per pixel and the vector broke into fragments.
 
 The vector matters more, so the line leaves that stretch out.
-`utils/vectorsAlongLines.js` runs after each build, after `applyTubeCollisions`.
+`utils/vectorsAlongLines.js` runs after each build and animation update, after
+`applyTubeCollisions`.
 For each line it collects the stretch every collinear vector covers (origin on
 the line and direction parallel, within 0.01 so each glyph's own jitter still
 counts), measured from the line's segment midpoint like collision zones. It
@@ -98,8 +99,12 @@ collision accents. So the vector is drawn whole with nothing behind it.
 Coincident lines are also mutually halo-immune
 ([halos.md](halos.md#coincident-lines)).
 
-The gap is the vector's resting length. While a reveal grows the vector, the
-unfilled part of the gap shows empty.
+Gaps follow the visible vector's current length, excluding hidden glyphs and
+hidden ancestors. Vector endpoints are measured in world space, then mapped
+through the animated line's inverse matrix into its baked segment frame. A gap
+therefore appears only where a vector actually covers the line in that frame,
+not at the completed pose. Unchanged zones are cached in `vectorGapZones` to
+avoid rebuilding segmented geometry unnecessarily each frame.
 
 ## Halo companions
 

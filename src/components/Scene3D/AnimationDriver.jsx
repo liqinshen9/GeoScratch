@@ -6,6 +6,7 @@ import useSettingsStore from '@/store/useSettingsStore'
 import { getEasingFn } from '@/store/animationConfig'
 import { makeAnimationSequence } from '@/utils/animationSequence'
 import { applyTubeCollisions } from '@/utils/tubeCollision'
+import { hideLinesUnderVectors } from '@/utils/vectorsAlongLines'
 
 // Headless, mounted under <Scene>. Resolves the selected block's 3D object
 // (by stable srcBlockId / animAliasBlockIds), calls its userData.animate(p,
@@ -99,6 +100,7 @@ export default function AnimationDriver({ objects = [], fallback = false, sequen
       // Accents are computed at build time, for the resting scene; a moving line
       // or solid needs them recomputed. See docs/architecture/collision.md#during-an-animation.
       applyTubeCollisions(window.threeObjStore)
+      hideLinesUnderVectors(window.threeObjStore)
       highlightActiveBlock(obj)
     },
     [easing, highlightActiveBlock],

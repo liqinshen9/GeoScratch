@@ -123,6 +123,12 @@ then the teapot's pipeline, and drops anything the task does not ask for. A
 Cross Product plugged straight into Scale Vector is dropped too: `2n`'s reveal
 already plays it as its first stage.
 
+When Scale Vector takes the copied VN in this exercise, `decorateObjects` makes
+VN grow in the same stage as the cross product's result n. Scale Vector then
+reveals only 2n, without repeating VN. Selecting VN aliases the coordinated
+cross-product animation. The adjustment is made once when the scene is built,
+so scrubbing and selected-block playback use the same reveal closures.
+
 ## Staged vector reveal
 
 `utils/stagedVectorReveal.js`. `makeStagedVectorReveal(parts)` builds an

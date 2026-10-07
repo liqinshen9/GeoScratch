@@ -394,6 +394,45 @@ describe('exercise 3 (thread lines through objects)', () => {
     expect(mod.seedWorkspace).toBeTypeOf('function')
     expect(mod.ensureWorkspace).toBeTypeOf('function')
   })
+
+  it('reveals n and VN together and grows 2n without replaying VN', () => {
+    const cross = crossProduct(vec3(1, 0, -1), vec3(0, 1, 1))
+    const vn = vec3(1, -1, 1)
+    const scale = fakeBlock('vector_scale', {}, { K: scalar(2), V: vn })
+    const workspace = fakeWorkspace([cross, scale])
+    const glyph = (length) => {
+      const object = new THREE.Group()
+      object.userData.vectorLength = length
+      object.userData.setVectorLength = (length) => {
+        object.userData.vectorLength = length
+      }
+      return object
+    }
+    const crossObject = new THREE.Group()
+    crossObject.userData = { srcBlockId: cross.id, animate: () => {} }
+    crossObject.add(glyph(Math.SQRT2), glyph(Math.SQRT2), glyph(Math.sqrt(3)))
+    const scaleObject = new THREE.Group()
+    scaleObject.userData = { srcBlockId: scale.id, animate: () => {} }
+    scaleObject.add(glyph(Math.sqrt(3)), glyph(2 * Math.sqrt(3)))
+    mod.decorateObjects([crossObject, scaleObject], workspace)
+    crossObject.userData.animate(0)
+    scaleObject.userData.animate(0)
+    expect(crossObject.children[2].visible).toBe(false)
+    expect(scaleObject.children[0].visible).toBe(false)
+    crossObject.userData.animate(5 / 6)
+    expect(crossObject.children[2].userData.vectorLength).toBeCloseTo(Math.sqrt(3) / 2)
+    expect(scaleObject.children[0].userData.vectorLength).toBeCloseTo(Math.sqrt(3) / 2)
+    expect(crossObject.userData.animAliasBlockIds).toContain(vn.id)
+    crossObject.userData.animate(1)
+    scaleObject.userData.animate(0.5)
+    expect(scaleObject.children[0].userData.vectorLength).toBeCloseTo(Math.sqrt(3))
+    expect(scaleObject.children[1].userData.vectorLength).toBeCloseTo(Math.sqrt(3))
+    expect(scaleObject.userData.animate.durationScale).toBe(1)
+    expect(mod.animationSequence([scaleObject, crossObject], workspace)).toEqual([
+      crossObject,
+      scaleObject,
+    ])
+  })
 })
 
 describe('Cube and corner point pivot rotation exercise', () => {

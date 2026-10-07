@@ -29,6 +29,60 @@ const vector = (origin, direction, length) => {
 const gapsOf = (l) => l.userData.setGapZones.mock.calls.at(-1)[0]
 
 describe('hideLinesUnderVectors', () => {
+  it('does not cut a line for a vector hidden by its reveal or an ancestor', () => {
+    const L = line(new THREE.Vector3(), new THREE.Vector3(1, 0, 0))
+    const glyph = vector(new THREE.Vector3(), new THREE.Vector3(1, 0, 0), 2)
+    glyph.visible = false
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([])
+    glyph.visible = true
+    const parent = new THREE.Group()
+    parent.visible = false
+    parent.add(glyph)
+    hideLinesUnderVectors({ L, parent })
+    expect(gapsOf(L)).toEqual([])
+  })
+
+  it('updates gaps as a vector grows and avoids rebuilding unchanged gaps', () => {
+    const L = line(new THREE.Vector3(), new THREE.Vector3(1, 0, 0))
+    const glyph = vector(new THREE.Vector3(), new THREE.Vector3(1, 0, 0), 0.5)
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([{ start: 0, end: 0.5 }])
+    glyph.userData.vectorLength = 2
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([{ start: 0, end: 2 }])
+    hideLinesUnderVectors({ L, glyph })
+    expect(L.userData.setGapZones).toHaveBeenCalledTimes(2)
+  })
+
+  it('uses the moving line pose rather than its completed geometry', () => {
+    const L = line(new THREE.Vector3(), new THREE.Vector3(1, 0, 0))
+    const glyph = vector(new THREE.Vector3(), new THREE.Vector3(1, 0, 0), 2)
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toHaveLength(1)
+    L.position.y = 3
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([])
+    L.position.y = 0
+    L.rotation.z = Math.PI / 2
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([])
+  })
+
+  it('maps world-space vector coverage into a stretched line frame', () => {
+    const L = line(new THREE.Vector3(), new THREE.Vector3(1, 0, 0))
+    L.scale.x = 2
+    L.position.x = 1
+    const glyph = vector(new THREE.Vector3(3, 0, 0), new THREE.Vector3(1, 0, 0), 4)
+    hideLinesUnderVectors({ L, glyph })
+    expect(gapsOf(L)).toEqual([{ start: 1, end: 3 }])
+    const parent = new THREE.Group()
+    parent.scale.x = 2
+    parent.add(glyph)
+    hideLinesUnderVectors({ L, parent })
+    expect(gapsOf(L)).toEqual([{ start: 2.5, end: 6.5 }])
+  })
+
   it('leaves out the stretch of a line a vector covers', () => {
     const N = line(new THREE.Vector3(), new THREE.Vector3(1, 0, 0))
     hideLinesUnderVectors({

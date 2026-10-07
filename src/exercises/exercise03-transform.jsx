@@ -9,6 +9,7 @@ import {
   vectorsAreParallel,
 } from './shared/blockQueries'
 import { seedBackgroundBlocks } from './shared/seedBackgroundBlocks'
+import { makeStagedVectorReveal } from '@/utils/stagedVectorReveal'
 
 // The high-clutter holistic task: lines threaded through solids (collision
 // accents) and crossing in front of one another (halos), among decorative
@@ -331,6 +332,51 @@ function hasAncestorOfType(block, type) {
   return false
 }
 
+function decorateObjects(objects, workspace) {
+  const cross = objects.find(
+    (object) =>
+      typeof object?.userData?.animate === 'function' &&
+      isNormalCrossProduct(workspace?.getBlockById(String(object.userData.srcBlockId))) &&
+      !hasAncestorOfType(
+        workspace?.getBlockById(String(object.userData.srcBlockId)),
+        'vector_scale',
+      ),
+  )
+  if (!cross) return objects
+  const [u, v, n] = cross.children ?? []
+  if (![u, v, n].every((glyph) => glyph?.userData?.setVectorLength)) return objects
+  const companions = []
+  const companionIds = []
+  objects.forEach((object) => {
+    const block = workspace?.getBlockById(String(object?.userData?.srcBlockId))
+    if (
+      block?.type !== 'vector_scale' ||
+      !isDoubledN(block) ||
+      !isVectorVN(getInputBlock(block, 'V'))
+    )
+      return
+    const [source, scaled] = object.children ?? []
+    if (!source?.userData?.setVectorLength || !scaled?.userData?.setVectorLength) return
+    companions.push(source)
+    companionIds.push(getInputBlock(block, 'V').id)
+    object.userData.animate = makeStagedVectorReveal([
+      { obj: scaled, full: scaled.userData.vectorLength },
+    ])
+  })
+  if (companions.length) {
+    cross.userData.animate = makeStagedVectorReveal([
+      { obj: u, full: u.userData.vectorLength },
+      { obj: v, full: v.userData.vectorLength },
+      { objs: [n, ...companions], full: n.userData.vectorLength },
+    ])
+    cross.userData.animAliasBlockIds = [
+      ...(cross.userData.animAliasBlockIds ?? []),
+      ...companionIds,
+    ]
+  }
+  return objects
+}
+
 // Where an animatable object falls in the task: Part A's pipeline, then n and
 // 2n, then the teapot's pipeline. Null for anything the task does not ask for.
 function taskStage(object, workspace) {
@@ -471,6 +517,7 @@ export default {
   Givens,
   Steps,
   evaluate,
+  decorateObjects,
   solutionXml: SOLUTION_XML,
   animationSequence,
   seedWorkspace,
