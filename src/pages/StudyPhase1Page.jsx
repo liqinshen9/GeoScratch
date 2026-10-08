@@ -31,7 +31,9 @@ import './StudyPhase1Page.css'
 
 const EMPTY_OBJECTS = []
 const PANEL_WIDTH = 300
-const MIN_WINDOW = { width: VIEWPORT.width + PANEL_WIDTH + 96, height: VIEWPORT.height + 48 }
+// The tightest the page lays out: StudyPhase1Page.css drops to an 8px gutter
+// and a 16px gap below the roomier default.
+const MIN_WINDOW = { width: VIEWPORT.width + PANEL_WIDTH + 32, height: VIEWPORT.height + 16 }
 
 const progressKey = (code) => `geoscratch:phase1-progress:${code}`
 
@@ -313,7 +315,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
 
         {state.status === FLOW.BLOCK_INTRO && (
           <Overlay>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-[23px] font-semibold">
               Block {state.blockIndex + 1} of {blockCount}
             </h2>
             <p>
@@ -322,7 +324,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
                 : 'The first trials are practice, with feedback.'}
             </p>
             <Button
-              className="h-11 text-base"
+              className="h-[42px] px-5 text-[16px]"
               disabled={!windowFits}
               onClick={() => {
                 if (session) session.start(sessionStep.stepIndex)
@@ -336,12 +338,12 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
 
         {state.status === FLOW.BLOCK_END && (
           <Overlay>
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-[23px] font-semibold">
               Block {state.blockIndex + 1} of {blockCount} complete
             </h2>
             <p>Please answer the short questionnaire for this block, then continue.</p>
             <Button
-              className="h-11 text-base"
+              className="h-[42px] px-5 text-[16px]"
               onClick={() =>
                 session ? finishBlockForSession() : dispatch({ type: FLOW_ACTIONS.CONTINUE })
               }
@@ -349,7 +351,11 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
               Continue
             </Button>
             {devTools && (
-              <Button variant="outline" className="h-11 text-base" onClick={skipQuestionnaire}>
+              <Button
+                variant="outline"
+                className="h-[42px] px-5 text-[16px]"
+                onClick={skipQuestionnaire}
+              >
                 Skip questionnaire (dev)
               </Button>
             )}
@@ -358,7 +364,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
 
         {state.status === FLOW.DONE && (
           <Overlay>
-            <h2 className="text-xl font-semibold">This part is complete</h2>
+            <h2 className="text-[23px] font-semibold">This part is complete</h2>
             <p>Thank you. Feel free to close this tab.</p>
           </Overlay>
         )}
@@ -370,7 +376,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
         )}
 
         {!windowFits && (
-          <Overlay>
+          <Overlay fillWindow>
             <p>
               Please make your browser window larger (at least {MIN_WINDOW.width} x{' '}
               {MIN_WINDOW.height} pixels) to continue.
@@ -383,7 +389,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
         {/* Six lines reserved, the longest prompt's height at 16px (a
             sphere-sphere distance question), so the buttons below never move
             when the question changes length. */}
-        <p className="min-h-[9em] text-base leading-normal font-medium whitespace-pre-line">
+        <p className="min-h-[9em] text-[17px] leading-normal font-medium whitespace-pre-line">
           {question ? questionPrompt(trialScene.stimulus) : 'The question appears here each trial.'}
         </p>
         <div className="flex flex-col gap-3">
@@ -391,7 +397,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
             <Button
               key={choice}
               variant="outline"
-              className="h-auto min-h-[4.25em] py-2 text-base leading-normal whitespace-normal hover:bg-primary/10 hover:text-foreground"
+              className="h-auto min-h-[4.25em] py-2 text-[17px] leading-normal whitespace-normal hover:bg-primary/10 hover:text-foreground"
               disabled={!canAnswer}
               onClick={() => answer(choice)}
             >
@@ -399,7 +405,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
             </Button>
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground">
           Unsure which label is which? Click the object to hide or show its label. Clicking the
           label itself does nothing.
         </p>
@@ -410,7 +416,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
           {state.status === FLOW.FEEDBACK ? (feedbackCorrect ? 'Correct' : 'Incorrect') : ''}
         </p>
         {block && state.status !== FLOW.DONE && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[14px] text-muted-foreground">
             Block {state.blockIndex + 1} of {blockCount}
             {trial && state.status !== FLOW.BLOCK_INTRO
               ? ` · Trial ${Math.min(state.trialIndex + 1, trialCount)} of ${trialCount}${trial.practice ? ' (practice)' : ''}`
@@ -469,10 +475,12 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
   )
 }
 
-function Overlay({ children, width = 'max-w-lg' }) {
+// Sized in px, not rem: reset.css shrinks the root font, and the stage these
+// sit in is a fixed px size.
+function Overlay({ children, width = 'max-w-[720px]', fillWindow = false }) {
   return (
-    <div className="study-phase1__overlay">
-      <div className={`flex w-full ${width} flex-col items-start gap-4 text-base leading-relaxed`}>
+    <div className={`study-phase1__overlay ${fillWindow ? 'study-phase1__overlay--window' : ''}`}>
+      <div className={`flex w-full ${width} flex-col items-start gap-4 text-[17px] leading-normal`}>
         {children}
       </div>
     </div>
@@ -504,12 +512,16 @@ const CUE_FIGURES = [
 function Intro({ blockCount, canStart, onStart }) {
   const [page, setPage] = useState(0)
   const back = (
-    <Button variant="outline" className="h-11 text-base" onClick={() => setPage(page - 1)}>
+    <Button
+      variant="outline"
+      className="h-[42px] px-5 text-[16px]"
+      onClick={() => setPage(page - 1)}
+    >
       Back
     </Button>
   )
   const next = (
-    <Button className="h-11 text-base" onClick={() => setPage(page + 1)}>
+    <Button className="h-[42px] px-5 text-[16px]" onClick={() => setPage(page + 1)}>
       Next
     </Button>
   )
@@ -517,7 +529,7 @@ function Intro({ blockCount, canStart, onStart }) {
   if (page === 0) {
     return (
       <Overlay>
-        <h1 className="text-2xl font-semibold tracking-tight">Which one is closer to you?</h1>
+        <h1 className="text-[28px] font-semibold tracking-tight">Which one is closer to you?</h1>
         <p>
           Each scene shows several objects. Two of them are labelled <strong>A</strong> and{' '}
           <strong>B</strong>, and the question names them by kind, such as &ldquo;Line A&rdquo; or
@@ -544,8 +556,8 @@ function Intro({ blockCount, canStart, onStart }) {
   const figure = CUE_FIGURES[page - 1]
   if (figure) {
     return (
-      <Overlay width="max-w-[512px]">
-        <h2 className="text-xl font-semibold">{figure.title}</h2>
+      <Overlay>
+        <h2 className="text-[23px] font-semibold">{figure.title}</h2>
         <p>
           The way the scene is drawn changes between blocks. Some blocks add one of these markings.
         </p>
@@ -580,7 +592,7 @@ function Intro({ blockCount, canStart, onStart }) {
 
   return (
     <Overlay>
-      <h2 className="text-xl font-semibold">Before you start</h2>
+      <h2 className="text-[23px] font-semibold">Before you start</h2>
       <p>
         Answer with the buttons on the right, as quickly and as accurately as you can. Not sure
         which label is which? Click the object to hide or show its label. Clicking the label itself
@@ -596,7 +608,7 @@ function Intro({ blockCount, canStart, onStart }) {
       </p>
       <div className="flex gap-3">
         {back}
-        <Button className="h-11 text-base" disabled={!canStart} onClick={onStart}>
+        <Button className="h-[42px] px-5 text-[16px]" disabled={!canStart} onClick={onStart}>
           Start
         </Button>
       </div>

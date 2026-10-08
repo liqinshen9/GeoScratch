@@ -48,13 +48,13 @@ export default function StudySessionPage() {
   if (welcome) {
     return (
       <Screen researchId={study.researchId}>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome</h1>
+        <h1 className="text-[28px] font-semibold tracking-tight">Welcome</h1>
         <p>Your research ID is</p>
-        <p className="font-mono text-4xl font-semibold tracking-[0.2em]">{study.researchId}</p>
+        <p className="font-mono text-[40px] font-semibold tracking-[0.2em]">{study.researchId}</p>
         <p className="text-muted-foreground">
           It links your answers to what you do in GeoScratch, and it is not connected to your name.
         </p>
-        <Button className="h-11 text-base" onClick={() => start(0)}>
+        <Button className="h-[42px] px-5 text-[16px]" onClick={() => start(0)}>
           Begin
         </Button>
       </Screen>
@@ -84,7 +84,7 @@ export default function StudySessionPage() {
     if (!href) {
       return (
         <Screen researchId={study.researchId}>
-          <h2 className="text-xl font-semibold">Questionnaire</h2>
+          <h2 className="text-[23px] font-semibold">Questionnaire</h2>
           <p className="text-muted-foreground">
             This questionnaire&apos;s link is not set yet ({step.survey}).
           </p>
@@ -99,7 +99,7 @@ export default function StudySessionPage() {
     }
     return (
       <Screen researchId={study.researchId}>
-        <h2 className="text-xl font-semibold">Questionnaire</h2>
+        <h2 className="text-[23px] font-semibold">Questionnaire</h2>
         <p>{SURVEY_COPY[step.survey]}</p>
         {waiting ? (
           <p className="text-muted-foreground">
@@ -109,7 +109,11 @@ export default function StudySessionPage() {
         ) : (
           <p className="text-muted-foreground">It opens in a new tab.</p>
         )}
-        <Button asChild variant={waiting ? 'outline' : 'default'} className="h-11 text-base">
+        <Button
+          asChild
+          variant={waiting ? 'outline' : 'default'}
+          className="h-[42px] px-5 text-[16px]"
+        >
           <a
             href={href}
             target="_blank"
@@ -146,7 +150,11 @@ function HolisticBriefing({ task, taskCount, researchId, onStart }) {
   const intro = task.conditionIndex === 0 ? HOLISTIC_INTRO : []
   const [page, setPage] = useState(0)
   const back = page > 0 && (
-    <Button variant="outline" className="h-11 text-base" onClick={() => setPage(page - 1)}>
+    <Button
+      variant="outline"
+      className="h-[42px] px-5 text-[16px]"
+      onClick={() => setPage(page - 1)}
+    >
       Back
     </Button>
   )
@@ -155,11 +163,11 @@ function HolisticBriefing({ task, taskCount, researchId, onStart }) {
     const { title, width, body } = intro[page]
     return (
       <Screen researchId={researchId} width={width}>
-        <h2 className="text-xl font-semibold">{title}</h2>
+        <h2 className="text-[23px] font-semibold">{title}</h2>
         {body({ taskCount })}
         <div className="flex gap-3">
           {back}
-          <Button className="h-11 text-base" onClick={() => setPage(page + 1)}>
+          <Button className="h-[42px] px-5 text-[16px]" onClick={() => setPage(page + 1)}>
             Next
           </Button>
         </div>
@@ -173,7 +181,7 @@ function HolisticBriefing({ task, taskCount, researchId, onStart }) {
       <p className="text-muted-foreground">
         Task {task.conditionIndex + 1} of {taskCount}
       </p>
-      <h2 className="text-xl font-semibold">{getExercise(task.exerciseId)?.title}</h2>
+      <h2 className="text-[23px] font-semibold">{getExercise(task.exerciseId)?.title}</h2>
       <p>You have {minutes} minutes for this task.</p>
       {task.mode === RENDER_MODES.ANIMATED && (
         <p className="rounded-lg border border-primary bg-primary/10 p-3">
@@ -184,7 +192,7 @@ function HolisticBriefing({ task, taskCount, researchId, onStart }) {
       <p className="text-muted-foreground">The clock starts when you press Start.</p>
       <div className="flex gap-3">
         {back}
-        <Button className="h-11 text-base" onClick={onStart}>
+        <Button className="h-[42px] px-5 text-[16px]" onClick={onStart}>
           Start
         </Button>
       </div>
@@ -217,7 +225,7 @@ const HOLISTIC_INTRO = [
   },
   {
     title: 'The editor',
-    width: 'max-w-3xl',
+    width: 'max-w-[820px]',
     body: () => (
       <>
         <img
@@ -225,9 +233,9 @@ const HOLISTIC_INTRO = [
           alt="The GeoScratch editor: the Exercise panel, the Toolbox, the Workspace with a few blocks, and the 3D View showing a teapot."
           width={1280}
           height={720}
-          className="w-full rounded-lg border"
+          className="h-auto max-h-[45vh] w-auto max-w-full rounded-lg border"
         />
-        <ul className="flex list-disc flex-col gap-2 pl-5">
+        <ul className="flex list-disc flex-col gap-2 pl-[1.4em]">
           <li>
             <strong>Exercise</strong> describes the task: the values you are given and a list of
             steps. A step turns green once your blocks do it. Your time and the Continue button are
@@ -255,7 +263,7 @@ const HOLISTIC_INTRO = [
   {
     title: 'Working with blocks',
     body: () => (
-      <ul className="flex list-disc flex-col gap-2 pl-5">
+      <ul className="flex list-disc flex-col gap-2 pl-[1.4em]">
         <li>Click a block in the toolbox, or drag it out, to add it to the workspace.</li>
         <li>
           Blocks fit together like puzzle pieces. Drag a block onto a slot of another block and let
@@ -284,7 +292,7 @@ const HOLISTIC_INTRO = [
     title: 'The 3D view and your time',
     body: () => (
       <>
-        <ul className="flex list-disc flex-col gap-2 pl-5">
+        <ul className="flex list-disc flex-col gap-2 pl-[1.4em]">
           <li>
             Left-drag in the 3D view to turn it, and scroll to zoom. The Default view button in its
             bottom-right corner puts it back.
@@ -335,16 +343,19 @@ function ManualContinue({ onConfirm }) {
 function Finished({ researchId }) {
   return (
     <Screen researchId={researchId}>
-      <h2 className="text-xl font-semibold">All done</h2>
+      <h2 className="text-[23px] font-semibold">All done</h2>
       <p>Thank you for taking part. Feel free to close this tab.</p>
     </Screen>
   )
 }
 
-function Screen({ researchId, width = 'max-w-lg', children }) {
+// Sized in px, not rem: reset.css shrinks the root font.
+function Screen({ researchId, width = 'max-w-[720px]', children }) {
   return (
     <FullScreen>
-      <div className={`flex w-full ${width} flex-col items-start gap-4 text-base leading-relaxed`}>
+      <div
+        className={`flex max-h-[calc(100vh-3rem)] w-full ${width} flex-col items-start gap-4 overflow-y-auto text-[17px] leading-relaxed`}
+      >
         {children}
       </div>
       <p className="fixed bottom-3 right-4 font-mono text-xs text-muted-foreground">{researchId}</p>

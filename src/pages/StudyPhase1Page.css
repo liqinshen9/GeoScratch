@@ -7,6 +7,15 @@
   padding: 24px;
 }
 
+/* Below the roomy layout's size, give the margins up before the gate in
+   StudyPhase1Page.jsx (MIN_WINDOW) asks for a larger window. */
+@media (max-width: 1239px), (max-height: 687px) {
+  .study-phase1 {
+    gap: 16px;
+    padding: 8px;
+  }
+}
+
 /* A fixed CSS size so every trial subtends the same visual angle. */
 .study-phase1__stage {
   position: relative;
@@ -71,6 +80,12 @@
   background: var(--background, #ffffff);
 }
 
+/* The resize message: a window too small for the stage clips the stage's
+   left edge, so this one is centred on the window instead. */
+.study-phase1__overlay--window {
+  position: fixed;
+}
+
 .study-phase1__panel {
   flex: none;
   display: flex;
@@ -80,7 +95,7 @@
 
 .study-phase1__feedback {
   min-height: 1.5em;
-  font-size: 1rem;
+  font-size: 17px;
   font-weight: 600;
 }
 
