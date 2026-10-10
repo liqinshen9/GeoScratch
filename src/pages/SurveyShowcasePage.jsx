@@ -12,7 +12,8 @@ import './StudyPhase1Page.css'
 // every Phase 1 cue shows at once, for the questionnaire screenshots
 // (scripts/surveyScreenshots.mjs). ?t=T1..T10 picks a Phase 1 technique;
 // ?c=C1 / C2 a holistic configuration (baseline / perception-driven).
-// ?cue=halo / accent is a close-up of one cue, for the Phase 1 intro pages
+// ?cue=halo / accent / rings is a close-up of one cue, and ?cue=overlap / band
+// an example of each question, for the Phase 1 intro pages
 // (public/study/cue-*.png).
 
 // The camera looks at the room's centre, but the near floor corner projects
@@ -48,18 +49,53 @@ const SHOWCASE = {
 const CUE_CANVAS = { width: 512, height: 300 }
 const CUE_CAMERA_DISTANCE = 16
 
+// The crossing sits well away from where the labels settle, so neither label
+// can be read as belonging to the other line.
+const CROSSING_LINES = [
+  { key: 'B', role: 'target', kind: 'line', origin: [-2, 1.8, 0.5], direction: [1, 0.15, -1] },
+  { key: 'A', role: 'target', kind: 'line', origin: [-2, 0, 3.5], direction: [-1, 1.4, 0.2] },
+]
+
 const CUE_VIEWS = {
+  overlap: {
+    technique: 'T1',
+    label: 'Overlap question',
+    scene: { id: 'survey-cue-overlap', colourSalt: 0, objects: CROSSING_LINES },
+  },
+  band: {
+    technique: 'T1',
+    label: 'Band question',
+    // Percentages of the stage width, as probeBandStyle gives a trial. To the
+    // right, clear of the labels.
+    band: { left: '68%', width: '10%' },
+    scene: {
+      id: 'survey-cue-band',
+      colourSalt: 0,
+      objects: [
+        {
+          key: 'A',
+          role: 'target',
+          kind: 'line',
+          origin: [-2, 1.8, 0.5],
+          direction: [1, 0.15, -1],
+        },
+        {
+          key: 'B',
+          role: 'target',
+          kind: 'line',
+          origin: [-2, -1.2, 3.5],
+          direction: [1, -0.1, -1],
+        },
+      ],
+    },
+  },
   halo: {
     technique: 'T5',
     label: 'Halo',
     scene: {
       id: 'survey-cue-halo',
       colourSalt: 0,
-      objects: [
-        // Off the view's centre, where the labels settle, so they stay clear of the crossing.
-        { key: 'B', role: 'target', kind: 'line', origin: [-2, 0, 0.5], direction: [1, 0.15, -1] },
-        { key: 'A', role: 'target', kind: 'line', origin: [-2, 0, 3.5], direction: [-1, 1.4, -1] },
-      ],
+      objects: CROSSING_LINES,
     },
   },
   accent: {
@@ -114,6 +150,7 @@ function resolveView(t, c, cue) {
       label: cueView.label,
       settings: { ...getTechnique(cueView.technique).settings, showAxes: false, showGrid: false },
       scene: cueView.scene,
+      band: cueView.band,
       canvas: CUE_CANVAS,
       crop: { top: 0, height: CUE_CANVAS.height },
       cameraPosition: positionFromOrbit({
@@ -186,6 +223,7 @@ export default function SurveyShowcasePage() {
             cameraPosition={view.cameraPosition}
           />
         </div>
+        {view.band && <div className="study-phase1__band" style={view.band} aria-hidden="true" />}
       </div>
     </div>
   )

@@ -1,7 +1,8 @@
 // Screenshots of the Phase 1 techniques for the Qualtrics questionnaires: the
 // dev-only /study/showcase scene under every technique, then under the two
-// holistic configurations (C1 baseline, C2 perception-driven). Also the two
-// cue close-ups the Phase 1 intro shows; copy those into public/study/.
+// holistic configurations (C1 baseline, C2 perception-driven). Also the
+// question examples and cue close-ups the Phase 1 intro shows; copy those into
+// public/study/.
 //
 //   pnpm dev --port 5199
 //   node scripts/surveyScreenshots.mjs http://localhost:5199 <out-dir>
@@ -21,7 +22,10 @@ const VIEWS = [
     query: `t=${id}`,
   })),
   ...['C1', 'C2'].map((id) => ({ id, query: `c=${id}` })),
-  ...['halo', 'accent', 'rings'].map((cue) => ({ id: `cue-${cue}`, query: `cue=${cue}` })),
+  ...['overlap', 'band', 'halo', 'accent', 'rings'].map((cue) => ({
+    id: `cue-${cue}`,
+    query: `cue=${cue}`,
+  })),
 ]
 const SETTLE_MS = 1500
 

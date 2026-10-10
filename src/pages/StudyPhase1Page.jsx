@@ -321,7 +321,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
             <p>
               {state.trialIndex > 0
                 ? 'Pick up where you left off.'
-                : 'The first trials are practice, with feedback.'}
+                : 'The first two questions are practice, with feedback.'}
             </p>
             <Button
               className="h-[42px] px-5 text-[16px]"
@@ -390,7 +390,9 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
             sphere-sphere distance question), so the buttons below never move
             when the question changes length. */}
         <p className="min-h-[9em] text-[17px] leading-normal font-medium whitespace-pre-line">
-          {question ? questionPrompt(trialScene.stimulus) : 'The question appears here each trial.'}
+          {question
+            ? questionPrompt(trialScene.stimulus)
+            : 'Each question appears here. The buttons below switch on when the questions start.'}
         </p>
         <div className="flex flex-col gap-3">
           {['A', 'B'].map((choice) => (
@@ -419,7 +421,7 @@ function Phase1Session({ participantCode, sequence, stimulusSets, session }) {
           <p className="text-[14px] text-muted-foreground">
             Block {state.blockIndex + 1} of {blockCount}
             {trial && state.status !== FLOW.BLOCK_INTRO
-              ? ` · Trial ${Math.min(state.trialIndex + 1, trialCount)} of ${trialCount}${trial.practice ? ' (practice)' : ''}`
+              ? ` · Question ${Math.min(state.trialIndex + 1, trialCount)} of ${trialCount}${trial.practice ? ' (practice)' : ''}`
               : ''}
           </p>
         )}
@@ -487,21 +489,39 @@ function Overlay({ children, width = 'max-w-[720px]', fillWindow = false }) {
   )
 }
 
-// The cue pictures come from /study/showcase?cue=... (scripts/surveyScreenshots.mjs).
-const CUE_FIGURES = [
+// The pictures come from /study/showcase?cue=... (scripts/surveyScreenshots.mjs).
+const CUE_LEAD = 'The drawing style changes between blocks. Some add one of these markings.'
+const INTRO_FIGURES = [
   {
+    src: '/study/cue-overlap.png',
+    alt: 'Line A and line B crossing each other on screen.',
+    title: 'When A and B overlap',
+    lead: 'The first kind of question.',
+    text: 'You are asked which one is in front at the place where they overlap on screen.',
+  },
+  {
+    src: '/study/cue-band.png',
+    alt: 'Line A above line B, not crossing, with a shaded vertical band over part of the scene.',
+    title: 'When A and B do not overlap',
+    lead: 'The second kind of question.',
+    text: 'A shaded band marks part of the screen. You are asked which one is closer to you inside the band, so ignore the rest of each object. "You" means the camera, which looks down from well above the grid, so height counts too: an object higher up can be closer to you than a lower one that looks nearer the front.',
+  },
+  {
+    lead: CUE_LEAD,
     src: '/study/cue-halo.png',
     alt: 'Line B has a small gap on either side of line A where A passes in front of it.',
     title: 'Halo',
     text: 'Where one line passes in front of another, the line behind is cut away on either side of it. Here B is broken where A crosses it, so A is in front.',
   },
   {
+    lead: CUE_LEAD,
     src: '/study/cue-accent.png',
     alt: 'Line A is drawn dashed where it runs through a cube.',
     title: 'Collision accent',
     text: 'Where a line passes through a solid object, the part inside the object is drawn dashed. Here line A runs through the cube.',
   },
   {
+    lead: CUE_LEAD,
     src: '/study/cue-rings.png',
     alt: 'Line A drawn with alternating dark and grey rings.',
     title: 'Ringed tubes',
@@ -529,38 +549,28 @@ function Intro({ blockCount, canStart, onStart }) {
   if (page === 0) {
     return (
       <Overlay>
-        <h1 className="text-[28px] font-semibold tracking-tight">Which one is closer to you?</h1>
+        <h1 className="text-[28px] font-semibold tracking-tight">What you will be asked</h1>
+        <p>First, you will answer questions that test different ways of drawing a 3D scene.</p>
         <p>
           Each scene shows several objects. Two of them are labelled <strong>A</strong> and{' '}
-          <strong>B</strong>, and the question names them by kind, such as &ldquo;Line A&rdquo; or
-          &ldquo;Sphere B&rdquo;. <strong>A</strong> and <strong>B</strong> never touch each other,
-          though either of them may pass through the other objects around them.
+          <strong>B</strong>. They never touch each other, though either may pass through the other
+          objects around them.
         </p>
         <p>
-          When <strong>A</strong> and <strong>B</strong> overlap on the screen, you are asked which
-          one is <strong>in front</strong> where they overlap. When they do not overlap, a shaded
-          vertical band marks part of the screen, and you are asked which one is{' '}
-          <strong>closer to you</strong> inside that band. A line runs on for ever, so the question
-          is only ever about that one place.
-        </p>
-        <p>
-          <strong>Closer to you</strong> means closer to the camera you are looking through. The
-          camera sits well above the grid, looking down at it, so height counts too: an object
-          higher up can be closer to you than one lower down that looks nearer the front.
+          There are two kinds of question about <strong>A</strong> and <strong>B</strong>, depending
+          on whether they overlap on screen. The next two pages show one of each.
         </p>
         <div className="flex gap-3">{next}</div>
       </Overlay>
     )
   }
 
-  const figure = CUE_FIGURES[page - 1]
+  const figure = INTRO_FIGURES[page - 1]
   if (figure) {
     return (
       <Overlay>
         <h2 className="text-[23px] font-semibold">{figure.title}</h2>
-        <p>
-          The way the scene is drawn changes between blocks. Some blocks add one of these markings.
-        </p>
+        <p>{figure.lead}</p>
         {/* At its rendered size (px, not rem), so the marking is as large as in a trial. */}
         <img
           src={figure.src}
@@ -572,7 +582,7 @@ function Intro({ blockCount, canStart, onStart }) {
         {/* Every caption shares one grid cell, so the box is as tall as the longest
             and the image and buttons stay put from page to page. */}
         <div className="grid">
-          {CUE_FIGURES.map((f) => (
+          {INTRO_FIGURES.map((f) => (
             <p
               key={f.src}
               aria-hidden={f !== figure}
@@ -599,12 +609,12 @@ function Intro({ blockCount, canStart, onStart }) {
         does nothing.
       </p>
       <p>
-        In many trials the answer will not be obvious. That is expected: if you are not sure, go
+        In many questions the answer will not be obvious. That is expected: if you are not sure, go
         with your best guess.
       </p>
       <p>
-        There are {blockCount} blocks. The first two trials of each block are practice and tell you
-        whether you were right.
+        There are {blockCount} blocks. The first two questions of each block are practice and tell
+        you whether you were right.
       </p>
       <div className="flex gap-3">
         {back}

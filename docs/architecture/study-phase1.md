@@ -304,14 +304,21 @@ order without feedback, and a block-end screen (placeholder for the per-block
 Qualtrics questionnaire). Each trial starts with a 500 ms fixation cross; the
 scene is built during it, so build cost never falls inside a reaction time.
 
-The intro is five pages inside the one `intro` state (local page state in
-`StudyPhase1Page`): the task, then one page each for halos, collision accents
-and ringed tubes (one dark + one grey ring is one unit), then the answering
-instructions and Start. Every participant sees the
+The intro is seven pages inside the one `intro` state (local page state in
+`StudyPhase1Page`): what the block tests and that there are two kinds of
+question, one pictured example of each (overlap, then the shaded band), then one page each for halos,
+collision accents and ringed tubes (one dark + one grey ring is one unit), then
+the answering instructions and Start. The two example pages replaced a
+text-only explanation on 2026-10-10, after supervisor feedback that it was
+hard to follow; the same change made participant-facing text say "question"
+where it said "trial", which read as "trial run". The first two cohort1
+participants saw the earlier wording. Every participant sees the
 cue explanations before block 1, whatever their order, so when a participant
 learns what a cue means never varies with the Williams row. The pictures are
-`public/study/cue-*.png`, rendered from `/study/showcase?cue=halo|accent|rings`
-under T5 / T4 / T3 (the rings view from closer, so each ring is countable) with the trial's own settings (`scripts/surveyScreenshots.mjs`), and
+`public/study/cue-*.png`, rendered from
+`/study/showcase?cue=overlap|band|halo|accent|rings` under T1 / T1 / T5 / T4 /
+T3 (the rings view from closer, so each ring is countable) with the trial's own
+settings (`scripts/surveyScreenshots.mjs`), and
 shown at their rendered 512 px so the marking is the size it is in a trial.
 
 A cursor (`geoscratch:phase1-progress:<code>`) is saved after every step. A
